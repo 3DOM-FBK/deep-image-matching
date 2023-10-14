@@ -3,13 +3,16 @@ import shutil
 import argparse
 
 from pathlib import Path
+from lib.export_to_colmap import ExportToColmap
 from lib.image_matching import ImageMatching
+from lib.deep_image_matcher.logger import setup_logger
 #from lib.match_imgs import MatchImgs
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Matching with hand-crafted and deep-learning based local features and image retrieval.")
+    setup_logger()
 
+    parser = argparse.ArgumentParser(description="Matching with hand-crafted and deep-learning based local features and image retrieval.")
     parser.add_argument('-i', '--images', type=str, help="Input image folder", required=True)
     parser.add_argument('-o', '--outs', type=str, help="Output folder", required=True)
     parser.add_argument('-m', '--strategy', choices=['bruteforce', 'sequential', 'retrieval', 'custom_pairs'], required=True)
@@ -17,7 +20,6 @@ def main():
     parser.add_argument('-r', '--retrieval', choices=['netvlad', 'openibl', 'cosplace', 'dir'])
     parser.add_argument('-v', '--overlap', type=int, help="Image overlap if using sequential overlap strategy")
     #parser.add_argument('-v', '--verbose', action='store_true', help="Enable verbose mode")
-    
     args = parser.parse_args()
 
     if args.strategy == "retrieval" and args.retrieval is None:
@@ -41,7 +43,6 @@ def main():
     else:
         overlap = None
 
-
     imgs_dir = Path(args.images)
     output_dir = Path(args.outs)
     matching_strategy = args.strategy
@@ -52,21 +53,17 @@ def main():
 
     # Run matching
     img_matching = ImageMatching(imgs_dir, matching_strategy, pair_file, retrieval_option, overlap)
-    images, pairs, keypoints, correspondences = img_matching.run()
+    images = img_matching.img_names()
+    pairs =  img_matching.generate_pairs()
+    keypoints, correspondences = img_matching.match_pairs()
 
-    print(images)
-    print(pairs)
+    # Plot statistics
+    print("\n Finished matching and exporting")
+    print("n processed images: ", len(images))
+    print("n processed pairs: ", len(pairs))
 
     # Export in colmap format
-    output_dir
-
-    ## Define image pairs
-    ##pair_generator = PairGenerator(imgs, 'global_descriptor')
-    ##image_pairs = pair_generator.run()
-#
-    ##MatchImgs(matching_option, imgs_dir, output_dir, retrieval_option)
-
-
+    ExportToColmap(keypoints, correspondences, output_dir)
     
 
 if __name__ == "__main__":
