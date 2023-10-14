@@ -31,18 +31,22 @@ class PairsGenerator:
         print('\nBruteforce matching, generating pairs ..')
         pairs = BruteForce(self.img_paths, self.overlap)
         print("N of pairs:", len(pairs))
+        return pairs
 
     def sequential(self):
         print('\nSequential matching, generating pairs ..')
         pairs = SequentialPairs(self.img_paths, self.overlap)
         print("N of pairs:", len(pairs))
+        return pairs
 
 
     def retrieval(self):
         print('Retrieval matching, generating pairs ..')
         print('To be implemented. Exit')
         quit()
+        return pairs
 
     def run(self):
         generate_pairs = getattr(self, self.matching_strategy)
-        generate_pairs()
+        pairs = generate_pairs()
+        return pairs
