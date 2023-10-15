@@ -12,7 +12,6 @@ from easydict import EasyDict as edict
 
 from .deep_image_matcher.thirdparty.SuperGlue.models.matching import Matching
 from .deep_image_matcher.thirdparty.LightGlue.lightglue import SuperPoint
-from .deep_image_matcher.thirdparty.LightGlue.lightglue.utils import load_image
 from .deep_image_matcher.thirdparty.alike.alike import ALike, configs
 
 
@@ -56,52 +55,29 @@ class LocalFeatures:
         elif self.method == "SuperPoint":
             self.kornia_cfg = cfg
 
-    def load_torch_image(self, fname):
-        cv_img = cv2.imread(fname)
-        img = K.image_to_tensor(cv_img, False).float() / 255.0
-        img = K.color.rgb_to_grayscale(K.color.bgr_to_rgb(img))
-        return img
-
-    def load_torch_image_rgb(self, fname):
-        cv_img = cv2.imread(fname)
-        img = K.image_to_tensor(cv_img, False).float() / 255.0
-        return img
-    
-    def ORB(self, images: List[Path]) -> Tuple[List[np.ndarray], List[np.ndarray]]:
-        for im_path in images:
-            im_path = Path(im_path)
-            im = cv2.imread(str(im_path), cv2.IMREAD_GRAYSCALE)
+    def ORB(self, images: np.ndarray):
+        for img in images:
             orb = cv2.ORB_create(
                 nfeatures=self.n_features,
-                scaleFactor=self.orb_cfg.scaleFactor,
-                nlevels=self.orb_cfg.nlevels,
-                edgeThreshold=self.orb_cfg.edgeThreshold,
-                firstLevel=self.orb_cfg.firstLevel,
-                WTA_K=self.orb_cfg.WTA_K,
-                scoreType=self.orb_cfg.scoreType,
-                patchSize=self.orb_cfg.patchSize,
-                fastThreshold=self.orb_cfg.fastThreshold,
+                scaleFactor=self.orb_cfg["scaleFactor"],
+                nlevels=self.orb_cfg["nlevels"],
+                edgeThreshold=self.orb_cfg["edgeThreshold"],
+                firstLevel=self.orb_cfg["firstLevel"],
+                WTA_K=self.orb_cfg["WTA_K"],
+                scoreType=self.orb_cfg["scoreType"],
+                patchSize=self.orb_cfg["patchSize"],
+                fastThreshold=self.orb_cfg["fastThreshold"],
             )
-            kp = orb.detect(im, None)
-            kp, des = orb.compute(im, kp)
+
+            kp = orb.detect(img, None)
+            kp, des = orb.compute(img, kp)
             kpts = cv2.KeyPoint_convert(kp)
-
-            one_matrix = np.ones((len(kp), 1))
-            kpts = np.append(kpts, one_matrix, axis=1)
-            zero_matrix = np.zeros((len(kp), 1))
-            kpts = np.append(kpts, zero_matrix, axis=1).astype(np.float32)
-
-            zero_matrix = np.zeros((des.shape[0], 96))
-            des = np.append(des, zero_matrix, axis=1).astype(np.float32)
-            des = np.absolute(des)
-            des = des * 512 / np.linalg.norm(des, axis=1).reshape((-1, 1))
-            des = np.round(des)
-            des = np.array(des, dtype=np.uint8)
-
-            self.kpts[im_path.stem] = kpts
-            self.descriptors[im_path.stem] = des
-
+            des = des.astype(float)
             laf = None
+
+            self.kpts.append(kpts)
+            self.descriptors.append(des)
+            self.lafs.append(laf)
 
         return self.kpts, self.descriptors, laf
 
