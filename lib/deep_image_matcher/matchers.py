@@ -5,6 +5,7 @@ from typing import Tuple
 
 import cv2
 import kornia as K
+from kornia import feature
 import kornia.feature as KF
 import matplotlib.cm as cm
 import numpy as np
@@ -32,6 +33,66 @@ logger = logging.getLogger(__name__)
 # TODO: move all the configuration parameters to the __init__ method of the ImageMatcherBase class. The match method should only take the images as input (and optionally the already extracted features).
 # TODO: add integration with KORNIA library for using all the extractors and mathers.
 # TODO: add visualization functions for the matches (take the functions from the visualization module of ICEpy4d). Currentely, the visualization methods may not work!
+
+class DetectAndDescribe(ImageMatcherBase):
+    def __init__(self, **config) -> None:
+        """Initializes a LightGlueMatcher with Kornia"""
+
+        self._localfeatures = config.get("features", "superpoint") ############### modificare !!!!!!!!!!!!!!
+
+        super().__init__(**config)
+
+    def kornia_matcher(self, desc_0, desc_1, approach='smnn', ratio_threshold=0.95): #'nn' or 'snn' or 'mnn' or 'smnn'
+        torch_desc_0 = torch.from_numpy(desc_0)
+        torch_desc_1 = torch.from_numpy(desc_1)
+        matcher = feature.DescriptorMatcher(match_mode=approach, th=ratio_threshold)
+        match_distances, matches_matrix = matcher.forward(torch_desc_0, torch_desc_1)
+        return matches_matrix
+
+    def _match_pairs(
+        self,
+        image0: np.ndarray,
+        image1: np.ndarray,
+        **config,
+    ) -> Tuple[FeaturesBase, FeaturesBase, np.ndarray, np.ndarray]:
+        
+
+        local_feat_extractor = config["local_feat_extractor"]
+        keypoints, descriptors, lafs = local_feat_extractor.run(image0, image1)
+        kpys0 = keypoints[0]
+        kpys1 = keypoints[1]
+        desc0 = descriptors[0]
+        desc1 = descriptors[1]
+        matches_matrix = self.kornia_matcher(desc0, desc1)
+
+        matches_matrix = matches_matrix.numpy()
+        
+        matches0 = []
+        matches_matrix_col0 = matches_matrix[:,0]
+        matches_matrix_col1 = matches_matrix[:,1]
+        for i in range(kpys0.shape[0]):
+            if i in matches_matrix_col0:
+                j = np.where(matches_matrix_col0 == i)[0]
+                matches0.append(matches_matrix_col1[j][0])
+            else:
+                matches0.append(-1)
+        matches0 = np.array(matches0)
+        mconf = None
+
+        # Create FeaturesBase objects and matching array
+        features0 = FeaturesBase(
+            keypoints=kpys0,
+            descriptors=desc0,
+            scores=None,
+        )
+        features1 = FeaturesBase(
+            keypoints=kpys1,
+            descriptors=desc1,
+            scores=None,
+        )
+
+        return features0, features1, matches0, mconf
+
 
 
 class LightGlueMatcher(ImageMatcherBase):
@@ -115,6 +176,7 @@ class LightGlueMatcher(ImageMatcherBase):
             for k, v in matches01.items()
             if isinstance(v, torch.Tensor)
         }
+
 
         # Create FeaturesBase objects and matching array
         features0 = FeaturesBase(
