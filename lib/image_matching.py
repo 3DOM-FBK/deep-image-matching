@@ -57,21 +57,21 @@ class ImageMatching:
         return self.pairs
 
     def match_pairs(self):
-        # Add function to import matching_cfg!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         if self.local_features == 'lightglue':
             matcher = LightGlueMatcher()
-            cfg = self.custom_config["general"]
+            cfg = self.custom_config#["general"]
 
         if self.local_features == 'superglue':
             matcher = SuperGlueMatcher()
-            cfg = self.custom_config["general"]
+            cfg = self.custom_config#["general"]
 
         if self.local_features == 'loftr':
             matcher = LOFTRMatcher()
-            cfg = self.custom_config["general"]
+            cfg = self.custom_config#["general"]
 
         if self.local_features == 'detect_and_describe':
+            self.custom_config["ALIKE"]["n_limit"] = self.max_feat_numb
             detector_and_descriptor = self.custom_config["general"]["detector_and_descriptor"]
             local_feat_conf = self.custom_config[detector_and_descriptor]
             local_feat_extractor = LocalFeatureExtractor(
@@ -80,9 +80,8 @@ class ImageMatching:
                                                 self.max_feat_numb,
                                                 )
             matcher = DetectAndDescribe()
-            self.custom_config["ALIKE"]["n_limit"] = self.max_feat_numb
             cfg = self.custom_config
-            cfg["local_feat_extractor"] = local_feat_extractor
+            cfg["general"]["local_feat_extractor"] = local_feat_extractor
 
         for pair in self.pairs:
             im0 = pair[0]
@@ -95,23 +94,26 @@ class ImageMatching:
             if len(image1.shape) == 2:
                 image1 = cv2.cvtColor(image1, cv2.COLOR_GRAY2RGB)
 
-            matcher.match(
-                image0,
-                image1,
-                **cfg,
-            )
+            features0, features1, matches0, mconf = matcher.match(
+                                                                    image0,
+                                                                    image1,
+                                                                    **cfg,
+                                                                )
 
-            ktps0 = matcher.mkpts0
-            ktps1 = matcher.mkpts1
-            #descs0 = matcher.descriptors0
-            #descs1 = matcher.descriptors1
+            ktps0 = features0.keypoints
+            ktps1 = features1.keypoints
+            descs0 = features0.descriptors
+            descs1 = features1.descriptors
 
             self.keypoints[im0.name] = ktps0
             self.keypoints[im1.name] = ktps1
 
+            print(ktps0)
+
             n_tie_points = np.arange(ktps0.shape[0]).reshape((-1, 1))
 
-            self.correspondences[(im0, im1)] = np.hstack((n_tie_points, n_tie_points))
+            matrix = np.hstack((n_tie_points, matches0.reshape((-1,1))))
+            self.correspondences[(im0, im1)] = matrix[~np.any(matrix == -1, axis=1)]
 
 
 

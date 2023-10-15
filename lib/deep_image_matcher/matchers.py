@@ -55,14 +55,16 @@ class DetectAndDescribe(ImageMatcherBase):
         image1: np.ndarray,
         **config,
     ) -> Tuple[FeaturesBase, FeaturesBase, np.ndarray, np.ndarray]:
-        
-
-        local_feat_extractor = config["local_feat_extractor"]
+        print('inside _match_pairs')
+        print(config)
+        #max_keypoints = config.get("max_keypoints", 4096)
+        local_feat_extractor = config.get("local_feat_extractor")
         keypoints, descriptors, lafs = local_feat_extractor.run(image0, image1)
         kpys0 = keypoints[0]
         kpys1 = keypoints[1]
         desc0 = descriptors[0]
         desc1 = descriptors[1]
+
         matches_matrix = self.kornia_matcher(desc0, desc1)
 
         matches_matrix = matches_matrix.numpy()
