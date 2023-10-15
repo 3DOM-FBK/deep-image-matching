@@ -274,6 +274,7 @@ class ImageMatcherBase:
         self.timer = AverageTimer()
 
         # Get config from class members or from user input
+        config = config["general"]
         config = {**self._config, **config}
 
         # Get qualtiy and tile selection parameters
@@ -312,6 +313,8 @@ class ImageMatcherBase:
         image0_, image1_ = self._resize_images(quality, image0, image1)
 
         # Perform matching (on tiles or full images)
+        print('inside core')
+        print(config)
         if tile_selection == TileSelection.NONE:
             logger.info("Matching full images...")
             features0, features1, matches0, mconf = self._match_pairs(
@@ -325,9 +328,11 @@ class ImageMatcherBase:
             )
 
         # Retrieve original image coordinates if matching was performed on up/down-sampled images
-        self._features0, self._features1 = self._resize_features(
+        features0, features1 = self._resize_features(
             quality, features0, features1
         )
+
+        return features0, features1, matches0, mconf
 
         # Store features as class members
         try:
@@ -367,65 +372,7 @@ class ImageMatcherBase:
                 fast_viz=fast_viz,
                 hide_matching_track=hide_matching_track,
             )
-            # else:
-            #     if self._save_dir is not None:
-            #         self.viz_matches_mpl(
-            #             image0,
-            #             image1,
-            #             self._mkpts0,
-            #             self._mkpts1,
-            #             self._save_dir / "matches.jpg",
-            #             hide_fig=True,
-            #             point_size=5,
-            #         )
-            #     else:
-            #         self.viz_matches_mpl(
-            #             image0,
-            #             image1,
-            #             self._mkpts0,
-            #             self._mkpts1,
-            #             hide_fig=False,
-            #         )
 
-            # if fast_viz:
-            #     assert (
-            #         self._save_dir is not None
-            #     ), "save_dir must be specified for fast_viz"
-            #     if hide_matching_track:
-            #         line_thickness = -1
-            #     else:
-            #         line_thickness = 1
-
-            #     self.viz_matches_cv2(
-            #         image0,
-            #         image1,
-            #         self._mkpts0,
-            #         self._mkpts1,
-            #         str(self._save_dir / "matches.jpg"),
-            #         line_thickness=line_thickness,
-            #         autoresize=True,
-            #         max_long_edge=2000,
-            #         jpg_quality=95,
-            #     )
-            # else:
-            #     if self._save_dir is not None:
-            #         self.viz_matches_mpl(
-            #             image0,
-            #             image1,
-            #             self._mkpts0,
-            #             self._mkpts1,
-            #             self._save_dir / "matches.jpg",
-            #             hide_fig=True,
-            #             point_size=5,
-            #         )
-            #     else:
-            #         self.viz_matches_mpl(
-            #             image0,
-            #             image1,
-            #             self._mkpts0,
-            #             self._mkpts1,
-            #             hide_fig=False,
-            #         )
         if self._save_dir is not None:
             self.save_mkpts_as_txt(self._save_dir)
 
@@ -484,6 +431,7 @@ class ImageMatcherBase:
             AssertionError: If image0 or image1 is not a NumPy array.
 
         """
+        print(config)
 
         # Get config
         tile_selection = config.get("tile_selection", TileSelection.PRESELECTION)
@@ -526,7 +474,7 @@ class ImageMatcherBase:
             lim1 = t1_lims[tidx1]
             tile0 = self._tiler.extract_patch(image0, lim0)
             tile1 = self._tiler.extract_patch(image1, lim1)
-
+            print(config)
             features0, features1, matches0, conf = self._match_pairs(
                 tile0, tile1, **config
             )
@@ -677,6 +625,9 @@ class ImageMatcherBase:
                 points < rect[2:], axis=1
             )
             return logic
+        print(config)
+        local_feat_extractor = config["config"].get("local_feat_extractor")
+        print(local_feat_extractor)
 
         # Get MIN_MATCHES_PER_TILE
         min_matches_per_tile = config.get("min_matches_per_tile", MIN_MATCHES_PER_TILE)
@@ -708,7 +659,9 @@ class ImageMatcherBase:
             for _ in range(n_down):
                 i0 = cv2.pyrDown(i0)
                 i1 = cv2.pyrDown(i1)
-            f0, f1, mtc, _ = self._match_pairs(i0, i1, max_keypoints=4096)
+            conf_for_downsamp = {"local_feat_extractor": local_feat_extractor, "max_keypoints": 4096}
+            f0, f1, mtc, _ = self._match_pairs(i0, i1, **conf_for_downsamp)
+            #f0, f1, mtc, _ = self._match_pairs(i0, i1, max_keypoints=4096)
             vld = mtc > -1
             kp0 = f0.keypoints[vld]
             kp1 = f1.keypoints[mtc[vld]]

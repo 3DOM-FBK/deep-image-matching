@@ -2,8 +2,8 @@ from lib.deep_image_matcher import (Quality, TileSelection, GeometricVerificatio
 custom_config = {
 
     "general" : {
-        "detector_and_descriptor" : "ALIKE",
-        "quality" : Quality.LOW, # 'Quality.HIGH'
+        "detector_and_descriptor" : "KeyNetAffNetHardNet",
+        "quality" : Quality.HIGH, # 'Quality.HIGH'
         "tile_selection" : TileSelection.NONE,
         "grid" : [3,2],
         "overlap" : 200,
@@ -34,7 +34,18 @@ custom_config = {
         "scoreType": 0,
         "patchSize": 31,
         "fastThreshold": 0,
-            }
+            },
 
+    "DISK" : {
+
+    },
+
+    "SuperPoint" : {
+
+    },
+
+    "KeyNetAffNetHardNet" : {
+
+    }
 
 }
