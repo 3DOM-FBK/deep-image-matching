@@ -36,11 +36,7 @@ logger = logging.getLogger(__name__)
 
 class DetectAndDescribe(ImageMatcherBase):
     def __init__(self, **config) -> None:
-        """Initializes a LightGlueMatcher with Kornia"""
-
-        self._localfeatures = config.get("features", "superpoint") ############### modificare !!!!!!!!!!!!!!
-
-        super().__init__(**config)
+        super().__init__(**config["general"])
 
     def kornia_matcher(self, desc_0, desc_1, approach='smnn', ratio_threshold=0.95): #'nn' or 'snn' or 'mnn' or 'smnn'
         torch_desc_0 = torch.from_numpy(desc_0)
@@ -55,8 +51,6 @@ class DetectAndDescribe(ImageMatcherBase):
         image1: np.ndarray,
         **config,
     ) -> Tuple[FeaturesBase, FeaturesBase, np.ndarray, np.ndarray]:
-        print('inside _match_pairs')
-        print(config)
         #max_keypoints = config.get("max_keypoints", 4096)
         local_feat_extractor = config.get("local_feat_extractor")
         keypoints, descriptors, lafs = local_feat_extractor.run(image0, image1)
@@ -101,8 +95,8 @@ class LightGlueMatcher(ImageMatcherBase):
     def __init__(self, **config) -> None:
         """Initializes a LightGlueMatcher with Kornia"""
 
-        self._localfeatures = config.get("features", "superpoint")
-        super().__init__(**config)
+        self._localfeatures = "superpoint"
+        super().__init__(**config["general"])
 
     # Override _frame2tensor method to shift channel first as batch dimension
     def _frame2tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor:
@@ -209,7 +203,7 @@ class LightGlueMatcher(ImageMatcherBase):
 
 
 class SuperGlueMatcher(ImageMatcherBase):
-    def __init__(self, opt: dict) -> None:
+    def __init__(self, **config) -> None:
         """Initializes a SuperGlueMatcher object with the given options dictionary.
 
         The options dictionary should contain the following keys:
@@ -228,49 +222,11 @@ class SuperGlueMatcher(ImageMatcherBase):
             FileNotFoundError: if the specified SuperGlue model weights file cannot be found
 
         """
-        opt = self._build_superglue_config(opt)
-        super().__init__(opt)
+
+        super().__init__(**config["general"])
 
         # initialize the Matching object with given configuration
-        self.matcher = Matching(self._opt).eval().to(self._device)
-
-    def _build_superglue_config(self, opt: dict) -> dict:
-        # SuperPoint and SuperGlue default parameters
-        NMS_RADIUS = 3
-        SINKHORN_ITERATIONS = 20
-
-        def_opt = {
-            "weights": "outdoor",
-            "keypoint_threshold": 0.001,
-            "max_keypoints": -1,
-            "match_threshold": 0.3,
-            "force_cpu": False,
-            "nms_radius": NMS_RADIUS,
-            "sinkhorn_iterations": SINKHORN_ITERATIONS,
-        }
-        opt = {**def_opt, **opt}
-        required_keys = [
-            "weights",
-            "keypoint_threshold",
-            "max_keypoints",
-            "match_threshold",
-            "force_cpu",
-        ]
-        check_dict_keys(opt, required_keys)
-
-        return {
-            "superpoint": {
-                "nms_radius": opt["nms_radius"],
-                "keypoint_threshold": opt["keypoint_threshold"],
-                "max_keypoints": opt["max_keypoints"],
-            },
-            "superglue": {
-                "weights": opt["weights"],
-                "sinkhorn_iterations": opt["sinkhorn_iterations"],
-                "match_threshold": opt["match_threshold"],
-            },
-            "force_cpu": opt["force_cpu"],
-        }
+        self.matcher = Matching(config["superglue"]).eval().to(self._device)
 
     def _match_pairs(
         self,
@@ -386,27 +342,13 @@ class SuperGlueMatcher(ImageMatcherBase):
 
 
 class LOFTRMatcher(ImageMatcherBase):
-    def __init__(self, opt: dict = {}) -> None:
+    def __init__(self, **config) -> None:
         """Initializes a LOFTRMatcher with Kornia object with the given options dictionary."""
 
-        opt = self._build_config(opt)
-        super().__init__(opt)
+        super().__init__(**config["general"])
 
-        self.matcher = KF.LoFTR(pretrained="outdoor").to(self.device).eval()
+        self.matcher = KF.LoFTR(pretrained=config["loftr"]["pretrained"]).to(self.device).eval()
 
-    def _build_config(self, opt: dict) -> dict:
-        def_opt = {
-            "pretrained": "outdoor",
-            "force_cpu": False,
-        }
-        opt = {**def_opt, **opt}
-        required_keys = [
-            "pretrained",
-            "force_cpu",
-        ]
-        check_dict_keys(opt, required_keys)
-
-        return opt
 
     def _frame2tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor:
         image = K.image_to_tensor(np.array(image), False).float() / 255.0

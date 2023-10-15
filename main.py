@@ -4,15 +4,15 @@ import shutil
 import argparse
 
 from pathlib import Path
-from lib.export_to_colmap import ExportToColmap
 from lib.image_matching import ImageMatching
+from lib.export_to_colmap import ExportToColmap
 from lib.deep_image_matcher.logger import setup_logger
-#from lib.match_imgs import MatchImgs
 
 from config import custom_config
 
 
 def main():
+    
     setup_logger()
 
     parser = argparse.ArgumentParser(description="Matching with hand-crafted and deep-learning based local features and image retrieval.")

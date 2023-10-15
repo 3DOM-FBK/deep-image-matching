@@ -56,6 +56,9 @@ class LocalFeatures:
             self.kornia_cfg = cfg
 
     def ORB(self, images: np.ndarray):
+        self.kpts = []
+        self.descriptors = []
+        self.lafs = []
         for img in images:
             orb = cv2.ORB_create(
                 nfeatures=self.n_features,
@@ -82,6 +85,9 @@ class LocalFeatures:
         return self.kpts, self.descriptors, laf
 
     def ALIKE(self, images: np.ndarray):
+        self.kpts = []
+        self.descriptors = []
+        self.lafs = []
         for img in images:
             features = self.model(img, sub_pixel=self.alike_cfg["subpixel"])
             laf = None
@@ -93,6 +99,9 @@ class LocalFeatures:
 
     def DISK(self, images: np.ndarray):
         # Inspired by: https://github.com/ducha-aiki/imc2023-kornia-starter-pack/blob/main/DISK-adalam-pycolmap-3dreconstruction.ipynb
+        self.kpts = []
+        self.descriptors = []
+        self.lafs = []
         disk = self.disk
         with torch.inference_mode():
             for img in images:
@@ -109,6 +118,9 @@ class LocalFeatures:
         return self.kpts, self.descriptors, self.lafs
 
     def SuperPoint(self, images: np.ndarray):
+        self.kpts = []
+        self.descriptors = []
+        self.lafs = []
         with torch.inference_mode():
             for img in images:
                 extractor = SuperPoint(max_num_keypoints=self.n_features).eval().cuda()
@@ -125,6 +137,9 @@ class LocalFeatures:
         return self.kpts, self.descriptors, laf
 
     def KeyNetAffNetHardNet(self, images: np.ndarray):
+        self.kpts = []
+        self.descriptors = []
+        self.lafs = []
         for img in images:
             #img = self.load_torch_image(str(im_path)).to(self.device)
             image = K.image_to_tensor(img, False).float() / 255.0

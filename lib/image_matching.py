@@ -59,16 +59,17 @@ class ImageMatching:
     def match_pairs(self):
 
         if self.local_features == 'lightglue':
-            matcher = LightGlueMatcher()
-            cfg = self.custom_config#["general"]
+            cfg = self.custom_config
+            matcher = LightGlueMatcher(**cfg)        
 
         if self.local_features == 'superglue':
-            matcher = SuperGlueMatcher()
-            cfg = self.custom_config#["general"]
+            cfg = self.custom_config
+            matcher = SuperGlueMatcher(**cfg)
+            
 
         if self.local_features == 'loftr':
-            matcher = LOFTRMatcher()
-            cfg = self.custom_config#["general"]
+            cfg = self.custom_config
+            matcher = LOFTRMatcher(**cfg)
 
         if self.local_features == 'detect_and_describe':
             self.custom_config["ALIKE"]["n_limit"] = self.max_feat_numb
@@ -79,11 +80,12 @@ class ImageMatching:
                                                 local_feat_conf,
                                                 self.max_feat_numb,
                                                 )
-            matcher = DetectAndDescribe()
             cfg = self.custom_config
+            matcher = DetectAndDescribe(**cfg)
             cfg["general"]["local_feat_extractor"] = local_feat_extractor
 
         for pair in self.pairs:
+            print(pair)
             im0 = pair[0]
             im1 = pair[1]
             image0 = cv2.imread(str(im0), cv2.COLOR_RGB2BGR)
@@ -108,14 +110,9 @@ class ImageMatching:
             self.keypoints[im0.name] = ktps0
             self.keypoints[im1.name] = ktps1
 
-            print(ktps0)
-
             n_tie_points = np.arange(ktps0.shape[0]).reshape((-1, 1))
 
             matrix = np.hstack((n_tie_points, matches0.reshape((-1,1))))
             self.correspondences[(im0, im1)] = matrix[~np.any(matrix == -1, axis=1)]
-
-
-
 
         return self.keypoints, self.correspondences

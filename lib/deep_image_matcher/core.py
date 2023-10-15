@@ -309,12 +309,12 @@ class ImageMatcherBase:
             gv_method, GeometricVerification
         ), "geometric_verification must be a GeometricVerification enum"
 
+        logger.info(f"Matching options: {quality} {tile_selection}")
+
         # Resize images if needed
         image0_, image1_ = self._resize_images(quality, image0, image1)
 
         # Perform matching (on tiles or full images)
-        print('inside core')
-        print(config)
         if tile_selection == TileSelection.NONE:
             logger.info("Matching full images...")
             features0, features1, matches0, mconf = self._match_pairs(
