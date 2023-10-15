@@ -173,6 +173,7 @@ class ImageMatcherBase:
         Raises:
             TypeError: If `opt` is not a dictionary.
         """
+
         if not isinstance(config, dict):
             raise TypeError("opt must be a dictionary")
 
@@ -235,7 +236,7 @@ class ImageMatcherBase:
         return self._mconf
 
     def reset(self):
-        """Reset the matcher by clearing the features and matches"""
+        """Reset the matcher by cleaning the features and matches"""
         self._mkpts0 = None
         self._mkpts1 = None
         self._descriptors0 = None

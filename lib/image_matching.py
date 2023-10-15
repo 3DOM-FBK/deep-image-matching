@@ -4,8 +4,8 @@ import numpy as np
 from pathlib import Path
 from lib.pairs_generator import PairsGenerator
 from lib.image_list import ImageList
-from lib.matcher import Matcher
-from lib.deep_image_matcher import (SuperGlueMatcher, LOFTRMatcher, LightGlueMatcher, Quality, TileSelection, GeometricVerification)
+from lib.deep_image_matcher import (SuperGlueMatcher, LOFTRMatcher, LightGlueMatcher, Quality, TileSelection, GeometricVerification, DetectAndDescribe)
+from lib.local_features import LocalFeatureExtractor
 
 class ImageMatching:
     def __init__(
@@ -15,12 +15,18 @@ class ImageMatching:
             pair_file : Path, 
             retrieval_option : str,
             overlap : int,
+            local_features : str,
+            custom_config : str,
+            max_feat_numb : int,
             ):
         
         self.matching_strategy = matching_strategy
         self.pair_file = pair_file
         self.retrieval_option = retrieval_option
         self.overlap = overlap
+        self.local_features = local_features
+        self.custom_config = custom_config
+        self.max_feat_numb = max_feat_numb
         self.keypoints = {}
         self.correspondences = {}
 
@@ -51,36 +57,48 @@ class ImageMatching:
         return self.pairs
 
     def match_pairs(self):
-        matcher = Matcher()
+        # Add function to import matching_cfg!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+        if self.local_features == 'lightglue':
+            matcher = LightGlueMatcher()
+            cfg = self.custom_config["general"]
+
+        if self.local_features == 'superglue':
+            matcher = SuperGlueMatcher()
+            cfg = self.custom_config["general"]
+
+        if self.local_features == 'loftr':
+            matcher = LOFTRMatcher()
+            cfg = self.custom_config["general"]
+
+        if self.local_features == 'detect_and_describe':
+            detector_and_descriptor = self.custom_config["general"]["detector_and_descriptor"]
+            local_feat_conf = self.custom_config[detector_and_descriptor]
+            local_feat_extractor = LocalFeatureExtractor(
+                                                detector_and_descriptor,
+                                                local_feat_conf,
+                                                self.max_feat_numb,
+                                                )
+            matcher = DetectAndDescribe()
+            self.custom_config["ALIKE"]["n_limit"] = self.max_feat_numb
+            cfg = self.custom_config
+            cfg["local_feat_extractor"] = local_feat_extractor
+
         for pair in self.pairs:
             im0 = pair[0]
             im1 = pair[1]
             image0 = cv2.imread(str(im0), cv2.COLOR_RGB2BGR)
             image1 = cv2.imread(str(im1), cv2.COLOR_RGB2BGR)
 
-            matching_cfg = {
-                "weights": "outdoor",
-                "keypoint_threshold": 0.0001,
-                "max_keypoints": 8192,
-                "match_threshold": 0.2,
-                "force_cpu": False,
-            }
+            if len(image0.shape) == 2:
+                image0 = cv2.cvtColor(image0, cv2.COLOR_GRAY2RGB)
+            if len(image1.shape) == 2:
+                image1 = cv2.cvtColor(image1, cv2.COLOR_GRAY2RGB)
 
-            
-
-            matcher = LightGlueMatcher() #SuperGlueMatcher(matching_cfg)
             matcher.match(
                 image0,
                 image1,
-                quality=Quality.HIGH,
-                tile_selection=TileSelection.PRESELECTION,
-                grid=[3,2],
-                overlap=200,
-                min_matches_per_tile = 5,
-                do_viz_tiles=False,
-                save_dir = "./res/superglue_matches",
-                geometric_verification=GeometricVerification.PYDEGENSAC,
-                threshold=1.5,
+                **cfg,
             )
 
             ktps0 = matcher.mkpts0
