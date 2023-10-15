@@ -46,6 +46,6 @@ custom_config = {
 
     "KeyNetAffNetHardNet" : {
 
-    }
+    },
 
 }
