@@ -13,6 +13,7 @@ from easydict import EasyDict as edict
 from .deep_image_matcher.thirdparty.SuperGlue.models.matching import Matching
 from .deep_image_matcher.thirdparty.LightGlue.lightglue import SuperPoint
 from .deep_image_matcher.thirdparty.alike.alike import ALike, configs
+from .deep_image_matcher.thirdparty.LightGlue.lightglue.utils import load_image
 
 
 class LocalFeatures:
@@ -88,13 +89,14 @@ class LocalFeatures:
         self.kpts = []
         self.descriptors = []
         self.lafs = []
-        for img in images:
-            features = self.model(img, sub_pixel=self.alike_cfg["subpixel"])
-            laf = None
-            self.kpts.append(features["keypoints"])
-            self.descriptors.append(features["descriptors"])
-            self.lafs.append(laf)
-        return self.kpts, self.descriptors, self.lafs
+        with torch.inference_mode():
+            for img in images:
+                features = self.model(img, sub_pixel=self.alike_cfg["subpixel"])
+                laf = None
+                self.kpts.append(features["keypoints"])
+                self.descriptors.append(features["descriptors"])
+                self.lafs.append(laf)
+            return self.kpts, self.descriptors, self.lafs
 
 
     def DISK(self, images: np.ndarray):
@@ -117,19 +119,55 @@ class LocalFeatures:
 
         return self.kpts, self.descriptors, self.lafs
 
+    def _frame2tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor:
+        """Normalize the image tensor and reorder the dimensions."""
+        if image.ndim == 3:
+            image = image.transpose((2, 0, 1))  # HxWxC to CxHxW
+        elif image.ndim == 2:
+            image = image[None]  # add channel axis
+        else:
+            raise ValueError(f"Not an image: {image.shape}")
+        return torch.tensor(image / 255.0, dtype=torch.float).to(device)
+
     def SuperPoint(self, images: np.ndarray):
         self.kpts = []
         self.descriptors = []
         self.lafs = []
+        #images = [
+        #    Path(r"C:\Users\lmorelli\Desktop\Luca\GitHub_3DOM\deep-image-matching\assets\imgs\L1.jpg"),
+        #    Path(r"C:\Users\lmorelli\Desktop\Luca\GitHub_3DOM\deep-image-matching\assets\imgs\L2.jpg"),
+        #    ]
+    
         with torch.inference_mode():
             for img in images:
-                extractor = SuperPoint(max_num_keypoints=self.n_features).eval().cuda()
-                image = K.image_to_tensor(img, False).float() / 255.0
-                image = image.cuda()
-                feats = extractor.extract(image)
+                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+                image = self._frame2tensor(img, device)
+                extractor = SuperPoint(max_num_keypoints=2048).eval().to(device)
+                #extractor = SuperPoint(max_num_keypoints=self.n_features).eval().cuda()
+                #self.extractor = SuperPoint(max_num_keypoints=max_keypoints).eval().to(device)
+                #image = load_image(img).cuda()
+                ##image = K.image_to_tensor(img, False).float() / 255.0
+                #
+                #image = img.transpose((2, 0, 1))
+                ##image = img.transpose((2, 1, 0))
+                #image = torch.tensor(image / 255., dtype=torch.float)
+
+                #image = image.cuda()
+                feats = extractor.extract(image) #image0_, resize=resize
+                print(feats)
                 kpt = feats['keypoints'].cpu().detach().numpy()
+                kpt = kpt.reshape(-1, kpt.shape[-1])
+                print(kpt)
                 desc = feats['descriptors'].cpu().detach().numpy()
-                self.kpts.append(kpt.reshape(-1, kpt.shape[-1]))
+                c0 = kpt[:,0]#.reshape((-1,1))
+                c1 = kpt[:,1]#.reshape((-1,1))
+                newkpt = kpt.copy()
+
+                newkpt[:,0] = c0*0.5
+                newkpt[:,1] = c1*0.5
+                print(newkpt)
+                #self.kpts.append(kpt)
+                self.kpts.append(newkpt)
                 self.descriptors.append(desc.reshape(-1, desc.shape[-1]))
                 laf = None
                 self.lafs.append(laf)
@@ -140,20 +178,20 @@ class LocalFeatures:
         self.kpts = []
         self.descriptors = []
         self.lafs = []
-        for img in images:
-            #img = self.load_torch_image(str(im_path)).to(self.device)
-            image = K.image_to_tensor(img, False).float() / 255.0
-            image = K.color.rgb_to_grayscale(K.color.bgr_to_rgb(image))
-            print(image.shape)
-            image = image.cuda()
-            keypts = KF.KeyNetAffNetHardNet(
-                num_features=self.n_features, upright=True, device=torch.device("cuda")
-            ).forward(image)
+        with torch.inference_mode():
+            for img in images:
+                #img = self.load_torch_image(str(im_path)).to(self.device)
+                image = K.image_to_tensor(img, False).float() / 255.0
+                image = K.color.rgb_to_grayscale(K.color.bgr_to_rgb(image))
+                image = image.cuda()
+                keypts = KF.KeyNetAffNetHardNet(
+                    num_features=self.n_features, upright=self.kornia_cfg["upright"], device=self.device
+                ).forward(image)
 
-            laf = keypts[0].cpu().detach().numpy()
-            self.kpts.append(keypts[0].cpu().detach().numpy()[-1, :, :, -1])
-            self.descriptors.append(keypts[2].cpu().detach().numpy()[-1, :, :])
-            self.lafs.append(laf)
+                laf = keypts[0].cpu().detach().numpy()
+                self.kpts.append(keypts[0].cpu().detach().numpy()[-1, :, :, -1])
+                self.descriptors.append(keypts[2].cpu().detach().numpy()[-1, :, :])
+                self.lafs.append(laf)
 
         return self.kpts, self.descriptors, laf
 

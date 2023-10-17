@@ -18,5 +18,5 @@ def ExportToColmap(keypoints : dict, correspondences : dict, output_dir : Path) 
             file.write(f"{im0} {im1}\n")
             pair_tie_points = correspondences[pair]
             for row in range(pair_tie_points.shape[0]):
-                file.write("{} {}\n".format(pair_tie_points[row, 0], pair_tie_points[row, 0]))
+                file.write("{} {}\n".format(pair_tie_points[row, 0], pair_tie_points[row, 1]))
             file.write("\n")

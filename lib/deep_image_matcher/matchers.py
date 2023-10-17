@@ -38,7 +38,7 @@ class DetectAndDescribe(ImageMatcherBase):
     def __init__(self, **config) -> None:
         super().__init__(**config["general"])
 
-    def kornia_matcher(self, desc_0, desc_1, approach='smnn', ratio_threshold=0.95): #'nn' or 'snn' or 'mnn' or 'smnn'
+    def kornia_matcher(self, desc_0, desc_1, approach='smnn', ratio_threshold=0.99): #'nn' or 'snn' or 'mnn' or 'smnn'
         torch_desc_0 = torch.from_numpy(desc_0)
         torch_desc_1 = torch.from_numpy(desc_1)
         matcher = feature.DescriptorMatcher(match_mode=approach, th=ratio_threshold)
@@ -59,7 +59,7 @@ class DetectAndDescribe(ImageMatcherBase):
         desc0 = descriptors[0]
         desc1 = descriptors[1]
 
-        matches_matrix = self.kornia_matcher(desc0, desc1)
+        matches_matrix = self.kornia_matcher(desc0, desc1, config["kornia_matcher"], config["ratio_threshold"])
 
         matches_matrix = matches_matrix.numpy()
         
@@ -87,7 +87,12 @@ class DetectAndDescribe(ImageMatcherBase):
             scores=None,
         )
 
-        return features0, features1, matches0, mconf
+        matches_dict = {
+            'matches0': matches0,
+            'matches01' : {},
+        }
+
+        return features0, features1, matches_dict, mconf
 
 
 
@@ -122,10 +127,10 @@ class LightGlueMatcher(ImageMatcherBase):
         image1: np.ndarray,
         **config,
     ) -> Tuple[FeaturesBase, FeaturesBase, np.ndarray, np.ndarray]:
-        """Matches keypoints and descriptors in two given images (no matter if they are tiles or full-res images) using the SuperGlue algorithm.
+        """Matches keypoints and descriptors in two given images (no matter if they are tiles or full-res images) using the LightGlue algorithm.
 
         This method takes in two images as Numpy arrays, and returns the matches between keypoints
-        and descriptors in those images using the SuperGlue algorithm.
+        and descriptors in those images using the LightGlue algorithm.
 
         Args:
             image0 (np.ndarray): the first image to match, as Numpy array
@@ -150,6 +155,7 @@ class LightGlueMatcher(ImageMatcherBase):
 
         with torch.inference_mode():
             # extract the features
+            feats0 = self.extractor.extract(image0_, resize=resize)
             try:
                 feats0 = self.extractor.extract(image0_, resize=resize)
                 feats1 = self.extractor.extract(image1_, resize=resize)
@@ -187,6 +193,7 @@ class LightGlueMatcher(ImageMatcherBase):
         )
         matches0 = matches01["matches0"]
         mconf = matches01["scores"]
+        matches = matches01["matches"]
 
         # # For debugging
         # def print_shapes_in_dict(dic: dict):
@@ -199,7 +206,13 @@ class LightGlueMatcher(ImageMatcherBase):
         #     print(f"descriptors: {features.descriptors.shape}")
         #     print(f"scores: {features.scores.shape}")
 
-        return features0, features1, matches0, mconf
+        matches_dict = {
+            'matches0': matches0,
+            'matches01' : matches,
+
+        }
+
+        return features0, features1, matches_dict, mconf
 
 
 class SuperGlueMatcher(ImageMatcherBase):
@@ -276,7 +289,13 @@ class SuperGlueMatcher(ImageMatcherBase):
         valid = matches0 > -1
         mconf = features0.scores[valid]
 
-        return features0, features1, matches0, mconf
+        matches_dict = {
+            'matches0': matches0,
+            'matches01' : None,
+
+        }
+
+        return features0, features1, matches_dict, mconf
 
     def viz_matches(
         self,
@@ -365,7 +384,7 @@ class LOFTRMatcher(ImageMatcherBase):
     ) -> Tuple[FeaturesBase, FeaturesBase, np.ndarray, np.ndarray]:
         """Matches keypoints and descriptors in two given images
         (no matter if they are tiles or full-res images) using
-        the SuperGlue algorithm.
+        the LoFTR algorithm.
 
         This method takes in two images as Numpy arrays, and returns
         the matches between keypoints and descriptors in those images
@@ -402,8 +421,14 @@ class LOFTRMatcher(ImageMatcherBase):
 
         # Create a 1-to-1 matching array
         matches0 = np.arange(mkpts0.shape[0])
+        matches = np.hstack((matches0.reshape((-1,1)), matches0.reshape((-1,1))))
 
-        return features0, features1, matches0, mconf
+        matches_dict = {
+            'matches0': matches0,
+            'matches01' : matches,
+        }
+
+        return features0, features1, matches_dict, mconf
 
     def _match_by_tile(
         self,
