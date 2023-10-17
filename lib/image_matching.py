@@ -6,6 +6,16 @@ from lib.pairs_generator import PairsGenerator
 from lib.image_list import ImageList
 from lib.deep_image_matcher import (SuperGlueMatcher, LOFTRMatcher, LightGlueMatcher, Quality, TileSelection, GeometricVerification, DetectAndDescribe)
 from lib.local_features import LocalFeatureExtractor
+from lib.deep_image_matcher.geometric_verification import geometric_verification
+
+def ApplyGeometricVer(kpts0, kpts1, matches):
+    mkpts0 = kpts0[matches[:,0]]
+    mkpts1 = kpts1[matches[:,1]]
+    F, inlMask = geometric_verification(
+        mkpts0,
+        mkpts1,
+    )
+    return kpts0, kpts1, matches[inlMask]
 
 def ReorganizeMatches(kpts_number, matches : dict) -> np.ndarray:
     for key in matches:
@@ -125,11 +135,14 @@ class ImageMatching:
             self.keypoints[im0.name] = ktps0
             self.keypoints[im1.name] = ktps1
 
-            #n_tie_points = np.arange(ktps0.shape[0]).reshape((-1, 1))
-            #matrix = np.hstack((n_tie_points, matches.reshape((-1,1))))
-            #self.correspondences[(im0, im1)] = matrix[~np.any(matrix == -1, axis=1)]
-            #self.correspondences[(im0, im1)] = matches
-
             self.correspondences[(im0, im1)] = ReorganizeMatches(ktps0.shape[0], matches)
+            
+            self.keypoints[im0.name], self.keypoints[im1.name], self.correspondences[(im0, im1)] = ApplyGeometricVer(
+                                                                                                    self.keypoints[im0.name], 
+                                                                                                    self.keypoints[im1.name], 
+                                                                                                    self.correspondences[(im0, im1)]
+                                                                                                    )
 
         return self.keypoints, self.correspondences
+
+

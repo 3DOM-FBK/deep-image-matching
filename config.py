@@ -3,7 +3,7 @@ custom_config = {
 
 
     "general" : {
-        "detector_and_descriptor" : "SuperPoint", # To be used in combination with --detect_and_describe option. ALIKE, ORB, DISK, SuperPoint, KeyNetAffNetHardNet
+        "detector_and_descriptor" : "ALIKE", # To be used in combination with --detect_and_describe option. ALIKE, ORB, DISK, SuperPoint, KeyNetAffNetHardNet
         "quality" : Quality.HIGH,
         "tile_selection" : TileSelection.NONE,
         "grid" : [3,2],
