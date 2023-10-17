@@ -3,7 +3,7 @@ custom_config = {
 
 
     "general" : {
-        "detector_and_descriptor" : "DISK", # To be used in combination with --detect_and_describe option
+        "detector_and_descriptor" : "SuperPoint", # To be used in combination with --detect_and_describe option. ALIKE, ORB, DISK, SuperPoint, KeyNetAffNetHardNet
         "quality" : Quality.HIGH,
         "tile_selection" : TileSelection.NONE,
         "grid" : [3,2],
@@ -12,10 +12,11 @@ custom_config = {
         "do_viz_tiles" : False,
         "save_dir" : None,
         "geometric_verification" : GeometricVerification.PYDEGENSAC,
-        "threshold" : 1,
-        "confidence" : 0.999,
         "threshold" : 1.5,
+        "confidence" : 0.999,
         "force_cpu" : False,
+        "kornia_matcher" : "smnn", #'nn' or 'snn' or 'mnn' or 'smnn'
+        "ratio_threshold" : 0.95, # valid range [0-1]
     },
 
     # ALIKE options
@@ -53,7 +54,7 @@ custom_config = {
 
     # Key.Net + OriNet + HardNet8 from KORNIA (https://kornia.github.io/)
     "KeyNetAffNetHardNet" : {
-
+        "upright" : False,
     },
 
     # SuperGlue options

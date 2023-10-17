@@ -7,6 +7,17 @@ from lib.image_list import ImageList
 from lib.deep_image_matcher import (SuperGlueMatcher, LOFTRMatcher, LightGlueMatcher, Quality, TileSelection, GeometricVerification, DetectAndDescribe)
 from lib.local_features import LocalFeatureExtractor
 
+def ReorganizeMatches(kpts_number, matches : dict) -> np.ndarray:
+    for key in matches:
+        if key == 'matches0':
+            n_tie_points = np.arange(kpts_number).reshape((-1, 1))
+            matrix = np.hstack((n_tie_points, matches[key].reshape((-1,1))))
+            correspondences = matrix[~np.any(matrix == -1, axis=1)]
+            return correspondences
+        elif key == 'matches01':
+            correspondences = matches[key]
+            return correspondences
+
 class ImageMatching:
     def __init__(
             self, 
@@ -96,7 +107,7 @@ class ImageMatching:
             if len(image1.shape) == 2:
                 image1 = cv2.cvtColor(image1, cv2.COLOR_GRAY2RGB)
 
-            features0, features1, matches0, mconf = matcher.match(
+            features0, features1, matches, mconf = matcher.match(
                                                                     image0,
                                                                     image1,
                                                                     **cfg,
@@ -110,9 +121,11 @@ class ImageMatching:
             self.keypoints[im0.name] = ktps0
             self.keypoints[im1.name] = ktps1
 
-            n_tie_points = np.arange(ktps0.shape[0]).reshape((-1, 1))
+            #n_tie_points = np.arange(ktps0.shape[0]).reshape((-1, 1))
+            #matrix = np.hstack((n_tie_points, matches.reshape((-1,1))))
+            #self.correspondences[(im0, im1)] = matrix[~np.any(matrix == -1, axis=1)]
+            #self.correspondences[(im0, im1)] = matches
 
-            matrix = np.hstack((n_tie_points, matches0.reshape((-1,1))))
-            self.correspondences[(im0, im1)] = matrix[~np.any(matrix == -1, axis=1)]
+            self.correspondences[(im0, im1)] = ReorganizeMatches(ktps0.shape[0], matches)
 
         return self.keypoints, self.correspondences
