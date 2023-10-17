@@ -17,7 +17,7 @@ See other examples in run.bat. If you want customize detector and descpritor opt
 - [X] ALIKE
 - [X] ORB -- CHECK -- performance very bad matching nadiral and oblique images
 - [X] DISK
-- [ ] Superpoint -- PROBLEM -- bug on position of features, some outside of the image
+- [X] Superpoint
 - [X] KeyNetHardNet
 
 

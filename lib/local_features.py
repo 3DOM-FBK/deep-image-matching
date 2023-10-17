@@ -11,7 +11,7 @@ from easydict import EasyDict as edict
 
 
 from .deep_image_matcher.thirdparty.SuperGlue.models.matching import Matching
-from .deep_image_matcher.thirdparty.LightGlue.lightglue import SuperPoint
+from .deep_image_matcher.thirdparty.LightGlue.lightglue.superpoint import SuperPoint
 from .deep_image_matcher.thirdparty.alike.alike import ALike, configs
 from .deep_image_matcher.thirdparty.LightGlue.lightglue.utils import load_image
 
@@ -56,7 +56,7 @@ class LocalFeatures:
         elif self.method == "SuperPoint":
             self.kornia_cfg = cfg
 
-    def ORB(self, images: np.ndarray):
+    def ORB(self, images: np.ndarray, w_size : int):
         self.kpts = []
         self.descriptors = []
         self.lafs = []
@@ -85,7 +85,7 @@ class LocalFeatures:
 
         return self.kpts, self.descriptors, laf
 
-    def ALIKE(self, images: np.ndarray):
+    def ALIKE(self, images: np.ndarray, w_size : int):
         self.kpts = []
         self.descriptors = []
         self.lafs = []
@@ -99,7 +99,7 @@ class LocalFeatures:
             return self.kpts, self.descriptors, self.lafs
 
 
-    def DISK(self, images: np.ndarray):
+    def DISK(self, images: np.ndarray, w_size : int):
         # Inspired by: https://github.com/ducha-aiki/imc2023-kornia-starter-pack/blob/main/DISK-adalam-pycolmap-3dreconstruction.ipynb
         self.kpts = []
         self.descriptors = []
@@ -129,52 +129,27 @@ class LocalFeatures:
             raise ValueError(f"Not an image: {image.shape}")
         return torch.tensor(image / 255.0, dtype=torch.float).to(device)
 
-    def SuperPoint(self, images: np.ndarray):
+    def SuperPoint(self, images: np.ndarray, w_size : int):
         self.kpts = []
         self.descriptors = []
         self.lafs = []
-        #images = [
-        #    Path(r"C:\Users\lmorelli\Desktop\Luca\GitHub_3DOM\deep-image-matching\assets\imgs\L1.jpg"),
-        #    Path(r"C:\Users\lmorelli\Desktop\Luca\GitHub_3DOM\deep-image-matching\assets\imgs\L2.jpg"),
-        #    ]
     
         with torch.inference_mode():
             for img in images:
                 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
                 image = self._frame2tensor(img, device)
-                extractor = SuperPoint(max_num_keypoints=2048).eval().to(device)
-                #extractor = SuperPoint(max_num_keypoints=self.n_features).eval().cuda()
-                #self.extractor = SuperPoint(max_num_keypoints=max_keypoints).eval().to(device)
-                #image = load_image(img).cuda()
-                ##image = K.image_to_tensor(img, False).float() / 255.0
-                #
-                #image = img.transpose((2, 0, 1))
-                ##image = img.transpose((2, 1, 0))
-                #image = torch.tensor(image / 255., dtype=torch.float)
-
-                #image = image.cuda()
-                feats = extractor.extract(image) #image0_, resize=resize
-                print(feats)
+                extractor = SuperPoint(max_num_keypoints=self.n_features).eval().to(device)
+                feats = extractor.extract(image, resize=w_size)
                 kpt = feats['keypoints'].cpu().detach().numpy()
-                kpt = kpt.reshape(-1, kpt.shape[-1])
-                print(kpt)
                 desc = feats['descriptors'].cpu().detach().numpy()
-                c0 = kpt[:,0]#.reshape((-1,1))
-                c1 = kpt[:,1]#.reshape((-1,1))
-                newkpt = kpt.copy()
-
-                newkpt[:,0] = c0*0.5
-                newkpt[:,1] = c1*0.5
-                print(newkpt)
-                #self.kpts.append(kpt)
-                self.kpts.append(newkpt)
+                self.kpts.append(kpt.reshape(-1, kpt.shape[-1]))
                 self.descriptors.append(desc.reshape(-1, desc.shape[-1]))
                 laf = None
                 self.lafs.append(laf)
 
         return self.kpts, self.descriptors, laf
 
-    def KeyNetAffNetHardNet(self, images: np.ndarray):
+    def KeyNetAffNetHardNet(self, images: np.ndarray, w_size : int):
         self.kpts = []
         self.descriptors = []
         self.lafs = []
@@ -209,7 +184,7 @@ class LocalFeatureExtractor:
             local_feature, n_features, local_feature_cfg
         )
 
-    def run(self, im0, im1) -> None:
+    def run(self, im0, im1, w_size) -> None:
         extract = getattr(self.detector_and_descriptor, self.local_feature)
-        kpts, descriptors, lafs = extract([im0, im1])
+        kpts, descriptors, lafs = extract([im0, im1], w_size)
         return kpts, descriptors, lafs

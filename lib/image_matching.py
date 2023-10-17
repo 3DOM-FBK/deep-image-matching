@@ -69,6 +69,10 @@ class ImageMatching:
 
     def match_pairs(self):
 
+        first_img = cv2.imread(str(self.image_list[0].absolute_path))
+        w_size = first_img.shape[1]
+        self.custom_config["general"]["w_size"] = w_size
+
         if self.local_features == 'lightglue':
             cfg = self.custom_config
             matcher = LightGlueMatcher(**cfg)        
