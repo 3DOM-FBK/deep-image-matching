@@ -1,7 +1,3 @@
-# deep-image-matching
-Install hloc. See https://github.com/cvg/Hierarchical-Localization
-
-
 # Example usage
 Before running check options with `python ./main.py --help`, then:
 ```
