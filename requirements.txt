@@ -1,0 +1,9 @@
+numpy
+scipy
+matplotlib
+opencv-python
+opencv-contrib-python
+pydegensac
+easydict
+pyquaternion
+kornia
