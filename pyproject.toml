@@ -1,0 +1,65 @@
+[build-system]
+requires      = ["setuptools>=65", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "deep_image_matching"
+version = "0.0.1"
+description = ""
+readme = "README.md"
+authors = [{ name = "Francesco Ioli", email = "francesco.ioli@polimi.it" }]
+license = { file = "LICENSE.txt" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+keywords = []
+dependencies = [
+    "numpy",
+    "scipy",
+    "matplotlib",
+    "pydegensac",
+    "torch",
+    "torchvision",
+    "kornia",
+    "opencv-python",
+    "opencv-contrib-python",
+    "tqdm",
+    "easydict",
+    "pytest",
+    "pyquaternion"
+]
+requires-python = ">=3.8"
+
+
+[project.optional-dependencies]
+dev = ["ruff", "black", "bumpver", "isort", "pip-tools", "pytest", "bumpver", "mkdocs", "mkdocs-material", "mkdocstrings[python]"]
+
+[project.urls]
+Homepage = "https://github.com/franioli/deep-image-matching"
+
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+]
+
+[tool.isort]
+profile = "black"
+
+[tool.bumpver]
+current_version = "0.0.1"
+version_pattern = "MAJOR.MINOR.PATCH"
+commit_message = "bump version {old_version} -> {new_version}"
+commit = true
+tag = true
+push = true
+
+[tool.bumpver.file_patterns]
+"pyproject.toml" = [
+    'current_version = "{version}"', 
+    'version = "{version}"'
+]
+"src/deep_image_matching/__init__.py" = [
+    "{version}"
+]

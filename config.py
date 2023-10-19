@@ -1,26 +1,24 @@
-from lib.deep_image_matcher import (Quality, TileSelection, GeometricVerification)
+from deep_image_matching import Quality, TileSelection, GeometricVerification
+
 custom_config = {
-
-
-    "general" : {
-        "detector_and_descriptor" : "ALIKE", # To be used in combination with --detect_and_describe option. ALIKE, ORB, DISK, SuperPoint, KeyNetAffNetHardNet
-        "quality" : Quality.HIGH,
-        "tile_selection" : TileSelection.NONE,
-        "grid" : [3,2],
-        "overlap" : 200,
-        "min_matches_per_tile" : 5,
-        "do_viz_tiles" : False,
-        "save_dir" : None,
-        "geometric_verification" : GeometricVerification.PYDEGENSAC,
-        "threshold" : 1.5,
-        "confidence" : 0.999,
-        "force_cpu" : False,
-        "kornia_matcher" : "smnn", #'nn' or 'snn' or 'mnn' or 'smnn'
-        "ratio_threshold" : 0.95, # valid range [0-1]
+    "general": {
+        "detector_and_descriptor": "ALIKE",  # To be used in combination with --detect_and_describe option. ALIKE, ORB, DISK, SuperPoint, KeyNetAffNetHardNet
+        "quality": Quality.HIGH,
+        "tile_selection": TileSelection.NONE,
+        "grid": [3, 2],
+        "overlap": 200,
+        "min_matches_per_tile": 5,
+        "do_viz_tiles": False,
+        "save_dir": None,
+        "geometric_verification": GeometricVerification.PYDEGENSAC,
+        "threshold": 1.5,
+        "confidence": 0.999,
+        "force_cpu": False,
+        "kornia_matcher": "smnn",  #'nn' or 'snn' or 'mnn' or 'smnn'
+        "ratio_threshold": 0.95,  # valid range [0-1]
     },
-
     # ALIKE options
-    "ALIKE" : {
+    "ALIKE": {
         "model": "alike-s",
         "device": "cuda",
         "top_k": 15000,
@@ -28,10 +26,8 @@ custom_config = {
         "n_limit": 15000,
         "subpixel": True,
     },
-
-
     # ORB options (see opencv doc)
-    "ORB" : {
+    "ORB": {
         "scaleFactor": 1.2,
         "nlevels": 1,
         "edgeThreshold": 1,
@@ -40,46 +36,33 @@ custom_config = {
         "scoreType": 0,
         "patchSize": 31,
         "fastThreshold": 0,
-            },
-
+    },
     # DISK from KORNIA (https://kornia.github.io/)
-    "DISK" : {
-
-    },
-
+    "DISK": {},
     # SuperPoint from LightGlue repository (https://github.com/cvg/LightGlue)
-    "SuperPoint" : {
-
-    },
-
+    "SuperPoint": {},
     # Key.Net + OriNet + HardNet8 from KORNIA (https://kornia.github.io/)
-    "KeyNetAffNetHardNet" : {
-        "upright" : False,
+    "KeyNetAffNetHardNet": {
+        "upright": False,
     },
-
     # SuperGlue options
-    "superglue" : {
-                "superpoint": {
-                    "nms_radius": 3,
-                    "keypoint_threshold": 0.001,
-                    "max_keypoints": -1,
-                },
-                "superglue": {
-                    "weights": "outdoor",
-                    "sinkhorn_iterations": 20,
-                    "match_threshold": 0.3,
-                },
-                "force_cpu": False,
-            },
-
+    "superglue": {
+        "superpoint": {
+            "nms_radius": 3,
+            "keypoint_threshold": 0.001,
+            "max_keypoints": -1,
+        },
+        "superglue": {
+            "weights": "outdoor",
+            "sinkhorn_iterations": 20,
+            "match_threshold": 0.3,
+        },
+        "force_cpu": False,
+    },
     # LoFTR options from KORNIA (https://kornia.github.io/)
-    "loftr" : {
-        "pretrained" : "outdoor",
+    "loftr": {
+        "pretrained": "outdoor",
     },
-
     # LightGlue with SuperPoint features (LG with DISK features to be implemented)
-    "lightglue" : {
-
-    },
-
+    "lightglue": {},
 }
