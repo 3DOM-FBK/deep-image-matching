@@ -18,7 +18,7 @@ def timeit(func):
     return timeit_wrapper
 
 
-class AverageTimer:
+class Timer:
     """Class to help manage printing simple timing of code execution."""
 
     def __init__(self, smoothing=0.3, logger=None):
@@ -50,7 +50,7 @@ class AverageTimer:
         for key in self.times:
             val = self.times[key]
             if self.will_print[key]:
-                msg = msg + f"%s=%.3f, " % (key, val)
+                msg = msg + "%s=%.3f, " % (key, val)
                 total += val
         if self.logger is not None:
             self.logger.info(msg)

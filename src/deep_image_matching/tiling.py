@@ -1,7 +1,9 @@
 from typing import Dict, List
-
+import logging
 import matplotlib.pyplot as plt
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 class Tiler:
