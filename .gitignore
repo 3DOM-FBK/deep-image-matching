@@ -1,6 +1,7 @@
 # Specific
-assets
-lib/deep_image_matcher/thirdparty/SuperGlue
+venv/
+data/
+assets/
 
 # VScode
 # .vscode/

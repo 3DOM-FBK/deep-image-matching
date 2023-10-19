@@ -16,7 +16,7 @@ from .consts import (
     Quality,
     TileSelection,
 )
-from .core import FeaturesBase, ImageMatcherBase, check_dict_keys
+from .core import FeaturesBase, ImageMatcherBase
 from .tiling import Tiler
 from .thirdparty.LightGlue.lightglue import LightGlue, SuperPoint
 from .thirdparty.SuperGlue.models.matching import Matching
@@ -34,11 +34,14 @@ logger = logging.getLogger(__name__)
 # TODO: add integration with KORNIA library for using all the extractors and mathers.
 # TODO: add visualization functions for the matches (take the functions from the visualization module of ICEpy4d). Currentely, the visualization methods may not work!
 
+
 class DetectAndDescribe(ImageMatcherBase):
     def __init__(self, **config) -> None:
         super().__init__(**config["general"])
 
-    def kornia_matcher(self, desc_0, desc_1, approach='smnn', ratio_threshold=0.99): #'nn' or 'snn' or 'mnn' or 'smnn'
+    def kornia_matcher(
+        self, desc_0, desc_1, approach="smnn", ratio_threshold=0.99
+    ):  #'nn' or 'snn' or 'mnn' or 'smnn'
         torch_desc_0 = torch.from_numpy(desc_0)
         torch_desc_1 = torch.from_numpy(desc_1)
         matcher = feature.DescriptorMatcher(match_mode=approach, th=ratio_threshold)
@@ -51,21 +54,25 @@ class DetectAndDescribe(ImageMatcherBase):
         image1: np.ndarray,
         **config,
     ) -> Tuple[FeaturesBase, FeaturesBase, np.ndarray, np.ndarray]:
-        #max_keypoints = config.get("max_keypoints", 4096)
+        # max_keypoints = config.get("max_keypoints", 4096)
         local_feat_extractor = config.get("local_feat_extractor")
-        keypoints, descriptors, lafs = local_feat_extractor.run(image0, image1, config["w_size"])
+        keypoints, descriptors, lafs = local_feat_extractor.run(
+            image0, image1, config["w_size"]
+        )
         kpys0 = keypoints[0]
         kpys1 = keypoints[1]
         desc0 = descriptors[0]
         desc1 = descriptors[1]
 
-        matches_matrix = self.kornia_matcher(desc0, desc1, config["kornia_matcher"], config["ratio_threshold"])
+        matches_matrix = self.kornia_matcher(
+            desc0, desc1, config["kornia_matcher"], config["ratio_threshold"]
+        )
 
         matches_matrix = matches_matrix.numpy()
-        
+
         matches0 = []
-        matches_matrix_col0 = matches_matrix[:,0]
-        matches_matrix_col1 = matches_matrix[:,1]
+        matches_matrix_col0 = matches_matrix[:, 0]
+        matches_matrix_col1 = matches_matrix[:, 1]
         for i in range(kpys0.shape[0]):
             if i in matches_matrix_col0:
                 j = np.where(matches_matrix_col0 == i)[0]
@@ -88,12 +95,11 @@ class DetectAndDescribe(ImageMatcherBase):
         )
 
         matches_dict = {
-            'matches0': matches0,
-            'matches01' : {},
+            "matches0": matches0,
+            "matches01": {},
         }
 
         return features0, features1, matches_dict, mconf
-
 
 
 class LightGlueMatcher(ImageMatcherBase):
@@ -179,7 +185,6 @@ class LightGlueMatcher(ImageMatcherBase):
             if isinstance(v, torch.Tensor)
         }
 
-
         # Create FeaturesBase objects and matching array
         features0 = FeaturesBase(
             keypoints=feats0["keypoints"],
@@ -207,9 +212,8 @@ class LightGlueMatcher(ImageMatcherBase):
         #     print(f"scores: {features.scores.shape}")
 
         matches_dict = {
-            'matches0': matches0,
-            'matches01' : matches,
-
+            "matches0": matches0,
+            "matches01": matches,
         }
 
         return features0, features1, matches_dict, mconf
@@ -290,9 +294,8 @@ class SuperGlueMatcher(ImageMatcherBase):
         mconf = features0.scores[valid]
 
         matches_dict = {
-            'matches0': matches0,
-            'matches01' : None,
-
+            "matches0": matches0,
+            "matches01": None,
         }
 
         return features0, features1, matches_dict, mconf
@@ -366,8 +369,9 @@ class LOFTRMatcher(ImageMatcherBase):
 
         super().__init__(**config["general"])
 
-        self.matcher = KF.LoFTR(pretrained=config["loftr"]["pretrained"]).to(self.device).eval()
-
+        self.matcher = (
+            KF.LoFTR(pretrained=config["loftr"]["pretrained"]).to(self.device).eval()
+        )
 
     def _frame2tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor:
         image = K.image_to_tensor(np.array(image), False).float() / 255.0
@@ -421,11 +425,11 @@ class LOFTRMatcher(ImageMatcherBase):
 
         # Create a 1-to-1 matching array
         matches0 = np.arange(mkpts0.shape[0])
-        matches = np.hstack((matches0.reshape((-1,1)), matches0.reshape((-1,1))))
+        matches = np.hstack((matches0.reshape((-1, 1)), matches0.reshape((-1, 1))))
 
         matches_dict = {
-            'matches0': matches0,
-            'matches01' : matches,
+            "matches0": matches0,
+            "matches01": matches,
         }
 
         return features0, features1, matches_dict, mconf

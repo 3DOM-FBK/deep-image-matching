@@ -1,19 +1,12 @@
-import os
-from pathlib import Path
-from typing import List, Tuple, Union
-
 import cv2
 import kornia as K
 import kornia.feature as KF
 import numpy as np
 import torch
-from easydict import EasyDict as edict
 
 
-from .deep_image_matcher.thirdparty.SuperGlue.models.matching import Matching
-from .deep_image_matcher.thirdparty.LightGlue.lightglue.superpoint import SuperPoint
-from .deep_image_matcher.thirdparty.alike.alike import ALike, configs
-from .deep_image_matcher.thirdparty.LightGlue.lightglue.utils import load_image
+from .thirdparty.LightGlue.lightglue.superpoint import SuperPoint
+from .thirdparty.alike.alike import ALike, configs
 
 
 class LocalFeatures:
@@ -47,7 +40,7 @@ class LocalFeatures:
         elif self.method == "DISK":
             self.orb_cfg = cfg
             self.device = torch.device("cuda")
-            self.disk = KF.DISK.from_pretrained('depth').to(self.device)
+            self.disk = KF.DISK.from_pretrained("depth").to(self.device)
 
         elif self.method == "KeyNetAffNetHardNet":
             self.kornia_cfg = cfg
@@ -56,7 +49,7 @@ class LocalFeatures:
         elif self.method == "SuperPoint":
             self.kornia_cfg = cfg
 
-    def ORB(self, images: np.ndarray, w_size : int):
+    def ORB(self, images: np.ndarray, w_size: int):
         self.kpts = []
         self.descriptors = []
         self.lafs = []
@@ -85,7 +78,7 @@ class LocalFeatures:
 
         return self.kpts, self.descriptors, laf
 
-    def ALIKE(self, images: np.ndarray, w_size : int):
+    def ALIKE(self, images: np.ndarray, w_size: int):
         self.kpts = []
         self.descriptors = []
         self.lafs = []
@@ -98,8 +91,7 @@ class LocalFeatures:
                 self.lafs.append(laf)
             return self.kpts, self.descriptors, self.lafs
 
-
-    def DISK(self, images: np.ndarray, w_size : int):
+    def DISK(self, images: np.ndarray, w_size: int):
         # Inspired by: https://github.com/ducha-aiki/imc2023-kornia-starter-pack/blob/main/DISK-adalam-pycolmap-3dreconstruction.ipynb
         self.kpts = []
         self.descriptors = []
@@ -129,19 +121,21 @@ class LocalFeatures:
             raise ValueError(f"Not an image: {image.shape}")
         return torch.tensor(image / 255.0, dtype=torch.float).to(device)
 
-    def SuperPoint(self, images: np.ndarray, w_size : int):
+    def SuperPoint(self, images: np.ndarray, w_size: int):
         self.kpts = []
         self.descriptors = []
         self.lafs = []
-    
+
         with torch.inference_mode():
             for img in images:
                 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
                 image = self._frame2tensor(img, device)
-                extractor = SuperPoint(max_num_keypoints=self.n_features).eval().to(device)
+                extractor = (
+                    SuperPoint(max_num_keypoints=self.n_features).eval().to(device)
+                )
                 feats = extractor.extract(image, resize=w_size)
-                kpt = feats['keypoints'].cpu().detach().numpy()
-                desc = feats['descriptors'].cpu().detach().numpy()
+                kpt = feats["keypoints"].cpu().detach().numpy()
+                desc = feats["descriptors"].cpu().detach().numpy()
                 self.kpts.append(kpt.reshape(-1, kpt.shape[-1]))
                 self.descriptors.append(desc.reshape(-1, desc.shape[-1]))
                 laf = None
@@ -149,18 +143,20 @@ class LocalFeatures:
 
         return self.kpts, self.descriptors, laf
 
-    def KeyNetAffNetHardNet(self, images: np.ndarray, w_size : int):
+    def KeyNetAffNetHardNet(self, images: np.ndarray, w_size: int):
         self.kpts = []
         self.descriptors = []
         self.lafs = []
         with torch.inference_mode():
             for img in images:
-                #img = self.load_torch_image(str(im_path)).to(self.device)
+                # img = self.load_torch_image(str(im_path)).to(self.device)
                 image = K.image_to_tensor(img, False).float() / 255.0
                 image = K.color.rgb_to_grayscale(K.color.bgr_to_rgb(image))
                 image = image.cuda()
                 keypts = KF.KeyNetAffNetHardNet(
-                    num_features=self.n_features, upright=self.kornia_cfg["upright"], device=self.device
+                    num_features=self.n_features,
+                    upright=self.kornia_cfg["upright"],
+                    device=self.device,
                 ).forward(image)
 
                 laf = keypts[0].cpu().detach().numpy()
@@ -178,7 +174,6 @@ class LocalFeatureExtractor:
         local_feature_cfg: dict = None,
         n_features: int = 1024,
     ) -> None:
-        
         self.local_feature = local_feature
         self.detector_and_descriptor = LocalFeatures(
             local_feature, n_features, local_feature_cfg

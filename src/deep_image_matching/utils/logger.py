@@ -21,6 +21,11 @@ import functools
 import warnings
 
 
+def get_logger(name: str = "__name__"):
+    logger = logging.getLogger(name)
+    return logger
+
+
 def setup_logger(
     console_log_level: str = "info",
     log_folder: str = None,
@@ -60,11 +65,6 @@ def setup_logger(
         raise RuntimeError
 
     return get_logger()
-
-
-def get_logger(name: str = "__name__"):
-    logger = logging.getLogger(name)
-    return logger
 
 
 def deprecated(func):
