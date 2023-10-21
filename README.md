@@ -4,10 +4,11 @@
 Multivew matcher for COLMAP. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database. It supports both CLI and GUI.
 
 Key features:
-[X] multiview
-[X] large format images
-[X] SOTA deep-learning and hand-crafted features
-[X] full combatibility with COLMAP
+- [X] multiview
+- [X] large format images
+- [X] SOTA deep-learning and hand-crafted features
+- [X] full combatibility with COLMAP
+- [ ] support image retrieval with deep-learning local features
 
 The repo is under construction but it already works with SuperGlue, LightGlue, ALIKE, DISK, Key.Net+HardNet8, ORB.
 
