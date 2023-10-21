@@ -1,3 +1,4 @@
+import cv2
 from pathlib import Path
 
 
@@ -23,6 +24,10 @@ class ImageList:
         for image in all_imgs:
             self.add_image(i, image)
             i += 1
+        
+        self._img_format = Path(all_imgs[0]).suffix
+        image = cv2.imread(str(Path(all_imgs[0])))
+        self._height, self._width = image.shape[:2]
 
     def __len__(self):
         return len(self.images)
@@ -51,3 +56,15 @@ class ImageList:
     @property
     def img_paths(self):
         return [im.absolute_path for im in self.images]
+
+    @property
+    def img_format(self):
+        return self._img_format
+    
+    @property
+    def width(self):
+        return self._width
+
+    @property
+    def height(self):
+        return self._height

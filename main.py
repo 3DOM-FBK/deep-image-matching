@@ -146,7 +146,15 @@ def main(debug: bool = False):
     logger.info(f"\tProcessed pairs: {len(pairs)}")
 
     # Export in colmap format
-    ExportToColmap(keypoints, correspondences, output_dir)
+    ExportToColmap(
+        images,
+        img_matching.img_format,
+        img_matching.width,
+        img_matching.height,
+        keypoints,
+        correspondences,
+        output_dir,
+        )
 
 
 if __name__ == "__main__":
