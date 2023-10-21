@@ -1,4 +1,5 @@
-[![Static Badge](https://img.shields.io/badge/Powered_by-Kornia-green)](https://github.com/kornia/kornia)
+[![Static Badge](https://img.shields.io/badge/Powered_by-Kornia-green)](https://github.com/kornia/kornia) [![Static Badge](https://img.shields.io/badge/Matches_for-COLMAP-red)]https://github.com/colmap/colmap
+
 
 Multivew matcher for COLMAP. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database.
 The repo is under construction but it already works with SuperGlue, LightGlue, ALIKE, DISK, Key.Net+HardNet8, ORB.
