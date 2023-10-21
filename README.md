@@ -1,4 +1,4 @@
-[![Static Badge](https://img.shields.io/badge/Powered_by-Kornia-green) (https://github.com/kornia/kornia)]
+[![Static Badge](https://img.shields.io/badge/Powered_by-Kornia-green)](https://github.com/kornia/kornia)
 
 # Example usage
 Before running check options with `python ./main.py --help`, then:
