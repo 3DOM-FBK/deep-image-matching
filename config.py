@@ -1,8 +1,8 @@
-from deep_image_matching import Quality, TileSelection, GeometricVerification
+from src.deep_image_matching import Quality, TileSelection, GeometricVerification
 
 custom_config = {
     "general": {
-        "detector_and_descriptor": "ALIKE",  # To be used in combination with --detect_and_describe option. ALIKE, ORB, DISK, SuperPoint, KeyNetAffNetHardNet
+        #"detector_and_descriptor": "ALIKE",  # To be used in combination with --detect_and_describe option. ALIKE, ORB, DISK, SuperPoint, KeyNetAffNetHardNet
         "quality": Quality.HIGH,
         "tile_selection": TileSelection.NONE,
         "grid": [3, 2],
