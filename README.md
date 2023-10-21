@@ -7,6 +7,20 @@ The repo is under construction but it already works with SuperGlue, LightGlue, A
 
 Feel free to collaborate!
 
+## Install and run
+
+Install in a conda environment:
+
+```bash
+conda create -n deep-image-matching python=3.9.17
+conda activate deep-image-matching
+```
+Install pytorch. See [https://pytorch.org/get-started/locally/#linux-pip](https://pytorch.org/get-started/locally/#linux-pip)
+```bash
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
 ## Example usage
 Before running check options with `python ./main.py --help`, then:
 ```
