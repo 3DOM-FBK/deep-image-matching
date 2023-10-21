@@ -1,4 +1,4 @@
-[![Powered by Python Robotics]](https://github.com/kornia/kornia)
+[![Powered by KORNIA]] (https://github.com/kornia/kornia)
 
 # Example usage
 Before running check options with `python ./main.py --help`, then:
