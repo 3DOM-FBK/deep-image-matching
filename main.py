@@ -3,9 +3,9 @@ import argparse
 from easydict import EasyDict as edict
 from pathlib import Path
 
-from deep_image_matching.image_matching import ImageMatching
-from deep_image_matching.io.export_to_colmap import ExportToColmap
-from deep_image_matching.utils import setup_logger
+from src.deep_image_matching.image_matching import ImageMatching
+from src.deep_image_matching.io.export_to_colmap import ExportToColmap
+from src.deep_image_matching.utils import setup_logger
 
 from config import custom_config
 
@@ -39,7 +39,7 @@ def parse_args():
     parser.add_argument(
         "-f",
         "--features",
-        choices=["superglue", "lightglue", "loftr", "detect_and_describe"],
+        choices=["superglue", "lightglue", "loftr", "ALIKE", "ORB", "DISK", "SuperPoint", "KeyNetAffNetHardNet"],
     )
     parser.add_argument("-n", "--max_features", type=int, required=True)
     # parser.add_argument(
@@ -96,8 +96,14 @@ def main(debug: bool = False):
     imgs_dir = Path(args.images)
     output_dir = Path(args.outs)
     matching_strategy = args.strategy
-    local_features = args.features
     max_features = args.max_features
+
+    if args.features in [ "superglue", "lightglue", "loftr"]:
+        local_features = args.features
+    else:
+        local_features = "detect_and_describe"
+        custom_config["general"]["detector_and_descriptor"] = args.features
+   
 
     if output_dir.exists() and output_dir.is_dir():
         shutil.rmtree(output_dir)
@@ -129,6 +135,6 @@ def main(debug: bool = False):
 
 
 if __name__ == "__main__":
-    main(debug=True)
+    main(debug=False)
 
     logger.info("Done")
