@@ -18,19 +18,16 @@ See other examples in run.bat. If you want customize detector and descpritor opt
 
 
 # TODO
-- [ ] organize repo as Francesco repo
-- [ ] understand how to deal with other external github repository
 - [X] added kornia features
 - [X] multiview works for TileSelection.NONE
 - [ ] extend to tile processing
 - [X] move configuration params superglue and loftr in config.py
 - [ ] repo works per pairs - avoid extract again keypoints on already processed images
 - [ ] add image retrieval with global descriptors
-- [ ] add GUI
+- [X] add GUI
 - [ ] lightglue with DISK features to be implemented
-- [ ] self.max_feat_numb: To be checked that works on all detectors and matchers (probably no). See image_matching.py
+- [ ] self.max_feat_numb: To be checked that works on all detectors and matchers (probably no). See image_matching.py. For alike do not work
 - [ ] manage rotation, while majority of local features do not deal with them
 - [ ] add ALIKED
 - [ ] add SIFT from opencv
 - [ ] look for open source SuperPoint
-- [ ] 
