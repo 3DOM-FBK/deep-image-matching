@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
+from pathlib import Path
 
 class MatcherApp:
     def __init__(self, master):
@@ -13,11 +14,13 @@ class MatcherApp:
 
         self.out_dir = self.create_folder_button("Output directory")
 
-        self.pair_file = self.create_file_button("If matching strategy == 'custom_pairs'", "Choose pairs file")
+        self.pair_file = self.create_file_button("If matching strategy == 'custom_pairs':", "Choose pairs file")
 
-        self.int_entry = self.create_int_entry("If matching strategy == 'sequential', insert image overlap:")
+        self.overlap = self.create_int_entry("If matching strategy == 'sequential', insert image overlap:")
 
-        self.strategy = self.create_combobox("Choose local features:", ["SuperGlue", "LightGlue", "LoFTR", "ALIKE", "SuperPoint", "Key.Net+HardNet8", "DISK", "ORB"])
+        self.max_features = self.create_int_entry("Max number of local features per image:")
+
+        self.local_feat = self.create_combobox("Choose local features:", ["superglue", "lightglue", "loftr", "ALIKE", "superpoint", "KeyNetAffNetHardNet", "DISK", "ORB"])
 
         self.error_label = tk.Label(master, text="", fg="red")
         self.error_label.pack()
@@ -30,15 +33,29 @@ class MatcherApp:
         image_dir = self.image_dir.get()
         out_dir = self.out_dir.get()
         pair_file = self.pair_file.get()
-        image_overlap = self.int_entry.get()
+        image_overlap = self.overlap.get()
+        local_feat = self.local_feat.get()
+        max_features = self.max_features.get()
 
         print("image_dir:", image_dir)
         print("out_dir:", out_dir)
         print("strategy:", strategy)
         print("pair_file:", pair_file)
         print("image overlap:", image_overlap)
+        print("local_feat", local_feat)
+        print("max_features:", max_features)
 
         self.master.quit()
+
+    def get_values(self):
+        strategy = self.strategy.get()
+        image_dir = self.image_dir.get()
+        out_dir = self.out_dir.get()
+        pair_file = self.pair_file.get()
+        image_overlap = self.overlap.get()
+        local_feat = self.local_feat.get()
+        max_features = self.max_features.get()
+        return strategy, Path(image_dir), Path(out_dir), pair_file, int(image_overlap), local_feat, int(max_features)
 
     def create_combobox(self, label_text, values):
         label = tk.Label(self.master, text=label_text)
@@ -84,6 +101,7 @@ def gui():
     root = tk.Tk()
     app = MatcherApp(root)
     root.mainloop()
+    return app.get_values()
 
 if __name__ == "__main__":
     gui()

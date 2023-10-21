@@ -6,6 +6,7 @@ from pathlib import Path
 from src.deep_image_matching.image_matching import ImageMatching
 from src.deep_image_matching.io.export_to_colmap import ExportToColmap
 from src.deep_image_matching.utils import setup_logger
+from src.deep_image_matching.gui import gui
 
 from config import custom_config
 
@@ -16,6 +17,11 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Matching with hand-crafted and deep-learning based local features and image retrieval."
     )
+
+    parser.add_argument(
+        "interface", type=str, help="Run command line interface", choices=["cli", "gui"]
+    )
+
     parser.add_argument(
         "-i", "--images", type=str, help="Input image folder", required=True
     )
@@ -42,9 +48,7 @@ def parse_args():
         choices=["superglue", "lightglue", "loftr", "ALIKE", "ORB", "DISK", "SuperPoint", "KeyNetAffNetHardNet"],
     )
     parser.add_argument("-n", "--max_features", type=int, required=True)
-    # parser.add_argument(
-    #     "-v", "--verbose", action="store_true", help="Enable verbose mode"
-    # )
+
     args = parser.parse_args()
 
     return args
@@ -66,43 +70,54 @@ def main(debug: bool = False):
     else:
         args = parse_args()
 
-    if args.strategy == "retrieval" and args.retrieval is None:
-        raise ValueError(
-            "--retrieval option is required when --strategy is set to retrieval"
-        )
-    elif args.strategy == "retrieval":
-        retrieval_option = args.retrieval
-    else:
+
+    if args.interface == "cli":
+        if args.strategy == "retrieval" and args.retrieval is None:
+            raise ValueError(
+                "--retrieval option is required when --strategy is set to retrieval"
+            )
+        elif args.strategy == "retrieval":
+            retrieval_option = args.retrieval
+        else:
+            retrieval_option = None
+
+        if args.strategy == "custom_pairs" and args.pairs is None:
+            raise ValueError(
+                "--pairs option is required when --strategy is set to custom_pairs"
+            )
+        elif args.strategy == "custom_pairs":
+            pair_file = Path(args.pairs)
+        else:
+            pair_file = None
+
+        if args.strategy == "sequential" and args.overlap is None:
+            raise ValueError(
+                "--overlap option is required when --strategy is set to sequential"
+            )
+        elif args.strategy == "sequential":
+            overlap = args.overlap
+        else:
+            overlap = None
+
+        imgs_dir = Path(args.images)
+        output_dir = Path(args.outs)
+        matching_strategy = args.strategy
+        max_features = args.max_features
+
+        if args.features in [ "superglue", "lightglue", "loftr"]:
+            local_features = args.features
+        else:
+            local_features = "detect_and_describe"
+            custom_config["general"]["detector_and_descriptor"] = args.features
+        
+    elif args.interface == "gui":
+        matching_strategy, imgs_dir, output_dir, pair_file, overlap, feat, max_features = gui()
         retrieval_option = None
-
-    if args.strategy == "custom_pairs" and args.pairs is None:
-        raise ValueError(
-            "--pairs option is required when --strategy is set to custom_pairs"
-        )
-    elif args.strategy == "custom_pairs":
-        pair_file = Path(args.pairs)
-    else:
-        pair_file = None
-
-    if args.strategy == "sequential" and args.overlap is None:
-        raise ValueError(
-            "--overlap option is required when --strategy is set to sequential"
-        )
-    elif args.strategy == "sequential":
-        overlap = args.overlap
-    else:
-        overlap = None
-
-    imgs_dir = Path(args.images)
-    output_dir = Path(args.outs)
-    matching_strategy = args.strategy
-    max_features = args.max_features
-
-    if args.features in [ "superglue", "lightglue", "loftr"]:
-        local_features = args.features
-    else:
-        local_features = "detect_and_describe"
-        custom_config["general"]["detector_and_descriptor"] = args.features
+        if feat in [ "superglue", "lightglue", "loftr"]:
+            local_features = feat
+        else:
+            local_features = "detect_and_describe"
+            custom_config["general"]["detector_and_descriptor"] = feat
    
 
     if output_dir.exists() and output_dir.is_dir():
