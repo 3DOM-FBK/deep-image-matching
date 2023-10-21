@@ -1,0 +1,2 @@
+- [ ] repo works per pairs - avoid extract again keypoints on already processed images
+- [ ] self.max_feat_numb: To be checked that works on all detectors and matchers (probably no). See image_matching.py. For alike do not work
