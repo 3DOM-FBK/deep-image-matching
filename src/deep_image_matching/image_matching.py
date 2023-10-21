@@ -68,6 +68,18 @@ class ImageMatching:
             )
         elif len(images) == 1:
             raise ValueError("Image folder must contain at least two images")
+    
+    @property
+    def img_format(self):
+        return self.image_list.img_format
+
+    @property
+    def width(self):
+        return self.image_list.width
+    
+    @property
+    def height(self):
+        return self.image_list.height
 
     def img_names(self):
         return self.image_list.img_names
