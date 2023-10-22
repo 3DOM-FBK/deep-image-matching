@@ -45,7 +45,16 @@ def parse_args():
     parser.add_argument(
         "-f",
         "--features",
-        choices=["superglue", "lightglue", "loftr", "ALIKE", "ORB", "DISK", "SuperPoint", "KeyNetAffNetHardNet"],
+        choices=[
+            "superglue",
+            "lightglue",
+            "loftr",
+            "ALIKE",
+            "ORB",
+            "DISK",
+            "SuperPoint",
+            "KeyNetAffNetHardNet",
+        ],
     )
     parser.add_argument("-n", "--max_features", type=int, required=True)
 
@@ -58,6 +67,7 @@ def main(debug: bool = False):
     if debug:
         args = edict(
             {
+                "interface": "cli",
                 "images": "data",
                 "outs": "res",
                 "strategy": "sequential",
@@ -69,7 +79,6 @@ def main(debug: bool = False):
         )
     else:
         args = parse_args()
-
 
     if args.interface == "cli":
         if args.strategy == "retrieval" and args.retrieval is None:
@@ -104,21 +113,28 @@ def main(debug: bool = False):
         matching_strategy = args.strategy
         max_features = args.max_features
 
-        if args.features in [ "superglue", "lightglue", "loftr"]:
+        if args.features in ["superglue", "lightglue", "loftr"]:
             local_features = args.features
         else:
             local_features = "detect_and_describe"
             custom_config["general"]["detector_and_descriptor"] = args.features
-        
+
     elif args.interface == "gui":
-        matching_strategy, imgs_dir, output_dir, pair_file, overlap, feat, max_features = gui()
+        (
+            matching_strategy,
+            imgs_dir,
+            output_dir,
+            pair_file,
+            overlap,
+            feat,
+            max_features,
+        ) = gui()
         retrieval_option = None
-        if feat in [ "superglue", "lightglue", "loftr"]:
+        if feat in ["superglue", "lightglue", "loftr"]:
             local_features = feat
         else:
             local_features = "detect_and_describe"
             custom_config["general"]["detector_and_descriptor"] = feat
-   
 
     if output_dir.exists() and output_dir.is_dir():
         shutil.rmtree(output_dir)
@@ -154,10 +170,10 @@ def main(debug: bool = False):
         keypoints,
         correspondences,
         output_dir,
-        )
+    )
 
 
 if __name__ == "__main__":
-    main(debug=False)
+    main(debug=True)
 
     logger.info("Done")
