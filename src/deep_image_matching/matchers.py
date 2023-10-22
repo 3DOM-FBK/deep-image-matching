@@ -170,16 +170,16 @@ class LightGlueMatcher(ImageMatcherBase):
                 feats1 = self.extractor.extract(image1_)
 
             # match the features
-            matches01 = self.matcher({"image0": feats0, "image1": feats1})
+            match_res = self.matcher({"image0": feats0, "image1": feats1})
 
             # remove batch dimension
             feats0, feats1, matches01 = [
-                self._rbd(x) for x in [feats0, feats1, matches01]
+                self._rbd(x) for x in [feats0, feats1, match_res]
             ]
 
         feats0 = {k: v.cpu().numpy() for k, v in feats0.items()}
         feats1 = {k: v.cpu().numpy() for k, v in feats1.items()}
-        matches01 = {
+        match_res = {
             k: v.cpu().numpy()
             for k, v in matches01.items()
             if isinstance(v, torch.Tensor)
@@ -196,8 +196,11 @@ class LightGlueMatcher(ImageMatcherBase):
             descriptors=feats1["descriptors"].T,
             scores=feats1["keypoint_scores"],
         )
-        matches0 = matches01["matches0"]
-        mconf = matches01["scores"]
+
+        # Get matching arrays
+        matches0 = match_res["matches0"]
+        matches01 = match_res["matches"]
+        mconf = match_res["scores"]
 
         # # For debugging
         # def print_shapes_in_dict(dic: dict):
@@ -215,10 +218,9 @@ class LightGlueMatcher(ImageMatcherBase):
         #     "matches0": matches0,
         #     "matches01": matches,
         # }
-
         # return features0, features1, matches_dict, mconf
 
-        return features0, features1, matches0, mconf
+        return features0, features1, matches0, matches01, mconf
 
 
 class SuperGlueMatcher(ImageMatcherBase):
@@ -289,18 +291,21 @@ class SuperGlueMatcher(ImageMatcherBase):
             descriptors=pred["descriptors1"],
             scores=pred["scores1"],
         )
+
+        # get matching array
         matches0 = pred["matches0"]
+        matches01 = None
 
         # Create a match confidence array
         valid = matches0 > -1
         mconf = features0.scores[valid]
 
-        matches_dict = {
-            "matches0": matches0,
-            "matches01": None,
-        }
+        # matches_dict = {
+        #     "matches0": matches0,
+        #     "matches01": None,
+        # }
 
-        return features0, features1, matches_dict, mconf
+        return features0, features1, matches0, matches01, mconf
 
     def viz_matches(
         self,

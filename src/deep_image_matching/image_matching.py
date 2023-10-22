@@ -13,6 +13,8 @@ from .matchers import (
 )
 from .local_features import LocalFeatureExtractor
 from .geometric_verification import geometric_verification
+from .consts import GeometricVerification
+
 
 logger = logging.getLogger(__name__)
 
@@ -148,22 +150,35 @@ class ImageMatching:
             if len(image1.shape) == 2:
                 image1 = cv2.cvtColor(image1, cv2.COLOR_GRAY2RGB)
 
+            # By Luca
+            # features0, features1, matches, mconf = self._matcher.match(
+            #     image0,
+            #     image1,
+            #     geometric_verification=GeometricVerification.NONE,
+            # )
+            # ktps0 = features0.keypoints
+            # ktps1 = features1.keypoints
+            # self.keypoints[im0.name] = ktps0
+            # self.keypoints[im1.name] = ktps1
+
             self._matcher.match(
                 image0,
                 image1,
-                **self.custom_config,
+                geometric_verification=GeometricVerification.NONE,
             )
-
-            # features0, features1, matches, mconf =
-
-            ktps0 = features0.keypoints
-            ktps1 = features1.keypoints
-
+            ktps0 = self._matcher._features0.keypoints
+            ktps1 = self._matcher._features1.keypoints
             self.keypoints[im0.name] = ktps0
             self.keypoints[im1.name] = ktps1
 
+            matches0 = self._matcher._matches0
+            matches01 = self._matcher._matches01
+            matches_dict = {
+                "matches0": matches0,
+                "matches01": matches01,
+            }
             self.correspondences[(im0, im1)] = ReorganizeMatches(
-                ktps0.shape[0], matches
+                ktps0.shape[0], matches_dict
             )
 
             (

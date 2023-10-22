@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_CONFIG = {
     "quality": Quality.HIGH,
     "tile_selection": TileSelection.NONE,
-    "geometric_verification": GeometricVerification.PYDEGENSAC,
+    "geometric_verification": GeometricVerification.NONE,
     "max_keypoints": 4096,
     "force_cpu": False,
     "save_dir": "results",
@@ -125,15 +125,32 @@ class ImageMatcherBase:
         )
         logger.info(f"Running inference on device {self._device}")
 
-        # initialize additional variable members for storing matched
-        # keypoints descriptors and scores
-        self._mkpts0 = None  # matched keypoints on image 0
-        self._mkpts1 = None  # matched keypoints on image 1
-        self._descriptors0 = None  # descriptors of mkpts on image 0
-        self._descriptors1 = None  # descriptors of mkpts on image 1
-        self._scores0 = None  # scores of mkpts on image 0
-        self._scores1 = None  # scores of mkpts on image 1
-        self._mconf = None  # match confidence (i.e., scores0 of the valid matches)
+        # initialize variable members to None
+
+        # All features detected on image 0 (FeaturesBase object with N keypoints)
+        self._features0 = None
+        # All features detected on image 1 (FeaturesBase object with M keypoints)
+        self._features1 = None
+        # Index of the matched keypoints from image 0 to image 1 (N, array)
+        self._matches0 = None
+        # Index of the matches in both the images. The first column contains the index of the mathced keypoints in features0.keypoints, the second column contains the index of the matched keypoints in features1.keypoints (Kx2 array)
+        self._matches01 = None
+        # Matched keypoints on image 0 (Kx2 array, where K is the number of matches)
+        self._mkpts0 = None
+        # Matched keypoints on image 1 (Kx2 array)
+        self._mkpts1 = None
+        # descriptors of mkpts on image 0 (256xK array)
+        self._descriptors0 = None
+        # descriptors of mkpts on image 1 (256xK array)
+        self._descriptors1 = None
+        # scores of mkpts on image 0 (K, array)
+        self._scores0 = None
+        # scores of mkpts on image 1 (K, array)
+        self._scores1 = None
+        # match confidence (i.e., scores0 of the valid matches) (K, array)
+        self._mconf = None
+        # Fundamental matrix (3x3 array)
+        self._F = None
 
     @property
     def device(self):
@@ -169,6 +186,9 @@ class ImageMatcherBase:
 
     def reset(self):
         """Reset the matcher by cleaning the features and matches"""
+        self._features0 = None
+        self._features1 = None
+        self._matches0 = None
         self._mkpts0 = None
         self._mkpts1 = None
         self._descriptors0 = None
@@ -182,7 +202,7 @@ class ImageMatcherBase:
         image0: np.ndarray,
         image1: np.ndarray,
         **config,
-    ) -> Tuple[FeaturesBase, FeaturesBase, np.ndarray, np.ndarray]:
+    ) -> Tuple[FeaturesBase, FeaturesBase, np.ndarray, np.ndarray, np.ndarray]:
         """Matches keypoints and descriptors in two given images (no
         matter if they are tiles or full-res images).
 
@@ -230,6 +250,10 @@ class ImageMatcherBase:
 
         # If a custom config is passed, update the default config
         config = {**self._config, **config}
+        check_matching_config(config)
+        self._quality = config["quality"]
+        self._tiling = config["tile_selection"]
+        self._gv = config["geometric_verification"]
 
         # Resize images if needed
         image0_, image1_ = self._resize_images(self._quality, image0, image1)
@@ -237,32 +261,34 @@ class ImageMatcherBase:
         # Perform matching (on tiles or full images)
         if self._tiling == TileSelection.NONE:
             logger.info("Matching full images...")
-            features0, features1, matches0, mconf = self._match_pairs(
+            features0, features1, matches0, matches01, mconf = self._match_pairs(
                 image0_, image1_, **config
             )
 
         else:
             logger.info("Matching by tiles...")
-            features0, features1, matches0, mconf = self._match_by_tile(
+            features0, features1, matches0, matches01, mconf = self._match_by_tile(
                 image0_, image1_, **config
             )
 
         # Retrieve original image coordinates if matching was performed on up/down-sampled images
-        self._features0, self._features1 = self._resize_features(
+        features0, features1 = self._resize_features(
             self._quality, features0, features1
         )
 
         # Added by Luca
-        return self._features0, self._features1, matches0, mconf
+        # data4luca = [deepcopy(x) for x in [features0, features1, matches0, mconf]]
+        # return self._features0, self._features1, matches0, mconf
 
         # Store features as class members
         try:
-            self._store_matched_features(self._features0, self._features1, matches0)
-            self._mconf = mconf
+            self._store_matched_features(
+                features0, features1, matches0, matches01, mconf
+            )
         except Exception as e:
-            raise NotImplementedError(
+            raise RuntimeError(
                 f"""{e}. 
-                Error when storing matches. Implement your own _store_matched_features() method if the output of your _match_pairs function is different from FeaturesBase."""
+                Error when storing matches. Implement your own _store_matched_features() method if the output of your _match_pairs function is different from that expected by the ImageMatcherBase class."""
             )
         self.timer.update("matching")
         logger.info("Matching done!")
@@ -340,7 +366,7 @@ class ImageMatcherBase:
 
         # Select tile pairs to match
         tile_pairs = self._tile_selection(
-            image0, image1, t0_lims, t1_lims, tile_selection, config=config
+            image0, image1, t0_lims, t1_lims, tile_selection, **config
         )
 
         # Initialize empty array for storing matched keypoints, descriptors and scores
@@ -360,7 +386,7 @@ class ImageMatcherBase:
             lim1 = t1_lims[tidx1]
             tile0 = self._tiler.extract_patch(image0, lim0)
             tile1 = self._tiler.extract_patch(image1, lim1)
-            features0, features1, matches0, conf = self._match_pairs(
+            features0, features1, matches0, matches01, conf = self._match_pairs(
                 tile0, tile1, **config
             )
 
@@ -430,6 +456,7 @@ class ImageMatcherBase:
 
         # Create a 1-to-1 matching array
         matches0 = np.arange(mkpts0_full.shape[0])
+        matches01 = None
 
         # Create a match confidence array
         valid = matches0 > -1
@@ -437,7 +464,7 @@ class ImageMatcherBase:
 
         logger.info("Matching by tile completed.")
 
-        return features0, features1, matches0, mconf
+        return features0, features1, matches0, matches01, mconf
 
     def _frame2tensor(self, image: np.ndarray) -> torch.Tensor:
         """Normalize the image tensor and add batch dimension."""
@@ -638,6 +665,8 @@ class ImageMatcherBase:
         features0: FeaturesBase,
         features1: FeaturesBase,
         matches0: np.ndarray,
+        matches01: np.ndarray = None,
+        mconf: np.ndarray = None,
         force_overwrite: bool = True,
     ) -> bool:
         """Stores keypoints, descriptors and scores of the matches in the object's members."""
@@ -660,8 +689,19 @@ class ImageMatcherBase:
             else:
                 logger.warning("Matches already stored. Overwrite them")
 
+        # Store features as class members
+        self._features0 = features0
+        self._features1 = features1
+
+        # Store matching arrays as class members
+        self._matches0 = matches0
+        self._matches01 = matches01
+
+        # Store match confidence (store None if not available)
+        self._mconf = mconf
+
+        # Stored matched keypoints
         valid = matches0 > -1
-        # self._valid = valid
         idx1 = matches0[valid]
         self._mkpts0 = features0.keypoints[valid]
         self._mkpts1 = features1.keypoints[idx1]

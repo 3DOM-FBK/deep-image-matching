@@ -13,9 +13,9 @@ class TileSelection(Enum):
 class GeometricVerification(Enum):
     """Enumeration for geometric verification methods."""
 
-    NONE = 1
-    PYDEGENSAC = 2
-    MAGSAC = 3
+    NONE = 0
+    PYDEGENSAC = 1
+    MAGSAC = 2
 
 
 class Quality(Enum):
