@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 from pathlib import Path
+import logging
 
 from .pairs_generator import PairsGenerator
 from .image import ImageList
@@ -12,6 +13,8 @@ from .matchers import (
 )
 from .local_features import LocalFeatureExtractor
 from .geometric_verification import geometric_verification
+
+logger = logging.getLogger(__name__)
 
 
 def ApplyGeometricVer(kpts0, kpts1, matches):
@@ -45,7 +48,7 @@ class ImageMatching:
         retrieval_option: str,
         overlap: int,
         local_features: str,
-        custom_config: str,
+        custom_config: dict,
         max_feat_numb: int,
     ):
         self.matching_strategy = matching_strategy
@@ -68,7 +71,36 @@ class ImageMatching:
             )
         elif len(images) == 1:
             raise ValueError("Image folder must contain at least two images")
-    
+
+        # Initialize matcher
+        # first_img = cv2.imread(str(self.image_list[0].absolute_path))
+        # w_size = first_img.shape[1]
+        # self.custom_config["general"]["w_size"] = w_size
+        cfg = self.custom_config["general"]
+        if self.local_features == "lightglue":
+            self._matcher = LightGlueMatcher(**cfg)
+        elif self.local_features == "superglue":
+            self._matcher = SuperGlueMatcher(**cfg)
+        elif self.local_features == "loftr":
+            self._matcher = LOFTRMatcher(**cfg)
+        elif self.local_features == "detect_and_describe":
+            self.custom_config["ALIKE"]["n_limit"] = self.max_feat_numb
+            detector_and_descriptor = self.custom_config["general"][
+                "detector_and_descriptor"
+            ]
+            local_feat_conf = self.custom_config[detector_and_descriptor]
+            local_feat_extractor = LocalFeatureExtractor(
+                detector_and_descriptor,
+                local_feat_conf,
+                self.max_feat_numb,
+            )
+            self._matcher = DetectAndDescribe(**cfg)
+            cfg["general"]["local_feat_extractor"] = local_feat_extractor
+        else:
+            raise ValueError(
+                "Invalid local feature extractor. Supported extractors: lightglue, superglue, loftr, detect_and_describe"
+            )
+
     @property
     def img_format(self):
         return self.image_list.img_format
@@ -76,7 +108,7 @@ class ImageMatching:
     @property
     def width(self):
         return self.image_list.width
-    
+
     @property
     def height(self):
         return self.image_list.height
@@ -104,39 +136,8 @@ class ImageMatching:
         return self.pairs
 
     def match_pairs(self):
-        first_img = cv2.imread(str(self.image_list[0].absolute_path))
-        w_size = first_img.shape[1]
-        self.custom_config["general"]["w_size"] = w_size
-
-        if self.local_features == "lightglue":
-            cfg = self.custom_config
-            matcher = LightGlueMatcher(**cfg)
-
-        if self.local_features == "superglue":
-            cfg = self.custom_config
-            matcher = SuperGlueMatcher(**cfg)
-
-        if self.local_features == "loftr":
-            cfg = self.custom_config
-            matcher = LOFTRMatcher(**cfg)
-
-        if self.local_features == "detect_and_describe":
-            self.custom_config["ALIKE"]["n_limit"] = self.max_feat_numb
-            detector_and_descriptor = self.custom_config["general"][
-                "detector_and_descriptor"
-            ]
-            local_feat_conf = self.custom_config[detector_and_descriptor]
-            local_feat_extractor = LocalFeatureExtractor(
-                detector_and_descriptor,
-                local_feat_conf,
-                self.max_feat_numb,
-            )
-            cfg = self.custom_config
-            matcher = DetectAndDescribe(**cfg)
-            cfg["general"]["local_feat_extractor"] = local_feat_extractor
-
         for pair in self.pairs:
-            print(pair)
+            logger.info(f"Matching image pair: {pair[0].name} - {pair[1].name}")
             im0 = pair[0]
             im1 = pair[1]
             image0 = cv2.imread(str(im0), cv2.COLOR_RGB2BGR)
@@ -147,11 +148,13 @@ class ImageMatching:
             if len(image1.shape) == 2:
                 image1 = cv2.cvtColor(image1, cv2.COLOR_GRAY2RGB)
 
-            features0, features1, matches, mconf = matcher.match(
+            self._matcher.match(
                 image0,
                 image1,
-                **cfg,
+                **self.custom_config,
             )
+
+            # features0, features1, matches, mconf =
 
             ktps0 = features0.keypoints
             ktps1 = features1.keypoints

@@ -1,10 +1,10 @@
 # Specific
-venv/
 data/
 assets/
+res/
 
 # VScode
-# .vscode/
+.vscode/
 *.~lock*
 
 # Byte-compiled / optimized / DLL files

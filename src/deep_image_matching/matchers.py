@@ -16,7 +16,7 @@ from .consts import (
     Quality,
     TileSelection,
 )
-from .core import FeaturesBase, ImageMatcherBase
+from .matcher_base import FeaturesBase, ImageMatcherBase
 from .tiling import Tiler
 from .thirdparty.LightGlue.lightglue import LightGlue, SuperPoint
 from .thirdparty.SuperGlue.models.matching import Matching
@@ -107,7 +107,7 @@ class LightGlueMatcher(ImageMatcherBase):
         """Initializes a LightGlueMatcher with Kornia"""
 
         self._localfeatures = "superpoint"
-        super().__init__(**config["general"])
+        super().__init__(**config)
 
     # Override _frame2tensor method to shift channel first as batch dimension
     def _frame2tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor:
@@ -146,8 +146,8 @@ class LightGlueMatcher(ImageMatcherBase):
             Tuple[FeaturesBase, FeaturesBase, np.ndarray]: a tuple containing the features of the first image, the features of the second image, and the matches between them
         """
 
-        max_keypoints = config.get("max_keypoints", 4096)
         resize = config.get("resize", None)
+        max_keypoints = config["max_keypoints"]
 
         image0_ = self._frame2tensor(image0, self._device)
         image1_ = self._frame2tensor(image1, self._device)
@@ -198,25 +198,27 @@ class LightGlueMatcher(ImageMatcherBase):
         )
         matches0 = matches01["matches0"]
         mconf = matches01["scores"]
-        matches = matches01["matches"]
 
         # # For debugging
         # def print_shapes_in_dict(dic: dict):
         #     for k, v in dic.items():
         #         shape = v.shape if isinstance(v, np.ndarray) else None
         #         print(f"{k} shape: {shape}")
-
         # def print_features_shape(features: FeaturesBase):
         #     print(f"keypoints: {features.keypoints.shape}")
         #     print(f"descriptors: {features.descriptors.shape}")
         #     print(f"scores: {features.scores.shape}")
 
-        matches_dict = {
-            "matches0": matches0,
-            "matches01": matches,
-        }
+        # Added by Luca
+        # matches = matches01["matches"]
+        # matches_dict = {
+        #     "matches0": matches0,
+        #     "matches01": matches,
+        # }
 
-        return features0, features1, matches_dict, mconf
+        # return features0, features1, matches_dict, mconf
+
+        return features0, features1, matches0, mconf
 
 
 class SuperGlueMatcher(ImageMatcherBase):
@@ -554,7 +556,7 @@ class LOFTRMatcher(ImageMatcherBase):
 
 
 if __name__ == "__main__":
-    from .logger import setup_logger
+    from .utils.logger import setup_logger
 
     setup_logger()
 

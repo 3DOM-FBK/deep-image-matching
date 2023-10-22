@@ -2,18 +2,18 @@ from src.deep_image_matching import Quality, TileSelection, GeometricVerificatio
 
 custom_config = {
     "general": {
-        #"detector_and_descriptor": "ALIKE",  # To be used in combination with --detect_and_describe option. ALIKE, ORB, DISK, SuperPoint, KeyNetAffNetHardNet
+        # "detector_and_descriptor": "ALIKE",  # To be used in combination with --detect_and_describe option. ALIKE, ORB, DISK, SuperPoint, KeyNetAffNetHardNet
         "quality": Quality.HIGH,
-        "tile_selection": TileSelection.NONE,
-        "grid": [3, 2],
-        "overlap": 200,
-        "min_matches_per_tile": 5,
-        "do_viz_tiles": False,
-        "save_dir": None,
         "geometric_verification": GeometricVerification.PYDEGENSAC,
-        "threshold": 1.5,
-        "confidence": 0.999,
+        "gv_threshold": 1.5,
+        "gv_confidence": 0.999,
+        "tile_selection": TileSelection.NONE,
         "force_cpu": False,
+        "save_dir": "res",
+        "min_matches_per_tile": 5,
+        "tiling_grid": [3, 2],
+        "tiling_overlap": 200,
+        "do_viz_tiles": False,
         "kornia_matcher": "smnn",  #'nn' or 'snn' or 'mnn' or 'smnn'
         "ratio_threshold": 0.95,  # valid range [0-1]
     },
