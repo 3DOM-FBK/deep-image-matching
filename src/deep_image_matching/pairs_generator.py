@@ -1,5 +1,8 @@
 from typing import List, Union
 from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def SequentialPairs(img_list: List[Union[str, Path]], overlap: int) -> List[tuple]:
@@ -27,32 +30,32 @@ class PairsGenerator:
     def __init__(
         self,
         img_paths: List[Path],
-        matching_strategy: str,
-        retrieval_option: Union[str, None],
-        overlap: int,
+        strategy: str,
+        retrieval_option: Union[str, None] = None,
+        overlap: int = 1,
     ) -> None:
         self.img_paths = img_paths
-        self.matching_strategy = matching_strategy
+        self.strategy = strategy
         self.retrieval_option = retrieval_option
         self.overlap = overlap
 
     def bruteforce(self):
-        print("\nBruteforce matching, generating pairs ..")
+        logger.info("Bruteforce matching, generating pairs ..")
         pairs = BruteForce(self.img_paths, self.overlap)
-        print("N of pairs:", len(pairs))
+        logger.info(f"Number of pairs: {len(pairs)}")
         return pairs
 
     def sequential(self):
-        print("\nSequential matching, generating pairs ..")
+        logger.info("Sequential matching, generating pairs ..")
         pairs = SequentialPairs(self.img_paths, self.overlap)
-        print("N of pairs:", len(pairs))
+        logger.info(f"Number of pairs: {len(pairs)}")
         return pairs
 
     def retrieval(self):
-        print("Retrieval matching, generating pairs ..")
+        logger.info("Retrieval matching, generating pairs ..")
         raise NotImplementedError("Retrieval needs to be implemented. Exit")
 
     def run(self):
-        generate_pairs = getattr(self, self.matching_strategy)
+        generate_pairs = getattr(self, self.strategy)
         pairs = generate_pairs()
         return pairs

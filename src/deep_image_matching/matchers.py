@@ -104,7 +104,7 @@ class DetectAndDescribe(ImageMatcherBase):
 
 class LightGlueMatcher(ImageMatcherBase):
     def __init__(self, **config) -> None:
-        """Initializes a LightGlueMatcher with Kornia"""
+        """Initializes a LightGlueMatcher"""
 
         self._localfeatures = "superpoint"
         super().__init__(**config)
@@ -146,25 +146,24 @@ class LightGlueMatcher(ImageMatcherBase):
             Tuple[FeaturesBase, FeaturesBase, np.ndarray]: a tuple containing the features of the first image, the features of the second image, and the matches between them
         """
 
-        resize = config.get("resize", None)
-        max_keypoints = config["max_keypoints"]
-
         image0_ = self._frame2tensor(image0, self._device)
         image1_ = self._frame2tensor(image1, self._device)
 
         device = torch.device(self._device if torch.cuda.is_available() else "cpu")
 
         # load the extractor
-        self.extractor = SuperPoint(max_num_keypoints=max_keypoints).eval().to(device)
+        sp_cfg = self._config["SperPoint+LightGlue"]["SuperPoint"]
+        self.extractor = SuperPoint(**sp_cfg).eval().to(device)
+        
         # load the matcher
-        self.matcher = LightGlue(features=self._localfeatures).eval().to(device)
+        sg_cfg = self._config["SperPoint+LightGlue"]["LightGlue"]
+        self.matcher = LightGlue(self._localfeatures, **sg_cfg).eval().to(device)
 
         with torch.inference_mode():
             # extract the features
-            feats0 = self.extractor.extract(image0_, resize=resize)
             try:
-                feats0 = self.extractor.extract(image0_, resize=resize)
-                feats1 = self.extractor.extract(image1_, resize=resize)
+                feats0 = self.extractor.extract(image0_, resize=None)
+                feats1 = self.extractor.extract(image1_, resize=None)
             except:
                 feats0 = self.extractor.extract(image0_)
                 feats1 = self.extractor.extract(image1_)
