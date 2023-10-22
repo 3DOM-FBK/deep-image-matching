@@ -70,7 +70,7 @@ def main(debug: bool = False):
                 "interface": "cli",
                 "images": "data",
                 "outs": "res",
-                "strategy": "sequential",
+                "strategy": "bruteforce",
                 "features": "lightglue",
                 "retrieval": "netvlad",
                 "overlap": 1,
@@ -142,17 +142,16 @@ def main(debug: bool = False):
 
     # Generate pairs and matching
     img_matching = ImageMatching(
-        imgs_dir,
-        matching_strategy,
-        pair_file,
-        retrieval_option,
-        overlap,
-        local_features,
-        custom_config,
-        max_features,
+        imgs_dir=imgs_dir,
+        matching_strategy=matching_strategy,
+        retrieval_option=retrieval_option,
+        local_features=local_features,
+        custom_config=custom_config,
+        max_feat_numb=max_features,
+        pair_file=pair_file,
+        overlap=overlap,
     )
-
-    images = img_matching.img_names()
+    images = img_matching.img_names
     pairs = img_matching.generate_pairs()
     keypoints, correspondences = img_matching.match_pairs()
 

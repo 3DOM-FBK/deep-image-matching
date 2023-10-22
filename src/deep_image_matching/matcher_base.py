@@ -12,29 +12,31 @@ import torch
 from .consts import GeometricVerification, Quality, TileSelection
 from .geometric_verification import geometric_verification
 from .tiling import Tiler
-from .utils import Timer, timeit
+from .utils import Timer
 from .visualization import viz_matches_cv2, viz_matches_mpl
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_CONFIG = {
-    "quality": Quality.HIGH,
-    "tile_selection": TileSelection.NONE,
-    "geometric_verification": GeometricVerification.NONE,
-    "max_keypoints": 4096,
-    "force_cpu": False,
-    "save_dir": "results",
-    "do_viz": False,
-    "fast_viz": True,
-    # "interactive_viz": False,
-    "hide_matching_track": True,
-    "gv_threshold": 1,
-    "gv_confidence": 0.9999,
-    "do_viz_tiles": False,
-    "tiling_grid": [1, 1],
-    "tiling_overlap": 0,
-    "tiling_origin": [0, 0],
-    "min_matches_per_tile": 5,
+    "general": {
+        "quality": Quality.HIGH,
+        "tile_selection": TileSelection.NONE,
+        "geometric_verification": GeometricVerification.NONE,
+        "max_keypoints": 4096,
+        "force_cpu": False,
+        "save_dir": "results",
+        "do_viz": False,
+        "fast_viz": True,
+        # "interactive_viz": False,
+        "hide_matching_track": True,
+        "gv_threshold": 1,
+        "gv_confidence": 0.9999,
+        "do_viz_tiles": False,
+        "tiling_grid": [1, 1],
+        "tiling_overlap": 0,
+        "tiling_origin": [0, 0],
+        "min_matches_per_tile": 5,
+    }
 }
 
 
@@ -45,18 +47,17 @@ class FeaturesBase:
     scores: np.ndarray = None
 
 
-def check_matching_config(config: dict) -> None:
+def check_matching_config(config: dict) -> dict:
     """Check the matching config dictionary for missing keys or invalid values."""
+    config_general = config["general"]
     required_keys = [
         "quality",
         "tile_selection",
         "geometric_verification",
-        "max_keypoints",
         "force_cpu",
         "save_dir",
         "do_viz",
         "fast_viz",
-        # "interactive_viz",
         "hide_matching_track",
         "gv_threshold",
         "gv_confidence",
@@ -66,19 +67,19 @@ def check_matching_config(config: dict) -> None:
         "tiling_origin",
         "min_matches_per_tile",
     ]
-    missing_keys = [key for key in required_keys if key not in config]
+    missing_keys = [key for key in required_keys if key not in config_general]
     if missing_keys:
         raise KeyError(
             f"Missing required keys: {', '.join(missing_keys)} Matcher option dictionary"
         )
-    if not isinstance(config["quality"], Quality):
+    if not isinstance(config_general["quality"], Quality):
         raise TypeError("quality must be a Quality enum")
-    if not isinstance(config["tile_selection"], TileSelection):
+    if not isinstance(config_general["tile_selection"], TileSelection):
         raise TypeError("tile_selection must be a TileSelection enum")
-    if not isinstance(config["geometric_verification"], GeometricVerification):
+    if not isinstance(config_general["geometric_verification"], GeometricVerification):
         raise TypeError("geometric_verification must be a GeometricVerification enum")
-    if not isinstance(config["max_keypoints"], int):
-        raise TypeError("max_keypoints must be an integer")
+
+    return config
 
 
 class ImageMatcherBase:
@@ -98,20 +99,18 @@ class ImageMatcherBase:
             raise TypeError("opt must be a dictionary")
 
         # Get defaualt config and update it with custom config
-        config = {**DEFAULT_CONFIG, **config}
-        self._config = config
+        self._config = check_matching_config({**DEFAULT_CONFIG, **config})
 
         # Get main processing parameters
-        self._quality = config["quality"]
-        self._tiling = config["tile_selection"]
-        self._gv = config["geometric_verification"]
+        self._quality = self._config["general"]["quality"]
+        self._tiling = self._config["general"]["tile_selection"]
+        self._gv = self._config["general"]["geometric_verification"]
 
         # Check input config
-        check_matching_config(config)
         logger.info(f"Matching options: {self._quality} - {self._tiling}")
 
         # Define saving directory
-        save_dir = config["save_dir"]
+        save_dir = self._config["general"]["save_dir"]
         if save_dir is not None:
             self._save_dir = Path(save_dir)
             self._save_dir.mkdir(parents=True, exist_ok=True)
@@ -121,7 +120,9 @@ class ImageMatcherBase:
 
         # Get device
         self._device = (
-            "cuda" if torch.cuda.is_available() and not config["force_cpu"] else "cpu"
+            "cuda"
+            if torch.cuda.is_available() and not self._config["general"]["force_cpu"]
+            else "cpu"
         )
         logger.info(f"Running inference on device {self._device}")
 
@@ -189,6 +190,7 @@ class ImageMatcherBase:
         self._features0 = None
         self._features1 = None
         self._matches0 = None
+        self._matches01 = None
         self._mkpts0 = None
         self._mkpts1 = None
         self._descriptors0 = None
@@ -223,7 +225,7 @@ class ImageMatcherBase:
             "Subclasses must implement _match_full_images() method."
         )
 
-    @timeit
+    # @timeit
     def match(
         self,
         image0: np.ndarray,
@@ -251,9 +253,6 @@ class ImageMatcherBase:
         # If a custom config is passed, update the default config
         config = {**self._config, **config}
         check_matching_config(config)
-        self._quality = config["quality"]
-        self._tiling = config["tile_selection"]
-        self._gv = config["geometric_verification"]
 
         # Resize images if needed
         image0_, image1_ = self._resize_images(self._quality, image0, image1)
@@ -300,23 +299,23 @@ class ImageMatcherBase:
                 self._mkpts0,
                 self._mkpts1,
                 method=self._gv,
-                confidence=config["gv_confidence"],
-                threshold=config["gv_threshold"],
+                confidence=config["general"]["gv_confidence"],
+                threshold=config["general"]["gv_threshold"],
             )
             self._F = F
             self._filter_matches_by_mask(inlMask)
             logger.info("Geometric verification done.")
             self.timer.update("geometric_verification")
 
-        if config["do_viz"] is True:
+        if config["general"]["do_viz"] is True:
             self.viz_matches(
                 image0,
                 image1,
                 self._mkpts0,
                 self._mkpts1,
                 str(self._save_dir / "matches.jpg"),
-                fast_viz=config["fast_viz"],
-                hide_matching_track=config["hide_matching_track"],
+                fast_viz=config["general"]["fast_viz"],
+                hide_matching_track=config["general"]["hide_matching_track"],
             )
 
         if self._save_dir is not None:
@@ -354,10 +353,10 @@ class ImageMatcherBase:
 
         # Get config parameters
         tile_selection = self._tiling
-        grid = config["tiling_grid"]
-        overlap = config["tiling_overlap"]
-        origin = config["tiling_origin"]
-        do_viz_tiles = config["do_viz_tiles"]
+        grid = config["general"]["tiling_grid"]
+        overlap = config["general"]["tiling_overlap"]
+        origin = config["general"]["tiling_origin"]
+        do_viz_tiles = config["general"]["do_viz_tiles"]
 
         # Compute tiles limits and origin
         self._tiler = Tiler(grid=grid, overlap=overlap, origin=origin)
@@ -366,7 +365,7 @@ class ImageMatcherBase:
 
         # Select tile pairs to match
         tile_pairs = self._tile_selection(
-            image0, image1, t0_lims, t1_lims, tile_selection, **config
+            image0, image1, t0_lims, t1_lims, tile_selection
         )
 
         # Initialize empty array for storing matched keypoints, descriptors and scores
@@ -486,7 +485,6 @@ class ImageMatcherBase:
         t0_lims: dict[int, np.ndarray],
         t1_lims: dict[int, np.ndarray],
         method: TileSelection = TileSelection.PRESELECTION,
-        **config,
     ) -> List[Tuple[int, int]]:
         """
         Selects tile pairs for matching based on the specified method.
@@ -512,9 +510,6 @@ class ImageMatcherBase:
         # print(config)
         # local_feat_extractor = config["config"].get("local_feat_extractor")
         # print(local_feat_extractor)
-
-        # Get MIN_MATCHES_PER_TILE
-        min_matches_per_tile = config["min_matches_per_tile"]
 
         # Select tile selection method
         if method == TileSelection.EXHAUSTIVE:
@@ -547,11 +542,11 @@ class ImageMatcherBase:
             #     "local_feat_extractor": local_feat_extractor,
             #     "max_keypoints": 4096,
             # }
-            f0, f1, mtc, _ = self._match_pairs(i0, i1, **config)
+            f0, f1, mtc, _ = self._match_pairs(i0, i1, **self._config)
             vld = mtc > -1
             kp0 = f0.keypoints[vld]
             kp1 = f1.keypoints[mtc[vld]]
-            if self._config["do_viz"] is True:
+            if self._config["general"]["do_viz"] is True:
                 self.viz_matches(
                     i0,
                     i1,
@@ -577,7 +572,7 @@ class ImageMatcherBase:
                 ret0 = points_in_rect(kp0, lim0)
                 ret1 = points_in_rect(kp1, lim1)
                 ret = ret0 & ret1
-                if sum(ret) > min_matches_per_tile:
+                if sum(ret) > self._config["general"]["min_matches_per_tile"]:
                     tile_pairs.append((tidx0, tidx1))
             self.timer.update("preselection")
 

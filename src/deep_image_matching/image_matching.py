@@ -43,25 +43,40 @@ def ReorganizeMatches(kpts_number, matches: dict) -> np.ndarray:
 
 class ImageMatching:
     def __init__(
+        # TODO: add default values for not necessary parameters
         self,
         imgs_dir: Path,
         matching_strategy: str,
-        pair_file: Path,
         retrieval_option: str,
-        overlap: int,
         local_features: str,
         custom_config: dict,
-        max_feat_numb: int,
+        max_feat_numb: int = 2048,
+        pair_file: Path = None,
+        overlap: int = 1,
     ):
         self.matching_strategy = matching_strategy
-        self.pair_file = pair_file
         self.retrieval_option = retrieval_option
-        self.overlap = overlap
         self.local_features = local_features
         self.custom_config = custom_config
         self.max_feat_numb = max_feat_numb
+        self.pair_file = Path(self.pair_file) if pair_file is not None else None
+        self.overlap = overlap
         self.keypoints = {}
         self.correspondences = {}
+
+        if retrieval_option == "sequential":
+            if overlap is None:
+                raise ValueError(
+                    "'overlap' option is required when 'strategy' is set to sequential"
+                )
+        elif retrieval_option == "custom_pairs":
+            if self.pair_file is None:
+                raise ValueError(
+                    "'pair_file' option is required when 'strategy' is set to custom_pairs"
+                )
+            else:
+                if not self.pair_file.exists():
+                    raise ValueError(f"File {self.pair_file} does not exist")
 
         # Initialize ImageList class
         self.image_list = ImageList(imgs_dir)
@@ -74,17 +89,22 @@ class ImageMatching:
         elif len(images) == 1:
             raise ValueError("Image folder must contain at least two images")
 
+        # Do not use geometric verification within the matcher, but do it after
+        self.custom_config["general"][
+            "geometric_verification"
+        ] = GeometricVerification.NONE
+
         # Initialize matcher
         # first_img = cv2.imread(str(self.image_list[0].absolute_path))
         # w_size = first_img.shape[1]
         # self.custom_config["general"]["w_size"] = w_size
-        cfg = self.custom_config["general"]
+
         if self.local_features == "lightglue":
-            self._matcher = LightGlueMatcher(**cfg)
+            self._matcher = LightGlueMatcher(**self.custom_config)
         elif self.local_features == "superglue":
-            self._matcher = SuperGlueMatcher(**cfg)
+            self._matcher = SuperGlueMatcher(**self.custom_config)
         elif self.local_features == "loftr":
-            self._matcher = LOFTRMatcher(**cfg)
+            self._matcher = LOFTRMatcher(**self.custom_config)
         elif self.local_features == "detect_and_describe":
             self.custom_config["ALIKE"]["n_limit"] = self.max_feat_numb
             detector_and_descriptor = self.custom_config["general"][
@@ -96,8 +116,8 @@ class ImageMatching:
                 local_feat_conf,
                 self.max_feat_numb,
             )
-            self._matcher = DetectAndDescribe(**cfg)
-            cfg["general"]["local_feat_extractor"] = local_feat_extractor
+            self._matcher = DetectAndDescribe(**self.custom_config)
+            self.custom_config["general"]["local_feat_extractor"] = local_feat_extractor
         else:
             raise ValueError(
                 "Invalid local feature extractor. Supported extractors: lightglue, superglue, loftr, detect_and_describe"
@@ -115,12 +135,14 @@ class ImageMatching:
     def height(self):
         return self.image_list.height
 
+    @property
     def img_names(self):
         return self.image_list.img_names
 
     def generate_pairs(self):
         self.pairs = []
         if self.pair_file is not None and self.matching_strategy == "custom_pairs":
+            assert self.pair_file.exists(), f"File {self.pair_file} does not exist"
             with open(self.pair_file, "r") as txt_file:
                 lines = txt_file.readlines()
                 for line in lines:
@@ -164,7 +186,6 @@ class ImageMatching:
             self._matcher.match(
                 image0,
                 image1,
-                geometric_verification=GeometricVerification.NONE,
             )
             ktps0 = self._matcher._features0.keypoints
             ktps1 = self._matcher._features1.keypoints
