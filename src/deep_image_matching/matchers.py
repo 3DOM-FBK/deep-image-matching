@@ -1,5 +1,4 @@
 import logging
-import os
 from pathlib import Path
 from typing import Tuple
 
@@ -7,20 +6,16 @@ import cv2
 import kornia as K
 from kornia import feature
 import kornia.feature as KF
-import matplotlib.cm as cm
 import numpy as np
 import torch
 
 from .consts import (
-    GeometricVerification,
-    Quality,
     TileSelection,
 )
 from .matcher_base import FeaturesBase, ImageMatcherBase
 from .tiling import Tiler
 from .thirdparty.LightGlue.lightglue import LightGlue, SuperPoint
 from .thirdparty.SuperGlue.models.matching import Matching
-from .thirdparty.SuperGlue.models.utils import make_matching_plot
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +126,6 @@ class LightGlueMatcher(ImageMatcherBase):
         self,
         image0: np.ndarray,
         image1: np.ndarray,
-        **config,
     ) -> Tuple[FeaturesBase, FeaturesBase, np.ndarray, np.ndarray]:
         """Matches keypoints and descriptors in two given images (no matter if they are tiles or full-res images) using the LightGlue algorithm.
 
@@ -154,7 +148,7 @@ class LightGlueMatcher(ImageMatcherBase):
         # load the extractor
         sp_cfg = self._config["SperPoint+LightGlue"]["SuperPoint"]
         self.extractor = SuperPoint(**sp_cfg).eval().to(device)
-        
+
         # load the matcher
         sg_cfg = self._config["SperPoint+LightGlue"]["LightGlue"]
         self.matcher = LightGlue(self._localfeatures, **sg_cfg).eval().to(device)
@@ -243,16 +237,17 @@ class SuperGlueMatcher(ImageMatcherBase):
 
         """
 
-        super().__init__(**config["general"])
+        super().__init__(**config)
 
         # initialize the Matching object with given configuration
-        self.matcher = Matching(config["superglue"]).eval().to(self._device)
+        self.matcher = (
+            Matching(config["SperPoint+SuperGlue"]["superglue"]).eval().to(self._device)
+        )
 
     def _match_pairs(
         self,
         image0: np.ndarray,
         image1: np.ndarray,
-        **config,
     ) -> Tuple[FeaturesBase, FeaturesBase, np.ndarray, np.ndarray]:
         """Matches keypoints and descriptors in two given images (no matter if they are tiles or full-res images) using the SuperGlue algorithm.
 
@@ -306,67 +301,67 @@ class SuperGlueMatcher(ImageMatcherBase):
 
         return features0, features1, matches0, matches01, mconf
 
-    def viz_matches(
-        self,
-        image0: np.ndarray,
-        image1: np.ndarray,
-        path: str,
-        fast_viz: bool = False,
-        show_keypoints: bool = False,
-        opencv_display: bool = False,
-    ) -> None:
-        """
-        Visualize the matching result between two images.
+    # def viz_matches(
+    #     self,
+    #     image0: np.ndarray,
+    #     image1: np.ndarray,
+    #     path: str,
+    #     fast_viz: bool = False,
+    #     show_keypoints: bool = False,
+    #     opencv_display: bool = False,
+    # ) -> None:
+    #     """
+    #     Visualize the matching result between two images.
 
-        Args:
-        - path (str): The output path to save the visualization.
-        - fast_viz (bool): Whether to use preselection visualization method.
-        - show_keypoints (bool): Whether to show the detected keypoints.
-        - opencv_display (bool): Whether to use OpenCV for displaying the image.
+    #     Args:
+    #     - path (str): The output path to save the visualization.
+    #     - fast_viz (bool): Whether to use preselection visualization method.
+    #     - show_keypoints (bool): Whether to show the detected keypoints.
+    #     - opencv_display (bool): Whether to use OpenCV for displaying the image.
 
-        Returns:
-        - None
+    #     Returns:
+    #     - None
 
-        TODO: replace make_matching_plot with native a function implemented in icepy4D
-        """
+    #     TODO: replace make_matching_plot with native a function implemented in icepy4D
+    #     """
 
-        assert self._mkpts0 is not None, "Matches not available."
-        # image0 = np.uint8(tensor0.cpu().numpy() * 255),
+    #     assert self._mkpts0 is not None, "Matches not available."
+    #     # image0 = np.uint8(tensor0.cpu().numpy() * 255),
 
-        color = cm.jet(self._mconf)
-        text = [
-            "SuperGlue",
-            "Keypoints: {}:{}".format(
-                len(self._mkpts0),
-                len(self._mkpts1),
-            ),
-            "Matches: {}".format(len(self._mkpts0)),
-        ]
+    #     color = cm.jet(self._mconf)
+    #     text = [
+    #         "SuperGlue",
+    #         "Keypoints: {}:{}".format(
+    #             len(self._mkpts0),
+    #             len(self._mkpts1),
+    #         ),
+    #         "Matches: {}".format(len(self._mkpts0)),
+    #     ]
 
-        # Display extra parameter info.
-        k_thresh = self._opt["superpoint"]["keypoint_threshold"]
-        m_thresh = self._opt["superglue"]["match_threshold"]
-        small_text = [
-            "Keypoint Threshold: {:.4f}".format(k_thresh),
-            "Match Threshold: {:.2f}".format(m_thresh),
-        ]
+    #     # Display extra parameter info.
+    #     k_thresh = self._opt["superpoint"]["keypoint_threshold"]
+    #     m_thresh = self._opt["superglue"]["match_threshold"]
+    #     small_text = [
+    #         "Keypoint Threshold: {:.4f}".format(k_thresh),
+    #         "Match Threshold: {:.2f}".format(m_thresh),
+    #     ]
 
-        make_matching_plot(
-            image0,
-            image1,
-            self._mkpts0,
-            self._mkpts1,
-            self._mkpts0,
-            self._mkpts1,
-            color,
-            text,
-            path=path,
-            show_keypoints=show_keypoints,
-            fast_viz=fast_viz,
-            opencv_display=opencv_display,
-            opencv_title="Matches",
-            small_text=small_text,
-        )
+    #     make_matching_plot(
+    #         image0,
+    #         image1,
+    #         self._mkpts0,
+    #         self._mkpts1,
+    #         self._mkpts0,
+    #         self._mkpts1,
+    #         color,
+    #         text,
+    #         path=path,
+    #         show_keypoints=show_keypoints,
+    #         fast_viz=fast_viz,
+    #         opencv_display=opencv_display,
+    #         opencv_title="Matches",
+    #         small_text=small_text,
+    #     )
 
 
 class LOFTRMatcher(ImageMatcherBase):
@@ -390,7 +385,6 @@ class LOFTRMatcher(ImageMatcherBase):
         self,
         image0: np.ndarray,
         image1: np.ndarray,
-        **config,
     ) -> Tuple[FeaturesBase, FeaturesBase, np.ndarray, np.ndarray]:
         """Matches keypoints and descriptors in two given images
         (no matter if they are tiles or full-res images) using
@@ -557,130 +551,3 @@ class LOFTRMatcher(ImageMatcherBase):
         logger.info("Matching by tile completed.")
 
         return features0, features1, matches0, conf_full
-
-
-if __name__ == "__main__":
-    from .utils.logger import setup_logger
-
-    setup_logger()
-
-    # assset_path = Path("assets")
-
-    # im_path0 = assset_path / "img/cam1/IMG_2637.jpg"
-    # im_path1 = assset_path / "img/cam2/IMG_1112.jpg"
-
-    img_idx = 20
-    outdir = "sandbox/matching_results"
-
-    folders = [Path("data/img/p1"), Path("data/img/p2")]
-    imlists = [sorted(f.glob("*.jpg")) for f in folders]
-    im_path0 = imlists[0][img_idx]
-    im_path1 = imlists[1][img_idx]
-    img0 = cv2.imread(str(im_path0))
-    img1 = cv2.imread(str(im_path1))
-    outdir = Path(outdir)
-    if outdir.exists():
-        os.system(f"rm -rf {outdir}")
-
-    # Test LightGlue
-    matcher = LightGlueMatcher()
-    matcher.match(
-        img0,
-        img1,
-        quality=Quality.HIGH,
-        tile_selection=TileSelection.PRESELECTION,
-        grid=[2, 3],
-        overlap=100,
-        origin=[0, 0],
-        min_matches_per_tile=3,
-        max_keypoints=10240,
-        do_viz_matches=True,
-        do_viz_tiles=True,
-        fast_viz=False,
-        save_dir=outdir / "LIGHTGLUE",
-        geometric_verification=GeometricVerification.PYDEGENSAC,
-        threshold=2,
-        confidence=0.9999,
-    )
-    mm = matcher.mkpts0
-
-    # SuperGlue
-    suerglue_cfg = {
-        "weights": "outdoor",
-        "keypoint_threshold": 0.001,
-        "max_keypoints": 4096,
-        "match_threshold": 0.1,
-        "force_cpu": False,
-    }
-    matcher = SuperGlueMatcher(suerglue_cfg)
-    tile_selection = TileSelection.PRESELECTION
-    matcher.match(
-        img0,
-        img1,
-        quality=Quality.HIGH,
-        tile_selection=tile_selection,
-        grid=[2, 3],
-        overlap=200,
-        origin=[0, 0],
-        do_viz_matches=True,
-        do_viz_tiles=True,
-        save_dir=outdir / "superglue_PRESELECTION",
-        geometric_verification=GeometricVerification.PYDEGENSAC,
-        threshold=2,
-        confidence=0.9999,
-    )
-
-    # Test LOFTR
-    grid = [5, 4]
-    overlap = 50
-    origin = [0, 0]
-    matcher = LOFTRMatcher()
-    matcher.match(
-        img0,
-        img1,
-        quality=Quality.HIGH,
-        tile_selection=TileSelection.PRESELECTION,
-        grid=grid,
-        overlap=overlap,
-        origin=origin,
-        do_viz_matches=True,
-        do_viz_tiles=True,
-        save_dir=outdir / "LOFTR",
-        geometric_verification=GeometricVerification.PYDEGENSAC,
-        threshold=2,
-        confidence=0.9999,
-    )
-
-    # tile_selection = TileSelection.GRID
-    # matcher.match(
-    #     img0,
-    #     img1,
-    #     tile_selection=tile_selection,
-    #     grid=grid,
-    #     overlap=overlap,
-    #     origin=origin,
-    #     do_viz_matches=True,
-    #     do_viz_tiles=True,
-    #     save_dir=outdir / str(tile_selection).split(".")[1],
-    #     geometric_verification=GeometricVerification.PYDEGENSAC,
-    #     threshold=1,
-    #     confidence=0.9999,
-    # )
-
-    # tile_selection = TileSelection.EXHAUSTIVE
-    # matcher.match(
-    #     img0,
-    #     img1,
-    #     tile_selection=tile_selection,
-    #     grid=grid,
-    #     overlap=overlap,
-    #     origin=origin,
-    #     do_viz_matches=True,
-    #     do_viz_tiles=True,
-    #     save_dir=outdir / str(tile_selection).split(".")[1],
-    #     geometric_verification=GeometricVerification.PYDEGENSAC,
-    #     threshold=1,
-    #     confidence=0.9999,
-    # )
-
-    print("Matching succeded.")

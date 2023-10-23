@@ -183,33 +183,78 @@ class ImageMatching:
             # self.keypoints[im0.name] = ktps0
             # self.keypoints[im1.name] = ktps1
 
+            config = self.custom_config
+            config["general"]["save_dir"] = (
+                Path("res") / f"{pair[0].stem}-{pair[1].stem}"
+            )
             self._matcher.match(
                 image0,
                 image1,
-            )
-            ktps0 = self._matcher._features0.keypoints
-            ktps1 = self._matcher._features1.keypoints
-            self.keypoints[im0.name] = ktps0
-            self.keypoints[im1.name] = ktps1
-
-            matches0 = self._matcher._matches0
-            matches01 = self._matcher._matches01
-            matches_dict = {
-                "matches0": matches0,
-                "matches01": matches01,
-            }
-            self.correspondences[(im0, im1)] = ReorganizeMatches(
-                ktps0.shape[0], matches_dict
+                **config,
             )
 
-            (
-                self.keypoints[im0.name],
-                self.keypoints[im1.name],
-                self.correspondences[(im0, im1)],
-            ) = ApplyGeometricVer(
-                self.keypoints[im0.name],
-                self.keypoints[im1.name],
-                self.correspondences[(im0, im1)],
-            )
+            # Store keypoints and matche`s
+            debug = True
+
+            if debug:
+                from copy import deepcopy
+
+                ktps0 = deepcopy(self._matcher._features0.keypoints)
+                ktps1 = deepcopy(self._matcher._features1.keypoints)
+                matches0 = deepcopy(self._matcher._matches0)
+                matches01 = deepcopy(self._matcher._matches01)
+                matches_dict = {
+                    "matches0": matches0,
+                    "matches01": matches01,
+                }
+
+                correspondences = ReorganizeMatches(ktps0.shape[0], matches_dict)
+
+                (
+                    self.keypoints[im0.name],
+                    self.keypoints[im1.name],
+                    self.correspondences[(im0, im1)],
+                ) = ApplyGeometricVer(
+                    ktps0,
+                    ktps1,
+                    correspondences,
+                )
+
+                # deepcopy status
+                res = {}
+                k = f"{pair[0].stem}_{pair[1].stem}"
+                res[k] = (
+                    deepcopy(self.keypoints),
+                    deepcopy(self.correspondences),
+                )
+
+                logger.info(f"Pairs: {pair[0].name} - {pair[1].name} done.")
+
+            else:
+                ktps0 = self._matcher._features0.keypoints
+                ktps1 = self._matcher._features1.keypoints
+                matches0 = self._matcher._matches0
+                matches01 = self._matcher._matches01
+                matches_dict = {
+                    "matches0": matches0,
+                    "matches01": matches01,
+                }
+
+                self.keypoints[im0.name] = ktps0
+                self.keypoints[im1.name] = ktps1
+                self.correspondences[(im0, im1)] = ReorganizeMatches(
+                    ktps0.shape[0], matches_dict
+                )
+
+                # Apply geometric verification
+                (
+                    self.keypoints[im0.name],
+                    self.keypoints[im1.name],
+                    self.correspondences[(im0, im1)],
+                ) = ApplyGeometricVer(
+                    self.keypoints[im0.name],
+                    self.keypoints[im1.name],
+                    self.correspondences[(im0, im1)],
+                )
 
         return self.keypoints, self.correspondences
