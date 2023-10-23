@@ -183,21 +183,33 @@ class ImageMatching:
             # self.keypoints[im0.name] = ktps0
             # self.keypoints[im1.name] = ktps1
 
-            config = self.custom_config
-            config["general"]["save_dir"] = (
-                Path("res") / f"{pair[0].stem}-{pair[1].stem}"
-            )
-            self._matcher.match(
-                image0,
-                image1,
-                **config,
-            )
+            res_pair_dir = Path("res") / f"{pair[0].stem}-{pair[1].stem}"
 
-            # Store keypoints and matche`s
-            debug = True
+            # Store keypoints and matches
+            debug = False
 
             if debug:
                 from copy import deepcopy
+                import torch
+                from .thirdparty.LightGlue.lightglue import SuperPoint
+
+                device = torch.device("cuda")
+                sp_cfg = self.custom_config["SperPoint+LightGlue"]["SuperPoint"]
+                extractor = SuperPoint(**sp_cfg).eval().to(device)
+
+                image0_ = self._matcher._frame2tensor(image0, device)
+                image1_ = self._matcher._frame2tensor(image1, device)
+
+                feats0 = extractor.extract(image0_, resize=None)
+                feats1 = extractor.extract(image1_, resize=None)
+
+                self._matcher.match(
+                    image0,
+                    image1,
+                    feats0,
+                    feats1,
+                    general={"save_dir": res_pair_dir},
+                )
 
                 ktps0 = deepcopy(self._matcher._features0.keypoints)
                 ktps1 = deepcopy(self._matcher._features1.keypoints)
@@ -231,6 +243,12 @@ class ImageMatching:
                 logger.info(f"Pairs: {pair[0].name} - {pair[1].name} done.")
 
             else:
+                self._matcher.match(
+                    image0,
+                    image1,
+                    general={"save_dir": res_pair_dir},
+                )
+
                 ktps0 = self._matcher._features0.keypoints
                 ktps1 = self._matcher._features1.keypoints
                 matches0 = self._matcher._matches0
