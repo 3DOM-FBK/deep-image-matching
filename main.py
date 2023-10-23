@@ -68,9 +68,9 @@ def main(debug: bool = False):
         args = edict(
             {
                 "interface": "cli",
-                "images": "data/hard_lowres",
+                "images": "data/test",  # "data/hard_lowres",
                 "outs": "res",
-                "strategy": "bruteforce",
+                "strategy": "sequential",
                 "features": "lightglue",
                 "retrieval": "netvlad",
                 "overlap": 1,

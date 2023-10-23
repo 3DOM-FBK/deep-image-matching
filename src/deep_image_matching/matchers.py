@@ -126,6 +126,8 @@ class LightGlueMatcher(ImageMatcherBase):
         self,
         image0: np.ndarray,
         image1: np.ndarray,
+        features0=None,
+        features1=None,
     ) -> Tuple[FeaturesBase, FeaturesBase, np.ndarray, np.ndarray]:
         """Matches keypoints and descriptors in two given images (no matter if they are tiles or full-res images) using the LightGlue algorithm.
 

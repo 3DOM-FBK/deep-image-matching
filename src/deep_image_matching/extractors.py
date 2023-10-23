@@ -673,77 +673,6 @@ class ImageMatcherBase:
 
         return features0, features1
 
-    def _store_matched_features(
-        self,
-        features0: FeaturesBase,
-        features1: FeaturesBase,
-        matches0: np.ndarray,
-        matches01: np.ndarray = None,
-        mconf: np.ndarray = None,
-        force_overwrite: bool = True,
-    ) -> bool:
-        """Stores keypoints, descriptors and scores of the matches in the object's members."""
-
-        assert isinstance(
-            features0, FeaturesBase
-        ), "features0 must be a FeaturesBase object"
-        assert isinstance(
-            features1, FeaturesBase
-        ), "features1 must be a FeaturesBase object"
-        assert hasattr(features0, "keypoints"), "No keypoints found in features0"
-        assert hasattr(features1, "keypoints"), "No keypoints found in features1"
-
-        if self._mkpts0 is not None and self._mkpts1 is not None:
-            if force_overwrite is False:
-                logger.warning(
-                    "Matches already stored. Not overwriting them. Use force_overwrite=True to force overwrite them."
-                )
-                return False
-            else:
-                logger.warning("Matches already stored. Overwrite them")
-
-        # Store features as class members
-        self._features0 = features0
-        self._features1 = features1
-
-        # Store matching arrays as class members
-        self._matches0 = matches0
-        self._matches01 = matches01
-
-        # Store match confidence (store None if not available)
-        self._mconf = mconf
-
-        # Stored matched keypoints
-        valid = matches0 > -1
-        idx1 = matches0[valid]
-        self._mkpts0 = features0.keypoints[valid]
-        self._mkpts1 = features1.keypoints[idx1]
-        if features0.descriptors is not None:
-            self._descriptors0 = features0.descriptors[:, valid]
-            self._descriptors1 = features1.descriptors[:, idx1]
-        if features0.scores is not None:
-            self._scores0 = features0.scores[valid]
-            self._scores1 = features1.scores[idx1]
-
-        return True
-
-    def _filter_matches_by_mask(self, inlMask: np.ndarray) -> None:
-        """
-        Filter matches based on the specified mask.
-
-        Args:
-            inlMask (np.ndarray): The mask to filter matches.
-        """
-        self._mkpts0 = self._mkpts0[inlMask, :]
-        self._mkpts1 = self._mkpts1[inlMask, :]
-        if self._descriptors0 is not None and self._descriptors1 is not None:
-            self._descriptors0 = self._descriptors0[:, inlMask]
-            self._descriptors1 = self._descriptors1[:, inlMask]
-        if self._scores0 is not None and self._scores1 is not None:
-            self._scores0 = self._scores0[inlMask]
-            self._scores1 = self._scores1[inlMask]
-        if self._mconf is not None:
-            self._mconf = self._mconf[inlMask]
 
     def viz_matches(
         self,
@@ -815,30 +744,3 @@ class ImageMatcherBase:
                     point_size=5,
                     config=config,
                 )
-
-    def save_mkpts_as_txt(
-        self,
-        savedir: Union[str, Path],
-        delimiter: str = ",",
-        header: str = "x,y",
-    ) -> None:
-        """Save keypoints in a .txt file"""
-        path = Path(savedir)
-        path.mkdir(parents=True, exist_ok=True)
-
-        np.savetxt(
-            path / "keypoints_0.txt",
-            self.mkpts0,
-            delimiter=delimiter,
-            newline="\n",
-            header=header,
-            fmt="%.2f",  # Format to two decimal places
-        )
-        np.savetxt(
-            path / "keypoints_1.txt",
-            self.mkpts1,
-            delimiter=delimiter,
-            newline="\n",
-            header=header,
-            fmt="%.2f",  # Format to two decimal places
-        )
