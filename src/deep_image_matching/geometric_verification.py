@@ -1,6 +1,6 @@
 import importlib
 import logging
-
+from typing import Tuple
 import cv2
 import numpy as np
 
@@ -10,8 +10,8 @@ logger = logging.getLogger(__name__)
 
 
 def geometric_verification(
-    mkpts0: np.ndarray = None,
-    mkpts1: np.ndarray = None,
+    kpts0: np.ndarray = None,
+    kpts1: np.ndarray = None,
     method: GeometricVerification = GeometricVerification.PYDEGENSAC,
     threshold: float = 1,
     confidence: float = 0.9999,
@@ -20,7 +20,7 @@ def geometric_verification(
     error_type: str = "sampson",
     symmetric_error_check: bool = True,
     enable_degeneracy_check: bool = True,
-) -> dict:
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Computes the fundamental matrix and inliers between the two images using geometric verification.
 
@@ -45,17 +45,17 @@ def geometric_verification(
         method, GeometricVerification
     ), "Invalid method. It must be a GeometricVerification enum in GeometricVerification.PYDEGENSAC or GeometricVerification.MAGSAC."
 
+    fallback = False
     F = None
-    inlMask = np.ones(len(mkpts0), dtype=bool)
+    inlMask = np.ones(len(kpts0), dtype=bool)
 
-    if len(mkpts0) < 4:
+    if len(kpts0) < 4:
         logger.warning("Not enough matches to perform geometric verification.")
         return F, inlMask
 
     if method == GeometricVerification.PYDEGENSAC:
         try:
             pydegensac = importlib.import_module("pydegensac")
-            fallback = False
         except:
             logger.error(
                 "Pydegensac not available. Using MAGSAC++ (OpenCV) for geometric verification."
@@ -65,8 +65,8 @@ def geometric_verification(
     if method == GeometricVerification.PYDEGENSAC and not fallback:
         try:
             F, inlMask = pydegensac.findFundamentalMatrix(
-                mkpts0,
-                mkpts1,
+                kpts0,
+                kpts1,
                 px_th=threshold,
                 conf=confidence,
                 max_iters=max_iters,
@@ -76,7 +76,7 @@ def geometric_verification(
                 enable_degeneracy_check=enable_degeneracy_check,
             )
             logger.info(
-                f"Pydegensac found {inlMask.sum()} inliers ({inlMask.sum()*100/len(mkpts0):.2f}%)"
+                f"Pydegensac found {inlMask.sum()} inliers ({inlMask.sum()*100/len(kpts0):.2f}%)"
             )
         except Exception as err:
             # Fall back to MAGSAC++ if pydegensac fails
@@ -88,16 +88,16 @@ def geometric_verification(
     if method == GeometricVerification.MAGSAC or fallback:
         try:
             F, inliers = cv2.findFundamentalMat(
-                mkpts0, mkpts1, cv2.USAC_MAGSAC, 0.5, 0.999, 100000
+                kpts0, kpts1, cv2.USAC_MAGSAC, 0.5, 0.999, 100000
             )
             inlMask = (inliers > 0).squeeze()
             logger.info(
-                f"MAGSAC++ found {inlMask.sum()} inliers ({inlMask.sum()*100/len(mkpts0):.2f}%)"
+                f"MAGSAC++ found {inlMask.sum()} inliers ({inlMask.sum()*100/len(kpts0):.2f}%)"
             )
         except Exception as err:
             logger.error(
                 f"{err}. Unable to perform geometric verification with MAGSAC++."
             )
-            inlMask = np.ones(len(mkpts0), dtype=bool)
+            inlMask = np.ones(len(kpts0), dtype=bool)
 
     return F, inlMask
