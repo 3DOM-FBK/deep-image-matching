@@ -153,6 +153,7 @@ def main(debug: bool = False):
     )
     images = img_matching.img_names
     pairs = img_matching.generate_pairs()
+    img_matching.extract_features()
     keypoints, correspondences = img_matching.match_pairs()
 
     # Plot statistics
@@ -173,6 +174,6 @@ def main(debug: bool = False):
 
 
 if __name__ == "__main__":
-    main(debug=False)
+    main(debug=True)
 
     logger.info("Done")
