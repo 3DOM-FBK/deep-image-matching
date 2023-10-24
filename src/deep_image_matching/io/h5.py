@@ -3,6 +3,7 @@ from pathlib import Path
 import numpy as np
 import cv2
 import h5py
+import torch
 
 
 def names_to_pair(name0, name1, separator="/"):
@@ -36,6 +37,38 @@ def list_h5_names(path):
 
         fd.visititems(visit_fn)
     return list(set(names))
+
+
+def get_features(
+    path: Path,
+    name: str,
+    as_tensor: bool = False,
+    device: torch.device = torch.device("cuda"),
+) -> dict:
+    with h5py.File(str(path), "r", libver="latest") as fd:
+        if name in fd:
+            try:
+                kpts = np.array(fd[name]["keypoints"]).astype(np.float32)
+                descr = np.array(fd[name]["descriptors"]).astype(np.float32)
+                feats = {
+                    "keypoints": kpts,
+                    "descriptors": descr,
+                }
+
+                if "scores" in fd[name]:
+                    feats["scores"] = np.array(fd[name]["scores"]).astype(np.float32)
+            except KeyError:
+                raise ValueError(f"Cannot find keypoints and descriptors in {path}")
+        else:
+            raise ValueError(f"Cannot find image {name} in {path}")
+
+        if as_tensor:
+            feats = {
+                k: torch.tensor(v, dtype=torch.float, device=device)
+                for k, v in feats.items()
+            }
+
+        return feats
 
 
 def get_keypoints(
