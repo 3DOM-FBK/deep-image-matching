@@ -3,6 +3,7 @@ import numpy as np
 from pathlib import Path
 import logging
 from copy import deepcopy
+import h5py
 
 from .pairs_generator import PairsGenerator
 from .image import ImageList
@@ -12,10 +13,10 @@ from .matchers import (
     LightGlueMatcher,
     DetectAndDescribe,
 )
+from .extractors import ExtractorBase
 from .local_features import LocalFeatureExtractor
 from .geometric_verification import geometric_verification
 from .consts import GeometricVerification
-
 
 logger = logging.getLogger(__name__)
 
@@ -130,34 +131,47 @@ class ImageMatching:
         return self.pairs
 
     def extract_features(self):
-        # extractor =
+        extractor = ExtractorBase(**self.custom_config)
 
-        for idx, pair in enumerate(self.image_list):
-            logger.info(f"Extracting features from image: {pair.name}")
+        for idx, img in enumerate(self.image_list):
+            name = img.absolute_path.name
+            logger.info(f"Extracting features from image: {name}")
 
-        # if as_half:
-        #     for k in pred:
-        #         dt = pred[k].dtype
-        #         if (dt == np.float32) and (dt != np.float16):
-        #             pred[k] = pred[k].astype(np.float16)
+            features = extractor.extract(img)
 
-        # with h5py.File(str(feature_path), "a", libver="latest") as fd:
-        #     try:
-        #         if name in fd:
-        #             del fd[name]
-        #         grp = fd.create_group(name)
-        #         for k, v in pred.items():
-        #             grp.create_dataset(k, data=v)
-        #         if "keypoints" in pred:
-        #             grp["keypoints"].attrs["uncertainty"] = uncertainty
-        #     except OSError as error:
-        #         if "No space left on device" in error.args[0]:
-        #             logger.error(
-        #                 "Out of disk space: storing features on disk can take "
-        #                 "significant space, did you enable the as_half flag?"
-        #             )
-        #             del grp, fd[name]
-        #         raise error
+            # Save features to disk in h5 format
+            as_half = True
+            feature_path = (
+                Path(self.custom_config["general"]["save_dir"]) / "features.h5"
+            )
+            feats_dict = features.to_dict()
+
+            if as_half:
+                for k in feats_dict:
+                    if not isinstance(feats_dict[k], np.ndarray):
+                        continue
+                    dt = feats_dict[k].dtype
+                    if (dt == np.float32) and (dt != np.float16):
+                        feats_dict[k] = feats_dict[k].astype(np.float16)
+
+            with h5py.File(str(feature_path), "a", libver="latest") as fd:
+                try:
+                    if name in fd:
+                        del fd[name]
+                    grp = fd.create_group(name)
+                    for k, v in feats_dict.items():
+                        if isinstance(v, np.ndarray):
+                            grp.create_dataset(k, data=v)
+                except OSError as error:
+                    if "No space left on device" in error.args[0]:
+                        logger.error(
+                            "Out of disk space: storing features on disk can take "
+                            "significant space, did you enable the as_half flag?"
+                        )
+                        del grp, fd[name]
+                    raise error
+
+        logger.info("Features extracted and saved to disk")
 
     def match_pairs(self):
         # first_img = cv2.imread(str(self.image_list[0].absolute_path))
@@ -170,11 +184,11 @@ class ImageMatching:
 
         # Initialize matcher
         if self.local_features == "lightglue":
-            self._matcher = LightGlueMatcher(**matcher_cfg)
+            matcher = LightGlueMatcher(**matcher_cfg)
         elif self.local_features == "superglue":
-            self._matcher = SuperGlueMatcher(**matcher_cfg)
+            matcher = SuperGlueMatcher(**matcher_cfg)
         elif self.local_features == "loftr":
-            self._matcher = LOFTRMatcher(**matcher_cfg)
+            matcher = LOFTRMatcher(**matcher_cfg)
         elif self.local_features == "detect_and_describe":
             matcher_cfg["ALIKE"]["n_limit"] = self.max_feat_numb
             detector_and_descriptor = matcher_cfg["general"]["detector_and_descriptor"]
@@ -184,7 +198,7 @@ class ImageMatching:
                 local_feat_conf,
                 self.max_feat_numb,
             )
-            self._matcher = DetectAndDescribe(**matcher_cfg)
+            matcher = DetectAndDescribe(**matcher_cfg)
             matcher_cfg["general"]["local_feat_extractor"] = local_feat_extractor
         else:
             raise ValueError(
@@ -199,26 +213,24 @@ class ImageMatching:
 
             if DEBUG:
                 import torch
-                from deep_image_matching.hloc.extractors.superpoint import SuperPoint
-
-                def to_tensor(image):
-                    if len(image.shape) == 2:
-                        image = image[None][None]
-                    elif len(image.shape) == 3:
-                        image = image.transpose(2, 0, 1)[None]
-                    return torch.tensor(image / 255.0, dtype=torch.float).to(device)
+                from deep_image_matching.io.h5 import get_features
 
                 device = torch.device("cuda")
-                cfg = {"name": "superpoint", "nms_radius": 3, "max_keypoints": 4096}
 
                 image0 = cv2.imread(str(im0), cv2.IMREAD_GRAYSCALE).astype(np.float32)
                 image1 = cv2.imread(str(im1), cv2.IMREAD_GRAYSCALE).astype(np.float32)
 
-                extractor = SuperPoint(cfg).eval().to(device)
-                feats0 = extractor({"image": to_tensor(image0)})
-                feats1 = extractor({"image": to_tensor(image1)})
+                feature_path = (
+                    Path(self.custom_config["general"]["save_dir"]) / "features.h5"
+                )
+                feats0 = get_features(
+                    feature_path, im0.name, as_tensor=True, device=device
+                )
+                feats1 = get_features(
+                    feature_path, im1.name, as_tensor=True, device=device
+                )
 
-                self._matcher.match(
+                matcher.match(
                     image0,
                     image1,
                     feats0,
@@ -226,9 +238,9 @@ class ImageMatching:
                     general={"save_dir": res_pair_dir},
                 )
 
-                kpts0 = deepcopy(self._matcher._features0.keypoints)
-                kpts1 = deepcopy(self._matcher._features1.keypoints)
-                matches0 = deepcopy(self._matcher._matches0)
+                kpts0 = deepcopy(matcher._features0.keypoints)
+                kpts1 = deepcopy(matcher._features1.keypoints)
+                matches0 = deepcopy(matcher._matches0)
 
                 # Make correspondence matrix
                 correspondences = make_correspondence_matrix(matches0)
@@ -262,18 +274,18 @@ class ImageMatching:
                 if len(image1.shape) == 2:
                     image1 = cv2.cvtColor(image1, cv2.COLOR_GRAY2RGB)
 
-                self._matcher.match(
+                matcher.match(
                     image0,
                     image1,
                     general={"save_dir": res_pair_dir},
                 )
 
-                ktps0 = self._matcher._features0.keypoints
-                ktps1 = self._matcher._features1.keypoints
-                matches0 = self._matcher._matches0
+                ktps0 = matcher._features0.keypoints
+                ktps1 = matcher._features1.keypoints
+                matches0 = matcher._matches0
 
                 # Not needed anymore as the correspondence matrix is computed
-                # matches01 = self._matcher._matches01
+                # matches01 = matcher._matches01
                 # matches_dict = {
                 #     "matches0": matches0,
                 #     "matches01": matches01,

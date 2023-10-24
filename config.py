@@ -13,7 +13,6 @@ custom_config = {
         "min_matches_per_tile": 10,
         "tiling_grid": [2, 2],
         "tiling_overlap": 50,
-        "tiling_origin": [0, 0],
         "do_viz_tiles": True,
         "geometric_verification": GeometricVerification.PYDEGENSAC,
         "gv_threshold": 1.5,
