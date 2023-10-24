@@ -160,25 +160,13 @@ class ImageMatching:
         return self.pairs
 
     def match_pairs(self):
-        for pair in self.pairs:
+        for idx, pair in enumerate(self.pairs):
             logger.info(f"Matching image pair: {pair[0].name} - {pair[1].name}")
             im0 = pair[0]
             im1 = pair[1]
-
-            # By Luca
-            # features0, features1, matches, mconf = self._matcher.match(
-            #     image0,
-            #     image1,
-            #     geometric_verification=GeometricVerification.NONE,
-            # )
-            # ktps0 = features0.keypoints
-            # ktps1 = features1.keypoints
-            # self.keypoints[im0.name] = ktps0
-            # self.keypoints[im1.name] = ktps1
-
             res_pair_dir = Path("res") / f"{pair[0].stem}-{pair[1].stem}"
 
-            debug = True
+            debug = False
 
             if debug:
                 from copy import deepcopy
