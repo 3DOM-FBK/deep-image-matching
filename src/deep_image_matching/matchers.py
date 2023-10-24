@@ -122,12 +122,13 @@ class LightGlueMatcher(ImageMatcherBase):
             for k, v in data.items()
         }
 
+    @torch.no_grad()
     def _match_pairs(
         self,
         image0: np.ndarray,
         image1: np.ndarray,
-        features0=None,
-        features1=None,
+        feats0=None,
+        feats1=None,
     ) -> Tuple[FeaturesBase, FeaturesBase, np.ndarray, np.ndarray]:
         """Matches keypoints and descriptors in two given images (no matter if they are tiles or full-res images) using the LightGlue algorithm.
 
@@ -147,30 +148,58 @@ class LightGlueMatcher(ImageMatcherBase):
 
         device = torch.device(self._device if torch.cuda.is_available() else "cpu")
 
-        # load the extractor
-        sp_cfg = self._config["SperPoint+LightGlue"]["SuperPoint"]
-        self.extractor = SuperPoint(**sp_cfg).eval().to(device)
+        if feats0 is None or feats1 is None:
+            # load the extractor
+            sp_cfg = self._config["SperPoint+LightGlue"]["SuperPoint"]
+            self.extractor = SuperPoint(**sp_cfg).eval().to(device)
 
-        # load the matcher
-        sg_cfg = self._config["SperPoint+LightGlue"]["LightGlue"]
-        self.matcher = LightGlue(self._localfeatures, **sg_cfg).eval().to(device)
-
-        with torch.inference_mode():
             # extract the features
             try:
                 feats0 = self.extractor.extract(image0_, resize=None)
                 feats1 = self.extractor.extract(image1_, resize=None)
             except:
+                logging.warning("SuperPoint failed, trying again with resize")
                 feats0 = self.extractor.extract(image0_)
                 feats1 = self.extractor.extract(image1_)
+        else:
 
-            # match the features
-            match_res = self.matcher({"image0": feats0, "image1": feats1})
+            def fix_input_features(feats):
+                # Rename scores to keypoint_scores
+                feats["keypoint_scores"] = feats.pop("scores")
+                # Remove elements from list/tuple
+                feats = {
+                    k: v[0] if isinstance(v, (list, tuple)) else v
+                    for k, v in feats.items()
+                }
+                # Move descriptors dimension to last
+                if "descriptors" in feats.keys():
+                    feats["descriptors"] = feats["descriptors"].transpose(0, 1)
+                # Add batch dimension
+                feats = {k: v[None] for k, v in feats.items()}
+                # Check device
+                feats = {
+                    k: v.to(device) if isinstance(v, torch.Tensor) else v
+                    for k, v in feats.items()
+                }
+                return feats
 
-            # remove batch dimension
-            feats0, feats1, matches01 = [
-                self._rbd(x) for x in [feats0, feats1, match_res]
-            ]
+            # For debugging
+            # sp_cfg = self._config["SperPoint+LightGlue"]["SuperPoint"]
+            # self.extractor = SuperPoint(**sp_cfg).eval().to(device)
+            # feats_ref = self.extractor.extract(image0_, resize=None)
+
+            feats0 = fix_input_features(feats0)
+            feats1 = fix_input_features(feats1)
+
+        # load the matcher
+        sg_cfg = self._config["SperPoint+LightGlue"]["LightGlue"]
+        self.matcher = LightGlue(self._localfeatures, **sg_cfg).eval().to(device)
+
+        # match the features
+        match_res = self.matcher({"image0": feats0, "image1": feats1})
+
+        # remove batch dimension
+        feats0, feats1, matches01 = [self._rbd(x) for x in [feats0, feats1, match_res]]
 
         feats0 = {k: v.cpu().numpy() for k, v in feats0.items()}
         feats1 = {k: v.cpu().numpy() for k, v in feats1.items()}
