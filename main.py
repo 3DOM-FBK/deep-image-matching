@@ -45,7 +45,16 @@ def parse_args():
     parser.add_argument(
         "-f",
         "--features",
-        choices=["superglue", "lightglue", "loftr", "ALIKE", "ORB", "DISK", "SuperPoint", "KeyNetAffNetHardNet"],
+        choices=[
+            "superglue",
+            "lightglue",
+            "loftr",
+            "ALIKE",
+            "ORB",
+            "DISK",
+            "SuperPoint",
+            "KeyNetAffNetHardNet",
+        ],
     )
     parser.add_argument("-n", "--max_features", type=int, required=True)
 
@@ -58,7 +67,8 @@ def main(debug: bool = False):
     if debug:
         args = edict(
             {
-                "images": "data",
+                "interface": "cli",
+                "images": "data/hard_lowres",
                 "outs": "res",
                 "strategy": "sequential",
                 "features": "lightglue",
@@ -69,7 +79,6 @@ def main(debug: bool = False):
         )
     else:
         args = parse_args()
-
 
     if args.interface == "cli":
         if args.strategy == "retrieval" and args.retrieval is None:
@@ -104,21 +113,28 @@ def main(debug: bool = False):
         matching_strategy = args.strategy
         max_features = args.max_features
 
-        if args.features in [ "superglue", "lightglue", "loftr"]:
+        if args.features in ["superglue", "lightglue", "loftr"]:
             local_features = args.features
         else:
             local_features = "detect_and_describe"
             custom_config["general"]["detector_and_descriptor"] = args.features
-        
+
     elif args.interface == "gui":
-        matching_strategy, imgs_dir, output_dir, pair_file, overlap, feat, max_features = gui()
+        (
+            matching_strategy,
+            imgs_dir,
+            output_dir,
+            pair_file,
+            overlap,
+            feat,
+            max_features,
+        ) = gui()
         retrieval_option = None
-        if feat in [ "superglue", "lightglue", "loftr"]:
+        if feat in ["superglue", "lightglue", "loftr"]:
             local_features = feat
         else:
             local_features = "detect_and_describe"
             custom_config["general"]["detector_and_descriptor"] = feat
-   
 
     if output_dir.exists() and output_dir.is_dir():
         shutil.rmtree(output_dir)
@@ -126,17 +142,16 @@ def main(debug: bool = False):
 
     # Generate pairs and matching
     img_matching = ImageMatching(
-        imgs_dir,
-        matching_strategy,
-        pair_file,
-        retrieval_option,
-        overlap,
-        local_features,
-        custom_config,
-        max_features,
+        imgs_dir=imgs_dir,
+        matching_strategy=matching_strategy,
+        retrieval_option=retrieval_option,
+        local_features=local_features,
+        custom_config=custom_config,
+        max_feat_numb=max_features,
+        pair_file=pair_file,
+        overlap=overlap,
     )
-
-    images = img_matching.img_names()
+    images = img_matching.img_names
     pairs = img_matching.generate_pairs()
     keypoints, correspondences = img_matching.match_pairs()
 
@@ -154,7 +169,7 @@ def main(debug: bool = False):
         keypoints,
         correspondences,
         output_dir,
-        )
+    )
 
 
 if __name__ == "__main__":
