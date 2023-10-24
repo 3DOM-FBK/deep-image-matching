@@ -164,13 +164,6 @@ class ImageMatching:
             logger.info(f"Matching image pair: {pair[0].name} - {pair[1].name}")
             im0 = pair[0]
             im1 = pair[1]
-            image0 = cv2.imread(str(im0), cv2.COLOR_RGB2BGR)
-            image1 = cv2.imread(str(im1), cv2.COLOR_RGB2BGR)
-
-            if len(image0.shape) == 2:
-                image0 = cv2.cvtColor(image0, cv2.COLOR_GRAY2RGB)
-            if len(image1.shape) == 2:
-                image1 = cv2.cvtColor(image1, cv2.COLOR_GRAY2RGB)
 
             # By Luca
             # features0, features1, matches, mconf = self._matcher.match(
@@ -185,23 +178,29 @@ class ImageMatching:
 
             res_pair_dir = Path("res") / f"{pair[0].stem}-{pair[1].stem}"
 
-            # Store keypoints and matches
-            debug = False
+            debug = True
 
             if debug:
                 from copy import deepcopy
                 import torch
-                from .thirdparty.LightGlue.lightglue import SuperPoint
+                from deep_image_matching.hloc.extractors.superpoint import SuperPoint
+
+                def to_tensor(image):
+                    if len(image.shape) == 2:
+                        image = image[None][None]
+                    elif len(image.shape) == 3:
+                        image = image.transpose(2, 0, 1)[None]
+                    return torch.tensor(image / 255.0, dtype=torch.float).to(device)
 
                 device = torch.device("cuda")
-                sp_cfg = self.custom_config["SperPoint+LightGlue"]["SuperPoint"]
-                extractor = SuperPoint(**sp_cfg).eval().to(device)
+                cfg = {"name": "superpoint", "nms_radius": 3, "max_keypoints": 4096}
 
-                image0_ = self._matcher._frame2tensor(image0, device)
-                image1_ = self._matcher._frame2tensor(image1, device)
+                image0 = cv2.imread(str(im0), cv2.IMREAD_GRAYSCALE).astype(np.float32)
+                image1 = cv2.imread(str(im1), cv2.IMREAD_GRAYSCALE).astype(np.float32)
 
-                feats0 = extractor.extract(image0_, resize=None)
-                feats1 = extractor.extract(image1_, resize=None)
+                extractor = SuperPoint(cfg).eval().to(device)
+                feats0 = extractor({"image": to_tensor(image0)})
+                feats1 = extractor({"image": to_tensor(image1)})
 
                 self._matcher.match(
                     image0,
@@ -243,6 +242,14 @@ class ImageMatching:
                 logger.info(f"Pairs: {pair[0].name} - {pair[1].name} done.")
 
             else:
+                image0 = cv2.imread(str(im0), cv2.COLOR_RGB2BGR)
+                image1 = cv2.imread(str(im1), cv2.COLOR_RGB2BGR)
+
+                if len(image0.shape) == 2:
+                    image0 = cv2.cvtColor(image0, cv2.COLOR_GRAY2RGB)
+                if len(image1.shape) == 2:
+                    image1 = cv2.cvtColor(image1, cv2.COLOR_GRAY2RGB)
+
                 self._matcher.match(
                     image0,
                     image1,
@@ -258,6 +265,7 @@ class ImageMatching:
                     "matches01": matches01,
                 }
 
+                # Store keypoints and matches
                 self.keypoints[im0.name] = ktps0
                 self.keypoints[im1.name] = ktps1
                 self.correspondences[(im0, im1)] = ReorganizeMatches(

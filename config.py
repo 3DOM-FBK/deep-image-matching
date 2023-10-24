@@ -6,10 +6,10 @@ custom_config = {
         "quality": Quality.HIGH,
         "force_cpu": False,
         "save_dir": "res",
-        "do_viz": True,
+        "do_viz": False,
         "fast_viz": True,
         "hide_matching_track": False,
-        "tile_selection": TileSelection.GRID,
+        "tile_selection": TileSelection.NONE,
         "min_matches_per_tile": 10,
         "tiling_grid": [2, 2],
         "tiling_overlap": 50,
@@ -48,8 +48,8 @@ custom_config = {
         "SuperPoint": {
             "descriptor_dim": 256,
             "nms_radius": 4,
-            "max_num_keypoints": 4096,
-            "detection_threshold": 0.0005,
+            "max_num_keypoints": 1000,
+            "detection_threshold": 0.005,
             "remove_borders": 4,
         },
         "LightGlue": {
