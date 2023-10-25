@@ -2,20 +2,21 @@ import logging
 from copy import deepcopy
 from itertools import product
 from pathlib import Path
-from typing import List, Tuple, Union, TypedDict, Optional
-import h5py
+from typing import List, Optional, Tuple, TypedDict
 
 import cv2
+import h5py
 import numpy as np
 import torch
 
-
+from .consts import Quality, TileSelection
 from .io.h5 import get_features
-from .consts import GeometricVerification, Quality, TileSelection
 from .tiling import Tiler
 from .visualization import viz_matches_cv2, viz_matches_mpl
 
 logger = logging.getLogger(__name__)
+
+MIN_MATCHES = 20
 
 
 class FeaturesDict(TypedDict):
@@ -27,9 +28,7 @@ class FeaturesDict(TypedDict):
 
 DEFAULT_CONFIG = {
     "general": {
-        "quality": Quality.HIGH,
         "tile_selection": TileSelection.NONE,
-        "geometric_verification": GeometricVerification.NONE,
         "max_keypoints": 4096,
         "force_cpu": False,
         "save_dir": "results",
@@ -124,59 +123,35 @@ class MatcherBase:
         if not Path(feature_path).exists():
             raise FileNotFoundError(f"Feature file {feature_path} does not exist.")
         else:
-            feature_path = Path(feature_path)
-
-        # Check if images exist
-        if not Path(img0).exists():
-            raise FileNotFoundError(f"Image {img0} does not exist.")
-        if not Path(img1).exists():
-            raise FileNotFoundError(f"Image {img1} does not exist.")
-        img0_name = img0.name
-        img1_name = img1.name
+            self._feature_path = Path(feature_path)
 
         # Get features from h5 file
-        feature_path = Path(self._config["general"]["save_dir"]) / "features.h5"
-        features0 = get_features(feature_path, img0.name)
-        features1 = get_features(feature_path, img1.name)
+        img0_name = img0.name
+        img1_name = img1.name
+        self._features0 = get_features(self._feature_path, img0.name)
+        self._features1 = get_features(self._feature_path, img1.name)
 
         # Perform matching (on tiles or full images)
         if self._tiling == TileSelection.NONE:
             logger.info("Matching full images...")
-            matches = self._match_pairs(features0, features1)
+            self._matches = self._match_pairs(self._features0, self._features1)
 
         else:
             logger.info("Matching by tiles...")
-            matches = self._match_by_tile(
+            self._matches = self._match_by_tile(
                 img0,
                 img1,
             )
 
         # Save to h5 file
-        min_matches = 10
-        n_matches = len(matches)
-
+        n_matches = len(self._matches)
         matches_path = self._save_dir / "matches.h5"
         with h5py.File(str(matches_path), "a", libver="latest") as fd:
             group = fd.require_group(img0_name)
-            if n_matches >= min_matches:
-                group.create_dataset(img1_name, data=matches)
+            if n_matches >= MIN_MATCHES:
+                group.create_dataset(img1_name, data=self._matches)
 
         logger.info("Matching done!")
-
-        # Perform geometric verification (temporarily disabled)
-        # logger.info("Performing geometric verification...")
-        # if self._gv is not GeometricVerification.NONE:
-        #     F, inlMask = geometric_verification(
-        #         self._mkpts0,
-        #         self._mkpts1,
-        #         method=self._gv,
-        #         confidence=self._config["general"]["gv_confidence"],
-        #         threshold=self._config["general"]["gv_threshold"],
-        #     )
-        #     self._F = F
-        #     self._filter_matches_by_mask(inlMask)
-        #     logger.info("Geometric verification done.")
-        #     self.timer.update("geometric_verification")
 
         # Visualize matches (temporarily disabled)
         # if self._config["general"]["do_viz"] is True:
@@ -190,11 +165,7 @@ class MatcherBase:
         #         hide_matching_track=self._config["general"]["hide_matching_track"],
         #     )
 
-        # Save matches as txt file (temporarily disabled)
-        # if self._save_dir is not None:
-        #     self.save_mkpts_as_txt(self._save_dir)
-
-        return matches
+        return self._matches
 
     def _update_config(self, config: dict):
         """Check the matching config dictionary for missing keys or invalid values."""
@@ -209,16 +180,15 @@ class MatcherBase:
 
         # Check general config
         required_keys_general = [
-            # "quality",
-            "tile_selection",
-            "force_cpu",
             "save_dir",
-            "do_viz",
-            "fast_viz",
+            "force_cpu",
             "hide_matching_track",
-            "do_viz_tiles",
+            "tile_selection",
             "tiling_grid",
             "tiling_overlap",
+            "do_viz",
+            "fast_viz",
+            "do_viz_tiles",
             "min_matches_per_tile",
         ]
         missing_keys = [
@@ -232,23 +202,13 @@ class MatcherBase:
             raise TypeError("quality must be a Quality enum")
         if not isinstance(new_config["general"]["tile_selection"], TileSelection):
             raise TypeError("tile_selection must be a TileSelection enum")
-        if not isinstance(
-            new_config["general"]["geometric_verification"], GeometricVerification
-        ):
-            raise TypeError(
-                "geometric_verification must be a GeometricVerification enum"
-            )
 
         # Update the current config with the custom config
         self._config = new_config
 
         # Get main processing parameters and save them as class members
-        self._quality = self._config["general"]["quality"]
         self._tiling = self._config["general"]["tile_selection"]
-        self._gv = self._config["general"]["geometric_verification"]
-        logger.info(
-            f"Matching options: Quality: {self._quality.name} - Tiling: {self._tiling.name} - Geometric Verification: {self._gv.name}"
-        )
+        logger.debug(f"Matching options: Tiling: {self._tiling.name}")
 
         # Define saving directory
         save_dir = self._config["general"]["save_dir"]
@@ -273,9 +233,8 @@ class MatcherBase:
         img1: Path,
     ):
         # Get features from h5 file
-        feature_path = Path(self._config["general"]["save_dir"]) / "features.h5"
-        features0 = get_features(feature_path, img0.name)
-        features1 = get_features(feature_path, img1.name)
+        features0 = get_features(self._feature_path, img0.name)
+        features1 = get_features(self._feature_path, img1.name)
 
         # Compute tiles limits and origin
         tile_selection = self._tiling
@@ -293,10 +252,8 @@ class MatcherBase:
             image0, image1, t0_lims, t1_lims, tile_selection
         )
 
-        # Initialize empty array for storing matched keypoints, descriptors and scores
-        matches_full = np.array([], dtype=np.int64).reshape(0, 2)
-
         # Match each tile pair
+        matches_full = np.array([], dtype=np.int64).reshape(0, 2)
         for tidx0, tidx1 in tile_pairs:
             logger.debug(f"  - Matching tile pair ({tidx0}, {tidx1})")
 
@@ -317,12 +274,12 @@ class MatcherBase:
             feats1_tile, idx1 = get_features_by_tile(features1, tidx1)
 
             # Match features
-            matches = self._match_pairs(feats0_tile, feats1_tile)
+            correspondences = self._match_pairs(feats0_tile, feats1_tile)
 
             # Restore original ids of the matched keypoints
-            matches_orig = np.zeros_like(matches)
-            matches_orig[:, 0] = idx0[matches[:, 0]]
-            matches_orig[:, 1] = idx1[matches[:, 1]]
+            matches_orig = np.zeros_like(correspondences)
+            matches_orig[:, 0] = idx0[correspondences[:, 0]]
+            matches_orig[:, 1] = idx1[correspondences[:, 1]]
             matches_full = np.vstack((matches_full, matches_orig))
 
             # # Visualize matches on tile
@@ -343,12 +300,6 @@ class MatcherBase:
         logger.info("Matching by tile done.")
 
         return matches_full
-
-    def _frame2tensor(self, image: np.ndarray) -> torch.Tensor:
-        """Normalize the image tensor and add batch dimension."""
-
-        device = torch.device(self._device if torch.cuda.is_available() else "cpu")
-        return torch.tensor(image / 255.0, dtype=torch.float)[None, None].to(device)
 
     def _tile_selection(
         self,
@@ -410,10 +361,7 @@ class MatcherBase:
             for _ in range(n_down):
                 i0 = cv2.pyrDown(i0)
                 i1 = cv2.pyrDown(i1)
-            # conf_for_downsamp = {
-            #     "local_feat_extractor": local_feat_extractor,
-            #     "max_keypoints": 4096,
-            # }
+
             f0, f1, mtc, _, _ = self._match_pairs(i0, i1)
             vld = mtc > -1
             kp0 = f0.keypoints[vld]
@@ -448,100 +396,27 @@ class MatcherBase:
                     tile_pairs.append((tidx0, tidx1))
             self.timer.update("preselection")
 
-            # Debug...
-            # c = "r"
-            # s = 5
-            # fig, axes = plt.subplots(1, 2)
-            # for ax, img, kp in zip(axes, [image0, image1], [kp0, kp1]):
-            #     ax.imshow(cv2.cvtColor(img, cv2.COLOR_BAYER_BG2BGR))
-            #     ax.scatter(kp[:, 0], kp[:, 1], s=s, c=c)
-            #     ax.axis("off")
-            # for lim0, lim1 in zip(t0_lims.values(), t1_lims.values()):
-            #     axes[0].axvline(lim0[0])
-            #     axes[0].axhline(lim0[1])
-            #     axes[1].axvline(lim1[0])
-            #     axes[1].axhline(lim1[1])
-            # # axes[1].get_yaxis().set_visible(False)
-            # fig.tight_layout()
-            # plt.show()
-            # fig.savefig("preselection.jpg")
-            # plt.close()
+            # For Debugging...
+            # if False:
+            #     c = "r"
+            #     s = 5
+            #     fig, axes = plt.subplots(1, 2)
+            #     for ax, img, kp in zip(axes, [image0, image1], [kp0, kp1]):
+            #         ax.imshow(cv2.cvtColor(img, cv2.COLOR_BAYER_BG2BGR))
+            #         ax.scatter(kp[:, 0], kp[:, 1], s=s, c=c)
+            #         ax.axis("off")
+            #     for lim0, lim1 in zip(t0_lims.values(), t1_lims.values()):
+            #         axes[0].axvline(lim0[0])
+            #         axes[0].axhline(lim0[1])
+            #         axes[1].axvline(lim1[0])
+            #         axes[1].axhline(lim1[1])
+            #     # axes[1].get_yaxis().set_visible(False)
+            #     fig.tight_layout()
+            #     plt.show()
+            #     fig.savefig("preselection.jpg")
+            #     plt.close()
 
         return tile_pairs
-
-    def _filter_matches_by_mask(self, inlMask: np.ndarray) -> None:
-        """
-        Filter matches based on the specified mask.
-
-        Args:
-            inlMask (np.ndarray): The mask to filter matches.
-        """
-        self._mkpts0 = self._mkpts0[inlMask, :]
-        self._mkpts1 = self._mkpts1[inlMask, :]
-        if self._descriptors0 is not None and self._descriptors1 is not None:
-            self._descriptors0 = self._descriptors0[:, inlMask]
-            self._descriptors1 = self._descriptors1[:, inlMask]
-        if self._scores0 is not None and self._scores1 is not None:
-            self._scores0 = self._scores0[inlMask]
-            self._scores1 = self._scores1[inlMask]
-        if self._mconf is not None:
-            self._mconf = self._mconf[inlMask]
-
-    # def reset(self):
-    #     """Reset the matcher by cleaning the features and matches"""
-    #     pass
-
-    # def _store_matched_features(
-    #     self,
-    #     features0: FeaturesBase,
-    #     features1: FeaturesBase,
-    #     matches0: np.ndarray,
-    #     matches01: np.ndarray = None,
-    #     mconf: np.ndarray = None,
-    #     force_overwrite: bool = True,
-    # ) -> bool:
-    #     """Stores keypoints, descriptors and scores of the matches in the object's members."""
-
-    #     assert isinstance(
-    #         features0, FeaturesBase
-    #     ), "features0 must be a FeaturesBase object"
-    #     assert isinstance(
-    #         features1, FeaturesBase
-    #     ), "features1 must be a FeaturesBase object"
-    #     assert hasattr(features0, "keypoints"), "No keypoints found in features0"
-    #     assert hasattr(features1, "keypoints"), "No keypoints found in features1"
-
-    #     if self._mkpts0 is not None and self._mkpts1 is not None:
-    #         if force_overwrite is False:
-    #             logger.warning(
-    #                 "Matches already stored. Not overwriting them. Use force_overwrite=True to force overwrite them."
-    #             )
-    #             return False
-
-    #     # Store features as class members
-    #     self._features0 = features0
-    #     self._features1 = features1
-
-    #     # Store matching arrays as class members
-    #     self._matches0 = matches0
-    #     self._matches01 = matches01
-
-    #     # Store match confidence (store None if not available)
-    #     self._mconf = mconf
-
-    #     # Stored matched keypoints
-    #     valid = matches0 > -1
-    #     idx1 = matches0[valid]
-    #     self._mkpts0 = features0.keypoints[valid]
-    #     self._mkpts1 = features1.keypoints[idx1]
-    #     if features0.descriptors is not None:
-    #         self._descriptors0 = features0.descriptors[:, valid]
-    #         self._descriptors1 = features1.descriptors[:, idx1]
-    #     if features0.scores is not None:
-    #         self._scores0 = features0.scores[valid]
-    #         self._scores1 = features1.scores[idx1]
-
-    #     return True
 
     def viz_matches(
         self,
@@ -613,30 +488,3 @@ class MatcherBase:
                     point_size=5,
                     config=config,
                 )
-
-    def save_mkpts_as_txt(
-        self,
-        savedir: Union[str, Path],
-        delimiter: str = ",",
-        header: str = "x,y",
-    ) -> None:
-        """Save keypoints in a .txt file"""
-        path = Path(savedir)
-        path.mkdir(parents=True, exist_ok=True)
-
-        np.savetxt(
-            path / "keypoints_0.txt",
-            self.mkpts0,
-            delimiter=delimiter,
-            newline="\n",
-            header=header,
-            fmt="%.2f",  # Format to two decimal places
-        )
-        np.savetxt(
-            path / "keypoints_1.txt",
-            self.mkpts1,
-            delimiter=delimiter,
-            newline="\n",
-            header=header,
-            fmt="%.2f",  # Format to two decimal places
-        )

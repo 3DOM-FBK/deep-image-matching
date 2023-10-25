@@ -1,14 +1,15 @@
-import cv2
-import numpy as np
-from pathlib import Path
 import logging
 from copy import deepcopy
-from typing import Tuple, Union, TypedDict, Optional
-import torch
-import h5py
+from pathlib import Path
+from typing import Optional, Tuple, TypedDict, Union
 
-from .image import Image
+import cv2
+import h5py
+import numpy as np
+import torch
+
 from .consts import Quality, TileSelection
+from .image import Image
 from .tiling import Tiler
 
 logger = logging.getLogger(__name__)
@@ -123,7 +124,7 @@ class ExtractorBase:
 
         # Save features to disk in h5 format (TODO: MOVE it to another method)
         # def save_features_to_h5(self)
-        as_half = False  # TODO: add this to the config
+        as_half = True  # TODO: add this to the config
         save_dir = Path(self._config["general"]["save_dir"])
         save_dir.mkdir(parents=True, exist_ok=True)
         feature_path = save_dir / "features.h5"
@@ -153,6 +154,18 @@ class ExtractorBase:
                     )
                     del grp, fd[im_name]
                 raise error
+
+        # Save also keypoints and descriptors separately
+        with h5py.File(str(save_dir / "keypoints.h5"), "a", libver="latest") as fd:
+            if im_name in fd:
+                del fd[im_name]
+            fd[im_name] = features["keypoints"]
+
+        desc_dim = features["descriptors"].shape[0]
+        with h5py.File(str(save_dir / "descriptors.h5"), "a", libver="latest") as fd:
+            if im_name in fd:
+                del fd[im_name]
+            fd[im_name] = features["descriptors"].reshape(-1, desc_dim)
 
         return feature_path
 

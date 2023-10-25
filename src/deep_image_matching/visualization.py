@@ -1,8 +1,9 @@
+import importlib
 from typing import Tuple
+
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-import importlib
 
 
 def viz_matches_mpl(

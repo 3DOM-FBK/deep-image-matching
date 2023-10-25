@@ -1,20 +1,21 @@
-import numpy as np
-from pathlib import Path
 import logging
+from pathlib import Path
+
+import numpy as np
 from tqdm import tqdm
 
-from .pairs_generator import PairsGenerator
-from .image import ImageList
-from .matchers import (
-    SuperGlueMatcher,
-    LOFTRMatcher,
-    LightGlueMatcher,
-    DetectAndDescribe,
-)
 from .extractors import ExtractorBase
-from .local_features import LocalFeatureExtractor
 from .geometric_verification import geometric_verification
+from .image import ImageList
 from .io.h5 import get_features
+from .local_features import LocalFeatureExtractor
+from .matchers import (
+    DetectAndDescribe,
+    LightGlueMatcher,
+    LOFTRMatcher,
+    SuperGlueMatcher,
+)
+from .pairs_generator import PairsGenerator
 
 logger = logging.getLogger(__name__)
 

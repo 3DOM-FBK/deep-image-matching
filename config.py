@@ -1,4 +1,4 @@
-from src.deep_image_matching import Quality, TileSelection, GeometricVerification
+from src.deep_image_matching import GeometricVerification, Quality, TileSelection
 
 custom_config = {
     "general": {
