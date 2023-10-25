@@ -1,20 +1,18 @@
 import logging
+from importlib import import_module
 from pathlib import Path
+from typing import Optional, TypedDict
 
 import cv2
 import kornia as K
-from kornia import feature
 import kornia.feature as KF
 import numpy as np
 import torch
+from kornia import feature
 
-from .consts import (
-    TileSelection,
-)
+from .consts import TileSelection
 from .matcher_base import MatcherBase
 from .tiling import Tiler
-from .thirdparty.LightGlue.lightglue import LightGlue
-from .thirdparty.SuperGlue.models.matching import Matching
 
 logger = logging.getLogger(__name__)
 
@@ -22,13 +20,8 @@ logger = logging.getLogger(__name__)
 # The MatcherBase class should contain all the common methods and attributes for all the matchers (tile suddivision, image downsampling/upsampling), geometric verification etc.
 # The specific matchers MUST contain at least the `_match_pairs` method, which takes in two images as Numpy arrays, and returns the matches between keypoints and descriptors in those images. It doesn not care if the images are tiles or full-res images, as the tiling is handled by the MatcherBase class that calls the `_match_pairs` method for each tile pair or for the full images depending on the tile selection method.
 
-# TODO: divide the matching in two steps: one for the feature extractor and one for the matcher.
-# TODO: allows the user to provide the features (keypoints, descriptors and scores) as input to match method when using SuperGlue/LightGlue (e.g., for tracking features in a new image of a sequence)
-# TODO: move all the configuration parameters to the __init__ method of the MatcherBase class. The match method should only take the images as input (and optionally the already extracted features).
 # TODO: add integration with KORNIA library for using all the extractors and mathers.
 # TODO: add visualization functions for the matches (take the functions from the visualization module of ICEpy4d). Currentely, the visualization methods may not work!
-
-from typing import TypedDict, Optional
 
 
 class FeaturesDict(TypedDict):
@@ -112,9 +105,14 @@ class LightGlueMatcher(MatcherBase):
         self._localfeatures = "superpoint"
         super().__init__(**config)
 
+        # load the LightGlue module
+        LG = import_module(".thirdparty.LightGlue.lightglue")
+
         # load the matcher
         sg_cfg = self._config["SperPoint+LightGlue"]["LightGlue"]
-        self._matcher = LightGlue(self._localfeatures, **sg_cfg).eval().to(self._device)
+        self._matcher = (
+            LG.LightGlue(self._localfeatures, **sg_cfg).eval().to(self._device)
+        )
 
     @torch.no_grad()
     def _match_pairs(
@@ -167,7 +165,6 @@ class LightGlueMatcher(MatcherBase):
 
         return matches01_idx
 
-    # Override _frame2tensor method to shift channel first as batch dimension
     def _frame2tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor:
         """Normalize the image tensor and reorder the dimensions."""
         if image.ndim == 3:
@@ -188,24 +185,7 @@ class LightGlueMatcher(MatcherBase):
 
 class SuperGlueMatcher(MatcherBase):
     def __init__(self, **config) -> None:
-        """Initializes a SuperGlueMatcher object with the given options dictionary.
-
-        The options dictionary should contain the following keys:
-
-        - 'weights': defines the type of the weights used for SuperGlue inference. It can be either "indoor" or "outdoor". Default value is "outdoor".
-        - 'keypoint_threshold': threshold for the SuperPoint keypoint detector
-        - 'max_keypoints': maximum number of keypoints to extract with the SuperPoint detector. Default value is 0.001.
-        - 'match_threshold': threshold for the SuperGlue feature matcher
-        - 'force_cpu': whether to force using the CPU for inference
-
-        Args:
-            opt (dict): a dictionary of options for configuring the SuperGlueMatcher object
-
-        Raises:
-            KeyError: if one or more required options are missing from the options dictionary
-            FileNotFoundError: if the specified SuperGlue model weights file cannot be found
-
-        """
+        """Initializes a SuperGlueMatcher object with the given options dictionary."""
 
         raise NotImplementedError(
             "SuperGlueMatcher is not correctely implemented yet. It needs to be updated to the new version of the Matcher. Please use LightGlue in the meanwhile!"
@@ -213,9 +193,13 @@ class SuperGlueMatcher(MatcherBase):
 
         super().__init__(**config)
 
+        SG = import_module(".thirdparty.SuperGlue.models.matching")
+
         # initialize the Matching object with given configuration
         self.matcher = (
-            Matching(config["SperPoint+SuperGlue"]["superglue"]).eval().to(self._device)
+            SG.Matching(config["SperPoint+SuperGlue"]["superglue"])
+            .eval()
+            .to(self._device)
         )
 
     def _match_pairs(

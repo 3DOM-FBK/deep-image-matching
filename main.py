@@ -1,14 +1,14 @@
-import shutil
 import argparse
-from easydict import EasyDict as edict
+import shutil
 from pathlib import Path
 
+from easydict import EasyDict as edict
+
+from config import custom_config
+from src.deep_image_matching.gui import gui
 from src.deep_image_matching.image_matching import ImageMatching
 from src.deep_image_matching.io.export_to_colmap import ExportToColmap
 from src.deep_image_matching.utils import setup_logger
-from src.deep_image_matching.gui import gui
-
-from config import custom_config
 
 logger = setup_logger(console_log_level="debug")
 
@@ -173,6 +173,33 @@ def main(debug: bool = False):
         correspondences,
         output_dir,
     )
+
+    from deep_image_matching.io.h5_to_db import (
+        COLMAPDatabase,
+        add_keypoints,
+        add_matches,
+    )
+
+    def import_into_colmap(
+        img_dir, feature_dir=".featureout", database_path="colmap.db", img_ext=".jpg"
+    ):
+        db = COLMAPDatabase.connect(database_path)
+        db.create_tables()
+        single_camera = False
+        fname_to_id = add_keypoints(db, feature_dir, img_dir)
+        add_matches(
+            db,
+            feature_dir,
+            fname_to_id,
+        )
+
+        db.commit()
+        return
+
+    database_path = "res/colmap2.db"
+    if Path(database_path).exists():
+        Path(database_path).unlink()
+    # import_into_colmap(imgs_dir, feature_dir="res", database_path=database_path)
 
 
 if __name__ == "__main__":
