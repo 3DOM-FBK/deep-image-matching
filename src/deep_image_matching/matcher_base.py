@@ -132,12 +132,16 @@ class MatcherBase:
         self._features1 = get_features(self._feature_path, img1.name)
 
         # Perform matching (on tiles or full images)
-        if self._tiling == TileSelection.NONE:
-            logger.info("Matching full images...")
+        # Try first to match features on the full image, if it fails, try to match by tiles
+        try:
+            logger.debug("Matching full images...")
             self._matches = self._match_pairs(self._features0, self._features1)
-
-        else:
-            logger.info("Matching by tiles...")
+        except Exception as e:
+            if self._tile_selection == TileSelection.NONE:
+                self._tile_selection = TileSelection.PRESELECTION
+            logger.warning(
+                f"Matching full images failed: {e}. Trying to match by tiles..."
+            )
             self._matches = self._match_by_tile(
                 img0,
                 img1,
@@ -337,15 +341,15 @@ class MatcherBase:
         # Select tile selection method
         if method == TileSelection.EXHAUSTIVE:
             # Match all the tiles with all the tiles
-            logger.info("Matching tiles exaustively")
+            logger.debug("Matching tiles exaustively")
             tile_pairs = sorted(product(t0_lims.keys(), t1_lims.keys()))
         elif method == TileSelection.GRID:
             # Match tiles by regular grid
-            logger.info("Matching tiles by regular grid")
+            logger.debug("Matching tiles by regular grid")
             tile_pairs = sorted(zip(t0_lims.keys(), t1_lims.keys()))
         elif method == TileSelection.PRESELECTION:
             # Match tiles by preselection running matching on downsampled images
-            logger.info("Matching tiles by preselection tile selection")
+            logger.debug("Matching tiles by preselection tile selection")
             if image0.shape[0] > 8000:
                 n_down = 4
             if image0.shape[0] > 4000:
