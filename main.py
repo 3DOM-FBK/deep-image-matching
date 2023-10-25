@@ -68,7 +68,7 @@ def main(debug: bool = False):
         args = edict(
             {
                 "interface": "cli",
-                "images": "data/easy",
+                "images": "data/easy_small",
                 "outs": "res",
                 "strategy": "sequential",
                 "features": "lightglue",

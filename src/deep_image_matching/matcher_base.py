@@ -1,5 +1,6 @@
 import logging
 from copy import deepcopy
+from importlib import import_module
 from itertools import product
 from pathlib import Path
 from typing import List, Optional, Tuple, TypedDict
@@ -131,6 +132,13 @@ class MatcherBase:
         self._features0 = get_features(self._feature_path, img0.name)
         self._features1 = get_features(self._feature_path, img1.name)
 
+        # Test PRESELECTION
+        # self._matches = self._match_by_tile(
+        #     img0,
+        #     img1,
+        #     method=TileSelection.PRESELECTION,
+        # )
+
         # Perform matching (on tiles or full images)
         # Try first to match features on the full image, if it fails, try to match by tiles
         try:
@@ -235,13 +243,13 @@ class MatcherBase:
         self,
         img0: Path,
         img1: Path,
+        method: TileSelection = TileSelection.PRESELECTION,
     ):
         # Get features from h5 file
         features0 = get_features(self._feature_path, img0.name)
         features1 = get_features(self._feature_path, img1.name)
 
         # Compute tiles limits and origin
-        tile_selection = self._tiling
         grid = self._config["general"]["tiling_grid"]
         overlap = self._config["general"]["tiling_overlap"]
         do_viz_tiles = self._config["general"]["do_viz_tiles"]
@@ -252,9 +260,7 @@ class MatcherBase:
         t1_lims, t1_origin = tiler.compute_limits_by_grid(image1)
 
         # Select tile pairs to match
-        tile_pairs = self._tile_selection(
-            image0, image1, t0_lims, t1_lims, tile_selection
-        )
+        tile_pairs = self._tile_selection(image0, image1, t0_lims, t1_lims, method)
 
         # Match each tile pair
         matches_full = np.array([], dtype=np.int64).reshape(0, 2)
@@ -359,17 +365,55 @@ class MatcherBase:
             else:
                 n_down = 1
 
-            # Run inference on downsampled images
+            # Downsampled images
             i0 = deepcopy(image0)
             i1 = deepcopy(image1)
             for _ in range(n_down):
                 i0 = cv2.pyrDown(i0)
                 i1 = cv2.pyrDown(i1)
 
-            f0, f1, mtc, _, _ = self._match_pairs(i0, i1)
-            vld = mtc > -1
-            kp0 = f0.keypoints[vld]
-            kp1 = f1.keypoints[mtc[vld]]
+            # Import superpoint and lightglue
+            SP = import_module("deep_image_matching.hloc.extractors.superpoint")
+            LG = import_module("deep_image_matching.thirdparty.LightGlue.lightglue")
+
+            def sp2lg(feats: dict) -> dict:
+                feats = {
+                    k: v[0] if isinstance(v, (list, tuple)) else v
+                    for k, v in feats.items()
+                }
+                if feats["descriptors"].shape[-1] != 256:
+                    feats["descriptors"] = feats["descriptors"].T
+                feats = {k: v[None] for k, v in feats.items()}
+                return feats
+
+            def rbd2np(data: dict) -> dict:
+                """Remove batch dimension from elements in data"""
+                return {
+                    k: v[0].cpu().numpy()
+                    if isinstance(v, (torch.Tensor, np.ndarray, list))
+                    else v
+                    for k, v in data.items()
+                }
+
+            # Run SuperPoint on downsampled images
+            with torch.no_grad():
+                SP_cfg = {"max_keypoints": 1024}
+                SP_extractor = SP.SuperPoint(SP_cfg).eval().to(self._device)
+                feats0 = SP_extractor({"image": self._frame2tensor(i0, self._device)})
+                feats1 = SP_extractor({"image": self._frame2tensor(i1, self._device)})
+
+                # Match features with LightGlue
+                LG_matcher = LG.LightGlue("superpoint").eval().to(self._device)
+                feats0 = sp2lg(feats0)
+                feats1 = sp2lg(feats1)
+                res = LG_matcher({"image0": feats0, "image1": feats1})
+                res = rbd2np(res)
+
+            kp0 = feats0["keypoints"].cpu().numpy()[0]
+            kp0 = kp0[res["matches"][:, 0], :]
+            kp1 = feats1["keypoints"].cpu().numpy()[0]
+            kp1 = kp1[res["matches"][:, 1], :]
+
             if self._config["general"]["do_viz"] is True:
                 self.viz_matches(
                     i0,
@@ -398,7 +442,6 @@ class MatcherBase:
                 ret = ret0 & ret1
                 if sum(ret) > self._config["general"]["min_matches_per_tile"]:
                     tile_pairs.append((tidx0, tidx1))
-            self.timer.update("preselection")
 
             # For Debugging...
             # if False:
@@ -421,6 +464,13 @@ class MatcherBase:
             #     plt.close()
 
         return tile_pairs
+
+    def _frame2tensor(self, image: np.ndarray, device: str = "cpu"):
+        if len(image.shape) == 2:
+            image = image[None][None]
+        elif len(image.shape) == 3:
+            image = image.transpose(2, 0, 1)[None]
+        return torch.tensor(image / 255.0, dtype=torch.float).to(device)
 
     def viz_matches(
         self,
