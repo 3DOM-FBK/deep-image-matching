@@ -1,9 +1,7 @@
-import cv2
 import numpy as np
 from pathlib import Path
 import logging
-from copy import deepcopy
-import h5py
+from tqdm import tqdm
 
 from .pairs_generator import PairsGenerator
 from .image import ImageList
@@ -16,7 +14,6 @@ from .matchers import (
 from .extractors import ExtractorBase
 from .local_features import LocalFeatureExtractor
 from .geometric_verification import geometric_verification
-from .consts import GeometricVerification
 from .io.h5 import get_features
 
 logger = logging.getLogger(__name__)
@@ -134,45 +131,11 @@ class ImageMatching:
     def extract_features(self):
         extractor = ExtractorBase(**self.custom_config)
 
-        for idx, img in enumerate(self.image_list):
-            name = img.absolute_path.name
-            logger.info(f"Extracting features from image: {name}")
+        logger.info("Extracting features...")
+        for img in tqdm(self.image_list):
+            feature_path = extractor.extract(img)
 
-            features = extractor.extract(img)
-
-            # Save features to disk in h5 format
-            as_half = True
-            feature_path = (
-                Path(self.custom_config["general"]["save_dir"]) / "features.h5"
-            )
-            feats_dict = features.to_dict()
-
-            if as_half:
-                for k in feats_dict:
-                    if not isinstance(feats_dict[k], np.ndarray):
-                        continue
-                    dt = feats_dict[k].dtype
-                    if (dt == np.float32) and (dt != np.float16):
-                        feats_dict[k] = feats_dict[k].astype(np.float16)
-
-            with h5py.File(str(feature_path), "a", libver="latest") as fd:
-                try:
-                    if name in fd:
-                        del fd[name]
-                    grp = fd.create_group(name)
-                    for k, v in feats_dict.items():
-                        if isinstance(v, np.ndarray):
-                            grp.create_dataset(k, data=v)
-                except OSError as error:
-                    if "No space left on device" in error.args[0]:
-                        logger.error(
-                            "Out of disk space: storing features on disk can take "
-                            "significant space, did you enable the as_half flag?"
-                        )
-                        del grp, fd[name]
-                    raise error
-
-        logger.info("Features extracted and saved to disk")
+        logger.info("Features extracted")
 
         return feature_path
 
@@ -181,9 +144,16 @@ class ImageMatching:
         # w_size = first_img.shape[1]
         # self.custom_config["general"]["w_size"] = w_size
 
+        # Check that feature_path exists
+        if not Path(feature_path).exists():
+            raise ValueError(f"Feature path {feature_path} does not exist")
+        else:
+            feature_path = Path(feature_path)
+
         # Do not use geometric verification within the matcher, but do it after
-        matcher_cfg = deepcopy(self.custom_config)
-        matcher_cfg["geometric_verification"] = GeometricVerification.NONE
+        # matcher_cfg = deepcopy(self.custom_config)
+        # matcher_cfg["geometric_verification"] = GeometricVerification.NONE
+        matcher_cfg = self.custom_config
 
         # Initialize matcher
         if self.local_features == "lightglue":
@@ -212,93 +182,32 @@ class ImageMatching:
             logger.info(f"Matching image pair: {pair[0].name} - {pair[1].name}")
             im0 = pair[0]
             im1 = pair[1]
-            res_pair_dir = Path("res") / f"{pair[0].stem}-{pair[1].stem}"
+            # res_pair_dir = Path("res") / f"{pair[0].stem}-{pair[1].stem}"
 
-            if DEBUG:
-                device = (
-                    "cuda" if not self.custom_config["general"]["force_cpu"] else "cpu"
-                )
+            device = "cuda" if not self.custom_config["general"]["force_cpu"] else "cpu"
+            correspondences = matcher.match(
+                feature_path=feature_path,
+                img0=im0,
+                img1=im1,
+                # general={"save_dir": res_pair_dir},
+            )
 
-                feats0 = get_features(
-                    feature_path, im0.name, as_tensor=True, device=device
-                )
-                feats1 = get_features(
-                    feature_path, im1.name, as_tensor=True, device=device
-                )
+            # Make correspondence matrix (no need it anymore as the matcher already does it)
+            # correspondences = make_correspondence_matrix(matches)
 
-                matches = matcher.match(
-                    im0,
-                    im1,
-                    feats0,
-                    feats1,
-                    general={"save_dir": res_pair_dir},
-                )
+            kpts0_h5 = get_features(feature_path, im0.name)["keypoints"]
+            kpts1_h5 = get_features(feature_path, im1.name)["keypoints"]
 
-                # Make correspondence matrix
-                correspondences = make_correspondence_matrix(matches)
+            # Apply geometric verification and store results
+            self.keypoints[im0.name] = kpts0_h5
+            self.keypoints[im1.name] = kpts1_h5
+            self.correspondences[(im0, im1)] = apply_geometric_verification(
+                kpts0=self.keypoints[im0.name],
+                kpts1=self.keypoints[im1.name],
+                correspondences=correspondences,
+                config=self.custom_config["general"],
+            )
 
-                kpts0_h5 = get_features(feature_path, im0.name)["keypoints"]
-                kpts1_h5 = get_features(feature_path, im1.name)["keypoints"]
-
-                # Apply geometric verification and store results
-                self.keypoints[im0.name] = kpts0_h5
-                self.keypoints[im1.name] = kpts1_h5
-                self.correspondences[(im0, im1)] = apply_geometric_verification(
-                    kpts0=self.keypoints[im0.name],
-                    kpts1=self.keypoints[im1.name],
-                    correspondences=correspondences,
-                    config=self.custom_config["general"],
-                )
-
-                # deepcopy status
-                res = {}
-                k = f"{pair[0].stem}_{pair[1].stem}"
-                res[k] = (
-                    deepcopy(self.keypoints),
-                    deepcopy(self.correspondences),
-                )
-
-                logger.info(f"Pairs: {pair[0].name} - {pair[1].name} done.")
-
-            else:
-                image0 = cv2.imread(str(im0), cv2.COLOR_RGB2BGR)
-                image1 = cv2.imread(str(im1), cv2.COLOR_RGB2BGR)
-
-                if len(image0.shape) == 2:
-                    image0 = cv2.cvtColor(image0, cv2.COLOR_GRAY2RGB)
-                if len(image1.shape) == 2:
-                    image1 = cv2.cvtColor(image1, cv2.COLOR_GRAY2RGB)
-
-                matcher.match(
-                    image0,
-                    image1,
-                    general={"save_dir": res_pair_dir},
-                )
-
-                ktps0 = matcher._features0.keypoints
-                ktps1 = matcher._features1.keypoints
-                matches0 = matcher._matches0
-
-                # Not needed anymore as the correspondence matrix is computed
-                # matches01 = matcher._matches01
-                # matches_dict = {
-                #     "matches0": matches0,
-                #     "matches01": matches01,
-                # }
-
-                # Store keypoints and matches
-                self.keypoints[im0.name] = ktps0
-                self.keypoints[im1.name] = ktps1
-
-                # Make correspondence matrix
-                correspondences = make_correspondence_matrix(matches0)
-
-                # Apply geometric verification
-                self.correspondences[(im0, im1)] = apply_geometric_verification(
-                    kpts0=self.keypoints[im0.name],
-                    kpts1=self.keypoints[im1.name],
-                    correspondences=correspondences,
-                    config=self.custom_config["general"],
-                )
+            logger.info(f"Pairs: {pair[0].name} - {pair[1].name} done.")
 
         return self.keypoints, self.correspondences
