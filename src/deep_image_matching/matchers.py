@@ -162,16 +162,6 @@ class LightGlueMatcher(MatcherBase):
 
         return matches01_idx
 
-    def _frame2tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor:
-        """Normalize the image tensor and reorder the dimensions."""
-        if image.ndim == 3:
-            image = image.transpose((2, 0, 1))  # HxWxC to CxHxW
-        elif image.ndim == 2:
-            image = image[None]  # add channel axis
-        else:
-            raise ValueError(f"Not an image: {image.shape}")
-        return torch.tensor(image / 255.0, dtype=torch.float).to(device)
-
     def _rbd(self, data: dict) -> dict:
         """Remove batch dimension from elements in data"""
         return {
