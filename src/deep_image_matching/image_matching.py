@@ -17,6 +17,7 @@ from .extractors import ExtractorBase
 from .local_features import LocalFeatureExtractor
 from .geometric_verification import geometric_verification
 from .consts import GeometricVerification
+from .io.h5 import get_features
 
 logger = logging.getLogger(__name__)
 
@@ -173,7 +174,9 @@ class ImageMatching:
 
         logger.info("Features extracted and saved to disk")
 
-    def match_pairs(self):
+        return feature_path
+
+    def match_pairs(self, feature_path: Path):
         # first_img = cv2.imread(str(self.image_list[0].absolute_path))
         # w_size = first_img.shape[1]
         # self.custom_config["general"]["w_size"] = w_size
@@ -212,17 +215,10 @@ class ImageMatching:
             res_pair_dir = Path("res") / f"{pair[0].stem}-{pair[1].stem}"
 
             if DEBUG:
-                import torch
-                from deep_image_matching.io.h5 import get_features
-
-                device = torch.device("cuda")
-
-                image0 = cv2.imread(str(im0), cv2.IMREAD_GRAYSCALE).astype(np.float32)
-                image1 = cv2.imread(str(im1), cv2.IMREAD_GRAYSCALE).astype(np.float32)
-
-                feature_path = (
-                    Path(self.custom_config["general"]["save_dir"]) / "features.h5"
+                device = (
+                    "cuda" if not self.custom_config["general"]["force_cpu"] else "cpu"
                 )
+
                 feats0 = get_features(
                     feature_path, im0.name, as_tensor=True, device=device
                 )
@@ -230,24 +226,23 @@ class ImageMatching:
                     feature_path, im1.name, as_tensor=True, device=device
                 )
 
-                matcher.match(
-                    image0,
-                    image1,
+                matches = matcher.match(
+                    im0,
+                    im1,
                     feats0,
                     feats1,
                     general={"save_dir": res_pair_dir},
                 )
 
-                kpts0 = deepcopy(matcher._features0.keypoints)
-                kpts1 = deepcopy(matcher._features1.keypoints)
-                matches0 = deepcopy(matcher._matches0)
-
                 # Make correspondence matrix
-                correspondences = make_correspondence_matrix(matches0)
+                correspondences = make_correspondence_matrix(matches)
+
+                kpts0_h5 = get_features(feature_path, im0.name)["keypoints"]
+                kpts1_h5 = get_features(feature_path, im1.name)["keypoints"]
 
                 # Apply geometric verification and store results
-                self.keypoints[im0.name] = kpts0
-                self.keypoints[im1.name] = kpts1
+                self.keypoints[im0.name] = kpts0_h5
+                self.keypoints[im1.name] = kpts1_h5
                 self.correspondences[(im0, im1)] = apply_geometric_verification(
                     kpts0=self.keypoints[im0.name],
                     kpts1=self.keypoints[im1.name],

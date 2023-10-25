@@ -70,7 +70,7 @@ def main(debug: bool = False):
                 "interface": "cli",
                 "images": "data/hard_lowres",
                 "outs": "res",
-                "strategy": "sequential",
+                "strategy": "bruteforce",
                 "features": "lightglue",
                 "retrieval": "netvlad",
                 "overlap": 1,
@@ -153,8 +153,8 @@ def main(debug: bool = False):
     )
     images = img_matching.img_names
     pairs = img_matching.generate_pairs()
-    img_matching.extract_features()
-    keypoints, correspondences = img_matching.match_pairs()
+    feature_path = img_matching.extract_features()
+    keypoints, correspondences = img_matching.match_pairs(feature_path)
 
     # Plot statistics
     logger.info("Finished matching and exporting")

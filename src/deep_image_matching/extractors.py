@@ -3,7 +3,7 @@ import numpy as np
 from pathlib import Path
 import logging
 from copy import deepcopy
-from typing import Tuple
+from typing import Tuple, Union
 import torch
 from dataclasses import dataclass
 
@@ -14,6 +14,7 @@ from .tiling import Tiler
 logger = logging.getLogger(__name__)
 
 
+# TODO: move to another file to share it with matchers.py
 @dataclass
 class FeaturesBase:
     keypoints: np.ndarray
@@ -85,9 +86,11 @@ class ExtractorBase:
         cfg = {"name": "superpoint", "nms_radius": 3, "max_keypoints": 4096}
         self._extractor = SuperPoint(cfg).eval().to(self._device)
 
-    def extract(self, img: Image) -> np.ndarray:
+    def extract(self, img: Union[Image, Path]) -> np.ndarray:
         # Load image
-        image = cv2.imread(str(img.absolute_path), cv2.IMREAD_GRAYSCALE).astype(
+
+        im_path = str(img) if isinstance(img, Path) else str(img.absolute_path)
+        image = cv2.imread(im_path, cv2.IMREAD_GRAYSCALE).astype(
             np.float32
         )
 
