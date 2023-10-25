@@ -54,7 +54,10 @@ def get_features(
                     "keypoints": kpts,
                     "descriptors": descr,
                 }
-
+                if "tile_idx" in fd[name]:
+                    feats["tile_idx"] = np.array(fd[name]["tile_idx"]).astype(
+                        np.float32
+                    )
                 if "scores" in fd[name]:
                     feats["scores"] = np.array(fd[name]["scores"]).astype(np.float32)
             except KeyError:

@@ -3,9 +3,9 @@ import numpy as np
 from pathlib import Path
 import logging
 from copy import deepcopy
-from typing import Tuple, Union
+from typing import Tuple, Union, TypedDict, Optional
 import torch
-from dataclasses import dataclass
+import h5py
 
 from .image import Image
 from .consts import Quality, TileSelection
@@ -15,42 +15,56 @@ logger = logging.getLogger(__name__)
 
 
 # TODO: move to another file to share it with matchers.py
-@dataclass
-class FeaturesBase:
+# @dataclass
+# class FeaturesBase:
+#     keypoints: np.ndarray
+#     descriptors: np.ndarray = None
+#     scores: np.ndarray = None
+#     tile_idx: np.ndarray = None
+
+#     def to_dict(self, as_tensor: bool = False, device=None) -> dict:
+#         dic = {
+#             "keypoints": self.keypoints,
+#             "descriptors": self.descriptors,
+#             "scores": self.scores,
+#             "tile_idx": self.tile_idx,
+#         }
+#         if as_tensor:
+#             dic = {k: torch.tensor(v, device=device) for k, v in dic.items()}
+#         return dic
+
+#     @classmethod
+#     def from_dict(cls, dic: dict) -> "FeaturesBase":
+#         defualt_dic = {
+#             "keypoints": None,
+#             "descriptors": None,
+#             "scores": None,
+#             "tile_idx": None,
+#         }
+#         dic = {**defualt_dic, **dic}
+#         for k, v in dic.items():
+#             if isinstance(v, np.ndarray):
+#                 v = v.astype("float32")
+#         return cls(
+#             keypoints=dic["keypoints"],
+#             descriptors=dic["descriptors"],
+#             scores=dic["scores"],
+#             tile_idx=dic["tile_idx"],
+#         )
+
+
+class FeaturesDict(TypedDict):
     keypoints: np.ndarray
-    descriptors: np.ndarray = None
-    scores: np.ndarray = None
-    tile_idx: np.ndarray = None
+    descriptors: np.ndarray
+    scores: Optional[np.ndarray]
+    tile_idx: Optional[np.ndarray]
 
-    def to_dict(self, as_tensor: bool = False, device=None) -> dict:
-        dic = {
-            "keypoints": self.keypoints,
-            "descriptors": self.descriptors,
-            "scores": self.scores,
-            "tile_idx": self.tile_idx,
-        }
-        if as_tensor:
-            dic = {k: torch.tensor(v, device=device) for k, v in dic.items()}
-        return dic
 
-    @classmethod
-    def from_dict(cls, dic: dict) -> "FeaturesBase":
-        defualt_dic = {
-            "keypoints": None,
-            "descriptors": None,
-            "scores": None,
-            "tile_idx": None,
-        }
-        dic = {**defualt_dic, **dic}
-        for k, v in dic.items():
-            if isinstance(v, np.ndarray):
-                v = v.astype("float32")
-        return cls(
-            keypoints=dic["keypoints"],
-            descriptors=dic["descriptors"],
-            scores=dic["scores"],
-            tile_idx=dic["tile_idx"],
-        )
+def featuresDict_2_tensor(features: FeaturesDict, device: torch.device) -> FeaturesDict:
+    return {
+        k: torch.tensor(v, dtype=torch.float, device=device)
+        for k, v in features.items()
+    }
 
 
 DEBUG = True
@@ -70,6 +84,7 @@ DEFAULT_CONFIG = {
 }
 
 
+# TODO: separate the ExtractorBase class from the SuperPointExtractor class
 class ExtractorBase:
     def __init__(self, **custom_config: dict):
         # Set default config
@@ -80,7 +95,7 @@ class ExtractorBase:
             raise TypeError("opt must be a dictionary")
         self._update_config(custom_config)
 
-        # Load extractor in the subclass!
+        # Load extractor (TODO: DO IT IN THE SUBCLASS!)
         from deep_image_matching.hloc.extractors.superpoint import SuperPoint
 
         cfg = {"name": "superpoint", "nms_radius": 3, "max_keypoints": 4096}
@@ -89,10 +104,8 @@ class ExtractorBase:
     def extract(self, img: Union[Image, Path]) -> np.ndarray:
         # Load image
 
-        im_path = str(img) if isinstance(img, Path) else str(img.absolute_path)
-        image = cv2.imread(im_path, cv2.IMREAD_GRAYSCALE).astype(
-            np.float32
-        )
+        im_path = img if isinstance(img, Path) else img.absolute_path
+        image = cv2.imread(str(im_path), cv2.IMREAD_GRAYSCALE).astype(np.float32)
 
         # Resize images if needed
         image_ = self._resize_image(self._quality, image)
@@ -100,14 +113,48 @@ class ExtractorBase:
         if self._config["general"]["tile_selection"] == TileSelection.NONE:
             # Extract features from the whole image
             features = self._extract(image_)
+            features.tile_idx = np.zeros(features.keypoints.shape[0], dtype=np.float32)
         else:
             # Extract features by tiles
-            features = self._extract_by_tile(image_)
+            features = self._extract_by_tile(image_, select_unique=True)
 
         # Retrieve original image coordinates if matching was performed on up/down-sampled images
         features = self._resize_features(self._quality, features)
 
-        return features
+        # Save features to disk in h5 format (TODO: MOVE it to another method)
+        # def save_features_to_h5(self)
+        as_half = False  # TODO: add this to the config
+        save_dir = Path(self._config["general"]["save_dir"])
+        save_dir.mkdir(parents=True, exist_ok=True)
+        feature_path = save_dir / "features.h5"
+        im_name = im_path.name
+
+        if as_half:
+            for k in features:
+                if not isinstance(features[k], np.ndarray):
+                    continue
+                dt = features[k].dtype
+                if (dt == np.float32) and (dt != np.float16):
+                    features[k] = features[k].astype(np.float16)
+
+        with h5py.File(str(feature_path), "a", libver="latest") as fd:
+            try:
+                if im_name in fd:
+                    del fd[im_name]
+                grp = fd.create_group(im_name)
+                for k, v in features.items():
+                    if isinstance(v, np.ndarray):
+                        grp.create_dataset(k, data=v)
+            except OSError as error:
+                if "No space left on device" in error.args[0]:
+                    logger.error(
+                        "Out of disk space: storing features on disk can take "
+                        "significant space, did you enable the as_half flag?"
+                    )
+                    del grp, fd[im_name]
+                raise error
+
+        return feature_path
 
     @torch.no_grad()
     def _extract(self, image: np.ndarray) -> dict:
@@ -126,10 +173,7 @@ class ExtractorBase:
         # Convert tensors to numpy arrays
         feats = {k: v.cpu().numpy() for k, v in feats.items()}
 
-        # Convert features to FeaturesBase object
-        features = FeaturesBase.from_dict(feats)
-
-        return features
+        return feats
 
     def _frame2tensor(self, image: np.ndarray, device: str = "cpu"):
         if len(image.shape) == 2:
@@ -194,7 +238,7 @@ class ExtractorBase:
         )
         logger.info(f"Running inference on device {self._device}")
 
-    def _extract_by_tile(self, image: np.ndarray):
+    def _extract_by_tile(self, image: np.ndarray, select_unique: bool = True):
         # Compute tiles limits
         grid = self._config["general"]["tiling_grid"]
         overlap = self._config["general"]["tiling_overlap"]
@@ -209,24 +253,32 @@ class ExtractorBase:
 
         # Extract features from each tile
         for idx, lim in t_lims.items():
-            logger.info(f"  Extracting features from tile: {idx}")
-            tile = tiler.extract_patch(image, lim)
+            logger.debug(f"  - Extracting features from tile: {idx}")
 
+            # Extract features in tile
+            tile = tiler.extract_patch(image, lim)
             feat_tile = self._extract(tile)
 
             # append features
-            kpts_full = np.vstack((kpts_full, feat_tile.keypoints + np.array(lim[0:2])))
-            descriptors_full = np.hstack((descriptors_full, feat_tile.descriptors))
-            scores_full = np.concatenate((scores_full, feat_tile.scores))
+            kpts_full = np.vstack(
+                (kpts_full, feat_tile["keypoints"] + np.array(lim[0:2]))
+            )
+            descriptors_full = np.hstack((descriptors_full, feat_tile["descriptors"]))
+            scores_full = np.concatenate((scores_full, feat_tile["scores"]))
             tile_idx_full = np.concatenate(
                 (
                     tile_idx_full,
-                    np.ones(feat_tile.keypoints.shape[0], dtype=np.float32) * idx,
+                    np.ones(feat_tile["keypoints"].shape[0], dtype=np.float32) * idx,
                 )
             )
+        if select_unique is True:
+            kpts_full, unique_idx = np.unique(kpts_full, axis=0, return_index=True)
+            descriptors_full = descriptors_full[:, unique_idx]
+            scores_full = scores_full[unique_idx]
+            tile_idx_full = tile_idx_full[unique_idx]
 
-        # Convert features to FeaturesBase object
-        features = FeaturesBase(
+        # Make FeaturesDict object
+        features = FeaturesDict(
             keypoints=kpts_full,
             descriptors=descriptors_full,
             scores=scores_full,
@@ -258,32 +310,32 @@ class ExtractorBase:
         return image_
 
     def _resize_features(
-        self, quality: Quality, features: FeaturesBase
-    ) -> Tuple[FeaturesBase]:
+        self, quality: Quality, features: FeaturesDict
+    ) -> Tuple[FeaturesDict]:
         """
         Resize features based on the specified quality.
 
         Args:
             quality (Quality): The quality level for resizing.
-            features0 (FeaturesBase): The features of the first image.
-            features1 (FeaturesBase): The features of the second image.
+            features0 (FeaturesDict): The features of the first image.
+            features1 (FeaturesDict): The features of the second image.
 
         Returns:
-            Tuple[FeaturesBase]: Resized features.
+            Tuple[FeaturesDict]: Resized features.
 
         """
         if quality == Quality.HIGHEST:
-            features.keypoints /= 2
+            features["keypoints"] /= 2
         elif quality == Quality.HIGH:
             pass
         elif quality == Quality.MEDIUM:
-            features.keypoints *= 2
+            features["keypoints"] *= 2
         elif quality == Quality.LOW:
-            features.keypoints *= 4
+            features["keypoints"] *= 4
 
         return features
 
-    def _filter_kpts_by_mask(self, features: FeaturesBase, inlMask: np.ndarray) -> None:
+    def _filter_kpts_by_mask(self, features: FeaturesDict, inlMask: np.ndarray) -> None:
         """
         Filter matches based on the specified mask.
 

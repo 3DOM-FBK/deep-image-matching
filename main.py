@@ -10,7 +10,7 @@ from src.deep_image_matching.gui import gui
 
 from config import custom_config
 
-logger = setup_logger()
+logger = setup_logger(console_log_level="debug")
 
 
 def parse_args():
@@ -68,12 +68,12 @@ def main(debug: bool = False):
         args = edict(
             {
                 "interface": "cli",
-                "images": "data/hard_lowres",
+                "images": "data/easy",
                 "outs": "res",
-                "strategy": "bruteforce",
+                "strategy": "sequential",
                 "features": "lightglue",
                 "retrieval": "netvlad",
-                "overlap": 1,
+                "overlap": 2,
                 "max_features": 1000,
             }
         )
@@ -113,6 +113,9 @@ def main(debug: bool = False):
         matching_strategy = args.strategy
         max_features = args.max_features
 
+        if not imgs_dir.exists() or not imgs_dir.is_dir():
+            raise ValueError(f"Folder {imgs_dir} does not exist")
+
         if args.features in ["superglue", "lightglue", "loftr"]:
             local_features = args.features
         else:
@@ -151,12 +154,12 @@ def main(debug: bool = False):
         pair_file=pair_file,
         overlap=overlap,
     )
-    images = img_matching.img_names
     pairs = img_matching.generate_pairs()
     feature_path = img_matching.extract_features()
     keypoints, correspondences = img_matching.match_pairs(feature_path)
 
     # Plot statistics
+    images = img_matching.image_list
     logger.info("Finished matching and exporting")
     logger.info(f"\tProcessed images: {len(images)}")
     logger.info(f"\tProcessed pairs: {len(pairs)}")
@@ -164,7 +167,6 @@ def main(debug: bool = False):
     # Export in colmap format
     ExportToColmap(
         images,
-        img_matching.img_format,
         img_matching.width,
         img_matching.height,
         keypoints,

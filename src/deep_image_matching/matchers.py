@@ -1,6 +1,5 @@
 import logging
 from pathlib import Path
-from typing import Tuple
 
 import cv2
 import kornia as K
@@ -12,7 +11,7 @@ import torch
 from .consts import (
     TileSelection,
 )
-from .matcher_base import FeaturesBase, MatcherBase
+from .matcher_base import MatcherBase
 from .tiling import Tiler
 from .thirdparty.LightGlue.lightglue import LightGlue
 from .thirdparty.SuperGlue.models.matching import Matching
@@ -57,7 +56,7 @@ class DetectAndDescribe(MatcherBase):
         image0: np.ndarray,
         image1: np.ndarray,
         **config,
-    ) -> Tuple[FeaturesBase, FeaturesBase, np.ndarray, np.ndarray]:
+    ):
         # max_keypoints = config.get("max_keypoints", 4096)
         local_feat_extractor = config.get("local_feat_extractor")
         keypoints, descriptors, lafs = local_feat_extractor.run(
@@ -86,13 +85,13 @@ class DetectAndDescribe(MatcherBase):
         matches0 = np.array(matches0)
         mconf = None
 
-        # Create FeaturesBase objects and matching array
-        features0 = FeaturesBase(
+        # Create FeaturesDict objects and matching array
+        features0 = FeaturesDict(
             keypoints=kpys0,
             descriptors=desc0,
             scores=None,
         )
-        features1 = FeaturesBase(
+        features1 = FeaturesDict(
             keypoints=kpys1,
             descriptors=desc1,
             scores=None,
@@ -117,51 +116,38 @@ class LightGlueMatcher(MatcherBase):
         sg_cfg = self._config["SperPoint+LightGlue"]["LightGlue"]
         self._matcher = LightGlue(self._localfeatures, **sg_cfg).eval().to(self._device)
 
-    # Override _frame2tensor method to shift channel first as batch dimension
-    def _frame2tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor:
-        """Normalize the image tensor and reorder the dimensions."""
-        if image.ndim == 3:
-            image = image.transpose((2, 0, 1))  # HxWxC to CxHxW
-        elif image.ndim == 2:
-            image = image[None]  # add channel axis
-        else:
-            raise ValueError(f"Not an image: {image.shape}")
-        return torch.tensor(image / 255.0, dtype=torch.float).to(device)
-
-    def _rbd(self, data: dict) -> dict:
-        """Remove batch dimension from elements in data"""
-        return {
-            k: v[0] if isinstance(v, (torch.Tensor, np.ndarray, list)) else v
-            for k, v in data.items()
-        }
-
     @torch.no_grad()
     def _match_pairs(
         self,
         feats0: FeaturesDict,
         feats1: FeaturesDict,
     ) -> np.ndarray:
-        def featuresDict_2_lightglue(feats: FeaturesDict) -> dict:
-            # Rename scores to keypoint_scores
-            feats["keypoint_scores"] = feats.pop("scores")
+        def featuresDict_2_lightglue(feats: FeaturesDict, device: torch.device) -> dict:
             # Remove elements from list/tuple
             feats = {
                 k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()
             }
             # Move descriptors dimension to last
             if "descriptors" in feats.keys():
-                feats["descriptors"] = feats["descriptors"].transpose(0, 1)
+                if feats["descriptors"].shape[-1] != 256:
+                    feats["descriptors"] = feats["descriptors"].T
             # Add batch dimension
             feats = {k: v[None] for k, v in feats.items()}
-            # Check device
+            # Convert to tensor
             feats = {
-                k: v.to(self._device) if isinstance(v, torch.Tensor) else v
+                k: torch.tensor(v, dtype=torch.float, device=device)
                 for k, v in feats.items()
             }
+            # Check device
+            feats = {
+                k: v.to(device) if isinstance(v, torch.Tensor) else v
+                for k, v in feats.items()
+            }
+
             return feats
 
-        feats0 = featuresDict_2_lightglue(feats0)
-        feats1 = featuresDict_2_lightglue(feats1)
+        feats0 = featuresDict_2_lightglue(feats0, self._device)
+        feats1 = featuresDict_2_lightglue(feats1, self._device)
 
         # match the features
         match_res = self._matcher({"image0": feats0, "image1": feats1})
@@ -180,6 +166,24 @@ class LightGlueMatcher(MatcherBase):
         matches01_idx = match_res["matches"]
 
         return matches01_idx
+
+    # Override _frame2tensor method to shift channel first as batch dimension
+    def _frame2tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor:
+        """Normalize the image tensor and reorder the dimensions."""
+        if image.ndim == 3:
+            image = image.transpose((2, 0, 1))  # HxWxC to CxHxW
+        elif image.ndim == 2:
+            image = image[None]  # add channel axis
+        else:
+            raise ValueError(f"Not an image: {image.shape}")
+        return torch.tensor(image / 255.0, dtype=torch.float).to(device)
+
+    def _rbd(self, data: dict) -> dict:
+        """Remove batch dimension from elements in data"""
+        return {
+            k: v[0] if isinstance(v, (torch.Tensor, np.ndarray, list)) else v
+            for k, v in data.items()
+        }
 
 
 class SuperGlueMatcher(MatcherBase):
@@ -218,7 +222,7 @@ class SuperGlueMatcher(MatcherBase):
         self,
         image0: np.ndarray,
         image1: np.ndarray,
-    ) -> Tuple[FeaturesBase, FeaturesBase, np.ndarray, np.ndarray]:
+    ):
         """Matches keypoints and descriptors in two given images (no matter if they are tiles or full-res images) using the SuperGlue algorithm.
 
         This method takes in two images as Numpy arrays, and returns the matches between keypoints
@@ -245,12 +249,12 @@ class SuperGlueMatcher(MatcherBase):
         pred = {k: v[0].cpu().numpy() for k, v in pred_tensor.items()}
 
         # Create FeaturesBase objects and matching array
-        features0 = FeaturesBase(
+        features0 = FeaturesDict(
             keypoints=pred["keypoints0"],
             descriptors=pred["descriptors0"],
             scores=pred["scores0"],
         )
-        features1 = FeaturesBase(
+        features1 = FeaturesDict(
             keypoints=pred["keypoints1"],
             descriptors=pred["descriptors1"],
             scores=pred["scores1"],
@@ -358,7 +362,7 @@ class LOFTRMatcher(MatcherBase):
         self,
         image0: np.ndarray,
         image1: np.ndarray,
-    ) -> Tuple[FeaturesBase, FeaturesBase, np.ndarray, np.ndarray]:
+    ):
         """Matches keypoints and descriptors in two given images
         (no matter if they are tiles or full-res images) using
         the LoFTR algorithm.
@@ -390,8 +394,8 @@ class LOFTRMatcher(MatcherBase):
         # Get matches and build features
         mkpts0 = correspondences["keypoints0"].cpu().numpy()
         mkpts1 = correspondences["keypoints1"].cpu().numpy()
-        features0 = FeaturesBase(keypoints=mkpts0)
-        features1 = FeaturesBase(keypoints=mkpts1)
+        features0 = FeaturesDict(keypoints=mkpts0)
+        features1 = FeaturesDict(keypoints=mkpts1)
 
         # Get match confidence
         mconf = correspondences["confidence"].cpu().numpy()
@@ -413,7 +417,7 @@ class LOFTRMatcher(MatcherBase):
         image1: np.ndarray,
         tile_selection: TileSelection = TileSelection.PRESELECTION,
         **config,
-    ) -> Tuple[FeaturesBase, FeaturesBase, np.ndarray, np.ndarray]:
+    ):
         """
         Matches tiles in two images and returns the features, matches, and confidence.
 
@@ -515,8 +519,8 @@ class LOFTRMatcher(MatcherBase):
         conf_full = conf_full[unique_idx]
 
         # Create features
-        features0 = FeaturesBase(keypoints=mkpts0_full)
-        features1 = FeaturesBase(keypoints=mkpts1_full)
+        features0 = FeaturesDict(keypoints=mkpts0_full)
+        features1 = FeaturesDict(keypoints=mkpts1_full)
 
         # Create a 1-to-1 matching array
         matches0 = np.arange(mkpts0_full.shape[0])
