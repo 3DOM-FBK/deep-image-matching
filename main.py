@@ -174,6 +174,7 @@ def main(debug: bool = False):
         output_dir,
     )
 
+    # Tests for using h5_to_db.py
     from deep_image_matching.io.h5_to_db import (
         COLMAPDatabase,
         add_keypoints,

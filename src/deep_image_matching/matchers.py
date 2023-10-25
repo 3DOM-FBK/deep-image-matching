@@ -20,9 +20,6 @@ logger = logging.getLogger(__name__)
 # The MatcherBase class should contain all the common methods and attributes for all the matchers (tile suddivision, image downsampling/upsampling), geometric verification etc.
 # The specific matchers MUST contain at least the `_match_pairs` method, which takes in two images as Numpy arrays, and returns the matches between keypoints and descriptors in those images. It doesn not care if the images are tiles or full-res images, as the tiling is handled by the MatcherBase class that calls the `_match_pairs` method for each tile pair or for the full images depending on the tile selection method.
 
-# TODO: add integration with KORNIA library for using all the extractors and mathers.
-# TODO: add visualization functions for the matches (take the functions from the visualization module of ICEpy4d). Currentely, the visualization methods may not work!
-
 
 class FeaturesDict(TypedDict):
     keypoints: np.ndarray

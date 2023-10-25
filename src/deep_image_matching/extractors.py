@@ -15,45 +15,6 @@ from .tiling import Tiler
 logger = logging.getLogger(__name__)
 
 
-# TODO: move to another file to share it with matchers.py
-# @dataclass
-# class FeaturesBase:
-#     keypoints: np.ndarray
-#     descriptors: np.ndarray = None
-#     scores: np.ndarray = None
-#     tile_idx: np.ndarray = None
-
-#     def to_dict(self, as_tensor: bool = False, device=None) -> dict:
-#         dic = {
-#             "keypoints": self.keypoints,
-#             "descriptors": self.descriptors,
-#             "scores": self.scores,
-#             "tile_idx": self.tile_idx,
-#         }
-#         if as_tensor:
-#             dic = {k: torch.tensor(v, device=device) for k, v in dic.items()}
-#         return dic
-
-#     @classmethod
-#     def from_dict(cls, dic: dict) -> "FeaturesBase":
-#         defualt_dic = {
-#             "keypoints": None,
-#             "descriptors": None,
-#             "scores": None,
-#             "tile_idx": None,
-#         }
-#         dic = {**defualt_dic, **dic}
-#         for k, v in dic.items():
-#             if isinstance(v, np.ndarray):
-#                 v = v.astype("float32")
-#         return cls(
-#             keypoints=dic["keypoints"],
-#             descriptors=dic["descriptors"],
-#             scores=dic["scores"],
-#             tile_idx=dic["tile_idx"],
-#         )
-
-
 class FeaturesDict(TypedDict):
     keypoints: np.ndarray
     descriptors: np.ndarray

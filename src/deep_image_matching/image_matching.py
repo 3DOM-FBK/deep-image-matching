@@ -19,8 +19,6 @@ from .pairs_generator import PairsGenerator
 
 logger = logging.getLogger(__name__)
 
-DEBUG = True
-
 
 def make_correspondence_matrix(matches: np.ndarray) -> np.ndarray:
     kpts_number = matches.shape[0]
@@ -183,14 +181,11 @@ class ImageMatching:
             logger.info(f"Matching image pair: {pair[0].name} - {pair[1].name}")
             im0 = pair[0]
             im1 = pair[1]
-            # res_pair_dir = Path("res") / f"{pair[0].stem}-{pair[1].stem}"
 
-            device = "cuda" if not self.custom_config["general"]["force_cpu"] else "cpu"
             correspondences = matcher.match(
                 feature_path=feature_path,
                 img0=im0,
                 img1=im1,
-                # general={"save_dir": res_pair_dir},
             )
 
             # Make correspondence matrix (no need it anymore as the matcher already does it)
