@@ -15,8 +15,8 @@ custom_config = {
         "tiling_overlap": 50,
         "do_viz_tiles": True,
         "geometric_verification": GeometricVerification.PYDEGENSAC,
-        "gv_threshold": 1.5,
-        "gv_confidence": 0.999,
+        "gv_threshold": 3,
+        "gv_confidence": 0.9999,
         "kornia_matcher": "smnn",  #'nn' or 'snn' or 'mnn' or 'smnn'
         "ratio_threshold": 0.95,  # valid range [0-1]
     },

@@ -10,7 +10,6 @@ import numpy as np
 import torch
 
 from .consts import GeometricVerification, Quality, TileSelection
-from .geometric_verification import geometric_verification
 from .tiling import Tiler
 from .utils import Timer
 from .visualization import viz_matches_cv2, viz_matches_mpl
@@ -34,20 +33,52 @@ DEFAULT_CONFIG = {
         "do_viz_tiles": False,
         "tiling_grid": [1, 1],
         "tiling_overlap": 0,
-        "tiling_origin": [0, 0],
+        # "tiling_origin": [0, 0],
         "min_matches_per_tile": 5,
     }
 }
 
 
+# TODO: move to another file to share it with extractor_base.py
 @dataclass
 class FeaturesBase:
     keypoints: np.ndarray
     descriptors: np.ndarray = None
     scores: np.ndarray = None
+    tile_idx: np.ndarray = None
+
+    def to_dict(self, as_tensor: bool = False, device=None) -> dict:
+        dic = {
+            "keypoints": self.keypoints,
+            "descriptors": self.descriptors,
+            "scores": self.scores,
+            "tile_idx": self.tile_idx,
+        }
+        if as_tensor:
+            dic = {k: torch.tensor(v, device=device) for k, v in dic.items()}
+        return dic
+
+    @classmethod
+    def from_dict(cls, dic: dict) -> "FeaturesBase":
+        defualt_dic = {
+            "keypoints": None,
+            "descriptors": None,
+            "scores": None,
+            "tile_idx": None,
+        }
+        dic = {**defualt_dic, **dic}
+        for k, v in dic.items():
+            if isinstance(v, np.ndarray):
+                v = v.astype("float32")
+        return cls(
+            keypoints=dic["keypoints"],
+            descriptors=dic["descriptors"],
+            scores=dic["scores"],
+            tile_idx=dic["tile_idx"],
+        )
 
 
-class ImageMatcherBase:
+class MatcherBase:
     def __init__(self, **custom_config) -> None:
         """
         Base class for matchers. It defines the basic interface for matchers and basic functionalities that are shared among all matchers, in particular the `match` method. It must be subclassed to implement a new matcher.
@@ -95,36 +126,16 @@ class ImageMatcherBase:
         self._F = None
 
     @property
-    def device(self):
-        return self._device
+    def features0(self):
+        return self._features0
 
     @property
-    def mkpts0(self):
-        return self._mkpts0
+    def features1(self):
+        return self._features1
 
     @property
-    def mkpts1(self):
-        return self._mkpts1
-
-    @property
-    def descriptors0(self):
-        return self._descriptors0
-
-    @property
-    def descriptors1(self):
-        return self._descriptors1
-
-    @property
-    def scores0(self):
-        return self._scores0
-
-    @property
-    def scores1(self):
-        return self._scores1
-
-    @property
-    def mconf(self):
-        return self._mconf
+    def matches0(self):
+        return self._matches0
 
     def _update_config(self, config: dict):
         """Check the matching config dictionary for missing keys or invalid values."""
@@ -152,7 +163,7 @@ class ImageMatcherBase:
             "do_viz_tiles",
             "tiling_grid",
             "tiling_overlap",
-            "tiling_origin",
+            # "tiling_origin",
             "min_matches_per_tile",
         ]
         missing_keys = [
@@ -194,32 +205,18 @@ class ImageMatcherBase:
         logger.info(f"Saving directory: {self._save_dir}")
 
         # Get device
-        self._device = (
+        self._device = torch.device(
             "cuda"
             if torch.cuda.is_available() and not self._config["general"]["force_cpu"]
             else "cpu"
         )
         logger.info(f"Running inference on device {self._device}")
 
-    def reset(self):
-        """Reset the matcher by cleaning the features and matches"""
-        self._features0 = None
-        self._features1 = None
-        self._matches0 = None
-        self._matches01 = None
-        self._mkpts0 = None
-        self._mkpts1 = None
-        self._descriptors0 = None
-        self._descriptors1 = None
-        self._scores0 = None
-        self._scores1 = None
-        self._mconf = None
-
     def _match_pairs(
         self,
-        image0: np.ndarray,
-        image1: np.ndarray,
-    ) -> Tuple[FeaturesBase, FeaturesBase, np.ndarray, np.ndarray, np.ndarray]:
+        feats0: dict,
+        feats1: dict,
+    ) -> Tuple[FeaturesBase, FeaturesBase, np.ndarray, np.ndarray]:
         """Matches keypoints and descriptors in two given images (no
         matter if they are tiles or full-res images).
 
@@ -243,8 +240,8 @@ class ImageMatcherBase:
     # @timeit
     def match(
         self,
-        image0: np.ndarray,
-        image1: np.ndarray,
+        img0: Path,
+        img1: Path,
         features0=None,
         features1=None,
         **custom_config,
@@ -263,28 +260,40 @@ class ImageMatcherBase:
         """
         self.timer = Timer()
 
-        # Check input images
-        assert isinstance(image0, np.ndarray), "image0 must be a NumPy array"
-        assert isinstance(image1, np.ndarray), "image1 must be a NumPy array"
-
         # If a custom config is passed, update the default config
         self._update_config(custom_config)
 
-        # Resize images if needed
-        image0_, image1_ = self._resize_images(self._quality, image0, image1)
+        # Store image path in class
+        if not Path(img0).exists():
+            raise FileNotFoundError(f"Image {img0} does not exist.")
+        if not Path(img1).exists():
+            raise FileNotFoundError(f"Image {img1} does not exist.")
+        img0_name = img0.name
+        img1_name = img1.name
+
+        # Read the image
+        if features0 is None or features1 is None:
+            logger.info("Features not provided. Extracting features...")
+            image0 = cv2.imread(str(img0), cv2.IMREAD_GRAYSCALE)
+            image1 = cv2.imread(str(img1), cv2.IMREAD_GRAYSCALE)
+
+            # Resize images if needed
+            image0, image1 = self._resize_images(self._quality, image0, image1)
+
+            # Extract features
 
         # Perform matching (on tiles or full images)
         if self._tiling == TileSelection.NONE:
             logger.info("Matching full images...")
-            features0, features1, matches0, matches01, mconf = self._match_pairs(
-                image0_, image1_, features0, features1
-            )
+            self._matches0 = self._match_pairs(features0, features1)
 
         else:
             logger.info("Matching by tiles...")
-            features0, features1, matches0, matches01, mconf = self._match_by_tile(
-                image0_,
-                image1_,
+            self._matches0 = self._match_by_tile(
+                image0,
+                image1,
+                img0_name,
+                img1_name,
                 select_unique=False,
             )
 
@@ -292,61 +301,50 @@ class ImageMatcherBase:
         features0, features1 = self._resize_features(
             self._quality, features0, features1
         )
-
-        # Added by Luca
-        # data4luca = [deepcopy(x) for x in [features0, features1, matches0, mconf]]
-        # return self._features0, self._features1, matches0, mconf
-
-        # Store features as class members
-        try:
-            self._store_matched_features(
-                features0, features1, matches0, matches01, mconf
-            )
-        except Exception as e:
-            raise RuntimeError(
-                f"""{e}. 
-                Error when storing matches. Implement your own _store_matched_features() method if the output of your _match_pairs function is different from that expected by the ImageMatcherBase class."""
-            )
         self.timer.update("matching")
         logger.info("Matching done!")
 
-        # Perform geometric verification
-        logger.info("Performing geometric verification...")
-        if self._gv is not GeometricVerification.NONE:
-            F, inlMask = geometric_verification(
-                self._mkpts0,
-                self._mkpts1,
-                method=self._gv,
-                confidence=self._config["general"]["gv_confidence"],
-                threshold=self._config["general"]["gv_threshold"],
-            )
-            self._F = F
-            self._filter_matches_by_mask(inlMask)
-            logger.info("Geometric verification done.")
-            self.timer.update("geometric_verification")
+        # Perform geometric verification (temporarily disabled)
+        # logger.info("Performing geometric verification...")
+        # if self._gv is not GeometricVerification.NONE:
+        #     F, inlMask = geometric_verification(
+        #         self._mkpts0,
+        #         self._mkpts1,
+        #         method=self._gv,
+        #         confidence=self._config["general"]["gv_confidence"],
+        #         threshold=self._config["general"]["gv_threshold"],
+        #     )
+        #     self._F = F
+        #     self._filter_matches_by_mask(inlMask)
+        #     logger.info("Geometric verification done.")
+        #     self.timer.update("geometric_verification")
 
-        if self._config["general"]["do_viz"] is True:
-            self.viz_matches(
-                image0,
-                image1,
-                self._mkpts0,
-                self._mkpts1,
-                str(self._save_dir / "matches.jpg"),
-                fast_viz=self._config["general"]["fast_viz"],
-                hide_matching_track=self._config["general"]["hide_matching_track"],
-            )
+        # Visualize matches (temporarily disabled)
+        # if self._config["general"]["do_viz"] is True:
+        #     self.viz_matches(
+        #         image0,
+        #         image1,
+        #         self._mkpts0,
+        #         self._mkpts1,
+        #         str(self._save_dir / "matches.jpg"),
+        #         fast_viz=self._config["general"]["fast_viz"],
+        #         hide_matching_track=self._config["general"]["hide_matching_track"],
+        #     )
 
-        if self._save_dir is not None:
-            self.save_mkpts_as_txt(self._save_dir)
+        # Save matches as txt file (temporarily disabled)
+        # if self._save_dir is not None:
+        #     self.save_mkpts_as_txt(self._save_dir)
 
         self.timer.print("Matching")
 
-        return True
+        return self._matches0
 
     def _match_by_tile(
         self,
         image0: np.ndarray,
         image1: np.ndarray,
+        img0_name: str,
+        img1_name: str,
         select_unique: bool = True,
     ) -> Tuple[FeaturesBase, FeaturesBase, np.ndarray, np.ndarray]:
         """
@@ -367,16 +365,22 @@ class ImageMatcherBase:
             AssertionError: If image0 or image1 is not a NumPy array.
 
         """
+        # TEMP!
+        from .io.h5 import get_features
+
+        # Get features from h5 file
+        feature_path = Path(self._config["general"]["save_dir"]) / "features.h5"
+        features0 = get_features(feature_path, image0.name)
+        features1 = get_features(feature_path, image1.name)
 
         # Get config parameters
         tile_selection = self._tiling
         grid = self._config["general"]["tiling_grid"]
         overlap = self._config["general"]["tiling_overlap"]
-        origin = self._config["general"]["tiling_origin"]
         do_viz_tiles = self._config["general"]["do_viz_tiles"]
 
         # Compute tiles limits and origin
-        self._tiler = Tiler(grid=grid, overlap=overlap, origin=origin)
+        self._tiler = Tiler(grid=grid, overlap=overlap)
         t0_lims, t0_origin = self._tiler.compute_limits_by_grid(image0)
         t1_lims, t1_origin = self._tiler.compute_limits_by_grid(image1)
 
@@ -473,7 +477,6 @@ class ImageMatcherBase:
 
         # Create a 1-to-1 matching array
         matches0 = np.arange(mkpts0_full.shape[0])
-        matches01 = None
 
         # Create a match confidence array
         valid = matches0 > -1
@@ -481,7 +484,7 @@ class ImageMatcherBase:
 
         logger.info("Matching by tile completed.")
 
-        return features0, features1, matches0, matches01, mconf
+        return features0, features1, matches0, mconf
 
     def _frame2tensor(self, image: np.ndarray) -> torch.Tensor:
         """Normalize the image tensor and add batch dimension."""
@@ -699,8 +702,6 @@ class ImageMatcherBase:
                     "Matches already stored. Not overwriting them. Use force_overwrite=True to force overwrite them."
                 )
                 return False
-            else:
-                logger.warning("Matches already stored. Overwrite them")
 
         # Store features as class members
         self._features0 = features0
@@ -744,6 +745,20 @@ class ImageMatcherBase:
             self._scores1 = self._scores1[inlMask]
         if self._mconf is not None:
             self._mconf = self._mconf[inlMask]
+
+    def reset(self):
+        """Reset the matcher by cleaning the features and matches"""
+        self._features0 = None
+        self._features1 = None
+        self._matches0 = None
+        self._matches01 = None
+        self._mkpts0 = None
+        self._mkpts1 = None
+        self._descriptors0 = None
+        self._descriptors1 = None
+        self._scores0 = None
+        self._scores1 = None
+        self._mconf = None
 
     def viz_matches(
         self,
