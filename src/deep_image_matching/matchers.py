@@ -103,7 +103,7 @@ class LightGlueMatcher(MatcherBase):
         super().__init__(**config)
 
         # load the LightGlue module
-        LG = import_module(".thirdparty.LightGlue.lightglue")
+        LG = import_module("deep_image_matching.thirdparty.LightGlue.lightglue")
 
         # load the matcher
         sg_cfg = self._config["SperPoint+LightGlue"]["LightGlue"]
@@ -190,7 +190,7 @@ class SuperGlueMatcher(MatcherBase):
 
         super().__init__(**config)
 
-        SG = import_module(".thirdparty.SuperGlue.models.matching")
+        SG = import_module("deep_image_matching.thirdparty.SuperGlue.models.matching")
 
         # initialize the Matching object with given configuration
         self.matcher = (

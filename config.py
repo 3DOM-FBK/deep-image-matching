@@ -9,7 +9,7 @@ custom_config = {
         "do_viz": False,
         "fast_viz": True,
         "hide_matching_track": False,
-        "tile_selection": TileSelection.GRID,
+        "tile_selection": TileSelection.PRESELECTION,
         "min_matches_per_tile": 20,
         "tiling_grid": [2, 2],
         "tiling_overlap": 50,
