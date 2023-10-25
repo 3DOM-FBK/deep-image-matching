@@ -1,5 +1,6 @@
 import logging
 from copy import deepcopy
+from importlib import import_module
 from pathlib import Path
 from typing import Optional, Tuple, TypedDict, Union
 
@@ -58,10 +59,9 @@ class ExtractorBase:
         self._update_config(custom_config)
 
         # Load extractor (TODO: DO IT IN THE SUBCLASS!)
-        from deep_image_matching.hloc.extractors.superpoint import SuperPoint
-
-        cfg = {"name": "superpoint", "nms_radius": 3, "max_keypoints": 4096}
-        self._extractor = SuperPoint(cfg).eval().to(self._device)
+        SP = import_module("deep_image_matching.hloc.extractors.superpoint")
+        SP_cfg = self._config["SperPoint+LightGlue"]["SuperPoint"]
+        self._extractor = SP.SuperPoint(SP_cfg).eval().to(self._device)
 
     def extract(self, img: Union[Image, Path]) -> np.ndarray:
         # Load image

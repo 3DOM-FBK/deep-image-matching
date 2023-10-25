@@ -47,9 +47,10 @@ custom_config = {
         "SuperPoint": {
             "descriptor_dim": 256,
             "nms_radius": 4,
-            "max_num_keypoints": 1000,
-            "detection_threshold": 0.005,
+            "max_keypoints": 1000,
+            "keypoint_threshold": 0.005,
             "remove_borders": 4,
+            "fix_sampling": True,
         },
         "LightGlue": {
             "descriptor_dim": 256,
