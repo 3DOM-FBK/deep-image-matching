@@ -1,25 +1,7 @@
-#  Copyright [2020] [Michał Tyszkiewicz, Pascal Fua, Eduard Trulls]
-#
-#   Licensed under the Apache License, Version 2.0 (the "License");
-#   you may not use this file except in compliance with the License.
-#   You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-#   Unless required by applicable law or agreed to in writing, software
-#   distributed under the License is distributed on an "AS IS" BASIS,
-#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#   See the License for the specific language governing permissions and
-#   limitations under the License.
-
-import argparse
-import os
-import warnings
-
-import h5py
+import os, argparse, h5py, warnings
 import numpy as np
-from PIL import ExifTags, Image
 from tqdm import tqdm
+from PIL import Image, ExifTags
 
 from .colmap.database import COLMAPDatabase, image_ids_to_pair_id
 
@@ -53,29 +35,29 @@ def get_focal(image_path, err_on_default=False):
     return focal
 
 
-def create_camera(db, image_path, camera_model):
+def create_camera(db, image_path):
     image = Image.open(image_path)
     width, height = image.size
 
     focal = get_focal(image_path)
 
-    if camera_model == "simple-pinhole":
+    if args.camera_model == "simple-pinhole":
         model = 0  # simple pinhole
         param_arr = np.array([focal, width / 2, height / 2])
-    if camera_model == "pinhole":
+    if args.camera_model == "pinhole":
         model = 1  # pinhole
         param_arr = np.array([focal, focal, width / 2, height / 2])
-    elif camera_model == "simple-radial":
+    elif args.camera_model == "simple-radial":
         model = 2  # simple radial
         param_arr = np.array([focal, width / 2, height / 2, 0.1])
-    elif camera_model == "opencv":
+    elif args.camera_model == "opencv":
         model = 4  # opencv
         param_arr = np.array([focal, focal, width / 2, height / 2, 0.0, 0.0, 0.0, 0.0])
 
     return db.add_camera(model, width, height, param_arr)
 
 
-def add_keypoints(db, h5_path, image_path, img_ext, camera_model, single_camera=True):
+def add_keypoints(db, h5_path, image_path):
     keypoint_f = h5py.File(os.path.join(h5_path, "keypoints.h5"), "r")
 
     camera_id = None
@@ -83,13 +65,13 @@ def add_keypoints(db, h5_path, image_path, img_ext, camera_model, single_camera=
     for filename in tqdm(list(keypoint_f.keys())):
         keypoints = keypoint_f[filename][()]
 
-        fname_with_ext = filename  # + img_ext
+        fname_with_ext = filename + args.image_extension
         path = os.path.join(image_path, fname_with_ext)
         if not os.path.isfile(path):
             raise IOError(f"Invalid image path {path}")
 
-        if camera_id is None or not single_camera:
-            camera_id = create_camera(db, path, camera_model)
+        if camera_id is None or not args.single_camera:
+            camera_id = create_camera(db, path)
         image_id = db.add_image(fname_with_ext, camera_id)
         fname_to_id[filename] = image_id
 
@@ -118,33 +100,11 @@ def add_matches(db, h5_path, fname_to_id):
                     continue
 
                 matches = group[key_2][()]
-                db.add_matches(id_1, id_2, matches)
+                db.add_matches(id_1, id_2, matches.T)
 
                 added.add(pair_id)
 
                 pbar.update(1)
-
-
-def import_into_colmap(
-    img_dir,
-    feature_dir=".featureout",
-    database_path="colmap.db",
-    img_ext=".jpg",
-    single_camera=True,
-):
-    db = COLMAPDatabase.connect(database_path)
-    db.create_tables()
-    fname_to_id = add_keypoints(
-        db, feature_dir, img_dir, img_ext, "simple-radial", single_camera
-    )
-    add_matches(
-        db,
-        feature_dir,
-        fname_to_id,
-    )
-
-    db.commit()
-    return
 
 
 if __name__ == "__main__":
@@ -198,14 +158,7 @@ if __name__ == "__main__":
     db = COLMAPDatabase.connect(args.database_path)
     db.create_tables()
 
-    fname_to_id = add_keypoints(
-        db,
-        args.h5_path,
-        args.image_path,
-        args.image_extension,
-        args.camera_model,
-        args.single_camera,
-    )
+    fname_to_id = add_keypoints(db, args.h5_path, args.image_path)
     add_matches(
         db,
         args.h5_path,

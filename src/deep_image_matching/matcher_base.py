@@ -32,7 +32,7 @@ DEFAULT_CONFIG = {
         "tile_selection": TileSelection.NONE,
         "max_keypoints": 4096,
         "force_cpu": False,
-        "save_dir": "results",
+        "output_dir": "results",
         "do_viz": False,
         "fast_viz": True,
         # "interactive_viz": False,
@@ -183,7 +183,7 @@ class MatcherBase:
 
         # Save to h5 file
         n_matches = len(self._matches)
-        matches_path = self._save_dir / "matches.h5"
+        matches_path = self._output_dir / "matches.h5"
         with h5py.File(str(matches_path), "a", libver="latest") as fd:
             group = fd.require_group(img0_name)
             if n_matches >= MIN_MATCHES:
@@ -198,7 +198,7 @@ class MatcherBase:
         #         image1,
         #         self._mkpts0,
         #         self._mkpts1,
-        #         str(self._save_dir / "matches.jpg"),
+        #         str(self._output_dir / "matches.jpg"),
         #         fast_viz=self._config["general"]["fast_viz"],
         #         hide_matching_track=self._config["general"]["hide_matching_track"],
         #     )
@@ -218,7 +218,7 @@ class MatcherBase:
 
         # Check general config
         required_keys_general = [
-            "save_dir",
+            "output_dir",
             "force_cpu",
             "hide_matching_track",
             "tile_selection",
@@ -249,13 +249,13 @@ class MatcherBase:
         logger.debug(f"Matching options: Tiling: {self._tiling.name}")
 
         # Define saving directory
-        save_dir = self._config["general"]["save_dir"]
-        if save_dir is not None:
-            self._save_dir = Path(save_dir)
-            self._save_dir.mkdir(parents=True, exist_ok=True)
+        output_dir = self._config["general"]["output_dir"]
+        if output_dir is not None:
+            self._output_dir = Path(output_dir)
+            self._output_dir.mkdir(parents=True, exist_ok=True)
         else:
-            self._save_dir = None
-        logger.debug(f"Saving directory: {self._save_dir}")
+            self._output_dir = None
+        logger.debug(f"Saving directory: {self._output_dir}")
 
         # Get device
         self._device = torch.device(
@@ -320,7 +320,7 @@ class MatcherBase:
 
             # # Visualize matches on tile
             # if do_viz_tiles is True:
-            #     out_img_path = str(self._save_dir / f"matches_tile_{tidx0}-{tidx1}.jpg")
+            #     out_img_path = str(self._output_dir / f"matches_tile_{tidx0}-{tidx1}.jpg")
             #     self.viz_matches(
             #         tile0,
             #         tile1,
@@ -446,7 +446,7 @@ class MatcherBase:
                     i1,
                     kp0,
                     kp1,
-                    str(self._save_dir / "tile_preselection.jpg"),
+                    str(self._output_dir / "tile_preselection.jpg"),
                     fast_viz=True,
                     hide_matching_track=True,
                     autoresize=True,
@@ -512,7 +512,7 @@ class MatcherBase:
         if not interactive_viz:
             assert (
                 save_path is not None
-            ), "save_dir must be specified if interactive_viz is False"
+            ), "output_dir must be specified if interactive_viz is False"
 
         # Check input parameters
         if fast_viz:
@@ -520,7 +520,7 @@ class MatcherBase:
                 logger.warning("interactive_viz is ignored if fast_viz is True")
             assert (
                 save_path is not None
-            ), "save_dir must be specified if fast_viz is True"
+            ), "output_dir must be specified if fast_viz is True"
 
         # Make visualization with OpenCV or Matplotlib
         if fast_viz:
