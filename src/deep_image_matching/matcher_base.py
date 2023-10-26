@@ -174,7 +174,7 @@ class MatcherBase:
             else:
                 logger.debug(
                     f"Tile selection was {self._tiling.name} and features are more than {max_feats}. Matching by tile with {self._tiling.name} selection..."
-                )                
+                )
                 self._matches = self._match_by_tile(
                     img0,
                     img1,
@@ -189,7 +189,7 @@ class MatcherBase:
             if n_matches >= MIN_MATCHES:
                 group.create_dataset(img1_name, data=self._matches)
 
-        logger.info("Matching done!")
+        logger.debug(f"Matching {img0_name}-{img1_name} done!")
 
         # Visualize matches (temporarily disabled)
         # if self._config["general"]["do_viz"] is True:
@@ -255,7 +255,7 @@ class MatcherBase:
             self._save_dir.mkdir(parents=True, exist_ok=True)
         else:
             self._save_dir = None
-        logger.info(f"Saving directory: {self._save_dir}")
+        logger.debug(f"Saving directory: {self._save_dir}")
 
         # Get device
         self._device = torch.device(
@@ -263,7 +263,7 @@ class MatcherBase:
             if torch.cuda.is_available() and not self._config["general"]["force_cpu"]
             else "cpu"
         )
-        logger.info(f"Running inference on device {self._device}")
+        logger.debug(f"Running inference on device {self._device}")
 
     def _match_by_tile(
         self,
@@ -333,7 +333,7 @@ class MatcherBase:
             #         max_long_edge=1200,
             #     )
 
-        logger.info("Matching by tile done.")
+        logger.debug("Matching by tile completed.")
 
         return matches_full
 
