@@ -1,8 +1,7 @@
 import logging
 import time
-
-from functools import wraps
 from collections import OrderedDict
+from functools import wraps
 
 
 def timeit(func):

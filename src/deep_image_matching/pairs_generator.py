@@ -1,6 +1,6 @@
-from typing import List, Union
-from pathlib import Path
 import logging
+from pathlib import Path
+from typing import List, Union
 
 logger = logging.getLogger(__name__)
 

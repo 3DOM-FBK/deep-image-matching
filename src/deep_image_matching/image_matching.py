@@ -1,44 +1,46 @@
-import cv2
-import numpy as np
-from pathlib import Path
 import logging
+from pathlib import Path
 
-from .pairs_generator import PairsGenerator
-from .image import ImageList
-from .matchers import (
-    SuperGlueMatcher,
-    LOFTRMatcher,
-    LightGlueMatcher,
-    DetectAndDescribe,
-)
-from .local_features import LocalFeatureExtractor
+import numpy as np
+from tqdm import tqdm
+
+from .extractors import SuperPointExtractor
 from .geometric_verification import geometric_verification
-from .consts import GeometricVerification
-
+from .image import ImageList
+from .io.h5 import get_features
+from .local_features import LocalFeatureExtractor
+from .matchers import (
+    DetectAndDescribe,
+    LightGlueMatcher,
+    LOFTRMatcher,
+    SuperGlueMatcher,
+)
+from .pairs_generator import PairsGenerator
 
 logger = logging.getLogger(__name__)
 
 
-def ApplyGeometricVer(kpts0, kpts1, matches):
-    mkpts0 = kpts0[matches[:, 0]]
-    mkpts1 = kpts1[matches[:, 1]]
-    F, inlMask = geometric_verification(
-        mkpts0,
-        mkpts1,
+def make_correspondence_matrix(matches: np.ndarray) -> np.ndarray:
+    kpts_number = matches.shape[0]
+    n_tie_points = np.arange(kpts_number).reshape((-1, 1))
+    matrix = np.hstack((n_tie_points, matches.reshape((-1, 1))))
+    correspondences = matrix[~np.any(matrix == -1, axis=1)]
+    return correspondences
+
+
+def apply_geometric_verification(
+    kpts0: np.ndarray, kpts1: np.ndarray, correspondences: np.ndarray, config: dict
+) -> np.ndarray:
+    mkpts0 = kpts0[correspondences[:, 0]]
+    mkpts1 = kpts1[correspondences[:, 1]]
+    _, inlMask = geometric_verification(
+        kpts0=mkpts0,
+        kpts1=mkpts1,
+        method=config["geometric_verification"],
+        threshold=config["gv_threshold"],
+        confidence=config["gv_confidence"],
     )
-    return kpts0, kpts1, matches[inlMask]
-
-
-def ReorganizeMatches(kpts_number, matches: dict) -> np.ndarray:
-    for key in matches:
-        if key == "matches0":
-            n_tie_points = np.arange(kpts_number).reshape((-1, 1))
-            matrix = np.hstack((n_tie_points, matches[key].reshape((-1, 1))))
-            correspondences = matrix[~np.any(matrix == -1, axis=1)]
-            return correspondences
-        elif key == "matches01":
-            correspondences = matches[key]
-            return correspondences
+    return correspondences[inlMask]
 
 
 class ImageMatching:
@@ -89,40 +91,6 @@ class ImageMatching:
         elif len(images) == 1:
             raise ValueError("Image folder must contain at least two images")
 
-        # Do not use geometric verification within the matcher, but do it after
-        self.custom_config["general"][
-            "geometric_verification"
-        ] = GeometricVerification.NONE
-
-        # Initialize matcher
-        # first_img = cv2.imread(str(self.image_list[0].absolute_path))
-        # w_size = first_img.shape[1]
-        # self.custom_config["general"]["w_size"] = w_size
-
-        if self.local_features == "lightglue":
-            self._matcher = LightGlueMatcher(**self.custom_config)
-        elif self.local_features == "superglue":
-            self._matcher = SuperGlueMatcher(**self.custom_config)
-        elif self.local_features == "loftr":
-            self._matcher = LOFTRMatcher(**self.custom_config)
-        elif self.local_features == "detect_and_describe":
-            self.custom_config["ALIKE"]["n_limit"] = self.max_feat_numb
-            detector_and_descriptor = self.custom_config["general"][
-                "detector_and_descriptor"
-            ]
-            local_feat_conf = self.custom_config[detector_and_descriptor]
-            local_feat_extractor = LocalFeatureExtractor(
-                detector_and_descriptor,
-                local_feat_conf,
-                self.max_feat_numb,
-            )
-            self._matcher = DetectAndDescribe(**self.custom_config)
-            self.custom_config["general"]["local_feat_extractor"] = local_feat_extractor
-        else:
-            raise ValueError(
-                "Invalid local feature extractor. Supported extractors: lightglue, superglue, loftr, detect_and_describe"
-            )
-
     @property
     def img_format(self):
         return self.image_list.img_format
@@ -159,116 +127,86 @@ class ImageMatching:
 
         return self.pairs
 
-    def match_pairs(self):
-        for idx, pair in enumerate(self.pairs):
-            logger.info(f"Matching image pair: {pair[0].name} - {pair[1].name}")
+    def extract_features(self):
+        extractor = SuperPointExtractor(**self.custom_config)
+
+        logger.info("Extracting features...")
+        for img in tqdm(self.image_list):
+            feature_path = extractor.extract(img)
+
+        logger.info("Features extracted")
+
+        return feature_path
+
+    def match_pairs(self, feature_path: Path):
+        # first_img = cv2.imread(str(self.image_list[0].absolute_path))
+        # w_size = first_img.shape[1]
+        # self.custom_config["general"]["w_size"] = w_size
+
+        # Check that feature_path exists
+        if not Path(feature_path).exists():
+            raise ValueError(f"Feature path {feature_path} does not exist")
+        else:
+            feature_path = Path(feature_path)
+
+        # Do not use geometric verification within the matcher, but do it after
+        # matcher_cfg = deepcopy(self.custom_config)
+        # matcher_cfg["geometric_verification"] = GeometricVerification.NONE
+        matcher_cfg = self.custom_config
+
+        # Initialize matcher
+        if self.local_features == "lightglue":
+            matcher = LightGlueMatcher(**matcher_cfg)
+        elif self.local_features == "superglue":
+            matcher = SuperGlueMatcher(**matcher_cfg)
+        elif self.local_features == "loftr":
+            matcher = LOFTRMatcher(**matcher_cfg)
+        elif self.local_features == "detect_and_describe":
+            matcher_cfg["ALIKE"]["n_limit"] = self.max_feat_numb
+            detector_and_descriptor = matcher_cfg["general"]["detector_and_descriptor"]
+            local_feat_conf = matcher_cfg[detector_and_descriptor]
+            local_feat_extractor = LocalFeatureExtractor(
+                detector_and_descriptor,
+                local_feat_conf,
+                self.max_feat_numb,
+            )
+            matcher = DetectAndDescribe(**matcher_cfg)
+            matcher_cfg["general"]["local_feat_extractor"] = local_feat_extractor
+        else:
+            raise ValueError(
+                "Invalid local feature extractor. Supported extractors: lightglue, superglue, loftr, detect_and_describe"
+            )
+
+        logger.info("Matching features...")
+        for pair in tqdm(self.pairs):
+            logger.debug(f"Matching image pair: {pair[0].name} - {pair[1].name}")
             im0 = pair[0]
             im1 = pair[1]
-            res_pair_dir = Path("res") / f"{pair[0].stem}-{pair[1].stem}"
 
-            debug = False
+            correspondences = matcher.match(
+                feature_path=feature_path,
+                img0=im0,
+                img1=im1,
+            )
 
-            if debug:
-                from copy import deepcopy
-                import torch
-                from deep_image_matching.hloc.extractors.superpoint import SuperPoint
+            # Make correspondence matrix (no need it anymore as the matcher already does it)
+            # correspondences = make_correspondence_matrix(matches)
 
-                def to_tensor(image):
-                    if len(image.shape) == 2:
-                        image = image[None][None]
-                    elif len(image.shape) == 3:
-                        image = image.transpose(2, 0, 1)[None]
-                    return torch.tensor(image / 255.0, dtype=torch.float).to(device)
+            kpts0_h5 = get_features(feature_path, im0.name)["keypoints"]
+            kpts1_h5 = get_features(feature_path, im1.name)["keypoints"]
 
-                device = torch.device("cuda")
-                cfg = {"name": "superpoint", "nms_radius": 3, "max_keypoints": 4096}
+            # Apply geometric verification and store results
+            self.keypoints[im0.name] = kpts0_h5
+            self.keypoints[im1.name] = kpts1_h5
+            self.correspondences[(im0, im1)] = apply_geometric_verification(
+                kpts0=self.keypoints[im0.name],
+                kpts1=self.keypoints[im1.name],
+                correspondences=correspondences,
+                config=self.custom_config["general"],
+            )
 
-                image0 = cv2.imread(str(im0), cv2.IMREAD_GRAYSCALE).astype(np.float32)
-                image1 = cv2.imread(str(im1), cv2.IMREAD_GRAYSCALE).astype(np.float32)
+            logger.debug(f"Pairs: {pair[0].name} - {pair[1].name} done.")
 
-                extractor = SuperPoint(cfg).eval().to(device)
-                feats0 = extractor({"image": to_tensor(image0)})
-                feats1 = extractor({"image": to_tensor(image1)})
-
-                self._matcher.match(
-                    image0,
-                    image1,
-                    feats0,
-                    feats1,
-                    general={"save_dir": res_pair_dir},
-                )
-
-                ktps0 = deepcopy(self._matcher._features0.keypoints)
-                ktps1 = deepcopy(self._matcher._features1.keypoints)
-                matches0 = deepcopy(self._matcher._matches0)
-                matches01 = deepcopy(self._matcher._matches01)
-                matches_dict = {
-                    "matches0": matches0,
-                    "matches01": matches01,
-                }
-
-                correspondences = ReorganizeMatches(ktps0.shape[0], matches_dict)
-
-                (
-                    self.keypoints[im0.name],
-                    self.keypoints[im1.name],
-                    self.correspondences[(im0, im1)],
-                ) = ApplyGeometricVer(
-                    ktps0,
-                    ktps1,
-                    correspondences,
-                )
-
-                # deepcopy status
-                res = {}
-                k = f"{pair[0].stem}_{pair[1].stem}"
-                res[k] = (
-                    deepcopy(self.keypoints),
-                    deepcopy(self.correspondences),
-                )
-
-                logger.info(f"Pairs: {pair[0].name} - {pair[1].name} done.")
-
-            else:
-                image0 = cv2.imread(str(im0), cv2.COLOR_RGB2BGR)
-                image1 = cv2.imread(str(im1), cv2.COLOR_RGB2BGR)
-
-                if len(image0.shape) == 2:
-                    image0 = cv2.cvtColor(image0, cv2.COLOR_GRAY2RGB)
-                if len(image1.shape) == 2:
-                    image1 = cv2.cvtColor(image1, cv2.COLOR_GRAY2RGB)
-
-                self._matcher.match(
-                    image0,
-                    image1,
-                    general={"save_dir": res_pair_dir},
-                )
-
-                ktps0 = self._matcher._features0.keypoints
-                ktps1 = self._matcher._features1.keypoints
-                matches0 = self._matcher._matches0
-                matches01 = self._matcher._matches01
-                matches_dict = {
-                    "matches0": matches0,
-                    "matches01": matches01,
-                }
-
-                # Store keypoints and matches
-                self.keypoints[im0.name] = ktps0
-                self.keypoints[im1.name] = ktps1
-                self.correspondences[(im0, im1)] = ReorganizeMatches(
-                    ktps0.shape[0], matches_dict
-                )
-
-                # Apply geometric verification
-                (
-                    self.keypoints[im0.name],
-                    self.keypoints[im1.name],
-                    self.correspondences[(im0, im1)],
-                ) = ApplyGeometricVer(
-                    self.keypoints[im0.name],
-                    self.keypoints[im1.name],
-                    self.correspondences[(im0, im1)],
-                )
+        logger.info("Matching done!")
 
         return self.keypoints, self.correspondences

@@ -1,16 +1,16 @@
-import shutil
 import argparse
-from easydict import EasyDict as edict
+import shutil
 from pathlib import Path
 
+from easydict import EasyDict as edict
+
+from config import custom_config
+from src.deep_image_matching.gui import gui
 from src.deep_image_matching.image_matching import ImageMatching
 from src.deep_image_matching.io.export_to_colmap import ExportToColmap
 from src.deep_image_matching.utils import setup_logger
-from src.deep_image_matching.gui import gui
 
-from config import custom_config
-
-logger = setup_logger()
+logger = setup_logger(console_log_level="info")
 
 
 def parse_args():
@@ -67,13 +67,13 @@ def main(debug: bool = False):
     if debug:
         args = edict(
             {
-                "interface": "cli",
-                "images": "data/hard_lowres",
-                "outs": "res",
+                "interface": "gui",
+                "images": "data/easy_small",
+                "outs": "res/easy_small",
                 "strategy": "sequential",
                 "features": "lightglue",
                 "retrieval": "netvlad",
-                "overlap": 1,
+                "overlap": 2,
                 "max_features": 1000,
             }
         )
@@ -113,6 +113,9 @@ def main(debug: bool = False):
         matching_strategy = args.strategy
         max_features = args.max_features
 
+        if not imgs_dir.exists() or not imgs_dir.is_dir():
+            raise ValueError(f"Folder {imgs_dir} does not exist")
+
         if args.features in ["superglue", "lightglue", "loftr"]:
             local_features = args.features
         else:
@@ -140,6 +143,8 @@ def main(debug: bool = False):
         shutil.rmtree(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    custom_config["general"]["output_dir"] = output_dir
+
     # Generate pairs and matching
     img_matching = ImageMatching(
         imgs_dir=imgs_dir,
@@ -151,11 +156,12 @@ def main(debug: bool = False):
         pair_file=pair_file,
         overlap=overlap,
     )
-    images = img_matching.img_names
     pairs = img_matching.generate_pairs()
-    keypoints, correspondences = img_matching.match_pairs()
+    feature_path = img_matching.extract_features()
+    keypoints, correspondences = img_matching.match_pairs(feature_path)
 
     # Plot statistics
+    images = img_matching.image_list
     logger.info("Finished matching and exporting")
     logger.info(f"\tProcessed images: {len(images)}")
     logger.info(f"\tProcessed pairs: {len(pairs)}")
@@ -163,7 +169,6 @@ def main(debug: bool = False):
     # Export in colmap format
     ExportToColmap(
         images,
-        img_matching.img_format,
         img_matching.width,
         img_matching.height,
         keypoints,
@@ -171,8 +176,21 @@ def main(debug: bool = False):
         output_dir,
     )
 
+    # Tests for using h5_to_db.py
+    from deep_image_matching.io.h5_to_db import import_into_colmap
+
+    database_path = Path(output_dir) / "db2.db"
+    if database_path.exists():
+        database_path.unlink()
+    import_into_colmap(
+        imgs_dir,
+        feature_dir=feature_path.parent,
+        database_path=database_path,
+        single_camera=True,
+    )
+
 
 if __name__ == "__main__":
-    main(debug=False)
+    main(debug=True)
 
     logger.info("Done")
