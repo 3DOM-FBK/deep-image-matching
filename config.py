@@ -3,15 +3,15 @@ from src.deep_image_matching import GeometricVerification, Quality, TileSelectio
 custom_config = {
     "general": {
         # "detector_and_descriptor": "ALIKE",  # To be used in combination with --detect_and_describe option. ALIKE, ORB, DISK, SuperPoint, KeyNetAffNetHardNet
-        "quality": Quality.HIGHEST,
+        "quality": Quality.HIGH,
         "force_cpu": False,
-        "save_dir": "res",
+        "output_dir": "res",
         "do_viz": False,
         "fast_viz": True,
         "hide_matching_track": False,
         "tile_selection": TileSelection.PRESELECTION,
         "min_matches_per_tile": 10,
-        "tiling_grid": [2, 3],
+        "tiling_grid": [3, 3],
         "tiling_overlap": 50,
         "do_viz_tiles": True,
         "geometric_verification": GeometricVerification.PYDEGENSAC,

@@ -462,16 +462,16 @@ class LOFTRMatcher(MatcherBase):
             conf_full = np.concatenate((conf_full, conf))
 
             # Plot matches on tile
-            save_dir = config.get("save_dir", ".")
-            save_dir = Path(save_dir)
-            save_dir.mkdir(parents=True, exist_ok=True)
+            output_dir = config.get("output_dir", ".")
+            output_dir = Path(output_dir)
+            output_dir.mkdir(parents=True, exist_ok=True)
             if do_viz_tiles is True:
                 self.viz_matches_mpl(
                     tile0,
                     tile1,
                     mkpts0,
                     mkpts1,
-                    save_dir / f"matches_tile_{tidx0}-{tidx1}.png",
+                    output_dir / f"matches_tile_{tidx0}-{tidx1}.png",
                 )
 
         logger.info("Restoring full image coordinates of matches...")

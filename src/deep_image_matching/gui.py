@@ -76,6 +76,12 @@ class MatcherApp:
         image_overlap = self.overlap.get()
         local_feat = self.local_feat.get()
         max_features = self.max_features.get()
+
+        if not pair_file:
+            pair_file = None
+        else:
+            pair_file = Path(pair_file)
+
         return (
             strategy,
             Path(image_dir),

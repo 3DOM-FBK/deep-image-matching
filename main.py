@@ -10,7 +10,7 @@ from src.deep_image_matching.image_matching import ImageMatching
 from src.deep_image_matching.io.export_to_colmap import ExportToColmap
 from src.deep_image_matching.utils import setup_logger
 
-logger = setup_logger(console_log_level="debug")
+logger = setup_logger(console_log_level="info")
 
 
 def parse_args():
@@ -67,13 +67,13 @@ def main(debug: bool = False):
     if debug:
         args = edict(
             {
-                "interface": "cli",
+                "interface": "gui",
                 "images": "data/easy_small",
-                "outs": "res",
+                "outs": "res/easy_small",
                 "strategy": "sequential",
                 "features": "lightglue",
                 "retrieval": "netvlad",
-                "overlap": 3,
+                "overlap": 2,
                 "max_features": 1000,
             }
         )
@@ -143,6 +143,8 @@ def main(debug: bool = False):
         shutil.rmtree(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    custom_config["general"]["output_dir"] = output_dir
+
     # Generate pairs and matching
     img_matching = ImageMatching(
         imgs_dir=imgs_dir,
@@ -175,32 +177,17 @@ def main(debug: bool = False):
     )
 
     # Tests for using h5_to_db.py
-    from deep_image_matching.io.h5_to_db import (
-        COLMAPDatabase,
-        add_keypoints,
-        add_matches,
+    from deep_image_matching.io.h5_to_db import import_into_colmap
+
+    database_path = Path(output_dir) / "db2.db"
+    if database_path.exists():
+        database_path.unlink()
+    import_into_colmap(
+        imgs_dir,
+        feature_dir=feature_path.parent,
+        database_path=database_path,
+        single_camera=True,
     )
-
-    def import_into_colmap(
-        img_dir, feature_dir=".featureout", database_path="colmap.db", img_ext=".jpg"
-    ):
-        db = COLMAPDatabase.connect(database_path)
-        db.create_tables()
-        single_camera = False
-        fname_to_id = add_keypoints(db, feature_dir, img_dir)
-        add_matches(
-            db,
-            feature_dir,
-            fname_to_id,
-        )
-
-        db.commit()
-        return
-
-    database_path = "res/colmap2.db"
-    if Path(database_path).exists():
-        Path(database_path).unlink()
-    # import_into_colmap(imgs_dir, feature_dir="res", database_path=database_path)
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 from tqdm import tqdm
 
-from .extractors import ExtractorBase
+from .extractors import SuperPointExtractor
 from .geometric_verification import geometric_verification
 from .image import ImageList
 from .io.h5 import get_features
@@ -128,7 +128,7 @@ class ImageMatching:
         return self.pairs
 
     def extract_features(self):
-        extractor = ExtractorBase(**self.custom_config)
+        extractor = SuperPointExtractor(**self.custom_config)
 
         logger.info("Extracting features...")
         for img in tqdm(self.image_list):

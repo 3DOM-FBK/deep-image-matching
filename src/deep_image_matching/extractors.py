@@ -38,7 +38,7 @@ DEFAULT_CONFIG = {
         "tile_selection": TileSelection.NONE,
         "tiling_grid": [1, 1],
         "tiling_overlap": 0,
-        "save_dir": "results",
+        "output_dir": "results",
         "force_cpu": False,
         "do_viz": False,
         "fast_viz": True,
@@ -57,11 +57,6 @@ class ExtractorBase:
         if not isinstance(custom_config, dict):
             raise TypeError("opt must be a dictionary")
         self._update_config(custom_config)
-
-        # Load extractor (TODO: DO IT IN THE SUBCLASS!)
-        SP = import_module("deep_image_matching.hloc.extractors.superpoint")
-        SP_cfg = self._config["SperPoint+LightGlue"]["SuperPoint"]
-        self._extractor = SP.SuperPoint(SP_cfg).eval().to(self._device)
 
     def extract(self, img: Union[Image, Path]) -> np.ndarray:
         # Load image
@@ -86,9 +81,9 @@ class ExtractorBase:
         # Save features to disk in h5 format (TODO: MOVE it to another method)
         # def save_features_to_h5(self)
         as_half = True  # TODO: add this to the config
-        save_dir = Path(self._config["general"]["save_dir"])
-        save_dir.mkdir(parents=True, exist_ok=True)
-        feature_path = save_dir / "features.h5"
+        output_dir = Path(self._config["general"]["output_dir"])
+        output_dir.mkdir(parents=True, exist_ok=True)
+        feature_path = output_dir / "features.h5"
         im_name = im_path.name
 
         if as_half:
@@ -117,37 +112,21 @@ class ExtractorBase:
                 raise error
 
         # Save also keypoints and descriptors separately
-        with h5py.File(str(save_dir / "keypoints.h5"), "a", libver="latest") as fd:
+        with h5py.File(str(output_dir / "keypoints.h5"), "a", libver="latest") as fd:
             if im_name in fd:
                 del fd[im_name]
             fd[im_name] = features["keypoints"]
 
         desc_dim = features["descriptors"].shape[0]
-        with h5py.File(str(save_dir / "descriptors.h5"), "a", libver="latest") as fd:
+        with h5py.File(str(output_dir / "descriptors.h5"), "a", libver="latest") as fd:
             if im_name in fd:
                 del fd[im_name]
             fd[im_name] = features["descriptors"].reshape(-1, desc_dim)
 
         return feature_path
 
-    @torch.no_grad()
     def _extract(self, image: np.ndarray) -> dict:
-        # raise NotImplementedError("Subclasses should implement _extract method!")
-
-        # Convert image from numpy array to tensor
-        image_ = self._frame2tensor(image, self._device)
-
-        # Extract features
-        feats = self._extractor({"image": image_})
-
-        # Remove elements from list/tuple
-        feats = {
-            k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()
-        }
-        # Convert tensors to numpy arrays
-        feats = {k: v.cpu().numpy() for k, v in feats.items()}
-
-        return feats
+        raise NotImplementedError("Subclasses should implement _extract method!")
 
     def _frame2tensor(self, image: np.ndarray, device: str = "cpu"):
         if len(image.shape) == 2:
@@ -196,13 +175,13 @@ class ExtractorBase:
         )
 
         # Define saving directory
-        save_dir = self._config["general"]["save_dir"]
-        if save_dir is not None:
-            self._save_dir = Path(save_dir)
-            self._save_dir.mkdir(parents=True, exist_ok=True)
+        output_dir = self._config["general"]["output_dir"]
+        if output_dir is not None:
+            self._output_dir = Path(output_dir)
+            self._output_dir.mkdir(parents=True, exist_ok=True)
         else:
-            self._save_dir = None
-        logger.debug(f"Saving directory: {self._save_dir}")
+            self._output_dir = None
+        logger.debug(f"Saving directory: {self._output_dir}")
 
         # Get device
         self._device = (
@@ -309,24 +288,30 @@ class ExtractorBase:
 
         return features
 
-    def _filter_kpts_by_mask(self, features: FeaturesDict, inlMask: np.ndarray) -> None:
-        """
-        Filter matches based on the specified mask.
-
-        Args:
-            features (FeaturesBase): The features to filter.
-            inlMask (np.ndarray): The mask to filter matches.
-        """
-        features.keypoints = features.keypoints[inlMask, :]
-        if features.descriptors is not None:
-            features.descriptors = features.descriptors[:, inlMask]
-        if features.scores is not None:
-            features.scores = features.scores[inlMask]
-
 
 class SuperPointExtractor(ExtractorBase):
-    def __init__(self, config: dict):
-        super().__init__(config)
+    def __init__(self, **config: dict):
+        # Init the base class
+        super().__init__(**config)
 
-    def extract(self, image: np.ndarray) -> np.ndarray:
-        raise NotImplementedError
+        # Load extractor (TODO: DO IT IN THE SUBCLASS!)
+        SP = import_module("deep_image_matching.hloc.extractors.superpoint")
+        SP_cfg = self._config["SperPoint+LightGlue"]["SuperPoint"]
+        self._extractor = SP.SuperPoint(SP_cfg).eval().to(self._device)
+
+    @torch.no_grad()
+    def _extract(self, image: np.ndarray) -> np.ndarray:
+        # Convert image from numpy array to tensor
+        image_ = self._frame2tensor(image, self._device)
+
+        # Extract features
+        feats = self._extractor({"image": image_})
+
+        # Remove elements from list/tuple
+        feats = {
+            k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()
+        }
+        # Convert tensors to numpy arrays
+        feats = {k: v.cpu().numpy() for k, v in feats.items()}
+
+        return feats

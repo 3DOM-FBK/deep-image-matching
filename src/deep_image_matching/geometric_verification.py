@@ -1,6 +1,7 @@
 import importlib
 import logging
 from typing import Tuple
+
 import cv2
 import numpy as np
 
@@ -75,7 +76,7 @@ def geometric_verification(
                 symmetric_error_check=symmetric_error_check,
                 enable_degeneracy_check=enable_degeneracy_check,
             )
-            logger.info(
+            logger.debug(
                 f"Pydegensac found {inlMask.sum()} inliers ({inlMask.sum()*100/len(kpts0):.2f}%)"
             )
         except Exception as err:
