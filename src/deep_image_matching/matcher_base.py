@@ -132,7 +132,7 @@ class MatcherBase:
         self._features0 = get_features(self._feature_path, img0.name)
         self._features1 = get_features(self._feature_path, img1.name)
 
-        # Test PRESELECTION
+        # Testing PRESELECTION
         # self._matches = self._match_by_tile(
         #     img0,
         #     img1,
@@ -140,20 +140,46 @@ class MatcherBase:
         # )
 
         # Perform matching (on tiles or full images)
-        # Try first to match features on the full image, if it fails, try to match by tiles
-        try:
-            logger.debug("Matching full images...")
+        # If the features are not too many, try first to match all features together on full image, if it fails, try to match by tiles
+        max_feats = 200000
+        high_feats_flag = (
+            len(self._features0["keypoints"]) > max_feats
+            or len(self._features1["keypoints"]) > max_feats
+        )
+        if self._tiling == TileSelection.NONE:
+            logger.debug(
+                f"Tile selection was {self._tiling.name}. Matching full images..."
+            )
+            if high_feats_flag:
+                raise RuntimeError(
+                    "Too many features to match full images. Try running the matching with tile selection or use a lower max_keypoints value."
+                )
             self._matches = self._match_pairs(self._features0, self._features1)
-        except Exception as e:
-            if self._tile_selection == TileSelection.NONE:
-                self._tile_selection = TileSelection.PRESELECTION
-            logger.warning(
-                f"Matching full images failed: {e}. Trying to match by tiles..."
-            )
-            self._matches = self._match_by_tile(
-                img0,
-                img1,
-            )
+        else:
+            if not high_feats_flag:
+                try:
+                    logger.debug(
+                        f"Tile selection was {self._tiling.name}, but features are less then {max_feats}. Trying to match full images..."
+                    )
+                    self._matches = self._match_pairs(self._features0, self._features1)
+                except Exception as e:
+                    logger.warning(
+                        f"Matching full images failed: {e}. Trying to match by tiles..."
+                    )
+                    self._matches = self._match_by_tile(
+                        img0,
+                        img1,
+                        method=self._tiling,
+                    )
+            else:
+                logger.debug(
+                    f"Tile selection was {self._tiling.name} and features are more than {max_feats}. Matching by tile with {self._tiling.name} selection..."
+                )                
+                self._matches = self._match_by_tile(
+                    img0,
+                    img1,
+                    method=self._tiling,
+                )
 
         # Save to h5 file
         n_matches = len(self._matches)

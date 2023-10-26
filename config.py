@@ -3,22 +3,44 @@ from src.deep_image_matching import GeometricVerification, Quality, TileSelectio
 custom_config = {
     "general": {
         # "detector_and_descriptor": "ALIKE",  # To be used in combination with --detect_and_describe option. ALIKE, ORB, DISK, SuperPoint, KeyNetAffNetHardNet
-        "quality": Quality.HIGH,
+        "quality": Quality.HIGHEST,
         "force_cpu": False,
         "save_dir": "res",
         "do_viz": False,
         "fast_viz": True,
         "hide_matching_track": False,
         "tile_selection": TileSelection.PRESELECTION,
-        "min_matches_per_tile": 20,
-        "tiling_grid": [2, 2],
+        "min_matches_per_tile": 5,
+        "tiling_grid": [3, 3],
         "tiling_overlap": 50,
         "do_viz_tiles": True,
         "geometric_verification": GeometricVerification.PYDEGENSAC,
-        "gv_threshold": 3,
+        "gv_threshold": 5,
         "gv_confidence": 0.99999,
         "kornia_matcher": "smnn",  #'nn' or 'snn' or 'mnn' or 'smnn'
         "ratio_threshold": 0.95,  # valid range [0-1]
+    },
+    # SperPoint+LightGlue (https://github.com/cvg/LightGlue)
+    "SperPoint+LightGlue": {
+        "SuperPoint": {
+            "descriptor_dim": 256,
+            "nms_radius": 4,
+            "max_keypoints": 6000,  # 1000,
+            "keypoint_threshold": 0.0001,  # 0.005,
+            "remove_borders": 4,
+            "fix_sampling": True,
+        },
+        "LightGlue": {
+            "descriptor_dim": 256,
+            "n_layers": 9,
+            "num_heads": 4,
+            "flash": True,  # enable FlashAttention if available.
+            "mp": False,  # enable mixed precision
+            "depth_confidence": 0.95,  # early stopping, disable with -1
+            "width_confidence": 0.99,  # point pruning, disable with -1
+            "filter_threshold": 0.1,  # match threshold
+            "weights": None,
+        },
     },
     # ALIKE options
     "ALIKE": {
@@ -42,28 +64,6 @@ custom_config = {
     },
     # DISK from KORNIA (https://kornia.github.io/)
     "DISK": {},
-    # SperPoint+LightGlue (https://github.com/cvg/LightGlue)
-    "SperPoint+LightGlue": {
-        "SuperPoint": {
-            "descriptor_dim": 256,
-            "nms_radius": 4,
-            "max_keypoints": 1000,
-            "keypoint_threshold": 0.005,
-            "remove_borders": 4,
-            "fix_sampling": True,
-        },
-        "LightGlue": {
-            "descriptor_dim": 256,
-            "n_layers": 9,
-            "num_heads": 4,
-            "flash": True,  # enable FlashAttention if available.
-            "mp": False,  # enable mixed precision
-            "depth_confidence": 0.95,  # early stopping, disable with -1
-            "width_confidence": 0.99,  # point pruning, disable with -1
-            "filter_threshold": 0.1,  # match threshold
-            "weights": None,
-        },
-    },
     # Key.Net + OriNet + HardNet8 from KORNIA (https://kornia.github.io/)
     "KeyNetAffNetHardNet": {
         "upright": False,
