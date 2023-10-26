@@ -10,12 +10,12 @@ custom_config = {
         "fast_viz": True,
         "hide_matching_track": False,
         "tile_selection": TileSelection.PRESELECTION,
-        "min_matches_per_tile": 5,
-        "tiling_grid": [3, 3],
+        "min_matches_per_tile": 10,
+        "tiling_grid": [2, 3],
         "tiling_overlap": 50,
         "do_viz_tiles": True,
         "geometric_verification": GeometricVerification.PYDEGENSAC,
-        "gv_threshold": 5,
+        "gv_threshold": 3,
         "gv_confidence": 0.99999,
         "kornia_matcher": "smnn",  #'nn' or 'snn' or 'mnn' or 'smnn'
         "ratio_threshold": 0.95,  # valid range [0-1]
@@ -25,8 +25,8 @@ custom_config = {
         "SuperPoint": {
             "descriptor_dim": 256,
             "nms_radius": 4,
-            "max_keypoints": 6000,  # 1000,
-            "keypoint_threshold": 0.0001,  # 0.005,
+            "max_keypoints": 1000,
+            "keypoint_threshold": 0.005,
             "remove_borders": 4,
             "fix_sampling": True,
         },

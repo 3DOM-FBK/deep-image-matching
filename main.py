@@ -68,12 +68,12 @@ def main(debug: bool = False):
         args = edict(
             {
                 "interface": "cli",
-                "images": "data/belv",
+                "images": "data/easy_small",
                 "outs": "res",
                 "strategy": "sequential",
                 "features": "lightglue",
                 "retrieval": "netvlad",
-                "overlap": 1,
+                "overlap": 3,
                 "max_features": 1000,
             }
         )

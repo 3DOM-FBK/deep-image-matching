@@ -177,8 +177,9 @@ class ImageMatching:
                 "Invalid local feature extractor. Supported extractors: lightglue, superglue, loftr, detect_and_describe"
             )
 
-        for idx, pair in enumerate(self.pairs):
-            logger.info(f"Matching image pair: {pair[0].name} - {pair[1].name}")
+        logger.info("Matching features...")
+        for pair in tqdm(self.pairs):
+            logger.debug(f"Matching image pair: {pair[0].name} - {pair[1].name}")
             im0 = pair[0]
             im1 = pair[1]
 
@@ -204,6 +205,8 @@ class ImageMatching:
                 config=self.custom_config["general"],
             )
 
-            logger.info(f"Pairs: {pair[0].name} - {pair[1].name} done.")
+            logger.debug(f"Pairs: {pair[0].name} - {pair[1].name} done.")
+
+        logger.info("Matching done!")
 
         return self.keypoints, self.correspondences

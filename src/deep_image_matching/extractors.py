@@ -191,7 +191,7 @@ class ExtractorBase:
         # Get main processing parameters and save them as class members
         self._quality = self._config["general"]["quality"]
         self._tiling = self._config["general"]["tile_selection"]
-        logger.info(
+        logger.debug(
             f"Matching options: Quality: {self._quality.name} - Tiling: {self._tiling.name}"
         )
 
@@ -202,7 +202,7 @@ class ExtractorBase:
             self._save_dir.mkdir(parents=True, exist_ok=True)
         else:
             self._save_dir = None
-        logger.info(f"Saving directory: {self._save_dir}")
+        logger.debug(f"Saving directory: {self._save_dir}")
 
         # Get device
         self._device = (
@@ -210,7 +210,7 @@ class ExtractorBase:
             if torch.cuda.is_available() and not self._config["general"]["force_cpu"]
             else "cpu"
         )
-        logger.info(f"Running inference on device {self._device}")
+        logger.debug(f"Running inference on device {self._device}")
 
     def _extract_by_tile(self, image: np.ndarray, select_unique: bool = True):
         # Compute tiles limits
