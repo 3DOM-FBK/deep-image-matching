@@ -1,36 +1,34 @@
 import logging
+from importlib import import_module
 from pathlib import Path
-from typing import Tuple
+from typing import Optional, TypedDict
 
 import cv2
 import kornia as K
-from kornia import feature
 import kornia.feature as KF
 import numpy as np
 import torch
+from kornia import feature
 
-from .consts import (
-    TileSelection,
-)
-from .matcher_base import FeaturesBase, ImageMatcherBase
+from .consts import TileSelection
+from .matcher_base import MatcherBase
 from .tiling import Tiler
-from .thirdparty.LightGlue.lightglue import LightGlue, SuperPoint
-from .thirdparty.SuperGlue.models.matching import Matching
 
 logger = logging.getLogger(__name__)
 
-# NOTE: the ImageMatcherBase class should be used as a base class for all the image matchers.
-# The ImageMatcherBase class should contain all the common methods and attributes for all the matchers (tile suddivision, image downsampling/upsampling), geometric verification etc.
-# The specific matchers MUST contain at least the `_match_pairs` method, which takes in two images as Numpy arrays, and returns the matches between keypoints and descriptors in those images. It doesn not care if the images are tiles or full-res images, as the tiling is handled by the ImageMatcherBase class that calls the `_match_pairs` method for each tile pair or for the full images depending on the tile selection method.
-
-# TODO: divide the matching in two steps: one for the feature extractor and one for the matcher.
-# TODO: allows the user to provide the features (keypoints, descriptors and scores) as input to match method when using SuperGlue/LightGlue (e.g., for tracking features in a new image of a sequence)
-# TODO: move all the configuration parameters to the __init__ method of the ImageMatcherBase class. The match method should only take the images as input (and optionally the already extracted features).
-# TODO: add integration with KORNIA library for using all the extractors and mathers.
-# TODO: add visualization functions for the matches (take the functions from the visualization module of ICEpy4d). Currentely, the visualization methods may not work!
+# NOTE: the MatcherBase class should be used as a base class for all the image matchers.
+# The MatcherBase class should contain all the common methods and attributes for all the matchers (tile suddivision, image downsampling/upsampling), geometric verification etc.
+# The specific matchers MUST contain at least the `_match_pairs` method, which takes in two images as Numpy arrays, and returns the matches between keypoints and descriptors in those images. It doesn not care if the images are tiles or full-res images, as the tiling is handled by the MatcherBase class that calls the `_match_pairs` method for each tile pair or for the full images depending on the tile selection method.
 
 
-class DetectAndDescribe(ImageMatcherBase):
+class FeaturesDict(TypedDict):
+    keypoints: np.ndarray
+    descriptors: np.ndarray
+    scores: Optional[np.ndarray]
+    tile_idx: Optional[np.ndarray]
+
+
+class DetectAndDescribe(MatcherBase):
     def __init__(self, **config) -> None:
         super().__init__(**config["general"])
 
@@ -48,7 +46,7 @@ class DetectAndDescribe(ImageMatcherBase):
         image0: np.ndarray,
         image1: np.ndarray,
         **config,
-    ) -> Tuple[FeaturesBase, FeaturesBase, np.ndarray, np.ndarray]:
+    ):
         # max_keypoints = config.get("max_keypoints", 4096)
         local_feat_extractor = config.get("local_feat_extractor")
         keypoints, descriptors, lafs = local_feat_extractor.run(
@@ -77,13 +75,13 @@ class DetectAndDescribe(ImageMatcherBase):
         matches0 = np.array(matches0)
         mconf = None
 
-        # Create FeaturesBase objects and matching array
-        features0 = FeaturesBase(
+        # Create FeaturesDict objects and matching array
+        features0 = FeaturesDict(
             keypoints=kpys0,
             descriptors=desc0,
             scores=None,
         )
-        features1 = FeaturesBase(
+        features1 = FeaturesDict(
             keypoints=kpys1,
             descriptors=desc1,
             scores=None,
@@ -97,23 +95,72 @@ class DetectAndDescribe(ImageMatcherBase):
         return features0, features1, matches_dict, mconf
 
 
-class LightGlueMatcher(ImageMatcherBase):
+class LightGlueMatcher(MatcherBase):
     def __init__(self, **config) -> None:
         """Initializes a LightGlueMatcher"""
 
         self._localfeatures = "superpoint"
         super().__init__(**config)
 
-    # Override _frame2tensor method to shift channel first as batch dimension
-    def _frame2tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor:
-        """Normalize the image tensor and reorder the dimensions."""
-        if image.ndim == 3:
-            image = image.transpose((2, 0, 1))  # HxWxC to CxHxW
-        elif image.ndim == 2:
-            image = image[None]  # add channel axis
-        else:
-            raise ValueError(f"Not an image: {image.shape}")
-        return torch.tensor(image / 255.0, dtype=torch.float).to(device)
+        # load the LightGlue module
+        LG = import_module("deep_image_matching.thirdparty.LightGlue.lightglue")
+
+        # load the matcher
+        sg_cfg = self._config["SperPoint+LightGlue"]["LightGlue"]
+        self._matcher = (
+            LG.LightGlue(self._localfeatures, **sg_cfg).eval().to(self._device)
+        )
+
+    @torch.no_grad()
+    def _match_pairs(
+        self,
+        feats0: FeaturesDict,
+        feats1: FeaturesDict,
+    ) -> np.ndarray:
+        def featuresDict_2_lightglue(feats: FeaturesDict, device: torch.device) -> dict:
+            # Remove elements from list/tuple
+            feats = {
+                k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()
+            }
+            # Move descriptors dimension to last
+            if "descriptors" in feats.keys():
+                if feats["descriptors"].shape[-1] != 256:
+                    feats["descriptors"] = feats["descriptors"].T
+            # Add batch dimension
+            feats = {k: v[None] for k, v in feats.items()}
+            # Convert to tensor
+            feats = {
+                k: torch.tensor(v, dtype=torch.float, device=device)
+                for k, v in feats.items()
+            }
+            # Check device
+            feats = {
+                k: v.to(device) if isinstance(v, torch.Tensor) else v
+                for k, v in feats.items()
+            }
+
+            return feats
+
+        feats0 = featuresDict_2_lightglue(feats0, self._device)
+        feats1 = featuresDict_2_lightglue(feats1, self._device)
+
+        # match the features
+        match_res = self._matcher({"image0": feats0, "image1": feats1})
+
+        # remove batch dimension and convert to numpy
+        mfeats0, mfeats1, matches01 = [
+            self._rbd(x) for x in [feats0, feats1, match_res]
+        ]
+        match_res = {
+            k: v.cpu().numpy()
+            for k, v in matches01.items()
+            if isinstance(v, torch.Tensor)
+        }
+
+        # get matching array (indices of matched keypoints in image0 and image1)
+        matches01_idx = match_res["matches"]
+
+        return matches01_idx
 
     def _rbd(self, data: dict) -> dict:
         """Remove batch dimension from elements in data"""
@@ -122,164 +169,31 @@ class LightGlueMatcher(ImageMatcherBase):
             for k, v in data.items()
         }
 
-    @torch.no_grad()
-    def _match_pairs(
-        self,
-        image0: np.ndarray,
-        image1: np.ndarray,
-        feats0=None,
-        feats1=None,
-    ) -> Tuple[FeaturesBase, FeaturesBase, np.ndarray, np.ndarray]:
-        """Matches keypoints and descriptors in two given images (no matter if they are tiles or full-res images) using the LightGlue algorithm.
 
-        This method takes in two images as Numpy arrays, and returns the matches between keypoints
-        and descriptors in those images using the LightGlue algorithm.
-
-        Args:
-            image0 (np.ndarray): the first image to match, as Numpy array
-            image1 (np.ndarray): the second image to match, as Numpy array
-
-        Returns:
-            Tuple[FeaturesBase, FeaturesBase, np.ndarray]: a tuple containing the features of the first image, the features of the second image, and the matches between them
-        """
-
-        image0_ = self._frame2tensor(image0, self._device)
-        image1_ = self._frame2tensor(image1, self._device)
-
-        device = torch.device(self._device if torch.cuda.is_available() else "cpu")
-
-        if feats0 is None or feats1 is None:
-            # load the extractor
-            sp_cfg = self._config["SperPoint+LightGlue"]["SuperPoint"]
-            self.extractor = SuperPoint(**sp_cfg).eval().to(device)
-
-            # extract the features
-            try:
-                feats0 = self.extractor.extract(image0_, resize=None)
-                feats1 = self.extractor.extract(image1_, resize=None)
-            except:
-                logging.warning("SuperPoint failed, trying again with resize")
-                feats0 = self.extractor.extract(image0_)
-                feats1 = self.extractor.extract(image1_)
-        else:
-
-            def fix_input_features(feats):
-                # Rename scores to keypoint_scores
-                feats["keypoint_scores"] = feats.pop("scores")
-                # Remove elements from list/tuple
-                feats = {
-                    k: v[0] if isinstance(v, (list, tuple)) else v
-                    for k, v in feats.items()
-                }
-                # Move descriptors dimension to last
-                if "descriptors" in feats.keys():
-                    feats["descriptors"] = feats["descriptors"].transpose(0, 1)
-                # Add batch dimension
-                feats = {k: v[None] for k, v in feats.items()}
-                # Check device
-                feats = {
-                    k: v.to(device) if isinstance(v, torch.Tensor) else v
-                    for k, v in feats.items()
-                }
-                return feats
-
-            # For debugging
-            # sp_cfg = self._config["SperPoint+LightGlue"]["SuperPoint"]
-            # self.extractor = SuperPoint(**sp_cfg).eval().to(device)
-            # feats_ref = self.extractor.extract(image0_, resize=None)
-
-            feats0 = fix_input_features(feats0)
-            feats1 = fix_input_features(feats1)
-
-        # load the matcher
-        sg_cfg = self._config["SperPoint+LightGlue"]["LightGlue"]
-        self.matcher = LightGlue(self._localfeatures, **sg_cfg).eval().to(device)
-
-        # match the features
-        match_res = self.matcher({"image0": feats0, "image1": feats1})
-
-        # remove batch dimension
-        feats0, feats1, matches01 = [self._rbd(x) for x in [feats0, feats1, match_res]]
-
-        feats0 = {k: v.cpu().numpy() for k, v in feats0.items()}
-        feats1 = {k: v.cpu().numpy() for k, v in feats1.items()}
-        match_res = {
-            k: v.cpu().numpy()
-            for k, v in matches01.items()
-            if isinstance(v, torch.Tensor)
-        }
-
-        # Create FeaturesBase objects and matching array
-        features0 = FeaturesBase(
-            keypoints=feats0["keypoints"],
-            descriptors=feats0["descriptors"].T,
-            scores=feats0["keypoint_scores"],
-        )
-        features1 = FeaturesBase(
-            keypoints=feats1["keypoints"],
-            descriptors=feats1["descriptors"].T,
-            scores=feats1["keypoint_scores"],
-        )
-
-        # Get matching arrays
-        matches0 = match_res["matches0"]
-        matches01 = match_res["matches"]
-        mconf = match_res["scores"]
-
-        # # For debugging
-        # def print_shapes_in_dict(dic: dict):
-        #     for k, v in dic.items():
-        #         shape = v.shape if isinstance(v, np.ndarray) else None
-        #         print(f"{k} shape: {shape}")
-        # def print_features_shape(features: FeaturesBase):
-        #     print(f"keypoints: {features.keypoints.shape}")
-        #     print(f"descriptors: {features.descriptors.shape}")
-        #     print(f"scores: {features.scores.shape}")
-
-        # Added by Luca
-        # matches = matches01["matches"]
-        # matches_dict = {
-        #     "matches0": matches0,
-        #     "matches01": matches,
-        # }
-        # return features0, features1, matches_dict, mconf
-
-        return features0, features1, matches0, matches01, mconf
-
-
-class SuperGlueMatcher(ImageMatcherBase):
+class SuperGlueMatcher(MatcherBase):
     def __init__(self, **config) -> None:
-        """Initializes a SuperGlueMatcher object with the given options dictionary.
+        """Initializes a SuperGlueMatcher object with the given options dictionary."""
 
-        The options dictionary should contain the following keys:
-
-        - 'weights': defines the type of the weights used for SuperGlue inference. It can be either "indoor" or "outdoor". Default value is "outdoor".
-        - 'keypoint_threshold': threshold for the SuperPoint keypoint detector
-        - 'max_keypoints': maximum number of keypoints to extract with the SuperPoint detector. Default value is 0.001.
-        - 'match_threshold': threshold for the SuperGlue feature matcher
-        - 'force_cpu': whether to force using the CPU for inference
-
-        Args:
-            opt (dict): a dictionary of options for configuring the SuperGlueMatcher object
-
-        Raises:
-            KeyError: if one or more required options are missing from the options dictionary
-            FileNotFoundError: if the specified SuperGlue model weights file cannot be found
-
-        """
+        raise NotImplementedError(
+            "SuperGlueMatcher is not correctely implemented yet. It needs to be updated to the new version of the Matcher. Please use LightGlue in the meanwhile!"
+        )
 
         super().__init__(**config)
 
+        SG = import_module("deep_image_matching.thirdparty.SuperGlue.models.matching")
+
         # initialize the Matching object with given configuration
         self.matcher = (
-            Matching(config["SperPoint+SuperGlue"]["superglue"]).eval().to(self._device)
+            SG.Matching(config["SperPoint+SuperGlue"]["superglue"])
+            .eval()
+            .to(self._device)
         )
 
     def _match_pairs(
         self,
         image0: np.ndarray,
         image1: np.ndarray,
-    ) -> Tuple[FeaturesBase, FeaturesBase, np.ndarray, np.ndarray]:
+    ):
         """Matches keypoints and descriptors in two given images (no matter if they are tiles or full-res images) using the SuperGlue algorithm.
 
         This method takes in two images as Numpy arrays, and returns the matches between keypoints
@@ -306,12 +220,12 @@ class SuperGlueMatcher(ImageMatcherBase):
         pred = {k: v[0].cpu().numpy() for k, v in pred_tensor.items()}
 
         # Create FeaturesBase objects and matching array
-        features0 = FeaturesBase(
+        features0 = FeaturesDict(
             keypoints=pred["keypoints0"],
             descriptors=pred["descriptors0"],
             scores=pred["scores0"],
         )
-        features1 = FeaturesBase(
+        features1 = FeaturesDict(
             keypoints=pred["keypoints1"],
             descriptors=pred["descriptors1"],
             scores=pred["scores1"],
@@ -319,7 +233,6 @@ class SuperGlueMatcher(ImageMatcherBase):
 
         # get matching array
         matches0 = pred["matches0"]
-        matches01 = None
 
         # Create a match confidence array
         valid = matches0 > -1
@@ -330,7 +243,7 @@ class SuperGlueMatcher(ImageMatcherBase):
         #     "matches01": None,
         # }
 
-        return features0, features1, matches0, matches01, mconf
+        return features0, features1, matches0, mconf
 
     # def viz_matches(
     #     self,
@@ -395,9 +308,13 @@ class SuperGlueMatcher(ImageMatcherBase):
     #     )
 
 
-class LOFTRMatcher(ImageMatcherBase):
+class LOFTRMatcher(MatcherBase):
     def __init__(self, **config) -> None:
         """Initializes a LOFTRMatcher with Kornia object with the given options dictionary."""
+
+        raise NotImplementedError(
+            "LOFTR is not correctely implemented yet. It needs to be updated to the new version of the Matcher. Please use LightGlue in the meanwhile!"
+        )
 
         super().__init__(**config["general"])
 
@@ -416,7 +333,7 @@ class LOFTRMatcher(ImageMatcherBase):
         self,
         image0: np.ndarray,
         image1: np.ndarray,
-    ) -> Tuple[FeaturesBase, FeaturesBase, np.ndarray, np.ndarray]:
+    ):
         """Matches keypoints and descriptors in two given images
         (no matter if they are tiles or full-res images) using
         the LoFTR algorithm.
@@ -448,8 +365,8 @@ class LOFTRMatcher(ImageMatcherBase):
         # Get matches and build features
         mkpts0 = correspondences["keypoints0"].cpu().numpy()
         mkpts1 = correspondences["keypoints1"].cpu().numpy()
-        features0 = FeaturesBase(keypoints=mkpts0)
-        features1 = FeaturesBase(keypoints=mkpts1)
+        features0 = FeaturesDict(keypoints=mkpts0)
+        features1 = FeaturesDict(keypoints=mkpts1)
 
         # Get match confidence
         mconf = correspondences["confidence"].cpu().numpy()
@@ -471,7 +388,7 @@ class LOFTRMatcher(ImageMatcherBase):
         image1: np.ndarray,
         tile_selection: TileSelection = TileSelection.PRESELECTION,
         **config,
-    ) -> Tuple[FeaturesBase, FeaturesBase, np.ndarray, np.ndarray]:
+    ):
         """
         Matches tiles in two images and returns the features, matches, and confidence.
 
@@ -545,16 +462,16 @@ class LOFTRMatcher(ImageMatcherBase):
             conf_full = np.concatenate((conf_full, conf))
 
             # Plot matches on tile
-            save_dir = config.get("save_dir", ".")
-            save_dir = Path(save_dir)
-            save_dir.mkdir(parents=True, exist_ok=True)
+            output_dir = config.get("output_dir", ".")
+            output_dir = Path(output_dir)
+            output_dir.mkdir(parents=True, exist_ok=True)
             if do_viz_tiles is True:
                 self.viz_matches_mpl(
                     tile0,
                     tile1,
                     mkpts0,
                     mkpts1,
-                    save_dir / f"matches_tile_{tidx0}-{tidx1}.png",
+                    output_dir / f"matches_tile_{tidx0}-{tidx1}.png",
                 )
 
         logger.info("Restoring full image coordinates of matches...")
@@ -573,8 +490,8 @@ class LOFTRMatcher(ImageMatcherBase):
         conf_full = conf_full[unique_idx]
 
         # Create features
-        features0 = FeaturesBase(keypoints=mkpts0_full)
-        features1 = FeaturesBase(keypoints=mkpts1_full)
+        features0 = FeaturesDict(keypoints=mkpts0_full)
+        features1 = FeaturesDict(keypoints=mkpts1_full)
 
         # Create a 1-to-1 matching array
         matches0 = np.arange(mkpts0_full.shape[0])

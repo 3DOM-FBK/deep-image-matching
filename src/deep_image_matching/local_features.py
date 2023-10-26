@@ -4,9 +4,8 @@ import kornia.feature as KF
 import numpy as np
 import torch
 
-
-from .thirdparty.LightGlue.lightglue.superpoint import SuperPoint
 from .thirdparty.alike.alike import ALike, configs
+from .thirdparty.LightGlue.lightglue.superpoint import SuperPoint
 
 
 class LocalFeatures:
