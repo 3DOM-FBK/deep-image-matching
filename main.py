@@ -1,8 +1,8 @@
 import argparse
-import shutil
 from pathlib import Path
 
 from config import custom_config
+from src.deep_image_matching.gui import gui
 from src.deep_image_matching.image_matching import ImageMatching
 from src.deep_image_matching.io.export_to_colmap import ExportToColmap
 from src.deep_image_matching.utils import change_logger_level, setup_logger
@@ -49,7 +49,7 @@ confs_zoo = {
 }
 
 
-def parse_args(debug: bool = False):
+def parse_args():
     parser = argparse.ArgumentParser(
         description="Matching with hand-crafted and deep-learning based local features and image retrieval."
     )
@@ -107,31 +107,15 @@ def parse_args(debug: bool = False):
 
     args = parser.parse_args()
 
-    if debug:
-        change_logger_level("debug")
-        args.images = Path("data/easy_small")
-        args.outs = Path("res/easy_small")
-        args.config = "superpoint+lightglue"
-        args.strategy = "sequential"
-        args.features = "superpoint"
-        args.matching = "lightglue"
-        args.retrieval = "netvlad"
-        args.overlap = 2
-        args.pairs = None
-        args.max_features = 4000
-
-        return args
-
-    # if args.interface == "gui":
-    #     gui_out = gui()
-    #     args
-
-    #     retrieval_option = None
-    #     if feat in ["superglue", "lightglue", "loftr"]:
-    #         local_features = feat
-    #     else:
-    #         local_features = "detect_and_describe"
-    #         custom_config["general"]["detector_and_descriptor"] = feat
+    if args.gui is True:
+        gui_out = gui()
+        args.images = gui_out["image_dir"]
+        args.outs = gui_out["out_dir"]
+        args.config = gui_out["config"]
+        args.strategy = gui_out["strategy"]
+        args.pairs = gui_out["pair_file"]
+        args.overlap = gui_out["image_overlap"]
+        args.max_features = gui_out["max_features"]
 
     # Checks for input arguments
     if args.images is None:
@@ -195,9 +179,9 @@ def parse_args(debug: bool = False):
     return args
 
 
-def main(debug: bool = False):
+def main():
     # Parse arguments
-    args = parse_args(debug=debug)
+    args = parse_args()
     imgs_dir = args.images
     output_dir = args.outs
     matching_strategy = args.strategy
@@ -215,11 +199,12 @@ def main(debug: bool = False):
     #     local_features = "detect_and_describe"
     #     custom_config["general"]["detector_and_descriptor"] = args.local_features
 
-    # Remove output folder if exists
-    if output_dir.exists() and output_dir.is_dir():
-        shutil.rmtree(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
+    # Update configuration dictionary
     custom_config["general"]["output_dir"] = output_dir
+    if max_features is not None:
+        custom_config["SuperPoint+LightGlue"]["SuperPoint"][
+            "max_keypoints"
+        ] = max_features
 
     # Generate pairs and matching
     img_matching = ImageMatching(
@@ -229,7 +214,7 @@ def main(debug: bool = False):
         local_features=local_features,
         matching_method=matching_method,
         custom_config=custom_config,
-        max_feat_numb=max_features,
+        # max_feat_numb=max_features,
         pair_file=pair_file,
         overlap=overlap,
     )
@@ -268,6 +253,6 @@ def main(debug: bool = False):
 
 
 if __name__ == "__main__":
-    main(debug=False)
+    main()
 
     logger.info("Done")

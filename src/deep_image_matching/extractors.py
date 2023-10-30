@@ -327,7 +327,7 @@ class SuperPointExtractor(ExtractorBase):
 
         # Load extractor (TODO: DO IT IN THE SUBCLASS!)
         SP = import_module("deep_image_matching.hloc.extractors.superpoint")
-        SP_cfg = self._config["SperPoint+LightGlue"]["SuperPoint"]
+        SP_cfg = self._config["SuperPoint+LightGlue"]["SuperPoint"]
         self._extractor = SP.SuperPoint(SP_cfg).eval().to(self._device)
 
     @torch.no_grad()

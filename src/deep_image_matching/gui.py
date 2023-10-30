@@ -1,6 +1,8 @@
+import shutil
 import tkinter as tk
 from pathlib import Path
-from tkinter import filedialog, ttk
+from pprint import pprint
+from tkinter import filedialog, messagebox, ttk
 
 
 class MatcherApp:
@@ -8,14 +10,28 @@ class MatcherApp:
         self.master = master
         self.master.title("Deep Image Matcher")
 
+        self.image_dir = self.create_folder_button("Images directory")
+
+        self.out_dir = self.create_folder_button("Output directory")
+
+        self.config = self.create_combobox(
+            "Choose available matching configuration:",
+            [
+                "superpoint+lightglue",
+                "superpoint+superglue",
+                "loftr",
+                "ALIKE",
+                "superpoint",
+                "KeyNetAffNetHardNet",
+                "DISK",
+                "ORB",
+            ],
+        )
+
         self.strategy = self.create_combobox(
             "Matching strategy:",
             ["bruteforce", "sequential", "retrieval", "custom_pairs"],
         )
-
-        self.image_dir = self.create_folder_button("Images directory")
-
-        self.out_dir = self.create_folder_button("Output directory")
 
         self.pair_file = self.create_file_button(
             "If matching strategy == 'custom_pairs':", "Choose pairs file"
@@ -29,20 +45,6 @@ class MatcherApp:
             "Max number of local features per image:"
         )
 
-        self.local_feat = self.create_combobox(
-            "Choose local features:",
-            [
-                "superglue",
-                "lightglue",
-                "loftr",
-                "ALIKE",
-                "superpoint",
-                "KeyNetAffNetHardNet",
-                "DISK",
-                "ORB",
-            ],
-        )
-
         self.error_label = tk.Label(master, text="", fg="red")
         self.error_label.pack()
 
@@ -50,47 +52,71 @@ class MatcherApp:
         self.submit_button.pack()
 
     def on_submit(self):
-        strategy = self.strategy.get()
-        image_dir = self.image_dir.get()
-        out_dir = self.out_dir.get()
-        pair_file = self.pair_file.get()
-        image_overlap = self.overlap.get()
-        local_feat = self.local_feat.get()
-        max_features = self.max_features.get()
-
-        print("image_dir:", image_dir)
-        print("out_dir:", out_dir)
-        print("strategy:", strategy)
-        print("pair_file:", pair_file)
-        print("image overlap:", image_overlap)
-        print("local_feat", local_feat)
-        print("max_features:", max_features)
+        args = {
+            "image_dir": Path(self.image_dir.get()),
+            "out_dir": Path(self.out_dir.get()),
+            "config": self.config.get(),
+            "strategy": self.strategy.get(),
+            "pair_file": self.pair_file.get(),
+            "image_overlap": self.overlap.get(),
+            "max_features": self.max_features.get(),
+        }
+        pprint(args)
 
         self.master.quit()
 
     def get_values(self):
-        strategy = self.strategy.get()
-        image_dir = self.image_dir.get()
-        out_dir = self.out_dir.get()
-        pair_file = self.pair_file.get()
-        image_overlap = self.overlap.get()
-        local_feat = self.local_feat.get()
-        max_features = self.max_features.get()
+        args = {
+            "image_dir": Path(self.image_dir.get()),
+            "out_dir": Path(self.out_dir.get()),
+            "config": self.config.get(),
+            "strategy": self.strategy.get(),
+            "pair_file": self.pair_file.get(),
+            "image_overlap": self.overlap.get(),
+            "max_features": self.max_features.get(),
+        }
 
-        if not pair_file:
-            pair_file = None
+        if not args["image_dir"].exists() or not args["image_dir"].is_dir():
+            msg = f"Directory {args['image_dir']} does not exist"
+            messagebox.showerror("Error", msg)
+            raise ValueError(msg)
+
+        if not args["pair_file"]:
+            args["pair_file"] = None
         else:
-            pair_file = Path(pair_file)
+            args["pair_file"] = Path(args["pair_file"])
+            if not args["pair_file"].exists():
+                msg = f"File {args['pair_file']} does not exist"
+                messagebox.showerror("Error", msg)
+                raise ValueError(msg)
 
-        return (
-            strategy,
-            Path(image_dir),
-            Path(out_dir),
-            pair_file,
-            int(image_overlap),
-            local_feat,
-            int(max_features),
-        )
+        if args["out_dir"].exists():
+            answer = messagebox.askokcancel(
+                "Warning",
+                f"Directory {args['out_dir']} already exists, previous results will be overwritten. Do you wish to proceed?",
+            )
+            if not answer:
+                return None
+            else:
+                shutil.rmtree(args["out_dir"])
+        args["out_dir"].mkdir(parents=True, exist_ok=True)
+
+        if args["strategy"] == "sequential":
+            if not args["image_overlap"]:
+                msg = "Image overlap is required when strategy is set to sequential"
+                messagebox.showerror("Error", msg)
+                raise ValueError(msg)
+            else:
+                args["image_overlap"] = int(args["image_overlap"])
+
+        if not args["max_features"]:
+            self.error_label[
+                "text"
+            ] = "Invalid max number of local features per image. Using the default value."
+        else:
+            args["max_features"] = int(args["max_features"])
+
+        return args
 
     def create_combobox(self, label_text, values):
         label = tk.Label(self.master, text=label_text)

@@ -47,7 +47,7 @@ class ImageMatching:
         local_features: str,
         matching_method: str,
         custom_config: dict,
-        max_feat_numb: int = 2048,
+        # max_feat_numb: int = 2048,
         pair_file: Path = None,
         overlap: int = 1,
     ):
@@ -56,7 +56,7 @@ class ImageMatching:
         self.local_features = local_features
         self.matching_method = matching_method
         self.custom_config = custom_config
-        self.max_feat_numb = max_feat_numb
+        # self.max_feat_numb = max_feat_numb
         self.pair_file = Path(self.pair_file) if pair_file is not None else None
         self.overlap = overlap
         self.keypoints = {}

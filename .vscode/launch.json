@@ -9,22 +9,28 @@
       "type": "python",
       "request": "launch",
       "program": "${file}",
-      "console": "integratedTerminal",
-      "justMyCode": true
+      "console": "integratedTerminal"
     },
     {
-      "name": "Python (with arguments)",
+      "name": "Python CLI",
       "type": "python",
       "request": "launch",
       "program": "${file}",
       "console": "integratedTerminal",
-      "justMyCode": true,
       "args": [
         "--config",
         "superpoint+lightglue",
         "--images",
         "data/easy_small"
       ]
+    },
+    {
+      "name": "Python GUI",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "args": ["--gui"]
     }
   ]
 }

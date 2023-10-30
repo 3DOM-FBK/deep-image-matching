@@ -119,7 +119,7 @@ class LightGlueMatcher(MatcherBase):
         LG = import_module("deep_image_matching.thirdparty.LightGlue.lightglue")
 
         # load the matcher
-        sg_cfg = self._config["SperPoint+LightGlue"]["LightGlue"]
+        sg_cfg = self._config["SuperPoint+LightGlue"]["LightGlue"]
         self._matcher = (
             LG.LightGlue(self._localfeatures, **sg_cfg).eval().to(self._device)
         )
@@ -203,7 +203,7 @@ class SuperGlueMatcher(MatcherBase):
 
         # initialize the Matching object with given configuration
         self.matcher = (
-            SG.Matching(config["SperPoint+SuperGlue"]["superglue"])
+            SG.Matching(config["SuperPoint+SuperGlue"]["superglue"])
             .eval()
             .to(self._device)
         )
