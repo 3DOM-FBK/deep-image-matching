@@ -8,13 +8,7 @@ from .extractors import SuperPointExtractor
 from .geometric_verification import geometric_verification
 from .image import ImageList
 from .io.h5 import get_features
-from .local_features import LocalFeatureExtractor
-from .matchers import (
-    DetectAndDescribe,
-    LightGlueMatcher,
-    LOFTRMatcher,
-    SuperGlueMatcher,
-)
+from .matchers import LightGlueMatcher, LOFTRMatcher, SuperGlueMatcher
 from .pairs_generator import PairsGenerator
 
 logger = logging.getLogger(__name__)
@@ -51,6 +45,7 @@ class ImageMatching:
         matching_strategy: str,
         retrieval_option: str,
         local_features: str,
+        matching_method: str,
         custom_config: dict,
         max_feat_numb: int = 2048,
         pair_file: Path = None,
@@ -59,6 +54,7 @@ class ImageMatching:
         self.matching_strategy = matching_strategy
         self.retrieval_option = retrieval_option
         self.local_features = local_features
+        self.matching_method = matching_method
         self.custom_config = custom_config
         self.max_feat_numb = max_feat_numb
         self.pair_file = Path(self.pair_file) if pair_file is not None else None
@@ -128,7 +124,12 @@ class ImageMatching:
         return self.pairs
 
     def extract_features(self):
-        extractor = SuperPointExtractor(**self.custom_config)
+        if self.local_features == "superpoint":
+            extractor = SuperPointExtractor(**self.custom_config)
+        else:
+            raise ValueError(
+                "Invalid local feature extractor. Supported extractors: superpoint"
+            )
 
         logger.info("Extracting features...")
         for img in tqdm(self.image_list):
@@ -161,17 +162,17 @@ class ImageMatching:
             matcher = SuperGlueMatcher(**matcher_cfg)
         elif self.local_features == "loftr":
             matcher = LOFTRMatcher(**matcher_cfg)
-        elif self.local_features == "detect_and_describe":
-            matcher_cfg["ALIKE"]["n_limit"] = self.max_feat_numb
-            detector_and_descriptor = matcher_cfg["general"]["detector_and_descriptor"]
-            local_feat_conf = matcher_cfg[detector_and_descriptor]
-            local_feat_extractor = LocalFeatureExtractor(
-                detector_and_descriptor,
-                local_feat_conf,
-                self.max_feat_numb,
-            )
-            matcher = DetectAndDescribe(**matcher_cfg)
-            matcher_cfg["general"]["local_feat_extractor"] = local_feat_extractor
+        # elif self.local_features == "detect_and_describe":
+        #     matcher_cfg["ALIKE"]["n_limit"] = self.max_feat_numb
+        #     detector_and_descriptor = matcher_cfg["general"]["detector_and_descriptor"]
+        #     local_feat_conf = matcher_cfg[detector_and_descriptor]
+        #     local_feat_extractor = LocalFeatureExtractor(
+        #         detector_and_descriptor,
+        #         local_feat_conf,
+        #         self.max_feat_numb,
+        #     )
+        #     matcher = DetectAndDescribe(**matcher_cfg)
+        #     matcher_cfg["general"]["local_feat_extractor"] = local_feat_extractor
         else:
             raise ValueError(
                 "Invalid local feature extractor. Supported extractors: lightglue, superglue, loftr, detect_and_describe"

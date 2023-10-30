@@ -8,7 +8,6 @@ import kornia as K
 import kornia.feature as KF
 import numpy as np
 import torch
-from kornia import feature
 
 from .consts import TileSelection
 from .matcher_base import MatcherBase
