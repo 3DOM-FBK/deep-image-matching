@@ -156,11 +156,11 @@ class ImageMatching:
         matcher_cfg = self.custom_config
 
         # Initialize matcher
-        if self.local_features == "lightglue":
+        if self.matching_method == "lightglue":
             matcher = LightGlueMatcher(**matcher_cfg)
-        elif self.local_features == "superglue":
+        elif self.matching_method == "superglue":
             matcher = SuperGlueMatcher(**matcher_cfg)
-        elif self.local_features == "loftr":
+        elif self.matching_method == "loftr":
             matcher = LOFTRMatcher(**matcher_cfg)
         # elif self.local_features == "detect_and_describe":
         #     matcher_cfg["ALIKE"]["n_limit"] = self.max_feat_numb
