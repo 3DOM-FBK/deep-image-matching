@@ -20,8 +20,8 @@ custom_config = {
         "kornia_matcher": "smnn",  #'nn' or 'snn' or 'mnn' or 'smnn'
         "ratio_threshold": 0.95,  # valid range [0-1]
     },
-    # SperPoint+LightGlue (https://github.com/cvg/LightGlue)
-    "SperPoint+LightGlue": {
+    # SuperPoint+LightGlue (https://github.com/cvg/LightGlue)
+    "SuperPoint+LightGlue": {
         "SuperPoint": {
             "descriptor_dim": 256,
             "nms_radius": 4,
@@ -69,7 +69,7 @@ custom_config = {
         "upright": False,
     },
     # SuperPoint+SuperGlue options
-    "SperPoint+SuperGlue": {
+    "SuperPoint+SuperGlue": {
         "superpoint": {
             "nms_radius": 3,
             "keypoint_threshold": 0.001,
