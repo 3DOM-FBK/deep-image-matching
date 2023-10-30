@@ -96,6 +96,20 @@ class DetectAndDescribe(MatcherBase):
 
 
 class LightGlueMatcher(MatcherBase):
+    default_config = (
+        {
+            "descriptor_dim": 256,
+            "n_layers": 9,
+            "num_heads": 4,
+            "flash": True,  # enable FlashAttention if available.
+            "mp": False,  # enable mixed precision
+            "depth_confidence": 0.95,  # early stopping, disable with -1
+            "width_confidence": 0.99,  # point pruning, disable with -1
+            "filter_threshold": 0.1,  # match threshold
+            "weights": None,
+        },
+    )
+
     def __init__(self, **config) -> None:
         """Initializes a LightGlueMatcher"""
 
@@ -171,12 +185,18 @@ class LightGlueMatcher(MatcherBase):
 
 
 class SuperGlueMatcher(MatcherBase):
+    default_config = {
+        "weights": "outdoor",
+        "sinkhorn_iterations": 20,
+        "match_threshold": 0.3,
+    }
+
     def __init__(self, **config) -> None:
         """Initializes a SuperGlueMatcher object with the given options dictionary."""
 
-        raise NotImplementedError(
-            "SuperGlueMatcher is not correctely implemented yet. It needs to be updated to the new version of the Matcher. Please use LightGlue in the meanwhile!"
-        )
+        # raise NotImplementedError(
+        #     "SuperGlueMatcher is not correctely implemented yet. It needs to be updated to the new version of the Matcher. Please use LightGlue in the meanwhile!"
+        # )
 
         super().__init__(**config)
 
