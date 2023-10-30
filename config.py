@@ -17,8 +17,8 @@ custom_config = {
         "geometric_verification": GeometricVerification.PYDEGENSAC,
         "gv_threshold": 3,
         "gv_confidence": 0.99999,
-        "kornia_matcher": "smnn",  #'nn' or 'snn' or 'mnn' or 'smnn'
-        "ratio_threshold": 0.95,  # valid range [0-1]
+        # "kornia_matcher": "smnn",  #'nn' or 'snn' or 'mnn' or 'smnn'
+        # "ratio_threshold": 0.95,  # valid range [0-1]
     },
     # SuperPoint+LightGlue (https://github.com/cvg/LightGlue)
     "SuperPoint+LightGlue": {
