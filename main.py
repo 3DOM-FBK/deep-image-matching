@@ -59,9 +59,7 @@ def parse_args(debug: bool = False):
     )
 
     parser.add_argument("-i", "--images", type=str, help="Input image folder")
-    parser.add_argument(
-        "-o", "--outs", type=str, help="Output folder", default="output"
-    )
+    parser.add_argument("-o", "--outs", type=str, help="Output folder", default=None)
     parser.add_argument(
         "-c",
         "--config",
@@ -146,7 +144,7 @@ def parse_args(debug: bool = False):
         args.outs = Path("output") / f"{args.images.name}_{args.config}_{args.strategy}"
     else:
         args.outs = Path(args.outs)
-        args.outs.mkdir(parents=True, exist_ok=True)
+    args.outs.mkdir(parents=True, exist_ok=True)
 
     if args.config is None:
         raise ValueError("--config option is required")
