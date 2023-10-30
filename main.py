@@ -29,6 +29,11 @@ matchers_zoo = [
     "lightglue",
     "loftr",
     "adalam",
+    "smnn",
+    "nn",
+    "snn",
+    "mnn",
+    "smnn",
 ]
 retrieval_zoo = ["netvlad", "openibl", "cosplace", "dir"]
 
@@ -88,20 +93,6 @@ def parse_args():
         choices=retrieval_zoo,
         default=None,
     )
-    # parser.add_argument(
-    #     "-f",
-    #     "--features",
-    #     choices=[
-    #         "superglue",
-    #         "lightglue",
-    #         "loftr",
-    #         "ALIKE",
-    #         "ORB",
-    #         "DISK",
-    #         "SuperPoint",
-    #         "KeyNetAffNetHardNet",
-    #     ],
-    # )
     parser.add_argument("-n", "--max_features", type=int, default=2048)
     parser.add_argument("--debug", action="store_true", default=False)
 
