@@ -12,6 +12,16 @@ from src.deep_image_matching.utils import setup_logger
 
 logger = setup_logger(console_log_level="info")
 
+features_zoo = ["superpoint", "alike", "orb", "disk", "keynetaffnethardnet"]
+
+available_matchers_zoo = [
+    "superglue",
+    "lightglue",
+    "loftr",
+]
+
+confs_zoo = []
+
 
 def parse_args():
     parser = argparse.ArgumentParser(

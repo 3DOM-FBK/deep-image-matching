@@ -9,7 +9,7 @@ import h5py
 import numpy as np
 import torch
 
-from .consts import Quality, TileSelection
+from .consts import Quality, TileSelection, def_cfg_general
 from .image import Image
 from .tiling import Tiler
 
@@ -32,24 +32,17 @@ def featuresDict_2_tensor(features: FeaturesDict, device: torch.device) -> Featu
 
 DEBUG = True
 
-DEFAULT_CONFIG = {
-    "general": {
-        "quality": Quality.HIGH,
-        "tile_selection": TileSelection.NONE,
-        "tiling_grid": [1, 1],
-        "tiling_overlap": 0,
-        "output_dir": "results",
-        "force_cpu": False,
-        "do_viz": False,
-        "fast_viz": True,
-        "do_viz_tiles": False,
-    }
-}
+DEFAULT_CONFIG = {"general": def_cfg_general}
 
 
-# TODO: separate the ExtractorBase class from the SuperPointExtractor class
 class ExtractorBase:
     def __init__(self, **custom_config: dict):
+        """
+        Initialize the instance with a custom config. This is the method to be called by subclasses
+
+        Args:
+                custom_config: a dictionary of options to
+        """
         # Set default config
         self._config = DEFAULT_CONFIG
 
@@ -59,6 +52,15 @@ class ExtractorBase:
         self._update_config(custom_config)
 
     def extract(self, img: Union[Image, Path]) -> np.ndarray:
+        """
+        Extract features from an image. This is the main method of the feature extractor.
+
+        Args:
+                img: Image to extract features from.
+
+        Returns:
+                List of features extracted from the image. Each feature is a 2D NumPy array
+        """
         # Load image
 
         im_path = img if isinstance(img, Path) else img.absolute_path
@@ -86,6 +88,7 @@ class ExtractorBase:
         feature_path = output_dir / "features.h5"
         im_name = im_path.name
 
+        # If as_half is True then the features are converted to float32 or float16.
         if as_half:
             for k in features:
                 if not isinstance(features[k], np.ndarray):
@@ -126,9 +129,25 @@ class ExtractorBase:
         return feature_path
 
     def _extract(self, image: np.ndarray) -> dict:
+        """
+        Extract features from an image. This is called by : meth : ` extract ` to extract features from the image. This method must be implemented by subclasses.
+
+        Args:
+            image: A NumPy array of shape ( height width 3 )
+
+        Returns:
+            A dictionary of extracted features
+        """
         raise NotImplementedError("Subclasses should implement _extract method!")
 
     def _frame2tensor(self, image: np.ndarray, device: str = "cpu"):
+        """
+        Convert a frame to a tensor. This is a low - level method to be used by subclasses that need to convert an image to a tensor
+
+        Args:
+            image: The image to be converted
+            device: The device to convert to (defaults to 'cpu')
+        """
         if len(image.shape) == 2:
             image = image[None][None]
         elif len(image.shape) == 3:
@@ -136,7 +155,12 @@ class ExtractorBase:
         return torch.tensor(image / 255.0, dtype=torch.float).to(device)
 
     def _update_config(self, config: dict):
-        """Check the matching config dictionary for missing keys or invalid values."""
+        """
+        Update the config dictionary. This is called by : meth : ` update_config ` to allow subclasses to perform additional checks before and after configuration is updated.
+
+        Args:
+           config: The configuration dictionary to update in place. It is assumed that the keys and values are valid
+        """
 
         # Make a deepcopy of the default config and update it with the custom config
         new_config = deepcopy(self._config)
@@ -192,6 +216,13 @@ class ExtractorBase:
         logger.debug(f"Running inference on device {self._device}")
 
     def _extract_by_tile(self, image: np.ndarray, select_unique: bool = True):
+        """
+        Extract features from an image by tiles. This is called by :meth:`extract` to extract features from the image.
+
+        Args:
+            image: The image to extract from. Must be a 2D array
+            select_unique: If True the unique values of keypoints are selected
+        """
         # Compute tiles limits
         grid = self._config["general"]["tiling_grid"]
         overlap = self._config["general"]["tiling_overlap"]

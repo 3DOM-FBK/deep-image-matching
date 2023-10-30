@@ -80,7 +80,6 @@ custom_config = {
             "sinkhorn_iterations": 20,
             "match_threshold": 0.3,
         },
-        "force_cpu": False,
     },
     # LoFTR options from KORNIA (https://kornia.github.io/)
     "loftr": {

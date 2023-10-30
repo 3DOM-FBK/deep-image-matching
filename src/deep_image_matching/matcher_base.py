@@ -10,7 +10,7 @@ import h5py
 import numpy as np
 import torch
 
-from .consts import Quality, TileSelection
+from .consts import Quality, TileSelection, def_cfg_general
 from .io.h5 import get_features
 from .tiling import Tiler
 from .visualization import viz_matches_cv2, viz_matches_mpl
@@ -27,26 +27,12 @@ class FeaturesDict(TypedDict):
     tile_idx: Optional[np.ndarray]
 
 
-DEFAULT_CONFIG = {
-    "general": {
-        "tile_selection": TileSelection.NONE,
-        "max_keypoints": 4096,
-        "force_cpu": False,
-        "output_dir": "results",
-        "do_viz": False,
-        "fast_viz": True,
-        # "interactive_viz": False,
-        "hide_matching_track": True,
-        "do_viz_tiles": False,
-        "tiling_grid": [1, 1],
-        "tiling_overlap": 0,
-        "min_matches_per_tile": 5,
-    }
-}
+DEFAULT_CONFIG = {"general": def_cfg_general}
 
 
 class MatcherBase:
     def __init__(self, **custom_config) -> None:
+        # cfg_general, **matcher_cfg
         """
         Base class for matchers. It defines the basic interface for matchers and basic functionalities that are shared among all matchers, in particular the `match` method. It must be subclassed to implement a new matcher.
 
