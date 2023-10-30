@@ -2,6 +2,7 @@
 data/
 assets/
 res/
+output/
 sandbox/
 
 # VScode

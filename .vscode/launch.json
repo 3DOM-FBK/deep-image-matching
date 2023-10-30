@@ -11,6 +11,20 @@
       "program": "${file}",
       "console": "integratedTerminal",
       "justMyCode": true
+    },
+    {
+      "name": "Python (with arguments)",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": [
+        "--config",
+        "superpoint+lightglue",
+        "--images",
+        "data/easy_small"
+      ]
     }
   ]
 }
