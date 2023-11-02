@@ -1,11 +1,46 @@
 import logging
 
+import numpy as np
 import torch
 
-from ..thirdparty.SuperGlue.models.matching import Matching
+from ..thirdparty.SuperGlue.models.superglue import SuperGlue
 from .matcher_base import FeaturesDict, MatcherBase
 
 logger = logging.getLogger(__name__)
+
+
+def features_2_sg(
+    feats0: FeaturesDict, feats1: FeaturesDict, device: torch.device
+) -> dict:
+    # Merge feats0 and feats1 in a single dict
+    data = {}
+    data = {**data, **{k + "0": v for k, v in feats0.items()}}
+    data = {**data, **{k + "1": v for k, v in feats1.items()}}
+
+    # Add batch dimension
+    data = {k: v[None] for k, v in data.items()}
+
+    # Convert to tensor
+    data = {
+        k: torch.tensor(v, dtype=torch.float, device=device) for k, v in data.items()
+    }
+
+    # Add channel dimension if missing
+    for i in range(2):
+        s = data[f"image_size{i}"].cpu().numpy().astype(int).squeeze()
+        data[f"image_size{i}"] = torch.Size((1, 1, s[0], s[1]))
+
+    return data
+
+
+def correspondence_matrix_from_matches0(
+    kpts_number: int, matches0: np.ndarray
+) -> np.ndarray:
+    n_tie_points = np.arange(kpts_number).reshape((-1, 1))
+    matrix = np.hstack((n_tie_points, matches0.reshape((-1, 1))))
+    correspondences = matrix[~np.any(matrix == -1, axis=1)]
+
+    return correspondences
 
 
 class SuperGlueMatcher(MatcherBase):
@@ -14,22 +49,17 @@ class SuperGlueMatcher(MatcherBase):
         "sinkhorn_iterations": 20,
         "match_threshold": 0.3,
     }
+    required_inputs = []
+    min_matches = 20
+    max_feat_no_tiling = 50000
 
     def __init__(self, **config) -> None:
         """Initializes a SuperGlueMatcher object with the given options dictionary."""
 
-        # raise NotImplementedError(
-        #     "SuperGlueMatcher is not correctely implemented yet. It needs to be updated to the new version of the Matcher. Please use LightGlue in the meanwhile!"
-        # )
-
         super().__init__(**config)
 
         # initialize the Matching object with given configuration
-        self._matcher = (
-            Matching(config["SuperPoint+SuperGlue"]["superglue"])
-            .eval()
-            .to(self._device)
-        )
+        self._matcher = SuperGlue(config["superglue"]).eval().to(self._device)
 
     @torch.no_grad()
     def _match_pairs(
@@ -48,118 +78,19 @@ class SuperGlueMatcher(MatcherBase):
             _type_: _description_
         """
 
-        def featuresDict_2_sg(feats: FeaturesDict, device: torch.device) -> dict:
-            # Remove elements from list/tuple
-            feats = {
-                k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()
-            }
-            # Move descriptors dimension to last
-            if "descriptors" in feats.keys():
-                if feats["descriptors"].shape[-1] != 256:
-                    feats["descriptors"] = feats["descriptors"].T
-            # Add batch dimension
-            feats = {k: v[None] for k, v in feats.items()}
-            # Convert to tensor
-            feats = {
-                k: torch.tensor(v, dtype=torch.float, device=device)
-                for k, v in feats.items()
-            }
-            # Check device
-            feats = {
-                k: v.to(device) if isinstance(v, torch.Tensor) else v
-                for k, v in feats.items()
-            }
+        # Check that the image size is rprovided into the features
+        data = features_2_sg(feats0, feats1, self._device)
 
-            return feats
+        match_res = self._matcher(data)
+        match_res = {
+            k: v.cpu().numpy()
+            for k, v in match_res.items()
+            if isinstance(v, torch.Tensor)
+        }
 
-        feats0_ = featuresDict_2_sg(feats0, self._device)
-        feats1_ = featuresDict_2_sg(feats1, self._device)
-        match_res = self._matcher({"image0": feats0_, "image1": feats1_})
+        # Make correspondence matrix from matches0
+        matches0 = match_res["matches0"]
+        kpts_number = feats0["keypoints"].shape[0]
+        correspondences = correspondence_matrix_from_matches0(kpts_number, matches0)
 
-        # Create FeaturesBase objects and matching array
-        features0 = FeaturesDict(
-            keypoints=pred["keypoints0"],
-            descriptors=pred["descriptors0"],
-            scores=pred["scores0"],
-        )
-        features1 = FeaturesDict(
-            keypoints=pred["keypoints1"],
-            descriptors=pred["descriptors1"],
-            scores=pred["scores1"],
-        )
-
-        # get matching array
-        matches0 = pred["matches0"]
-
-        # Create a match confidence array
-        valid = matches0 > -1
-        mconf = features0.scores[valid]
-
-        # matches_dict = {
-        #     "matches0": matches0,
-        #     "matches01": None,
-        # }
-
-        return features0, features1, matches0, mconf
-
-    # def viz_matches(
-    #     self,
-    #     image0: np.ndarray,
-    #     image1: np.ndarray,
-    #     path: str,
-    #     fast_viz: bool = False,
-    #     show_keypoints: bool = False,
-    #     opencv_display: bool = False,
-    # ) -> None:
-    #     """
-    #     Visualize the matching result between two images.
-
-    #     Args:
-    #     - path (str): The output path to save the visualization.
-    #     - fast_viz (bool): Whether to use preselection visualization method.
-    #     - show_keypoints (bool): Whether to show the detected keypoints.
-    #     - opencv_display (bool): Whether to use OpenCV for displaying the image.
-
-    #     Returns:
-    #     - None
-
-    #     TODO: replace make_matching_plot with native a function implemented in icepy4D
-    #     """
-
-    #     assert self._mkpts0 is not None, "Matches not available."
-    #     # image0 = np.uint8(tensor0.cpu().numpy() * 255),
-
-    #     color = cm.jet(self._mconf)
-    #     text = [
-    #         "SuperGlue",
-    #         "Keypoints: {}:{}".format(
-    #             len(self._mkpts0),
-    #             len(self._mkpts1),
-    #         ),
-    #         "Matches: {}".format(len(self._mkpts0)),
-    #     ]
-
-    #     # Display extra parameter info.
-    #     k_thresh = self._opt["superpoint"]["keypoint_threshold"]
-    #     m_thresh = self._opt["superglue"]["match_threshold"]
-    #     small_text = [
-    #         "Keypoint Threshold: {:.4f}".format(k_thresh),
-    #         "Match Threshold: {:.2f}".format(m_thresh),
-    #     ]
-
-    #     make_matching_plot(
-    #         image0,
-    #         image1,
-    #         self._mkpts0,
-    #         self._mkpts1,
-    #         self._mkpts0,
-    #         self._mkpts1,
-    #         color,
-    #         text,
-    #         path=path,
-    #         show_keypoints=show_keypoints,
-    #         fast_viz=fast_viz,
-    #         opencv_display=opencv_display,
-    #         opencv_title="Matches",
-    #         small_text=small_text,
-    #     )
+        return correspondences

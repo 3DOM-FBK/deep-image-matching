@@ -1,6 +1,5 @@
 import logging
 from copy import deepcopy
-from importlib import import_module
 from itertools import product
 from pathlib import Path
 from typing import List, Optional, Tuple, TypedDict
@@ -10,7 +9,9 @@ import h5py
 import numpy as np
 import torch
 
+from ..hloc.extractors.superpoint import SuperPoint
 from ..io.h5 import get_features
+from ..thirdparty.LightGlue.lightglue import LightGlue
 from ..utils.consts import TileSelection
 from ..utils.tiling import Tiler
 from ..visualization import viz_matches_cv2, viz_matches_mpl
@@ -46,7 +47,7 @@ class MatcherBase:
     }
     required_inputs = []
     min_matches = 20
-    max_feat_no_tiling = 200000
+    max_feat_no_tiling = 100000
 
     def __init__(self, **custom_config) -> None:
         # cfg_general, **matcher_cfg
@@ -164,11 +165,13 @@ class MatcherBase:
                     self._matches = self._match_pairs(self._features0, self._features1)
                 except Exception as e:
                     logger.warning(
-                        f"Matching full images failed: {e}. Trying to match by tiles..."
+                        f"Matching full images failed: {e}. \nTrying to match by tiles..."
                     )
                     self._matches = self._match_by_tile(
                         img0,
                         img1,
+                        self._features0,
+                        self._features1,
                         method=self._tiling,
                     )
             else:
@@ -247,11 +250,13 @@ class MatcherBase:
         self,
         img0: Path,
         img1: Path,
+        features0: FeaturesDict,
+        features1: FeaturesDict,
         method: TileSelection = TileSelection.PRESELECTION,
     ):
-        # Get features from h5 file
-        features0 = get_features(self._feature_path, img0.name)
-        features1 = get_features(self._feature_path, img1.name)
+        # # Get features from h5 file
+        # features0 = get_features(self._feature_path, img0.name)
+        # features1 = get_features(self._feature_path, img1.name)
 
         # Compute tiles limits and origin
         grid = self._config["general"]["tiling_grid"]
@@ -280,6 +285,7 @@ class MatcherBase:
                     "keypoints": features["keypoints"][pts_in_tile],
                     "descriptors": features["descriptors"][:, pts_in_tile],
                     "scores": features["scores"][pts_in_tile],
+                    "image_size": features["image_size"],
                 }
                 return (feat_tile, idx)
 
@@ -376,10 +382,6 @@ class MatcherBase:
                 i0 = cv2.pyrDown(i0)
                 i1 = cv2.pyrDown(i1)
 
-            # Import superpoint and lightglue
-            SP = import_module("deep_image_matching.hloc.extractors.superpoint")
-            LG = import_module("deep_image_matching.thirdparty.LightGlue.lightglue")
-
             def sp2lg(feats: dict) -> dict:
                 feats = {
                     k: v[0] if isinstance(v, (list, tuple)) else v
@@ -402,12 +404,12 @@ class MatcherBase:
             # Run SuperPoint on downsampled images
             with torch.no_grad():
                 SP_cfg = {"max_keypoints": 1024}
-                SP_extractor = SP.SuperPoint(SP_cfg).eval().to(self._device)
+                SP_extractor = SuperPoint(SP_cfg).eval().to(self._device)
                 feats0 = SP_extractor({"image": self._frame2tensor(i0, self._device)})
                 feats1 = SP_extractor({"image": self._frame2tensor(i1, self._device)})
 
                 # Match features with LightGlue
-                LG_matcher = LG.LightGlue("superpoint").eval().to(self._device)
+                LG_matcher = LightGlue("superpoint").eval().to(self._device)
                 feats0 = sp2lg(feats0)
                 feats1 = sp2lg(feats1)
                 res = LG_matcher({"image0": feats0, "image1": feats1})

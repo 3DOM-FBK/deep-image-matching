@@ -94,7 +94,7 @@ def parse_args():
         choices=retrieval_zoo,
         default=None,
     )
-    parser.add_argument("-n", "--max_features", type=int, default=2048)
+    parser.add_argument("-n", "--max_features", type=int, default=2000)
     parser.add_argument("--debug", action="store_true", default=False)
 
     args = parser.parse_args()

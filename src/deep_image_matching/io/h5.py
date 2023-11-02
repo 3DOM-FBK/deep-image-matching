@@ -1,9 +1,13 @@
-from typing import Tuple
+import logging
 from pathlib import Path
-import numpy as np
+from typing import Tuple
+
 import cv2
 import h5py
+import numpy as np
 import torch
+
+logger = logging.getLogger(__name__)
 
 
 def names_to_pair(name0, name1, separator="/"):
@@ -54,14 +58,17 @@ def get_features(
                     "keypoints": kpts,
                     "descriptors": descr,
                 }
-                if "tile_idx" in fd[name]:
-                    feats["tile_idx"] = np.array(fd[name]["tile_idx"]).astype(
-                        np.float32
-                    )
-                if "scores" in fd[name]:
-                    feats["scores"] = np.array(fd[name]["scores"]).astype(np.float32)
             except KeyError:
                 raise ValueError(f"Cannot find keypoints and descriptors in {path}")
+
+            for k in ["tile_idx", "scores"]:
+                if k in fd[name]:
+                    feats[k] = np.array(fd[name][k]).astype(np.float32)
+                else:
+                    logger.warning(f"Cannot find {k} in {path}")
+            k = "image_size"
+            if k in fd[name]:
+                feats[k] = np.array(fd[name][k]).astype(np.int32)
         else:
             raise ValueError(f"Cannot find image {name} in {path}")
 
