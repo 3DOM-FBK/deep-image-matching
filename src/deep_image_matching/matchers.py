@@ -3,11 +3,10 @@ from importlib import import_module
 from pathlib import Path
 from typing import Optional, TypedDict
 
-import cv2
 import kornia as K
-import kornia.feature as KF
 import numpy as np
 import torch
+from kornia import feature as KF
 
 from .consts import TileSelection
 from .matcher_base import MatcherBase
@@ -36,7 +35,7 @@ class DetectAndDescribe(MatcherBase):
     ):  #'nn' or 'snn' or 'mnn' or 'smnn'
         torch_desc_0 = torch.from_numpy(desc_0)
         torch_desc_1 = torch.from_numpy(desc_1)
-        matcher = feature.DescriptorMatcher(match_mode=approach, th=ratio_threshold)
+        matcher = KF.DescriptorMatcher(match_mode=approach, th=ratio_threshold)
         match_distances, matches_matrix = matcher.forward(torch_desc_0, torch_desc_1)
         return matches_matrix
 
@@ -109,17 +108,17 @@ class LightGlueMatcher(MatcherBase):
         },
     )
 
-    def __init__(self, **config) -> None:
+    def __init__(self, local_features="superpoint", **config) -> None:
         """Initializes a LightGlueMatcher"""
 
-        self._localfeatures = "superpoint"
+        self._localfeatures = local_features
         super().__init__(**config)
 
         # load the LightGlue module
         LG = import_module("deep_image_matching.thirdparty.LightGlue.lightglue")
 
         # load the matcher
-        sg_cfg = self._config["SuperPoint+LightGlue"]["LightGlue"]
+        sg_cfg = self._config["LightGlue"]
         self._matcher = (
             LG.LightGlue(self._localfeatures, **sg_cfg).eval().to(self._device)
         )
@@ -202,41 +201,56 @@ class SuperGlueMatcher(MatcherBase):
         SG = import_module("deep_image_matching.thirdparty.SuperGlue.models.matching")
 
         # initialize the Matching object with given configuration
-        self.matcher = (
+        self._matcher = (
             SG.Matching(config["SuperPoint+SuperGlue"]["superglue"])
             .eval()
             .to(self._device)
         )
 
+    @torch.no_grad()
     def _match_pairs(
         self,
-        image0: np.ndarray,
-        image1: np.ndarray,
+        feats0: FeaturesDict,
+        feats1: FeaturesDict,
     ):
-        """Matches keypoints and descriptors in two given images (no matter if they are tiles or full-res images) using the SuperGlue algorithm.
-
-        This method takes in two images as Numpy arrays, and returns the matches between keypoints
-        and descriptors in those images using the SuperGlue algorithm.
+        """
+        _match_pairs _summary_
 
         Args:
-            image0 (np.ndarray): the first image to match, as Numpy array
-            image1 (np.ndarray): the second image to match, as Numpy array
+            feats0 (FeaturesDict): _description_
+            feats1 (FeaturesDict): _description_
 
         Returns:
-            Tuple[FeaturesBase, FeaturesBase, np.ndarray, np.ndarray]: a tuple containing the features of the first image, the features of the second image, the matches between them and the match confidence.
+            _type_: _description_
         """
 
-        if len(image0.shape) > 2:
-            image0 = cv2.cvtColor(image0, cv2.COLOR_RGB2GRAY)
-        if len(image1.shape) > 2:
-            image1 = cv2.cvtColor(image1, cv2.COLOR_RGB2GRAY)
+        def featuresDict_2_sg(feats: FeaturesDict, device: torch.device) -> dict:
+            # Remove elements from list/tuple
+            feats = {
+                k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()
+            }
+            # Move descriptors dimension to last
+            if "descriptors" in feats.keys():
+                if feats["descriptors"].shape[-1] != 256:
+                    feats["descriptors"] = feats["descriptors"].T
+            # Add batch dimension
+            feats = {k: v[None] for k, v in feats.items()}
+            # Convert to tensor
+            feats = {
+                k: torch.tensor(v, dtype=torch.float, device=device)
+                for k, v in feats.items()
+            }
+            # Check device
+            feats = {
+                k: v.to(device) if isinstance(v, torch.Tensor) else v
+                for k, v in feats.items()
+            }
 
-        tensor0 = self._frame2tensor(image0, self._device)
-        tensor1 = self._frame2tensor(image1, self._device)
+            return feats
 
-        with torch.inference_mode():
-            pred_tensor = self.matcher({"image0": tensor0, "image1": tensor1})
-        pred = {k: v[0].cpu().numpy() for k, v in pred_tensor.items()}
+        feats0_ = featuresDict_2_sg(feats0, self._device)
+        feats1_ = featuresDict_2_sg(feats1, self._device)
+        match_res = self._matcher({"image0": feats0_, "image1": feats1_})
 
         # Create FeaturesBase objects and matching array
         features0 = FeaturesDict(

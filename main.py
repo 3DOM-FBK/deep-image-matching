@@ -181,7 +181,7 @@ def main():
     overlap = args.overlap
     max_features = args.max_features
 
-    # temporary! Must be replaced by a configuration
+    # TODO: temporary! Must be replaced by a configuration
     if args.local_features in features_zoo:
         local_features = args.local_features
     if args.matching in matchers_zoo:
@@ -191,11 +191,10 @@ def main():
     #     custom_config["general"]["detector_and_descriptor"] = args.local_features
 
     # Update configuration dictionary
+    # TODO: improve configuration management
     custom_config["general"]["output_dir"] = output_dir
     if max_features is not None:
-        custom_config["SuperPoint+LightGlue"]["SuperPoint"][
-            "max_keypoints"
-        ] = max_features
+        custom_config["SuperPoint"]["max_keypoints"] = max_features
 
     # Generate pairs and matching
     img_matching = ImageMatching(

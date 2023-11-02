@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 from tqdm import tqdm
 
-from .extractors import SuperPointExtractor
+from .extractors import DiskExtractor, SuperPointExtractor
 from .geometric_verification import geometric_verification
 from .image import ImageList
 from .io.h5 import get_features
@@ -126,6 +126,8 @@ class ImageMatching:
     def extract_features(self):
         if self.local_features == "superpoint":
             extractor = SuperPointExtractor(**self.custom_config)
+        elif self.local_features == "disk":
+            extractor = DiskExtractor(**self.custom_config)
         else:
             raise ValueError(
                 "Invalid local feature extractor. Supported extractors: superpoint"
@@ -157,8 +159,14 @@ class ImageMatching:
 
         # Initialize matcher
         if self.matching_method == "lightglue":
-            matcher = LightGlueMatcher(**matcher_cfg)
+            matcher = LightGlueMatcher(
+                local_features=self.local_features, **matcher_cfg
+            )
         elif self.matching_method == "superglue":
+            if self.local_features != "superpoint":
+                raise ValueError(
+                    "Invalid local features for SuperGlue matcher. SuperGlue supports only SuperPoint features."
+                )
             matcher = SuperGlueMatcher(**matcher_cfg)
         elif self.matching_method == "loftr":
             matcher = LOFTRMatcher(**matcher_cfg)
