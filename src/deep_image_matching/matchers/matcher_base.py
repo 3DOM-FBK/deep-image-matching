@@ -11,13 +11,11 @@ import numpy as np
 import torch
 
 from ..io.h5 import get_features
-from ..utils.consts import Quality, TileSelection, def_cfg_general
+from ..utils.consts import TileSelection
 from ..utils.tiling import Tiler
 from ..visualization import viz_matches_cv2, viz_matches_mpl
 
 logger = logging.getLogger(__name__)
-
-MIN_MATCHES = 20
 
 
 class FeaturesDict(TypedDict):
@@ -27,13 +25,29 @@ class FeaturesDict(TypedDict):
     tile_idx: Optional[np.ndarray]
 
 
-DEFAULT_CONFIG = {"general": def_cfg_general}
-
 # NOTE: The MatcherBase class should contain all the common methods and attributes for all the matchers and must be used as a base class.
 # The specific matchers MUST contain at least the `_match_pairs` method, which takes in two images as Numpy arrays, and returns the matches between keypoints and descriptors in those images. It doesn not care if the images are tiles or full-res images, as the tiling is handled by the MatcherBase class that calls the `_match_pairs` method for each tile pair or for the full images depending on the tile selection method.
 
 
 class MatcherBase:
+    default_conf = {
+        "general": {
+            "tile_selection": TileSelection.NONE,
+            "force_cpu": False,
+            "do_viz": False,
+            "fast_viz": True,
+            # "interactive_viz": False,
+            "hide_matching_track": True,
+            "do_viz_tiles": False,
+            "tiling_grid": [1, 1],
+            "tiling_overlap": 0,
+            "min_matches_per_tile": 5,
+        }
+    }
+    required_inputs = []
+    min_matches = 20
+    max_feat_no_tiling = 200000
+
     def __init__(self, **custom_config) -> None:
         # cfg_general, **matcher_cfg
         """
@@ -47,7 +61,7 @@ class MatcherBase:
         """
 
         # Set default config
-        self._config = DEFAULT_CONFIG
+        self._config = self.default_conf
 
         # If a custom config is passed, update the default config
         if not isinstance(custom_config, dict):
@@ -128,10 +142,9 @@ class MatcherBase:
 
         # Perform matching (on tiles or full images)
         # If the features are not too many, try first to match all features together on full image, if it fails, try to match by tiles
-        max_feats = 200000
         high_feats_flag = (
-            len(self._features0["keypoints"]) > max_feats
-            or len(self._features1["keypoints"]) > max_feats
+            len(self._features0["keypoints"]) > self.max_feat_no_tiling
+            or len(self._features1["keypoints"]) > self.max_feat_no_tiling
         )
         if self._tiling == TileSelection.NONE:
             logger.debug(
@@ -146,7 +159,7 @@ class MatcherBase:
             if not high_feats_flag:
                 try:
                     logger.debug(
-                        f"Tile selection was {self._tiling.name}, but features are less then {max_feats}. Trying to match full images..."
+                        f"Tile selection was {self._tiling.name}, but features are less then {self.max_feat_no_tiling}. Trying to match full images..."
                     )
                     self._matches = self._match_pairs(self._features0, self._features1)
                 except Exception as e:
@@ -160,7 +173,7 @@ class MatcherBase:
                     )
             else:
                 logger.debug(
-                    f"Tile selection was {self._tiling.name} and features are more than {max_feats}. Matching by tile with {self._tiling.name} selection..."
+                    f"Tile selection was {self._tiling.name} and features are more than {self.max_feat_no_tiling}. Matching by tile with {self._tiling.name} selection..."
                 )
                 self._matches = self._match_by_tile(
                     img0,
@@ -173,7 +186,7 @@ class MatcherBase:
         matches_path = self._output_dir / "matches.h5"
         with h5py.File(str(matches_path), "a", libver="latest") as fd:
             group = fd.require_group(img0_name)
-            if n_matches >= MIN_MATCHES:
+            if n_matches >= self.min_matches:
                 group.create_dataset(img1_name, data=self._matches)
 
         logger.debug(f"Matching {img0_name}-{img1_name} done!")
@@ -203,28 +216,6 @@ class MatcherBase:
             else:
                 new_config[key] = {**new_config[key], **config[key]}
 
-        # Check general config
-        required_keys_general = [
-            "output_dir",
-            "force_cpu",
-            "hide_matching_track",
-            "tile_selection",
-            "tiling_grid",
-            "tiling_overlap",
-            "do_viz",
-            "fast_viz",
-            "do_viz_tiles",
-            "min_matches_per_tile",
-        ]
-        missing_keys = [
-            key for key in required_keys_general if key not in new_config["general"]
-        ]
-        if missing_keys:
-            raise KeyError(
-                f"Missing required keys in 'general' config: {', '.join(missing_keys)}."
-            )
-        if not isinstance(new_config["general"]["quality"], Quality):
-            raise TypeError("quality must be a Quality enum")
         if not isinstance(new_config["general"]["tile_selection"], TileSelection):
             raise TypeError("tile_selection must be a TileSelection enum")
 

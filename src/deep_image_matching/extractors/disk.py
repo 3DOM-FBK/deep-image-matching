@@ -1,9 +1,9 @@
 import logging
-from importlib import import_module
 
 import numpy as np
 import torch
 
+from ..hloc.extractors.disk import DISK
 from .extractor_base import ExtractorBase
 
 logger = logging.getLogger(__name__)
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class DiskExtractor(ExtractorBase):
     default_conf = {
         "weights": "depth",
-        "max_keypoints": None,
+        "max_keypoints": 2000,
         "nms_window_size": 5,
         "detection_threshold": 0.0,
         "pad_if_not_divisible": True,
@@ -29,8 +29,7 @@ class DiskExtractor(ExtractorBase):
         disk_cfg = self._config["DISK"]
 
         # Load extractor
-        extractors = import_module("deep_image_matching.hloc.extractors.disk")
-        self._extractor = extractors.DISK(disk_cfg).eval().to(self._device)
+        self._extractor = DISK(disk_cfg).eval().to(self._device)
 
     def _frame2tensor(self, image: np.ndarray, device: str = "cuda"):
         """
@@ -61,6 +60,8 @@ class DiskExtractor(ExtractorBase):
         }
         # Convert tensors to numpy arrays
         feats = {k: v.cpu().numpy() for k, v in feats.items()}
-        
+
+        # Rename keys name 'keypoint_scores' to 'scores'
+        feats["scores"] = feats.pop("keypoint_scores")
 
         return feats
