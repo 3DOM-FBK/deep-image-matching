@@ -1,8 +1,8 @@
 import logging
-from importlib import import_module
 
 import torch
 
+from ..thirdparty.SuperGlue.models.matching import Matching
 from .matcher_base import FeaturesDict, MatcherBase
 
 logger = logging.getLogger(__name__)
@@ -24,11 +24,9 @@ class SuperGlueMatcher(MatcherBase):
 
         super().__init__(**config)
 
-        SG = import_module("deep_image_matching.thirdparty.SuperGlue.models.matching")
-
         # initialize the Matching object with given configuration
         self._matcher = (
-            SG.Matching(config["SuperPoint+SuperGlue"]["superglue"])
+            Matching(config["SuperPoint+SuperGlue"]["superglue"])
             .eval()
             .to(self._device)
         )

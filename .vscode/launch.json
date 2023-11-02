@@ -17,13 +17,13 @@
       "request": "launch",
       "program": "${file}",
       "console": "integratedTerminal",
-      // "args": ["--config", "disk+lightglue", "--images", "data/easy_small"]
-      "args": [
-        "--config",
-        "superpoint+lightglue",
-        "--images",
-        "data/easy_small"
-      ]
+      "args": ["--config", "disk+lightglue", "--images", "data/easy_small"]
+      // "args": [
+      //   "--config",
+      //   "superpoint+lightglue",
+      //   "--images",
+      //   "data/easy_small"
+      // ]
     },
     {
       "name": "Python GUI",

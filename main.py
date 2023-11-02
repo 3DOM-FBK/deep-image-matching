@@ -5,6 +5,7 @@ from config import custom_config
 from src.deep_image_matching.gui import gui
 from src.deep_image_matching.image_matching import ImageMatching
 from src.deep_image_matching.io.export_to_colmap import ExportToColmap
+from src.deep_image_matching.io.h5_to_db import import_into_colmap
 from src.deep_image_matching.utils import change_logger_level, setup_logger
 
 # TODO: improve configuation manamgement
@@ -232,9 +233,7 @@ def main():
         output_dir,
     )
 
-    # Tests for using h5_to_db.py
-    from deep_image_matching.io.h5_to_db import import_into_colmap
-
+    # Using also h5_to_db.py
     database_path = Path(output_dir) / "db2.db"
     if database_path.exists():
         database_path.unlink()

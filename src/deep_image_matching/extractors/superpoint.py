@@ -1,9 +1,9 @@
 import logging
-from importlib import import_module
 
 import numpy as np
 import torch
 
+from ..hloc.extractors.superpoint import SuperPoint
 from .extractor_base import ExtractorBase
 
 logger = logging.getLogger(__name__)
@@ -31,8 +31,7 @@ class SuperPointExtractor(ExtractorBase):
         SP_cfg = self._config["SuperPoint"]
 
         # Load extractor
-        extractors = import_module("deep_image_matching.hloc.extractors.superpoint")
-        self._extractor = extractors.SuperPoint(SP_cfg).eval().to(self._device)
+        self._extractor = SuperPoint(SP_cfg).eval().to(self._device)
 
     @torch.no_grad()
     def _extract(self, image: np.ndarray) -> np.ndarray:

@@ -50,7 +50,9 @@ custom_config = {
         "fastThreshold": 0,
     },
     # DISK from KORNIA (https://kornia.github.io/)
-    "DISK": {},
+    "DISK": {
+        "max_keypoints": 2000,
+    },
     # Key.Net + OriNet + HardNet8 from KORNIA (https://kornia.github.io/)
     "KeyNetAffNetHardNet": {
         "upright": False,
