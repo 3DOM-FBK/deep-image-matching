@@ -90,9 +90,7 @@ class MatcherBase:
         Returns:
             np.ndarray: _description_
         """
-        raise NotImplementedError(
-            "Subclasses must implement _match_full_images() method."
-        )
+        raise NotImplementedError("Subclasses must implement _match_pairs() method.")
 
     # @timeit
     def match(

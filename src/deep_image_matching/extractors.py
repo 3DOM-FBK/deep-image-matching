@@ -327,7 +327,37 @@ class SuperPointExtractor(ExtractorBase):
 
         # Load extractor (TODO: DO IT IN THE SUBCLASS!)
         SP = import_module("deep_image_matching.hloc.extractors.superpoint")
-        SP_cfg = self._config["SuperPoint+LightGlue"]["SuperPoint"]
+
+        # TODO: improve configuration management! ()
+        SP_cfg = self._config["SuperPoint"]
+        self._extractor = SP.SuperPoint(SP_cfg).eval().to(self._device)
+
+    @torch.no_grad()
+    def _extract(self, image: np.ndarray) -> np.ndarray:
+        # Convert image from numpy array to tensor
+        image_ = self._frame2tensor(image, self._device)
+
+        # Extract features
+        feats = self._extractor({"image": image_})
+
+        # Remove elements from list/tuple
+        feats = {
+            k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()
+        }
+        # Convert tensors to numpy arrays
+        feats = {k: v.cpu().numpy() for k, v in feats.items()}
+
+        return feats
+
+
+class DiskExtractor(ExtractorBase):
+    def __init__(self, **config: dict):
+        # Init the base class
+        super().__init__(**config)
+
+        # Load extractor (TODO: DO IT IN THE SUBCLASS!)
+        SP = import_module("deep_image_matching.hloc.extractors.disk")
+        SP_cfg = self._config["SuperPoint"]
         self._extractor = SP.SuperPoint(SP_cfg).eval().to(self._device)
 
     @torch.no_grad()
