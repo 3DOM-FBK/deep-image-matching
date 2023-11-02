@@ -38,19 +38,19 @@ matchers_zoo = [
     "smnn",
 ]
 retrieval_zoo = ["netvlad", "openibl", "cosplace", "dir"]
-
+matching_strategy = ["bruteforce", "sequential", "retrieval", "custom_pairs"]
 
 confs_zoo = {
     "superpoint+lightglue": {"extractor": "superpoint", "matcher": "lightglue"},
     "disk+lightglue": {"extractor": "disk", "matcher": "lightglue"},
     # "aliked+lightglue": {"extractor": "aliked", "matcher": "lightglue"},
     # "sift+lightglue": {"extractor": "sift", "matcher": "lightglue"},
-    "superpoint+superglue": {"extractor": "superpoint", "matcher": "superglue"},
-    "keynetaffnethardnet+adalam": {
-        "extractor": "keynetaffnethardnet",
-        "matcher": "adalam",
-    },
-    "loftr": {"extractor": None, "matcher": "loftr"},
+    # "superpoint+superglue": {"extractor": "superpoint", "matcher": "superglue"},
+    # "keynetaffnethardnet+adalam": {
+    #     "extractor": "keynetaffnethardnet",
+    #     "matcher": "adalam",
+    # },
+    # "loftr": {"extractor": None, "matcher": "loftr"},
     # "alike": {"extractor": "alike", "matcher": None},
     # "orb": {"extractor": "orb", "matcher": None},
 }
@@ -97,7 +97,7 @@ def parse_args():
     )
     parser.add_argument("-n", "--max_features", type=int, default=2000)
     parser.add_argument("-f", "--force", action="store_true", default=False)
-    parser.add_argument("--debug", action="store_true", default=False)
+    parser.add_argument("-V", "--verbose", action="store_true", default=False)
 
     args = parser.parse_args()
 
@@ -136,14 +136,18 @@ def parse_args():
     if args.config is None:
         raise ValueError("--config option is required")
     else:
+        if args.config not in confs_zoo:
+            raise ValueError(
+                f"Invalid configuration option: {args.config}. Valid options are: {confs_zoo.keys()}"
+            )
         args.local_features = confs_zoo[args.config]["extractor"]
         args.matching = confs_zoo[args.config]["matcher"]
 
     if args.strategy is None:
         raise ValueError("--strategy option is required")
-    if args.strategy not in ["bruteforce", "sequential", "retrieval", "custom_pairs"]:
+    if args.strategy not in matching_strategy:
         raise ValueError(
-            f"Invalid strategy option: {args.strategy}. Valid options are: bruteforce, sequential, retrieval, custom_pairs"
+            f"Invalid strategy option: {args.strategy}. Valid options are: {matching_strategy}"
         )
     if args.strategy == "retrieval":
         if args.retrieval is None:
@@ -176,7 +180,7 @@ def parse_args():
     else:
         args.overlap = None
 
-    if args.debug:
+    if args.verbose:
         change_logger_level("debug")
 
     return args

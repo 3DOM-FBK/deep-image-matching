@@ -27,7 +27,7 @@
         "--config",
         "superpoint+lightglue",
         "--images",
-        "data/arsenale_terrestrial_nadiral",
+        "data/arsenale_hard",
         "--strategy",
         "bruteforce",
         "--force"
