@@ -17,18 +17,23 @@
       "request": "launch",
       "program": "${file}",
       "console": "integratedTerminal",
-      "args": [
-        "--config",
-        "superpoint+superglue",
-        "--images",
-        "data/easy_small"
-      ]
       // "args": [
       //   "--config",
-      //   "superpoint+lightglue",
+      //   "superpoint+superglue",
       //   "--images",
       //   "data/easy_small"
       // ]
+      "args": [
+        "--config",
+        "superpoint+lightglue",
+        "--images",
+        "data/arsenale_terrestrial_nadiral",
+        "--strategy",
+        "bruteforce",
+        "--force"
+        // "--overlap",
+        // "5"
+      ]
     },
     {
       "name": "Python GUI",

@@ -1,4 +1,5 @@
 import argparse
+import shutil
 from pathlib import Path
 
 from config import custom_config
@@ -95,6 +96,7 @@ def parse_args():
         default=None,
     )
     parser.add_argument("-n", "--max_features", type=int, default=2000)
+    parser.add_argument("-f", "--force", action="store_true", default=False)
     parser.add_argument("--debug", action="store_true", default=False)
 
     args = parser.parse_args()
@@ -120,7 +122,16 @@ def parse_args():
         args.outs = Path("output") / f"{args.images.name}_{args.config}_{args.strategy}"
     else:
         args.outs = Path(args.outs)
-    args.outs.mkdir(parents=True, exist_ok=True)
+
+    if args.outs.exists():
+        if args.force:
+            logger.warning(f"{args.outs} already exists, removing {args.outs}")
+            shutil.rmtree(args.outs)
+        else:
+            raise ValueError(
+                f"{args.outs} already exists, use '--force' to overwrite it"
+            )
+    args.outs.mkdir(parents=True)
 
     if args.config is None:
         raise ValueError("--config option is required")
@@ -241,7 +252,7 @@ def main():
         imgs_dir,
         feature_dir=feature_path.parent,
         database_path=database_path,
-        single_camera=True,
+        single_camera=False,
     )
 
 
