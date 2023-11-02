@@ -18,6 +18,7 @@ def featuresDict_2_lightglue(feats: FeaturesDict, device: torch.device) -> dict:
             feats["descriptors"] = feats["descriptors"].T
     # Add batch dimension
     feats = {k: v[None] for k, v in feats.items()}
+    
     # Convert to tensor
     feats = {
         k: torch.tensor(v, dtype=torch.float, device=device) for k, v in feats.items()

@@ -88,6 +88,9 @@ class ExtractorBase(metaclass=ABCMeta):
         # Retrieve original image coordinates if matching was performed on up/down-sampled images
         features = self._resize_features(self._quality, features)
 
+        # Add the image_size to the features (if not already present)
+        features["image_size"] = np.array(image.shape[:2])
+
         # Save features to disk in h5 format (TODO: MOVE it to another method)
         # def save_features_to_h5(self)
         as_half = True  # TODO: add this to the config
