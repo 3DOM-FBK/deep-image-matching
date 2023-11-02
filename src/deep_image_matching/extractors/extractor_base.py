@@ -1,3 +1,4 @@
+import inspect
 import logging
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
@@ -333,10 +334,7 @@ class ExtractorBase(metaclass=ABCMeta):
         return features
 
 
-import inspect
-
-
-def extractor_load(root, model):
+def extractor_loader(root, model):
     module_path = f"{root.__name__}.{model}"
     module = __import__(module_path, fromlist=[""])
     classes = inspect.getmembers(module, inspect.isclass)

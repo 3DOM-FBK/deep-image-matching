@@ -1,3 +1,4 @@
+import inspect
 import logging
 from copy import deepcopy
 from itertools import product
@@ -190,7 +191,9 @@ class MatcherBase:
         with h5py.File(str(matches_path), "a", libver="latest") as fd:
             group = fd.require_group(img0_name)
             if n_matches >= self.min_matches:
-                group.create_dataset(img1_name, data=self._matches)
+                group.create_dataset(
+                    img1_name, data=self._matches
+                )  # or use require_dataset
 
         logger.debug(f"Matching {img0_name}-{img1_name} done!")
 
@@ -548,3 +551,16 @@ class MatcherBase:
                     point_size=5,
                     config=config,
                 )
+
+
+def matcher_loader(root, model):
+    module_path = f"{root.__name__}.{model}"
+    module = __import__(module_path, fromlist=[""])
+    classes = inspect.getmembers(module, inspect.isclass)
+    # Filter classes defined in the module
+    classes = [c for c in classes if c[1].__module__ == module_path]
+    # Filter classes inherited from BaseModel
+    classes = [c for c in classes if issubclass(c[1], MatcherBase)]
+    assert len(classes) == 1, classes
+    return classes[0][1]
+    # return getattr(module, 'Model')

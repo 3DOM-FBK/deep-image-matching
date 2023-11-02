@@ -4,9 +4,10 @@ from pathlib import Path
 import numpy as np
 from tqdm import tqdm
 
-from .extractors import DiskExtractor, SuperPointExtractor
+from . import extractors, matchers
+from .extractors.extractor_base import extractor_loader
 from .io.h5 import get_features
-from .matchers import LightGlueMatcher, SuperGlueMatcher
+from .matchers.matcher_base import matcher_loader
 from .utils.geometric_verification import geometric_verification
 from .utils.image import ImageList
 from .utils.pairs_generator import PairsGenerator
@@ -124,15 +125,24 @@ class ImageMatching:
         return self.pairs
 
     def extract_features(self):
-        if self.local_features == "superpoint":
-            extractor = SuperPointExtractor(**self.custom_config)
-        elif self.local_features == "disk":
-            extractor = DiskExtractor(**self.custom_config)
-        else:
+        # if self.local_features == "superpoint":
+        #     extractor = SuperPointExtractor(**self.custom_config)
+        # elif self.local_features == "disk":
+        #     extractor = DiskExtractor(**self.custom_config)
+        # else:
+
+        # Dynamically load the extractor
+        try:
+            Extractor = extractor_loader(extractors, self.local_features)
+        except AttributeError:
             raise ValueError(
-                "Invalid local feature extractor. Supported extractors: superpoint"
+                f"Invalid local feature extractor. {self.local_features} is not supported."
             )
 
+        # Initialize extractor
+        extractor = Extractor(**self.custom_config)
+
+        # Extract features
         logger.info("Extracting features...")
         for img in tqdm(self.image_list):
             feature_path = extractor.extract(img)
@@ -142,35 +152,25 @@ class ImageMatching:
         return feature_path
 
     def match_pairs(self, feature_path: Path):
-        # first_img = cv2.imread(str(self.image_list[0].absolute_path))
-        # w_size = first_img.shape[1]
-        # self.custom_config["general"]["w_size"] = w_size
-
         # Check that feature_path exists
         if not Path(feature_path).exists():
             raise ValueError(f"Feature path {feature_path} does not exist")
         else:
             feature_path = Path(feature_path)
 
-        # Do not use geometric verification within the matcher, but do it after
-        # matcher_cfg = deepcopy(self.custom_config)
-        # matcher_cfg["geometric_verification"] = GeometricVerification.NONE
-        matcher_cfg = self.custom_config
-
-        # Initialize matcher
-        if self.matching_method == "lightglue":
-            matcher = LightGlueMatcher(
-                local_features=self.local_features, **matcher_cfg
-            )
-        elif self.matching_method == "superglue":
-            if self.local_features != "superpoint":
-                raise ValueError(
-                    "Invalid local features for SuperGlue matcher. SuperGlue supports only SuperPoint features."
-                )
-            matcher = SuperGlueMatcher(**matcher_cfg)
-        elif self.matching_method == "loftr":
-            raise NotImplementedError("LOFTR is not implemented yet")
-            # matcher = LOFTRMatcher(**matcher_cfg)
+        # if self.matching_method == "lightglue":
+        #     matcher = LightGlueMatcher(
+        #         local_features=self.local_features, **matcher_cfg
+        #     )
+        # elif self.matching_method == "superglue":
+        #     if self.local_features != "superpoint":
+        #         raise ValueError(
+        #             "Invalid local features for SuperGlue matcher. SuperGlue supports only SuperPoint features."
+        #         )
+        #     matcher = SuperGlueMatcher(**matcher_cfg)
+        # elif self.matching_method == "loftr":
+        #     raise NotImplementedError("LOFTR is not implemented yet")
+        # matcher = LOFTRMatcher(**matcher_cfg)
         # elif self.local_features == "detect_and_describe":
         #     matcher_cfg["ALIKE"]["n_limit"] = self.max_feat_numb
         #     detector_and_descriptor = matcher_cfg["general"]["detector_and_descriptor"]
@@ -182,38 +182,60 @@ class ImageMatching:
         #     )
         #     matcher = DetectAndDescribe(**matcher_cfg)
         #     matcher_cfg["general"]["local_feat_extractor"] = local_feat_extractor
-        else:
+        # else:
+        #     raise ValueError(
+        #         "Invalid local feature extractor. Supported extractors: lightglue, superglue, loftr, detect_and_describe"
+        #     )
+
+        # Dynamically load the matcher
+        try:
+            Matcher = matcher_loader(matchers, self.matching_method)
+        except AttributeError:
             raise ValueError(
-                "Invalid local feature extractor. Supported extractors: lightglue, superglue, loftr, detect_and_describe"
+                f"Invalid matcher. {self.local_features} is not supported."
             )
 
+        # Initialize matcher
+        matcher = Matcher(**self.custom_config)
+
+        # Match pairs
         logger.info("Matching features...")
         for pair in tqdm(self.pairs):
             logger.debug(f"Matching image pair: {pair[0].name} - {pair[1].name}")
             im0 = pair[0]
             im1 = pair[1]
 
+            # Run matching
             correspondences = matcher.match(
                 feature_path=feature_path,
                 img0=im0,
                 img1=im1,
             )
 
-            # Make correspondence matrix (no need it anymore as the matcher already does it)
-            # correspondences = make_correspondence_matrix(matches)
+            # Get original keypoints from h5 file
+            kpts0 = get_features(feature_path, im0.name)["keypoints"]
+            kpts1 = get_features(feature_path, im1.name)["keypoints"]
 
-            kpts0_h5 = get_features(feature_path, im0.name)["keypoints"]
-            kpts1_h5 = get_features(feature_path, im1.name)["keypoints"]
+            # Check if there are enough correspondences
+            min_matches_per_pair = 50
+            if len(correspondences) < min_matches_per_pair:
+                logger.warning(
+                    f"Not enough correspondences found between {im0.name} and {im1.name} ({len(correspondences)}). Skipping image pair"
+                )
+                continue
 
-            # Apply geometric verification and store results
-            self.keypoints[im0.name] = kpts0_h5
-            self.keypoints[im1.name] = kpts1_h5
-            self.correspondences[(im0, im1)] = apply_geometric_verification(
-                kpts0=self.keypoints[im0.name],
-                kpts1=self.keypoints[im1.name],
+            # Apply geometric verification
+            correspondences = apply_geometric_verification(
+                kpts0=kpts0,
+                kpts1=kpts1,
                 correspondences=correspondences,
                 config=self.custom_config["general"],
             )
+
+            # Save keypoints and correspondences
+            self.keypoints[im0.name] = kpts0
+            self.keypoints[im1.name] = kpts1
+            self.correspondences[(im0, im1)] = correspondences
 
             logger.debug(f"Pairs: {pair[0].name} - {pair[1].name} done.")
 
