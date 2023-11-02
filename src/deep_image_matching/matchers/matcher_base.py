@@ -10,10 +10,10 @@ import h5py
 import numpy as np
 import torch
 
-from .consts import Quality, TileSelection, def_cfg_general
-from .io.h5 import get_features
-from .tiling import Tiler
-from .visualization import viz_matches_cv2, viz_matches_mpl
+from ..io.h5 import get_features
+from ..utils.consts import Quality, TileSelection, def_cfg_general
+from ..utils.tiling import Tiler
+from ..visualization import viz_matches_cv2, viz_matches_mpl
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +28,9 @@ class FeaturesDict(TypedDict):
 
 
 DEFAULT_CONFIG = {"general": def_cfg_general}
+
+# NOTE: The MatcherBase class should contain all the common methods and attributes for all the matchers and must be used as a base class.
+# The specific matchers MUST contain at least the `_match_pairs` method, which takes in two images as Numpy arrays, and returns the matches between keypoints and descriptors in those images. It doesn not care if the images are tiles or full-res images, as the tiling is handled by the MatcherBase class that calls the `_match_pairs` method for each tile pair or for the full images depending on the tile selection method.
 
 
 class MatcherBase:

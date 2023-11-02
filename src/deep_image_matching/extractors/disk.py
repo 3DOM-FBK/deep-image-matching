@@ -10,6 +10,17 @@ logger = logging.getLogger(__name__)
 
 
 class DiskExtractor(ExtractorBase):
+    default_conf = {
+        "weights": "depth",
+        "max_keypoints": None,
+        "nms_window_size": 5,
+        "detection_threshold": 0.0,
+        "pad_if_not_divisible": True,
+    }
+    required_inputs = ["image"]
+    grayscale = False
+    descriptor_size = 128
+
     def __init__(self, **config: dict):
         # Init the base class
         super().__init__(**config)
@@ -20,6 +31,21 @@ class DiskExtractor(ExtractorBase):
         # Load extractor
         extractors = import_module("deep_image_matching.hloc.extractors.disk")
         self._extractor = extractors.DISK(disk_cfg).eval().to(self._device)
+
+    def _frame2tensor(self, image: np.ndarray, device: str = "cuda"):
+        """
+        Convert a frame to a tensor.
+
+        Args:
+            image: The image to be converted
+            device: The device to convert to (defaults to 'cuda')
+        """
+        if len(image.shape) != 3:
+            raise ValueError("The input image must have at least 3 channels.")
+
+        # Add batch dimension
+        image = image.transpose(2, 0, 1)[None]
+        return torch.tensor(image / 255.0, dtype=torch.float).to(device)
 
     @torch.no_grad()
     def _extract(self, image: np.ndarray) -> np.ndarray:
@@ -35,5 +61,6 @@ class DiskExtractor(ExtractorBase):
         }
         # Convert tensors to numpy arrays
         feats = {k: v.cpu().numpy() for k, v in feats.items()}
+        
 
         return feats

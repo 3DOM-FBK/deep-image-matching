@@ -9,9 +9,9 @@ import h5py
 import numpy as np
 import torch
 
-from ..consts import Quality, TileSelection, def_cfg_general
-from ..image import Image
-from ..tiling import Tiler
+from ..utils.consts import Quality, TileSelection, def_cfg_general
+from ..utils.image import Image
+from ..utils.tiling import Tiler
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +38,8 @@ DEFAULT_CONFIG = {"general": def_cfg_general}
 class ExtractorBase(metaclass=ABCMeta):
     default_conf = {}
     required_inputs = []
+    grayscale = True
+    descriptor_size = 128
 
     def __init__(self, **custom_config: dict):
         """
@@ -67,7 +69,10 @@ class ExtractorBase(metaclass=ABCMeta):
         # Load image
 
         im_path = img if isinstance(img, Path) else img.absolute_path
-        image = cv2.imread(str(im_path), cv2.IMREAD_GRAYSCALE).astype(np.float32)
+        image = cv2.imread(str(im_path)).astype(np.float32)
+
+        if self.grayscale:
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
         # Resize images if needed
         image_ = self._resize_image(self._quality, image)
@@ -144,19 +149,18 @@ class ExtractorBase(metaclass=ABCMeta):
         """
         raise NotImplementedError("Subclasses should implement _extract method!")
 
+    @abstractmethod
     def _frame2tensor(self, image: np.ndarray, device: str = "cpu"):
         """
-        Convert a frame to a tensor. This is a low - level method to be used by subclasses that need to convert an image to a tensor
+        Convert a frame to a tensor. This is a low - level method to be used by subclasses that need to convert an image to a tensor with the required format. This method must be implemented by subclasses.
 
         Args:
             image: The image to be converted
             device: The device to convert to (defaults to 'cpu')
         """
-        if len(image.shape) == 2:
-            image = image[None][None]
-        elif len(image.shape) == 3:
-            image = image.transpose(2, 0, 1)[None]
-        return torch.tensor(image / 255.0, dtype=torch.float).to(device)
+        raise NotImplementedError(
+            "Subclasses should implement _frame2tensor method to adapt the input image to the required format!"
+        )
 
     def _update_config(self, config: dict):
         """
@@ -235,7 +239,9 @@ class ExtractorBase(metaclass=ABCMeta):
 
         # Initialize empty arrays
         kpts_full = np.array([], dtype=np.float32).reshape(0, 2)
-        descriptors_full = np.array([], dtype=np.float32).reshape(256, 0)
+        descriptors_full = np.array([], dtype=np.float32).reshape(
+            self.descriptor_size, 0
+        )
         scores_full = np.array([], dtype=np.float32)
         tile_idx_full = np.array([], dtype=np.float32)
 
@@ -324,14 +330,17 @@ class ExtractorBase(metaclass=ABCMeta):
         return features
 
 
-# def dynamic_load(root, model):
-#     module_path = f"{root.__name__}.{model}"
-#     module = __import__(module_path, fromlist=[""])
-#     classes = inspect.getmembers(module, inspect.isclass)
-#     # Filter classes defined in the module
-#     classes = [c for c in classes if c[1].__module__ == module_path]
-#     # Filter classes inherited from BaseModel
-#     classes = [c for c in classes if issubclass(c[1], BaseModel)]
-#     assert len(classes) == 1, classes
-#     return classes[0][1]
-#     # return getattr(module, 'Model')
+import inspect
+
+
+def extractor_load(root, model):
+    module_path = f"{root.__name__}.{model}"
+    module = __import__(module_path, fromlist=[""])
+    classes = inspect.getmembers(module, inspect.isclass)
+    # Filter classes defined in the module
+    classes = [c for c in classes if c[1].__module__ == module_path]
+    # Filter classes inherited from BaseModel
+    classes = [c for c in classes if issubclass(c[1], ExtractorBase)]
+    assert len(classes) == 1, classes
+    return classes[0][1]
+    # return getattr(module, 'Model')

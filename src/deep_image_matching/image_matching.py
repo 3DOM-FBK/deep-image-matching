@@ -5,11 +5,11 @@ import numpy as np
 from tqdm import tqdm
 
 from .extractors import DiskExtractor, SuperPointExtractor
-from .geometric_verification import geometric_verification
-from .image import ImageList
 from .io.h5 import get_features
-from .matchers import LightGlueMatcher, LOFTRMatcher, SuperGlueMatcher
-from .pairs_generator import PairsGenerator
+from .matchers import LightGlueMatcher, SuperGlueMatcher
+from .utils.geometric_verification import geometric_verification
+from .utils.image import ImageList
+from .utils.pairs_generator import PairsGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -169,7 +169,8 @@ class ImageMatching:
                 )
             matcher = SuperGlueMatcher(**matcher_cfg)
         elif self.matching_method == "loftr":
-            matcher = LOFTRMatcher(**matcher_cfg)
+            raise NotImplementedError("LOFTR is not implemented yet")
+            # matcher = LOFTRMatcher(**matcher_cfg)
         # elif self.local_features == "detect_and_describe":
         #     matcher_cfg["ALIKE"]["n_limit"] = self.max_feat_numb
         #     detector_and_descriptor = matcher_cfg["general"]["detector_and_descriptor"]
