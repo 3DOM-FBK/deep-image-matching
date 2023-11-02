@@ -11,7 +11,7 @@ custom_config = {
         "hide_matching_track": False,
         "tile_selection": TileSelection.PRESELECTION,
         "min_matches_per_tile": 10,
-        "tiling_grid": [3, 3],
+        "tiling_grid": [1, 2],
         "tiling_overlap": 50,
         "do_viz_tiles": True,
         "geometric_verification": GeometricVerification.PYDEGENSAC,
