@@ -1,6 +1,6 @@
 import logging
+from abc import ABCMeta, abstractmethod
 from copy import deepcopy
-from importlib import import_module
 from pathlib import Path
 from typing import Optional, Tuple, TypedDict, Union
 
@@ -9,9 +9,9 @@ import h5py
 import numpy as np
 import torch
 
-from .consts import Quality, TileSelection, def_cfg_general
-from .image import Image
-from .tiling import Tiler
+from ..consts import Quality, TileSelection, def_cfg_general
+from ..image import Image
+from ..tiling import Tiler
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,10 @@ DEBUG = True
 DEFAULT_CONFIG = {"general": def_cfg_general}
 
 
-class ExtractorBase:
+class ExtractorBase(metaclass=ABCMeta):
+    default_conf = {}
+    required_inputs = []
+
     def __init__(self, **custom_config: dict):
         """
         Initialize the instance with a custom config. This is the method to be called by subclasses
@@ -128,6 +131,7 @@ class ExtractorBase:
 
         return feature_path
 
+    @abstractmethod
     def _extract(self, image: np.ndarray) -> dict:
         """
         Extract features from an image. This is called by : meth : ` extract ` to extract features from the image. This method must be implemented by subclasses.
@@ -320,59 +324,14 @@ class ExtractorBase:
         return features
 
 
-class SuperPointExtractor(ExtractorBase):
-    def __init__(self, **config: dict):
-        # Init the base class
-        super().__init__(**config)
-
-        # Load extractor (TODO: DO IT IN THE SUBCLASS!)
-        SP = import_module("deep_image_matching.hloc.extractors.superpoint")
-
-        # TODO: improve configuration management! ()
-        SP_cfg = self._config["SuperPoint"]
-        self._extractor = SP.SuperPoint(SP_cfg).eval().to(self._device)
-
-    @torch.no_grad()
-    def _extract(self, image: np.ndarray) -> np.ndarray:
-        # Convert image from numpy array to tensor
-        image_ = self._frame2tensor(image, self._device)
-
-        # Extract features
-        feats = self._extractor({"image": image_})
-
-        # Remove elements from list/tuple
-        feats = {
-            k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()
-        }
-        # Convert tensors to numpy arrays
-        feats = {k: v.cpu().numpy() for k, v in feats.items()}
-
-        return feats
-
-
-class DiskExtractor(ExtractorBase):
-    def __init__(self, **config: dict):
-        # Init the base class
-        super().__init__(**config)
-
-        # Load extractor (TODO: DO IT IN THE SUBCLASS!)
-        SP = import_module("deep_image_matching.hloc.extractors.disk")
-        SP_cfg = self._config["SuperPoint"]
-        self._extractor = SP.SuperPoint(SP_cfg).eval().to(self._device)
-
-    @torch.no_grad()
-    def _extract(self, image: np.ndarray) -> np.ndarray:
-        # Convert image from numpy array to tensor
-        image_ = self._frame2tensor(image, self._device)
-
-        # Extract features
-        feats = self._extractor({"image": image_})
-
-        # Remove elements from list/tuple
-        feats = {
-            k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()
-        }
-        # Convert tensors to numpy arrays
-        feats = {k: v.cpu().numpy() for k, v in feats.items()}
-
-        return feats
+# def dynamic_load(root, model):
+#     module_path = f"{root.__name__}.{model}"
+#     module = __import__(module_path, fromlist=[""])
+#     classes = inspect.getmembers(module, inspect.isclass)
+#     # Filter classes defined in the module
+#     classes = [c for c in classes if c[1].__module__ == module_path]
+#     # Filter classes inherited from BaseModel
+#     classes = [c for c in classes if issubclass(c[1], BaseModel)]
+#     assert len(classes) == 1, classes
+#     return classes[0][1]
+#     # return getattr(module, 'Model')

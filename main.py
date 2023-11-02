@@ -184,6 +184,10 @@ def main():
     # TODO: temporary! Must be replaced by a configuration
     if args.local_features in features_zoo:
         local_features = args.local_features
+    else:
+        raise ValueError(
+            f"Invalid combination of extractor and matcher. Chose one of the following combinations: {confs_zoo.keys()}"
+        )
     if args.matching in matchers_zoo:
         matching_method = args.matching
     # else:
