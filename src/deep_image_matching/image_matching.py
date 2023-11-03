@@ -48,6 +48,7 @@ class ImageMatching:
         local_features: str,
         matching_method: str,
         custom_config: dict,
+        min_matches_per_pair: int = 30,
         # max_feat_numb: int = 2048,
         pair_file: Path = None,
         overlap: int = 1,
@@ -57,12 +58,14 @@ class ImageMatching:
         self.local_features = local_features
         self.matching_method = matching_method
         self.custom_config = custom_config
+        self.min_matches_per_pair = min_matches_per_pair
         # self.max_feat_numb = max_feat_numb
         self.pair_file = Path(self.pair_file) if pair_file is not None else None
         self.overlap = overlap
         self.keypoints = {}
         self.correspondences = {}
 
+        # Check that parameters are valid
         if retrieval_option == "sequential":
             if overlap is None:
                 raise ValueError(
@@ -80,13 +83,70 @@ class ImageMatching:
         # Initialize ImageList class
         self.image_list = ImageList(imgs_dir)
         images = self.image_list.img_names
-
         if len(images) == 0:
             raise ValueError(
                 "Image folder empty. Supported formats: '.jpg', '.JPG', '.png'"
             )
         elif len(images) == 1:
             raise ValueError("Image folder must contain at least two images")
+
+        # Initialize extractor
+        try:
+            Extractor = extractor_loader(extractors, self.local_features)
+        except AttributeError:
+            raise ValueError(
+                f"Invalid local feature extractor. {self.local_features} is not supported."
+            )
+        self._extractor = Extractor(**self.custom_config)
+
+        # Initialize matcher
+        try:
+            Matcher = matcher_loader(matchers, self.matching_method)
+        except AttributeError:
+            raise ValueError(
+                f"Invalid matcher. {self.local_features} is not supported."
+            )
+        if self.matching_method == "lightglue":
+            self._matcher = Matcher(
+                local_features=self.local_features, **self.custom_config
+            )
+        else:
+            self._matcher = Matcher(**self.custom_config)
+
+        # if self.local_features == "superpoint":
+        #     extractor = SuperPointExtractor(**self.custom_config)
+        # elif self.local_features == "disk":
+        #     extractor = DiskExtractor(**self.custom_config)
+        # else:
+
+        # if self.matching_method == "lightglue":
+        #     matcher = LightGlueMatcher(
+        #         local_features=self.local_features, **matcher_cfg
+        #     )
+        # elif self.matching_method == "superglue":
+        #     if self.local_features != "superpoint":
+        #         raise ValueError(
+        #             "Invalid local features for SuperGlue matcher. SuperGlue supports only SuperPoint features."
+        #         )
+        #     matcher = SuperGlueMatcher(**matcher_cfg)
+        # elif self.matching_method == "loftr":
+        #     raise NotImplementedError("LOFTR is not implemented yet")
+        # matcher = LOFTRMatcher(**matcher_cfg)
+        # elif self.local_features == "detect_and_describe":
+        #     matcher_cfg["ALIKE"]["n_limit"] = self.max_feat_numb
+        #     detector_and_descriptor = matcher_cfg["general"]["detector_and_descriptor"]
+        #     local_feat_conf = matcher_cfg[detector_and_descriptor]
+        #     local_feat_extractor = LocalFeatureExtractor(
+        #         detector_and_descriptor,
+        #         local_feat_conf,
+        #         self.max_feat_numb,
+        #     )
+        #     matcher = DetectAndDescribe(**matcher_cfg)
+        #     matcher_cfg["general"]["local_feat_extractor"] = local_feat_extractor
+        # else:
+        #     raise ValueError(
+        #         "Invalid local feature extractor. Supported extractors: lightglue, superglue, loftr, detect_and_describe"
+        #     )
 
     @property
     def img_format(self):
@@ -121,31 +181,19 @@ class ImageMatching:
                 self.overlap,
             )
             self.pairs = pairs_generator.run()
+            # with open(self.pair_file, "w") as txt_file:
+            #     lines = txt_file.readlines()
+            #     for line in lines:
+            #         im1, im2 = line.strip().split(" ", 1)
+            #         self.pairs.append((im1, im2))
 
         return self.pairs
 
     def extract_features(self):
-        # if self.local_features == "superpoint":
-        #     extractor = SuperPointExtractor(**self.custom_config)
-        # elif self.local_features == "disk":
-        #     extractor = DiskExtractor(**self.custom_config)
-        # else:
-
-        # Dynamically load the extractor
-        try:
-            Extractor = extractor_loader(extractors, self.local_features)
-        except AttributeError:
-            raise ValueError(
-                f"Invalid local feature extractor. {self.local_features} is not supported."
-            )
-
-        # Initialize extractor
-        extractor = Extractor(**self.custom_config)
-
         # Extract features
         logger.info("Extracting features...")
         for img in tqdm(self.image_list):
-            feature_path = extractor.extract(img)
+            feature_path = self._extractor.extract(img)
 
         logger.info("Features extracted")
 
@@ -153,60 +201,20 @@ class ImageMatching:
 
     def match_pairs(self, feature_path: Path):
         # Check that feature_path exists
-        if not Path(feature_path).exists():
+        feature_path = Path(feature_path)
+        if not feature_path.exists():
             raise ValueError(f"Feature path {feature_path} does not exist")
-        else:
-            feature_path = Path(feature_path)
-
-        # if self.matching_method == "lightglue":
-        #     matcher = LightGlueMatcher(
-        #         local_features=self.local_features, **matcher_cfg
-        #     )
-        # elif self.matching_method == "superglue":
-        #     if self.local_features != "superpoint":
-        #         raise ValueError(
-        #             "Invalid local features for SuperGlue matcher. SuperGlue supports only SuperPoint features."
-        #         )
-        #     matcher = SuperGlueMatcher(**matcher_cfg)
-        # elif self.matching_method == "loftr":
-        #     raise NotImplementedError("LOFTR is not implemented yet")
-        # matcher = LOFTRMatcher(**matcher_cfg)
-        # elif self.local_features == "detect_and_describe":
-        #     matcher_cfg["ALIKE"]["n_limit"] = self.max_feat_numb
-        #     detector_and_descriptor = matcher_cfg["general"]["detector_and_descriptor"]
-        #     local_feat_conf = matcher_cfg[detector_and_descriptor]
-        #     local_feat_extractor = LocalFeatureExtractor(
-        #         detector_and_descriptor,
-        #         local_feat_conf,
-        #         self.max_feat_numb,
-        #     )
-        #     matcher = DetectAndDescribe(**matcher_cfg)
-        #     matcher_cfg["general"]["local_feat_extractor"] = local_feat_extractor
-        # else:
-        #     raise ValueError(
-        #         "Invalid local feature extractor. Supported extractors: lightglue, superglue, loftr, detect_and_describe"
-        #     )
-
-        # Dynamically load the matcher
-        try:
-            Matcher = matcher_loader(matchers, self.matching_method)
-        except AttributeError:
-            raise ValueError(
-                f"Invalid matcher. {self.local_features} is not supported."
-            )
-
-        # Initialize matcher
-        matcher = Matcher(**self.custom_config)
 
         # Match pairs
         logger.info("Matching features...")
+        logger.info("")
         for pair in tqdm(self.pairs):
             logger.debug(f"Matching image pair: {pair[0].name} - {pair[1].name}")
             im0 = pair[0]
             im1 = pair[1]
 
             # Run matching
-            correspondences = matcher.match(
+            correspondences = self._matcher.match(
                 feature_path=feature_path,
                 img0=im0,
                 img1=im1,
@@ -217,9 +225,8 @@ class ImageMatching:
             kpts1 = get_features(feature_path, im1.name)["keypoints"]
 
             # Check if there are enough correspondences
-            min_matches_per_pair = 50
-            if len(correspondences) < min_matches_per_pair:
-                logger.warning(
+            if len(correspondences) < self.min_matches_per_pair:
+                logger.info(
                     f"Not enough correspondences found between {im0.name} and {im1.name} ({len(correspondences)}). Skipping image pair"
                 )
                 continue

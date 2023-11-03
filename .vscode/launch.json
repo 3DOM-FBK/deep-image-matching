@@ -30,10 +30,22 @@
         "data/arsenale_hard",
         "--strategy",
         "bruteforce",
-        "--force"
+        "--force",
+        "-n",
+        "1000"
+        // "-V"
         // "--overlap",
         // "5"
       ]
+      // "args": [
+      //   "--config",
+      //   "disk+lightglue",
+      //   "--images",
+      //   "data/arsenale_hard",
+      //   "--strategy",
+      //   "bruteforce",
+      //   "--force"
+      // ]
     },
     {
       "name": "Python GUI",
