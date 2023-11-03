@@ -15,7 +15,7 @@ custom_config = {
         "tiling_overlap": 50,
         "do_viz_tiles": True,
         "geometric_verification": GeometricVerification.PYDEGENSAC,
-        "gv_threshold": 1.5,
+        "gv_threshold": 3,
         "gv_confidence": 0.99999,
         # "kornia_matcher": "smnn",  #'nn' or 'snn' or 'mnn' or 'smnn'
         # "ratio_threshold": 0.95,  # valid range [0-1]
@@ -65,8 +65,8 @@ custom_config = {
         "num_heads": 4,
         "flash": True,  # enable FlashAttention if available.
         "mp": False,  # enable mixed precision
-        "depth_confidence": 0.95,  # early stopping, disable with -1
-        "width_confidence": 0.99,  # point pruning, disable with -1
+        "depth_confidence": -1,  # 0.95,  # early stopping, disable with -1
+        "width_confidence": -1,  # 0.99,  # point pruning, disable with -1
         "filter_threshold": 0.1,  # match threshold
         "weights": None,
     },

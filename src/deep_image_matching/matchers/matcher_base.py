@@ -19,6 +19,8 @@ from ..visualization import viz_matches_cv2, viz_matches_mpl
 
 logger = logging.getLogger(__name__)
 
+min_matches_preselection = 20
+
 
 class FeaturesDict(TypedDict):
     keypoints: np.ndarray
@@ -97,7 +99,16 @@ class MatcherBase:
             self._preselction_extractor = (
                 SuperPoint({"max_keypoints": 1024}).eval().to(self._device)
             )
-            self._preselction_matcher = LightGlue("superpoint").eval().to(self._device)
+            self._preselction_matcher = (
+                LightGlue(
+                    features="superpoint",
+                    n_layers=7,
+                    depth_confidence=0.9,
+                    width_confidence=0.95,
+                )
+                .eval()
+                .to(self._device)
+            )
 
     @property
     def features0(self):
@@ -206,42 +217,11 @@ class MatcherBase:
                 method=self._tiling,
             )
 
-        # if self._tiling == TileSelection.NONE:
-        #     logger.debug(
-        #         f"Tile selection was {self._tiling.name}. Matching full images..."
-        #     )
-        #     if high_feats_flag:
-        #         raise RuntimeError(
-        #             "Too many features to match full images. Try running the matching with tile selection or use a lower max_keypoints value."
-        #         )
-        #     self._matches = self._match_pairs(self._features0, self._features1)
-        # else:
-        #     if not high_feats_flag:
-        #         try:
-        #             logger.debug(
-        #                 f"Tile selection was {self._tiling.name}, but features are less then {self.max_feat_no_tiling}. Trying to match full images..."
-        #             )
-        #             self._matches = self._match_pairs(self._features0, self._features1)
-        #         except Exception as e:
-        #             logger.warning(
-        #                 f"Matching full images failed: {e}. \nTrying to match by tiles..."
-        #             )
-        #             self._matches = self._match_by_tile(
-        #                 img0,
-        #                 img1,
-        #                 self._features0,
-        #                 self._features1,
-        #                 method=self._tiling,
-        #             )
-        #     else:
-        #         logger.debug(
-        #             f"Tile selection was {self._tiling.name} and features are more than {self.max_feat_no_tiling}. Matching by tile with {self._tiling.name} selection..."
-        #         )
-        #         self._matches = self._match_by_tile(
-        #             img0,
-        #             img1,
-        #             method=self._tiling,
-        #         )
+        if self._matches is None:
+            logger.debug(
+                f"Too few matches found. Skipping image pair {img0.name}-{img1.name}"
+            )
+            return None
 
         # Save to h5 file
         n_matches = len(self._matches)
@@ -331,6 +311,10 @@ class MatcherBase:
 
         # Select tile pairs to match
         tile_pairs = self._tile_selection(image0, image1, t0_lims, t1_lims, method)
+
+        # If no tile pairs are selected, return None
+        if len(tile_pairs) == 0:
+            return None
 
         # Match each tile pair
         matches_full = np.array([], dtype=np.int64).reshape(0, 2)
@@ -477,6 +461,12 @@ class MatcherBase:
                 res = self._preselction_matcher({"image0": feats0, "image1": feats1})
                 res = rbd2np(res)
 
+            # TODO: implement a better way to prune matching pair
+            # If not enough matches, return None and quit the matching
+            if len(res["matches"]) < min_matches_preselection:
+                return []
+
+            # Get keypoints in original image
             kp0 = feats0["keypoints"].cpu().numpy()[0]
             kp0 = kp0[res["matches"][:, 0], :]
             kp1 = feats1["keypoints"].cpu().numpy()[0]

@@ -18,7 +18,7 @@ def featuresDict_2_lightglue(feats: FeaturesDict, device: torch.device) -> dict:
             feats["descriptors"] = feats["descriptors"].T
     # Add batch dimension
     feats = {k: v[None] for k, v in feats.items()}
-    
+
     # Convert to tensor
     feats = {
         k: torch.tensor(v, dtype=torch.float, device=device) for k, v in feats.items()
@@ -53,7 +53,7 @@ class LightGlueMatcher(MatcherBase):
         super().__init__(**config)
 
         # load the matcher
-        sg_cfg = self._config["LightGlue"]
+        sg_cfg = {**self.default_conf, **self._config.get("LightGlue", {})}
         self._matcher = LightGlue(self._localfeatures, **sg_cfg).eval().to(self._device)
 
         if self._localfeatures == "disk":
