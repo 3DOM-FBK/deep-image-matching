@@ -10,15 +10,18 @@ logger = logging.getLogger(__name__)
 
 
 # TODO: skip the loading of hloc extractor, but implement it directly here.
-class SuperPointExtractor(ExtractorBase):
-    default_conf = {
-        "nms_radius": 4,
-        "keypoint_threshold": 0.005,
-        "max_keypoints": -1,
-        "remove_borders": 4,
-        "fix_sampling": False,
-    }
-    required_inputs = ["image"]
+class AlikeExtractor(ExtractorBase):
+    default_conf = (
+        {
+            "model": "alike-s",
+            "device": "cuda",
+            "top_k": 15000,
+            "scores_th": 0.2,
+            "n_limit": 15000,
+            "subpixel": True,
+        },
+    )
+    required_inputs = []
     grayscale = True
     descriptor_size = 256
     detection_noise = 2.0
@@ -28,7 +31,7 @@ class SuperPointExtractor(ExtractorBase):
         super().__init__(**config)
 
         # TODO: improve configuration management!
-        SP_cfg = {**self.default_conf, **self._config.get("SuperPoint", {})}
+        SP_cfg = {**self.default_conf, **self._config["SuperPoint"]}
 
         # Load extractor
         self._extractor = SuperPoint(SP_cfg).eval().to(self._device)

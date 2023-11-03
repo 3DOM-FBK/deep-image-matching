@@ -95,7 +95,7 @@ def parse_args():
         choices=retrieval_zoo,
         default=None,
     )
-    parser.add_argument("-n", "--max_features", type=int, default=1000)
+    parser.add_argument("-n", "--max_features", type=int, default=4000)
     parser.add_argument("-f", "--force", action="store_true", default=False)
     parser.add_argument("-V", "--verbose", action="store_true", default=False)
 
@@ -248,7 +248,7 @@ def main():
         feature_dir=feature_path.parent,
         database_path=database_path,
         camera_model="simple-radial",
-        single_camera=True,
+        single_camera=False,
     )
 
     # Backward compatibility

@@ -27,12 +27,12 @@
         "--config",
         "superpoint+lightglue",
         "--images",
-        "data/arsenale_hard",
+        "data/arsenale2",
         "--strategy",
         "bruteforce",
         "--force",
         "-n",
-        "1000"
+        "10000"
         // "-V"
         // "--overlap",
         // "5"

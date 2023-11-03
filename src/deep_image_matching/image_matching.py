@@ -219,6 +219,11 @@ class ImageMatching:
                 img0=im0,
                 img1=im1,
             )
+            if correspondences is None:
+                logger.info(
+                    f"Image pair {im0.name} - {im1.name} discarded by preselection."
+                )
+                continue
 
             # Get original keypoints from h5 file
             kpts0 = get_features(feature_path, im0.name)["keypoints"]
