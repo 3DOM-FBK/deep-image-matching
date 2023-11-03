@@ -43,9 +43,9 @@ matching_strategy = ["bruteforce", "sequential", "retrieval", "custom_pairs"]
 confs_zoo = {
     "superpoint+lightglue": {"extractor": "superpoint", "matcher": "lightglue"},
     "disk+lightglue": {"extractor": "disk", "matcher": "lightglue"},
+    "superpoint+superglue": {"extractor": "superpoint", "matcher": "superglue"},
     # "aliked+lightglue": {"extractor": "aliked", "matcher": "lightglue"},
     # "sift+lightglue": {"extractor": "sift", "matcher": "lightglue"},
-    # "superpoint+superglue": {"extractor": "superpoint", "matcher": "superglue"},
     # "keynetaffnethardnet+adalam": {
     #     "extractor": "keynetaffnethardnet",
     #     "matcher": "adalam",
@@ -95,7 +95,7 @@ def parse_args():
         choices=retrieval_zoo,
         default=None,
     )
-    parser.add_argument("-n", "--max_features", type=int, default=2000)
+    parser.add_argument("-n", "--max_features", type=int, default=1000)
     parser.add_argument("-f", "--force", action="store_true", default=False)
     parser.add_argument("-V", "--verbose", action="store_true", default=False)
 
@@ -224,6 +224,7 @@ def main():
         local_features=local_features,
         matching_method=matching_method,
         custom_config=custom_config,
+        min_matches_per_pair=20,
         # max_feat_numb=max_features,
         pair_file=pair_file,
         overlap=overlap,
@@ -238,6 +239,19 @@ def main():
     logger.info(f"\tProcessed images: {len(images)}")
     logger.info(f"\tProcessed pairs: {len(pairs)}")
 
+    # Using also h5_to_db.py
+    database_path = Path(output_dir) / "database.db"
+    if database_path.exists():
+        database_path.unlink()
+    import_into_colmap(
+        img_dir=imgs_dir,
+        feature_dir=feature_path.parent,
+        database_path=database_path,
+        camera_model="simple-radial",
+        single_camera=True,
+    )
+
+    # Backward compatibility
     # Export in colmap format
     ExportToColmap(
         images,
@@ -246,17 +260,6 @@ def main():
         keypoints,
         correspondences,
         output_dir,
-    )
-
-    # Using also h5_to_db.py
-    database_path = Path(output_dir) / "db2.db"
-    if database_path.exists():
-        database_path.unlink()
-    import_into_colmap(
-        imgs_dir,
-        feature_dir=feature_path.parent,
-        database_path=database_path,
-        single_camera=False,
     )
 
 

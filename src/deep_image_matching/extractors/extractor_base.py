@@ -31,13 +31,21 @@ def featuresDict_2_tensor(features: FeaturesDict, device: torch.device) -> Featu
     }
 
 
-DEBUG = True
-
-DEFAULT_CONFIG = {"general": def_cfg_general}
+def extractor_loader(root, model):
+    module_path = f"{root.__name__}.{model}"
+    module = __import__(module_path, fromlist=[""])
+    classes = inspect.getmembers(module, inspect.isclass)
+    # Filter classes defined in the module
+    classes = [c for c in classes if c[1].__module__ == module_path]
+    # Filter classes inherited from BaseModel
+    classes = [c for c in classes if issubclass(c[1], ExtractorBase)]
+    assert len(classes) == 1, classes
+    return classes[0][1]
+    # return getattr(module, 'Model')
 
 
 class ExtractorBase(metaclass=ABCMeta):
-    default_conf = {}
+    default_conf = {"general": def_cfg_general}
     required_inputs = []
     grayscale = True
     descriptor_size = 128
@@ -50,7 +58,7 @@ class ExtractorBase(metaclass=ABCMeta):
                 custom_config: a dictionary of options to
         """
         # Set default config
-        self._config = DEFAULT_CONFIG
+        self._config = self.default_conf
 
         # If a custom config is passed, update the default config
         if not isinstance(custom_config, dict):
@@ -332,16 +340,3 @@ class ExtractorBase(metaclass=ABCMeta):
             features["keypoints"] *= 4
 
         return features
-
-
-def extractor_loader(root, model):
-    module_path = f"{root.__name__}.{model}"
-    module = __import__(module_path, fromlist=[""])
-    classes = inspect.getmembers(module, inspect.isclass)
-    # Filter classes defined in the module
-    classes = [c for c in classes if c[1].__module__ == module_path]
-    # Filter classes inherited from BaseModel
-    classes = [c for c in classes if issubclass(c[1], ExtractorBase)]
-    assert len(classes) == 1, classes
-    return classes[0][1]
-    # return getattr(module, 'Model')
