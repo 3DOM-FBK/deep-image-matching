@@ -3,7 +3,7 @@ import logging
 import numpy as np
 import torch
 
-from ..hloc.extractors.superpoint import SuperPoint
+from ..thirdparty.alike.alike import ALike
 from .extractor_base import ExtractorBase
 
 logger = logging.getLogger(__name__)
@@ -31,10 +31,16 @@ class AlikeExtractor(ExtractorBase):
         super().__init__(**config)
 
         # TODO: improve configuration management!
-        SP_cfg = {**self.default_conf, **self._config["SuperPoint"]}
+        self._config = {**self.default_conf, **self._config.get("ALIKE", {})}
 
         # Load extractor
-        self._extractor = SuperPoint(SP_cfg).eval().to(self._device)
+        self._extractor = ALike(
+            self._config["model"],
+            device=self._config["device"],
+            top_k=self._config["top_k"],
+            scores_th=self._config["scores_th"],
+            n_limit=self._config["n_limit"],
+        )
 
     @torch.no_grad()
     def _extract(self, image: np.ndarray) -> np.ndarray:
@@ -66,3 +72,7 @@ class AlikeExtractor(ExtractorBase):
         elif len(image.shape) == 3:
             image = image.transpose(2, 0, 1)[None]
         return torch.tensor(image / 255.0, dtype=torch.float).to(device)
+
+
+if __name__ == "__main__":
+    pass

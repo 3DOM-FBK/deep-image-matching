@@ -53,6 +53,7 @@ class ImageMatching:
         pair_file: Path = None,
         overlap: int = 1,
     ):
+        self.image_dir = Path(imgs_dir)
         self.matching_strategy = matching_strategy
         self.retrieval_option = retrieval_option
         self.local_features = local_features
@@ -60,7 +61,7 @@ class ImageMatching:
         self.custom_config = custom_config
         self.min_matches_per_pair = min_matches_per_pair
         # self.max_feat_numb = max_feat_numb
-        self.pair_file = Path(self.pair_file) if pair_file is not None else None
+        self.pair_file = Path(pair_file) if pair_file is not None else None
         self.overlap = overlap
         self.keypoints = {}
         self.correspondences = {}
@@ -165,14 +166,20 @@ class ImageMatching:
         return self.image_list.img_names
 
     def generate_pairs(self):
-        self.pairs = []
         if self.pair_file is not None and self.matching_strategy == "custom_pairs":
-            assert self.pair_file.exists(), f"File {self.pair_file} does not exist"
+            if not self.pair_file.exists():
+                raise FileExistsError(f"File {self.pair_file} does not exist")
+
+            pairs = []
             with open(self.pair_file, "r") as txt_file:
                 lines = txt_file.readlines()
                 for line in lines:
                     im1, im2 = line.strip().split(" ", 1)
-                    self.pairs.append((im1, im2))
+                    pairs.append((im1, im2))
+            self.pairs = [
+                (self.image_dir / im1, self.image_dir / im2) for im1, im2 in pairs
+            ]
+
         else:
             pairs_generator = PairsGenerator(
                 self.image_list.img_paths,
