@@ -53,14 +53,14 @@ python ./main.py gui
 ## Multiview tests
 
 - [x] SuperGlue
-- [x] LightGlue with SuperGlue
+- [x] LightGlue with SuperPoint
 - [ ] LoFTR
-- [x] ALIKE
-- [x] ORB opencv
+- [ ] ALIKE
+- [ ] ORB opencv
 - [x] DISK
 - [x] Superpoint
 - [ ] Superpoint free
-- [x] KeyNet + OriNet + HardNet8
+- [ ] KeyNet + OriNet + HardNet8
 - [ ] SIFT opencv
 - [ ] ALIKED
 
