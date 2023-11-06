@@ -1,6 +1,6 @@
+import inspect
 import logging
 from copy import deepcopy
-from importlib import import_module
 from itertools import product
 from pathlib import Path
 from typing import List, Optional, Tuple, TypedDict
@@ -10,14 +10,16 @@ import h5py
 import numpy as np
 import torch
 
-from .consts import Quality, TileSelection
-from .io.h5 import get_features
-from .tiling import Tiler
-from .visualization import viz_matches_cv2, viz_matches_mpl
+from ..hloc.extractors.superpoint import SuperPoint
+from ..io.h5 import get_features
+from ..thirdparty.LightGlue.lightglue import LightGlue
+from ..utils.consts import TileSelection
+from ..utils.tiling import Tiler
+from ..visualization import viz_matches_cv2, viz_matches_mpl
 
 logger = logging.getLogger(__name__)
 
-MIN_MATCHES = 20
+min_matches_preselection = 20
 
 
 class FeaturesDict(TypedDict):
@@ -27,26 +29,44 @@ class FeaturesDict(TypedDict):
     tile_idx: Optional[np.ndarray]
 
 
-DEFAULT_CONFIG = {
-    "general": {
-        "tile_selection": TileSelection.NONE,
-        "max_keypoints": 4096,
-        "force_cpu": False,
-        "output_dir": "results",
-        "do_viz": False,
-        "fast_viz": True,
-        # "interactive_viz": False,
-        "hide_matching_track": True,
-        "do_viz_tiles": False,
-        "tiling_grid": [1, 1],
-        "tiling_overlap": 0,
-        "min_matches_per_tile": 5,
-    }
-}
+def matcher_loader(root, model):
+    module_path = f"{root.__name__}.{model}"
+    module = __import__(module_path, fromlist=[""])
+    classes = inspect.getmembers(module, inspect.isclass)
+    # Filter classes defined in the module
+    classes = [c for c in classes if c[1].__module__ == module_path]
+    # Filter classes inherited from BaseModel
+    classes = [c for c in classes if issubclass(c[1], MatcherBase)]
+    assert len(classes) == 1, classes
+    return classes[0][1]
+    # return getattr(module, 'Model')
+
+
+# NOTE: The MatcherBase class should contain all the common methods and attributes for all the matchers and must be used as a base class.
+# The specific matchers MUST contain at least the `_match_pairs` method, which takes in two images as Numpy arrays, and returns the matches between keypoints and descriptors in those images. It doesn not care if the images are tiles or full-res images, as the tiling is handled by the MatcherBase class that calls the `_match_pairs` method for each tile pair or for the full images depending on the tile selection method.
 
 
 class MatcherBase:
+    default_conf = {
+        "general": {
+            "tile_selection": TileSelection.NONE,
+            "force_cpu": False,
+            "do_viz": False,
+            "fast_viz": True,
+            # "interactive_viz": False,
+            "hide_matching_track": True,
+            "do_viz_tiles": False,
+            "tiling_grid": [1, 1],
+            "tiling_overlap": 0,
+            "min_matches_per_tile": 5,
+        }
+    }
+    required_inputs = []
+    min_matches = 20
+    max_feat_no_tiling = 100000
+
     def __init__(self, **custom_config) -> None:
+        # cfg_general, **matcher_cfg
         """
         Base class for matchers. It defines the basic interface for matchers and basic functionalities that are shared among all matchers, in particular the `match` method. It must be subclassed to implement a new matcher.
 
@@ -58,7 +78,7 @@ class MatcherBase:
         """
 
         # Set default config
-        self._config = DEFAULT_CONFIG
+        self._config = self.default_conf
 
         # If a custom config is passed, update the default config
         if not isinstance(custom_config, dict):
@@ -73,6 +93,22 @@ class MatcherBase:
 
         # Index of the matches in both the images. The first column contains the index of the mathced keypoints in features0.keypoints, the second column contains the index of the matched keypoints in features1.keypoints (Kx2 array)
         self._matches01 = None
+
+        # Load extractor and matcher for the preselction
+        if self._config["general"]["tile_selection"] == TileSelection.PRESELECTION:
+            self._preselction_extractor = (
+                SuperPoint({"max_keypoints": 1024}).eval().to(self._device)
+            )
+            self._preselction_matcher = (
+                LightGlue(
+                    features="superpoint",
+                    n_layers=7,
+                    depth_confidence=0.9,
+                    width_confidence=0.95,
+                )
+                .eval()
+                .to(self._device)
+            )
 
     @property
     def features0(self):
@@ -104,9 +140,7 @@ class MatcherBase:
         Returns:
             np.ndarray: _description_
         """
-        raise NotImplementedError(
-            "Subclasses must implement _match_full_images() method."
-        )
+        raise NotImplementedError("Subclasses must implement _match_pairs() method.")
 
     # @timeit
     def match(
@@ -114,6 +148,7 @@ class MatcherBase:
         feature_path: Path,
         img0: Path,
         img1: Path,
+        try_full_image: bool = False,
         **custom_config,
     ) -> np.ndarray:
         """ """
@@ -141,53 +176,62 @@ class MatcherBase:
 
         # Perform matching (on tiles or full images)
         # If the features are not too many, try first to match all features together on full image, if it fails, try to match by tiles
-        max_feats = 200000
+        fallback_flag = False
         high_feats_flag = (
-            len(self._features0["keypoints"]) > max_feats
-            or len(self._features1["keypoints"]) > max_feats
+            len(self._features0["keypoints"]) > self.max_feat_no_tiling
+            or len(self._features1["keypoints"]) > self.max_feat_no_tiling
         )
+
         if self._tiling == TileSelection.NONE:
-            logger.debug(
-                f"Tile selection was {self._tiling.name}. Matching full images..."
-            )
             if high_feats_flag:
                 raise RuntimeError(
-                    "Too many features to match full images. Try running the matching with tile selection or use a lower max_keypoints value."
+                    "Too many features to run the matching on full images. Try running the matching with tile selection or use a lower max_keypoints value."
                 )
-            self._matches = self._match_pairs(self._features0, self._features1)
-        else:
-            if not high_feats_flag:
-                try:
-                    logger.debug(
-                        f"Tile selection was {self._tiling.name}, but features are less then {max_feats}. Trying to match full images..."
-                    )
-                    self._matches = self._match_pairs(self._features0, self._features1)
-                except Exception as e:
-                    logger.warning(
-                        f"Matching full images failed: {e}. Trying to match by tiles..."
-                    )
-                    self._matches = self._match_by_tile(
-                        img0,
-                        img1,
-                        method=self._tiling,
-                    )
             else:
+                try_full_image = True
+
+        # Try to match full images first
+        if try_full_image and not high_feats_flag:
+            try:
                 logger.debug(
-                    f"Tile selection was {self._tiling.name} and features are more than {max_feats}. Matching by tile with {self._tiling.name} selection..."
+                    f"Tile selection was {self._tiling.name}. Matching full images..."
                 )
-                self._matches = self._match_by_tile(
-                    img0,
-                    img1,
-                    method=self._tiling,
-                )
+                self._matches = self._match_pairs(self._features0, self._features1)
+            except Exception as e:
+                if "CUDA out of memory" in str(e):
+                    logger.warning(
+                        f"Matching full images failed: {e}. \nTrying to match by tiles..."
+                    )
+                    fallback_flag = True
+                else:
+                    raise e
+
+        # If try_full_image is disabled or matching full images failed, match by tiles
+        if not try_full_image or fallback_flag:
+            logger.debug(f"Matching by tile with {self._tiling.name} selection...")
+            self._matches = self._match_by_tile(
+                img0,
+                img1,
+                self._features0,
+                self._features1,
+                method=self._tiling,
+            )
+
+        if self._matches is None:
+            logger.debug(
+                f"Too few matches found. Skipping image pair {img0.name}-{img1.name}"
+            )
+            return None
 
         # Save to h5 file
         n_matches = len(self._matches)
         matches_path = self._output_dir / "matches.h5"
         with h5py.File(str(matches_path), "a", libver="latest") as fd:
             group = fd.require_group(img0_name)
-            if n_matches >= MIN_MATCHES:
-                group.create_dataset(img1_name, data=self._matches)
+            if n_matches >= self.min_matches:
+                group.create_dataset(
+                    img1_name, data=self._matches
+                )  # or use require_dataset
 
         logger.debug(f"Matching {img0_name}-{img1_name} done!")
 
@@ -216,28 +260,6 @@ class MatcherBase:
             else:
                 new_config[key] = {**new_config[key], **config[key]}
 
-        # Check general config
-        required_keys_general = [
-            "output_dir",
-            "force_cpu",
-            "hide_matching_track",
-            "tile_selection",
-            "tiling_grid",
-            "tiling_overlap",
-            "do_viz",
-            "fast_viz",
-            "do_viz_tiles",
-            "min_matches_per_tile",
-        ]
-        missing_keys = [
-            key for key in required_keys_general if key not in new_config["general"]
-        ]
-        if missing_keys:
-            raise KeyError(
-                f"Missing required keys in 'general' config: {', '.join(missing_keys)}."
-            )
-        if not isinstance(new_config["general"]["quality"], Quality):
-            raise TypeError("quality must be a Quality enum")
         if not isinstance(new_config["general"]["tile_selection"], TileSelection):
             raise TypeError("tile_selection must be a TileSelection enum")
 
@@ -269,11 +291,13 @@ class MatcherBase:
         self,
         img0: Path,
         img1: Path,
+        features0: FeaturesDict,
+        features1: FeaturesDict,
         method: TileSelection = TileSelection.PRESELECTION,
     ):
-        # Get features from h5 file
-        features0 = get_features(self._feature_path, img0.name)
-        features1 = get_features(self._feature_path, img1.name)
+        # # Get features from h5 file
+        # features0 = get_features(self._feature_path, img0.name)
+        # features1 = get_features(self._feature_path, img1.name)
 
         # Compute tiles limits and origin
         grid = self._config["general"]["tiling_grid"]
@@ -287,6 +311,10 @@ class MatcherBase:
 
         # Select tile pairs to match
         tile_pairs = self._tile_selection(image0, image1, t0_lims, t1_lims, method)
+
+        # If no tile pairs are selected, return None
+        if len(tile_pairs) == 0:
+            return None
 
         # Match each tile pair
         matches_full = np.array([], dtype=np.int64).reshape(0, 2)
@@ -302,6 +330,7 @@ class MatcherBase:
                     "keypoints": features["keypoints"][pts_in_tile],
                     "descriptors": features["descriptors"][:, pts_in_tile],
                     "scores": features["scores"][pts_in_tile],
+                    "image_size": features["image_size"],
                 }
                 return (feat_tile, idx)
 
@@ -381,7 +410,7 @@ class MatcherBase:
             tile_pairs = sorted(zip(t0_lims.keys(), t1_lims.keys()))
         elif method == TileSelection.PRESELECTION:
             # Match tiles by preselection running matching on downsampled images
-            logger.debug("Matching tiles by preselection tile selection")
+            logger.debug("Matching tiles by downsampling preselection")
             if image0.shape[0] > 8000:
                 n_down = 4
             if image0.shape[0] > 4000:
@@ -397,10 +426,6 @@ class MatcherBase:
             for _ in range(n_down):
                 i0 = cv2.pyrDown(i0)
                 i1 = cv2.pyrDown(i1)
-
-            # Import superpoint and lightglue
-            SP = import_module("deep_image_matching.hloc.extractors.superpoint")
-            LG = import_module("deep_image_matching.thirdparty.LightGlue.lightglue")
 
             def sp2lg(feats: dict) -> dict:
                 feats = {
@@ -423,18 +448,25 @@ class MatcherBase:
 
             # Run SuperPoint on downsampled images
             with torch.no_grad():
-                SP_cfg = {"max_keypoints": 1024}
-                SP_extractor = SP.SuperPoint(SP_cfg).eval().to(self._device)
-                feats0 = SP_extractor({"image": self._frame2tensor(i0, self._device)})
-                feats1 = SP_extractor({"image": self._frame2tensor(i1, self._device)})
+                feats0 = self._preselction_extractor(
+                    {"image": self._frame2tensor(i0, self._device)}
+                )
+                feats1 = self._preselction_extractor(
+                    {"image": self._frame2tensor(i1, self._device)}
+                )
 
                 # Match features with LightGlue
-                LG_matcher = LG.LightGlue("superpoint").eval().to(self._device)
                 feats0 = sp2lg(feats0)
                 feats1 = sp2lg(feats1)
-                res = LG_matcher({"image0": feats0, "image1": feats1})
+                res = self._preselction_matcher({"image0": feats0, "image1": feats1})
                 res = rbd2np(res)
 
+            # TODO: implement a better way to prune matching pair
+            # If not enough matches, return None and quit the matching
+            if len(res["matches"]) < min_matches_preselection:
+                return []
+
+            # Get keypoints in original image
             kp0 = feats0["keypoints"].cpu().numpy()[0]
             kp0 = kp0[res["matches"][:, 0], :]
             kp1 = feats1["keypoints"].cpu().numpy()[0]

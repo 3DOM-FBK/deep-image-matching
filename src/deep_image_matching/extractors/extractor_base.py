@@ -1,6 +1,7 @@
+import inspect
 import logging
+from abc import ABCMeta, abstractmethod
 from copy import deepcopy
-from importlib import import_module
 from pathlib import Path
 from typing import Optional, Tuple, TypedDict, Union
 
@@ -9,9 +10,9 @@ import h5py
 import numpy as np
 import torch
 
-from .consts import Quality, TileSelection
-from .image import Image
-from .tiling import Tiler
+from ..utils.consts import Quality, TileSelection, def_cfg_general
+from ..utils.image import Image
+from ..utils.tiling import Tiler
 
 logger = logging.getLogger(__name__)
 
@@ -30,28 +31,34 @@ def featuresDict_2_tensor(features: FeaturesDict, device: torch.device) -> Featu
     }
 
 
-DEBUG = True
-
-DEFAULT_CONFIG = {
-    "general": {
-        "quality": Quality.HIGH,
-        "tile_selection": TileSelection.NONE,
-        "tiling_grid": [1, 1],
-        "tiling_overlap": 0,
-        "output_dir": "results",
-        "force_cpu": False,
-        "do_viz": False,
-        "fast_viz": True,
-        "do_viz_tiles": False,
-    }
-}
+def extractor_loader(root, model):
+    module_path = f"{root.__name__}.{model}"
+    module = __import__(module_path, fromlist=[""])
+    classes = inspect.getmembers(module, inspect.isclass)
+    # Filter classes defined in the module
+    classes = [c for c in classes if c[1].__module__ == module_path]
+    # Filter classes inherited from BaseModel
+    classes = [c for c in classes if issubclass(c[1], ExtractorBase)]
+    assert len(classes) == 1, classes
+    return classes[0][1]
+    # return getattr(module, 'Model')
 
 
-# TODO: separate the ExtractorBase class from the SuperPointExtractor class
-class ExtractorBase:
+class ExtractorBase(metaclass=ABCMeta):
+    default_conf = {"general": def_cfg_general}
+    required_inputs = []
+    grayscale = True
+    descriptor_size = 128
+
     def __init__(self, **custom_config: dict):
+        """
+        Initialize the instance with a custom config. This is the method to be called by subclasses
+
+        Args:
+                custom_config: a dictionary of options to
+        """
         # Set default config
-        self._config = DEFAULT_CONFIG
+        self._config = self.default_conf
 
         # If a custom config is passed, update the default config
         if not isinstance(custom_config, dict):
@@ -59,10 +66,22 @@ class ExtractorBase:
         self._update_config(custom_config)
 
     def extract(self, img: Union[Image, Path]) -> np.ndarray:
+        """
+        Extract features from an image. This is the main method of the feature extractor.
+
+        Args:
+                img: Image to extract features from.
+
+        Returns:
+                List of features extracted from the image. Each feature is a 2D NumPy array
+        """
         # Load image
 
         im_path = img if isinstance(img, Path) else img.absolute_path
-        image = cv2.imread(str(im_path), cv2.IMREAD_GRAYSCALE).astype(np.float32)
+        image = cv2.imread(str(im_path)).astype(np.float32)
+
+        if self.grayscale:
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
         # Resize images if needed
         image_ = self._resize_image(self._quality, image)
@@ -78,6 +97,9 @@ class ExtractorBase:
         # Retrieve original image coordinates if matching was performed on up/down-sampled images
         features = self._resize_features(self._quality, features)
 
+        # Add the image_size to the features (if not already present)
+        features["image_size"] = np.array(image.shape[:2])
+
         # Save features to disk in h5 format (TODO: MOVE it to another method)
         # def save_features_to_h5(self)
         as_half = True  # TODO: add this to the config
@@ -86,6 +108,7 @@ class ExtractorBase:
         feature_path = output_dir / "features.h5"
         im_name = im_path.name
 
+        # If as_half is True then the features are converted to float32 or float16.
         if as_half:
             for k in features:
                 if not isinstance(features[k], np.ndarray):
@@ -125,18 +148,39 @@ class ExtractorBase:
 
         return feature_path
 
+    @abstractmethod
     def _extract(self, image: np.ndarray) -> dict:
+        """
+        Extract features from an image. This is called by : meth : ` extract ` to extract features from the image. This method must be implemented by subclasses.
+
+        Args:
+            image: A NumPy array of shape ( height width 3 )
+
+        Returns:
+            A dictionary of extracted features
+        """
         raise NotImplementedError("Subclasses should implement _extract method!")
 
+    @abstractmethod
     def _frame2tensor(self, image: np.ndarray, device: str = "cpu"):
-        if len(image.shape) == 2:
-            image = image[None][None]
-        elif len(image.shape) == 3:
-            image = image.transpose(2, 0, 1)[None]
-        return torch.tensor(image / 255.0, dtype=torch.float).to(device)
+        """
+        Convert a frame to a tensor. This is a low - level method to be used by subclasses that need to convert an image to a tensor with the required format. This method must be implemented by subclasses.
+
+        Args:
+            image: The image to be converted
+            device: The device to convert to (defaults to 'cpu')
+        """
+        raise NotImplementedError(
+            "Subclasses should implement _frame2tensor method to adapt the input image to the required format!"
+        )
 
     def _update_config(self, config: dict):
-        """Check the matching config dictionary for missing keys or invalid values."""
+        """
+        Update the config dictionary. This is called by : meth : ` update_config ` to allow subclasses to perform additional checks before and after configuration is updated.
+
+        Args:
+           config: The configuration dictionary to update in place. It is assumed that the keys and values are valid
+        """
 
         # Make a deepcopy of the default config and update it with the custom config
         new_config = deepcopy(self._config)
@@ -192,6 +236,13 @@ class ExtractorBase:
         logger.debug(f"Running inference on device {self._device}")
 
     def _extract_by_tile(self, image: np.ndarray, select_unique: bool = True):
+        """
+        Extract features from an image by tiles. This is called by :meth:`extract` to extract features from the image.
+
+        Args:
+            image: The image to extract from. Must be a 2D array
+            select_unique: If True the unique values of keypoints are selected
+        """
         # Compute tiles limits
         grid = self._config["general"]["tiling_grid"]
         overlap = self._config["general"]["tiling_overlap"]
@@ -200,7 +251,9 @@ class ExtractorBase:
 
         # Initialize empty arrays
         kpts_full = np.array([], dtype=np.float32).reshape(0, 2)
-        descriptors_full = np.array([], dtype=np.float32).reshape(256, 0)
+        descriptors_full = np.array([], dtype=np.float32).reshape(
+            self.descriptor_size, 0
+        )
         scores_full = np.array([], dtype=np.float32)
         tile_idx_full = np.array([], dtype=np.float32)
 
@@ -287,31 +340,3 @@ class ExtractorBase:
             features["keypoints"] *= 4
 
         return features
-
-
-class SuperPointExtractor(ExtractorBase):
-    def __init__(self, **config: dict):
-        # Init the base class
-        super().__init__(**config)
-
-        # Load extractor (TODO: DO IT IN THE SUBCLASS!)
-        SP = import_module("deep_image_matching.hloc.extractors.superpoint")
-        SP_cfg = self._config["SperPoint+LightGlue"]["SuperPoint"]
-        self._extractor = SP.SuperPoint(SP_cfg).eval().to(self._device)
-
-    @torch.no_grad()
-    def _extract(self, image: np.ndarray) -> np.ndarray:
-        # Convert image from numpy array to tensor
-        image_ = self._frame2tensor(image, self._device)
-
-        # Extract features
-        feats = self._extractor({"image": image_})
-
-        # Remove elements from list/tuple
-        feats = {
-            k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()
-        }
-        # Convert tensors to numpy arrays
-        feats = {k: v.cpu().numpy() for k, v in feats.items()}
-
-        return feats

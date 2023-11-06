@@ -71,11 +71,13 @@ def create_camera(db, image_path, camera_model):
     elif camera_model == "opencv":
         model = 4  # opencv
         param_arr = np.array([focal, focal, width / 2, height / 2, 0.0, 0.0, 0.0, 0.0])
+    else:
+        raise RuntimeError(f"Invalid camera model {camera_model}")
 
     return db.add_camera(model, width, height, param_arr)
 
 
-def add_keypoints(db, h5_path, image_path, img_ext, camera_model, single_camera=True):
+def add_keypoints(db, h5_path, image_path, camera_model, single_camera=True):
     keypoint_f = h5py.File(os.path.join(h5_path, "keypoints.h5"), "r")
 
     camera_id = None
@@ -83,7 +85,7 @@ def add_keypoints(db, h5_path, image_path, img_ext, camera_model, single_camera=
     for filename in tqdm(list(keypoint_f.keys())):
         keypoints = keypoint_f[filename][()]
 
-        fname_with_ext = filename  # + img_ext
+        fname_with_ext = filename
         path = os.path.join(image_path, fname_with_ext)
         if not os.path.isfile(path):
             raise IOError(f"Invalid image path {path}")
@@ -130,13 +132,12 @@ def import_into_colmap(
     feature_dir=".featureout",
     database_path="colmap.db",
     img_ext=".jpg",
+    camera_model="simple-radial",
     single_camera=True,
 ):
     db = COLMAPDatabase.connect(database_path)
     db.create_tables()
-    fname_to_id = add_keypoints(
-        db, feature_dir, img_dir, img_ext, "simple-radial", single_camera
-    )
+    fname_to_id = add_keypoints(db, feature_dir, img_dir, camera_model, single_camera)
     add_matches(
         db,
         feature_dir,
