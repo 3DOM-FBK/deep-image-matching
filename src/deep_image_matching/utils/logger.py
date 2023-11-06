@@ -21,15 +21,22 @@ from datetime import date, datetime
 from pathlib import Path
 
 
-def get_logger(name: str = "__name__"):
-    logger = logging.getLogger(name)
+def get_logger():
+    logger = logging.getLogger()
     return logger
 
 
+def change_logger_level(level: str):
+    logger = get_logger()
+    log_level = logging.getLevelName(level.upper())
+    logger.setLevel(log_level)
+    for handler in logger.handlers:
+        handler.setLevel(log_level)
+
+
 def setup_logger(
-    console_log_level: str = "info",
+    log_level: str = "info",
     log_folder: str = None,
-    logfile_level: str = "info",
     logfile_basename: str = "log",
 ) -> logging.Logger:
     if log_folder is not None:
@@ -44,7 +51,7 @@ def setup_logger(
 
     # log_line_template = "%(color_on)s[%(created)d] [%(threadName)s] [%(levelname)-8s] %(message)s%(color_off)s"
 
-    if console_log_level == "debug" or logfile_level == "debug":
+    if log_level == "debug":
         log_line_template = "%(color_on)s%(asctime)s | | [%(filename)s -> %(funcName)s], line %(lineno)d - [%(levelname)-8s] %(message)s%(color_off)s"
     else:
         log_line_template = (
@@ -54,10 +61,10 @@ def setup_logger(
     # Setup logging
     if not configure_logging(
         console_log_output="stdout",
-        console_log_level=console_log_level,
+        console_log_level=log_level,
         console_log_color=True,
         logfile_file=log_file,
-        logfile_log_level=logfile_level,
+        logfile_log_level=log_level,
         logfile_log_color=False,
         log_line_template=log_line_template,
     ):

@@ -20,7 +20,7 @@ def ExportToColmap(
     images = [im.name for im in images.img_paths]
 
     # Generate colmap database with camera model and images
-    db_path = output_dir / "db.db"
+    db_path = output_dir / "db_two_view_geom.db"
     if os.path.exists(db_path):
         os.remove(db_path)
 

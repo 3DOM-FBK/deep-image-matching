@@ -4,18 +4,13 @@ from pathlib import Path
 import numpy as np
 from tqdm import tqdm
 
-from .extractors import SuperPointExtractor
-from .geometric_verification import geometric_verification
-from .image import ImageList
+from . import extractors, matchers
+from .extractors.extractor_base import extractor_loader
 from .io.h5 import get_features
-from .local_features import LocalFeatureExtractor
-from .matchers import (
-    DetectAndDescribe,
-    LightGlueMatcher,
-    LOFTRMatcher,
-    SuperGlueMatcher,
-)
-from .pairs_generator import PairsGenerator
+from .matchers.matcher_base import matcher_loader
+from .utils.geometric_verification import geometric_verification
+from .utils.image import ImageList
+from .utils.pairs_generator import PairsGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -51,21 +46,26 @@ class ImageMatching:
         matching_strategy: str,
         retrieval_option: str,
         local_features: str,
+        matching_method: str,
         custom_config: dict,
-        max_feat_numb: int = 2048,
+        min_matches_per_pair: int = 30,
+        # max_feat_numb: int = 2048,
         pair_file: Path = None,
         overlap: int = 1,
     ):
         self.matching_strategy = matching_strategy
         self.retrieval_option = retrieval_option
         self.local_features = local_features
+        self.matching_method = matching_method
         self.custom_config = custom_config
-        self.max_feat_numb = max_feat_numb
+        self.min_matches_per_pair = min_matches_per_pair
+        # self.max_feat_numb = max_feat_numb
         self.pair_file = Path(self.pair_file) if pair_file is not None else None
         self.overlap = overlap
         self.keypoints = {}
         self.correspondences = {}
 
+        # Check that parameters are valid
         if retrieval_option == "sequential":
             if overlap is None:
                 raise ValueError(
@@ -83,13 +83,70 @@ class ImageMatching:
         # Initialize ImageList class
         self.image_list = ImageList(imgs_dir)
         images = self.image_list.img_names
-
         if len(images) == 0:
             raise ValueError(
                 "Image folder empty. Supported formats: '.jpg', '.JPG', '.png'"
             )
         elif len(images) == 1:
             raise ValueError("Image folder must contain at least two images")
+
+        # Initialize extractor
+        try:
+            Extractor = extractor_loader(extractors, self.local_features)
+        except AttributeError:
+            raise ValueError(
+                f"Invalid local feature extractor. {self.local_features} is not supported."
+            )
+        self._extractor = Extractor(**self.custom_config)
+
+        # Initialize matcher
+        try:
+            Matcher = matcher_loader(matchers, self.matching_method)
+        except AttributeError:
+            raise ValueError(
+                f"Invalid matcher. {self.local_features} is not supported."
+            )
+        if self.matching_method == "lightglue":
+            self._matcher = Matcher(
+                local_features=self.local_features, **self.custom_config
+            )
+        else:
+            self._matcher = Matcher(**self.custom_config)
+
+        # if self.local_features == "superpoint":
+        #     extractor = SuperPointExtractor(**self.custom_config)
+        # elif self.local_features == "disk":
+        #     extractor = DiskExtractor(**self.custom_config)
+        # else:
+
+        # if self.matching_method == "lightglue":
+        #     matcher = LightGlueMatcher(
+        #         local_features=self.local_features, **matcher_cfg
+        #     )
+        # elif self.matching_method == "superglue":
+        #     if self.local_features != "superpoint":
+        #         raise ValueError(
+        #             "Invalid local features for SuperGlue matcher. SuperGlue supports only SuperPoint features."
+        #         )
+        #     matcher = SuperGlueMatcher(**matcher_cfg)
+        # elif self.matching_method == "loftr":
+        #     raise NotImplementedError("LOFTR is not implemented yet")
+        # matcher = LOFTRMatcher(**matcher_cfg)
+        # elif self.local_features == "detect_and_describe":
+        #     matcher_cfg["ALIKE"]["n_limit"] = self.max_feat_numb
+        #     detector_and_descriptor = matcher_cfg["general"]["detector_and_descriptor"]
+        #     local_feat_conf = matcher_cfg[detector_and_descriptor]
+        #     local_feat_extractor = LocalFeatureExtractor(
+        #         detector_and_descriptor,
+        #         local_feat_conf,
+        #         self.max_feat_numb,
+        #     )
+        #     matcher = DetectAndDescribe(**matcher_cfg)
+        #     matcher_cfg["general"]["local_feat_extractor"] = local_feat_extractor
+        # else:
+        #     raise ValueError(
+        #         "Invalid local feature extractor. Supported extractors: lightglue, superglue, loftr, detect_and_describe"
+        #     )
 
     @property
     def img_format(self):
@@ -124,86 +181,73 @@ class ImageMatching:
                 self.overlap,
             )
             self.pairs = pairs_generator.run()
+            # with open(self.pair_file, "w") as txt_file:
+            #     lines = txt_file.readlines()
+            #     for line in lines:
+            #         im1, im2 = line.strip().split(" ", 1)
+            #         self.pairs.append((im1, im2))
 
         return self.pairs
 
     def extract_features(self):
-        extractor = SuperPointExtractor(**self.custom_config)
-
+        # Extract features
         logger.info("Extracting features...")
         for img in tqdm(self.image_list):
-            feature_path = extractor.extract(img)
+            feature_path = self._extractor.extract(img)
 
         logger.info("Features extracted")
 
         return feature_path
 
     def match_pairs(self, feature_path: Path):
-        # first_img = cv2.imread(str(self.image_list[0].absolute_path))
-        # w_size = first_img.shape[1]
-        # self.custom_config["general"]["w_size"] = w_size
-
         # Check that feature_path exists
-        if not Path(feature_path).exists():
+        feature_path = Path(feature_path)
+        if not feature_path.exists():
             raise ValueError(f"Feature path {feature_path} does not exist")
-        else:
-            feature_path = Path(feature_path)
 
-        # Do not use geometric verification within the matcher, but do it after
-        # matcher_cfg = deepcopy(self.custom_config)
-        # matcher_cfg["geometric_verification"] = GeometricVerification.NONE
-        matcher_cfg = self.custom_config
-
-        # Initialize matcher
-        if self.local_features == "lightglue":
-            matcher = LightGlueMatcher(**matcher_cfg)
-        elif self.local_features == "superglue":
-            matcher = SuperGlueMatcher(**matcher_cfg)
-        elif self.local_features == "loftr":
-            matcher = LOFTRMatcher(**matcher_cfg)
-        elif self.local_features == "detect_and_describe":
-            matcher_cfg["ALIKE"]["n_limit"] = self.max_feat_numb
-            detector_and_descriptor = matcher_cfg["general"]["detector_and_descriptor"]
-            local_feat_conf = matcher_cfg[detector_and_descriptor]
-            local_feat_extractor = LocalFeatureExtractor(
-                detector_and_descriptor,
-                local_feat_conf,
-                self.max_feat_numb,
-            )
-            matcher = DetectAndDescribe(**matcher_cfg)
-            matcher_cfg["general"]["local_feat_extractor"] = local_feat_extractor
-        else:
-            raise ValueError(
-                "Invalid local feature extractor. Supported extractors: lightglue, superglue, loftr, detect_and_describe"
-            )
-
+        # Match pairs
         logger.info("Matching features...")
+        logger.info("")
         for pair in tqdm(self.pairs):
             logger.debug(f"Matching image pair: {pair[0].name} - {pair[1].name}")
             im0 = pair[0]
             im1 = pair[1]
 
-            correspondences = matcher.match(
+            # Run matching
+            correspondences = self._matcher.match(
                 feature_path=feature_path,
                 img0=im0,
                 img1=im1,
             )
+            if correspondences is None:
+                logger.info(
+                    f"Image pair {im0.name} - {im1.name} discarded by preselection."
+                )
+                continue
 
-            # Make correspondence matrix (no need it anymore as the matcher already does it)
-            # correspondences = make_correspondence_matrix(matches)
+            # Get original keypoints from h5 file
+            kpts0 = get_features(feature_path, im0.name)["keypoints"]
+            kpts1 = get_features(feature_path, im1.name)["keypoints"]
 
-            kpts0_h5 = get_features(feature_path, im0.name)["keypoints"]
-            kpts1_h5 = get_features(feature_path, im1.name)["keypoints"]
+            # Check if there are enough correspondences
+            if len(correspondences) < self.min_matches_per_pair:
+                logger.info(
+                    f"Not enough correspondences found between {im0.name} and {im1.name} ({len(correspondences)}). Skipping image pair"
+                )
+                continue
 
-            # Apply geometric verification and store results
-            self.keypoints[im0.name] = kpts0_h5
-            self.keypoints[im1.name] = kpts1_h5
-            self.correspondences[(im0, im1)] = apply_geometric_verification(
-                kpts0=self.keypoints[im0.name],
-                kpts1=self.keypoints[im1.name],
+            # Apply geometric verification
+            correspondences = apply_geometric_verification(
+                kpts0=kpts0,
+                kpts1=kpts1,
                 correspondences=correspondences,
                 config=self.custom_config["general"],
             )
+
+            # Save keypoints and correspondences
+            self.keypoints[im0.name] = kpts0
+            self.keypoints[im1.name] = kpts1
+            self.correspondences[(im0, im1)] = correspondences
 
             logger.debug(f"Pairs: {pair[0].name} - {pair[1].name} done.")
 

@@ -9,8 +9,51 @@
       "type": "python",
       "request": "launch",
       "program": "${file}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Python CLI",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
       "console": "integratedTerminal",
-      "justMyCode": true
+      // "args": [
+      //   "--config",
+      //   "superpoint+superglue",
+      //   "--images",
+      //   "data/easy_small"
+      // ]
+      "args": [
+        "--config",
+        "superpoint+lightglue",
+        "--images",
+        "data/arsenale2",
+        "--strategy",
+        "bruteforce",
+        "--force",
+        "-n",
+        "10000"
+        // "-V"
+        // "--overlap",
+        // "5"
+      ]
+      // "args": [
+      //   "--config",
+      //   "disk+lightglue",
+      //   "--images",
+      //   "data/arsenale_hard",
+      //   "--strategy",
+      //   "bruteforce",
+      //   "--force"
+      // ]
+    },
+    {
+      "name": "Python GUI",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "args": ["--gui"]
     }
   ]
 }
