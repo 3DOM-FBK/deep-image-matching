@@ -45,13 +45,12 @@ custom_config = {
         "fast_viz": True,
         "hide_matching_track": False,
         "tile_selection": TileSelection.NONE,
-        "min_matches_per_tile": 20,
-        "tiling_grid": [3, 2],
-        "tiling_overlap": 100,
+        "tiling_grid": [3, 3],
+        "tiling_overlap": 50,
         "do_viz_tiles": True,
         "geometric_verification": GeometricVerification.PYDEGENSAC,
-        "gv_threshold": 6,
-        "gv_confidence": 0.999,
+        "gv_threshold": 2,
+        "gv_confidence": 0.9999,
         # "kornia_matcher": "smnn",  #'nn' or 'snn' or 'mnn' or 'smnn'
         # "ratio_threshold": 0.95,  # valid range [0-1]
     },

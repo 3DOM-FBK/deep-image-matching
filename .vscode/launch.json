@@ -19,49 +19,31 @@
       "console": "integratedTerminal",
       // "args": [
       //   "--config",
-      //   "superpoint+superglue",
+      //   "superpoint+lightglue",
       //   "--images",
-      //   "data/easy_small"
+      //   "data/easy_small",
+      //   "--force"
+      // ]
+      // "args": [
+      //   "--config",
+      //   "superpoint+lightglue",
+      //   "--images",
+      //   "data/statua_hard",
+      //   "--strategy",
+      //   "bruteforce",
+      //   "--force",
+      //   "-n",
+      //   "10000"
       // ]
       "args": [
         "--config",
         "superpoint+lightglue",
         "--images",
-        "data/statua_hard",
+        "data/arsenale3",
         "--strategy",
         "bruteforce",
-        "--force",
-        "-n",
-        "10000"
-        // "-V"
-        // "--overlap",
-        // "5"
+        "--force"
       ]
-      // "args": [
-      //   "--config",
-      //   "superpoint+lightglue",
-      //   "--images",
-      //   "data/arsenale2",
-      //   "--strategy",
-      //   "custom_pairs",
-      //   "--pairs",
-      //   "data/pairs-netvlad.txt",
-      //   "--force",
-      //   "-n",
-      //   "10000"
-      //   // "-V"
-      //   // "--overlap",
-      //   // "5"
-      // ]
-      // "args": [
-      //   "--config",
-      //   "disk+lightglue",
-      //   "--images",
-      //   "data/arsenale_hard",
-      //   "--strategy",
-      //   "bruteforce",
-      //   "--force"
-      // ]
     },
     {
       "name": "Python GUI",

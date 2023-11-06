@@ -28,16 +28,14 @@ class Quality(Enum):
 
 
 def_cfg_general = {
-    "tile_selection": TileSelection.NONE,
     "max_keypoints": 4096,
-    "force_cpu": False,
+    "tile_selection": TileSelection.NONE,
+    "tiling_grid": [1, 1],
     "output_dir": "results",
+    "tiling_overlap": 0,
+    "force_cpu": False,
     "do_viz": False,
     "fast_viz": True,
-    # "interactive_viz": False,
     "hide_matching_track": True,
     "do_viz_tiles": False,
-    "tiling_grid": [1, 1],
-    "tiling_overlap": 0,
-    "min_matches_per_tile": 5,
 }
