@@ -5,7 +5,6 @@ from pathlib import Path
 from config import custom_config
 from src.deep_image_matching.gui import gui
 from src.deep_image_matching.image_matching import ImageMatching
-from src.deep_image_matching.io.export_to_colmap import ExportToColmap
 from src.deep_image_matching.io.h5_to_db import import_into_colmap
 from src.deep_image_matching.utils import change_logger_level, setup_logger
 
@@ -224,7 +223,7 @@ def main():
         local_features=local_features,
         matching_method=matching_method,
         custom_config=custom_config,
-        min_matches_per_pair=20,
+        min_matches_per_pair=5,
         # max_feat_numb=max_features,
         pair_file=pair_file,
         overlap=overlap,
@@ -248,19 +247,19 @@ def main():
         feature_dir=feature_path.parent,
         database_path=database_path,
         camera_model="simple-radial",
-        single_camera=False,
+        single_camera=True,
     )
 
     # Backward compatibility
     # Export in colmap format
-    ExportToColmap(
-        images,
-        img_matching.width,
-        img_matching.height,
-        keypoints,
-        correspondences,
-        output_dir,
-    )
+    # ExportToColmap(
+    #     images,
+    #     img_matching.width,
+    #     img_matching.height,
+    #     keypoints,
+    #     correspondences,
+    #     output_dir,
+    # )
 
 
 if __name__ == "__main__":

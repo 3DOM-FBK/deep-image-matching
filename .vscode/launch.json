@@ -27,7 +27,7 @@
         "--config",
         "superpoint+lightglue",
         "--images",
-        "data/arsenale2",
+        "data/statua_hard",
         "--strategy",
         "bruteforce",
         "--force",
@@ -37,6 +37,22 @@
         // "--overlap",
         // "5"
       ]
+      // "args": [
+      //   "--config",
+      //   "superpoint+lightglue",
+      //   "--images",
+      //   "data/arsenale2",
+      //   "--strategy",
+      //   "custom_pairs",
+      //   "--pairs",
+      //   "data/pairs-netvlad.txt",
+      //   "--force",
+      //   "-n",
+      //   "10000"
+      //   // "-V"
+      //   // "--overlap",
+      //   // "5"
+      // ]
       // "args": [
       //   "--config",
       //   "disk+lightglue",
@@ -54,6 +70,16 @@
       "program": "${file}",
       "console": "integratedTerminal",
       "args": ["--gui"]
+    },
+    {
+      "name": "Debug module",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      }
     }
   ]
 }

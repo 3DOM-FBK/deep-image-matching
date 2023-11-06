@@ -21,6 +21,7 @@ class FeaturesDict(TypedDict):
     keypoints: np.ndarray
     descriptors: np.ndarray
     scores: Optional[np.ndarray]
+    lafs: Optional[np.ndarray]
     tile_idx: Optional[np.ndarray]
 
 
@@ -89,7 +90,9 @@ class ExtractorBase(metaclass=ABCMeta):
         if self._config["general"]["tile_selection"] == TileSelection.NONE:
             # Extract features from the whole image
             features = self._extract(image_)
-            features.tile_idx = np.zeros(features.keypoints.shape[0], dtype=np.float32)
+            features["tile_idx"] = np.zeros(
+                features["keypoints"].shape[0], dtype=np.float32
+            )
         else:
             # Extract features by tiles
             features = self._extract_by_tile(image_, select_unique=True)

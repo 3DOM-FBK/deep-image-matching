@@ -19,13 +19,14 @@ from ..visualization import viz_matches_cv2, viz_matches_mpl
 
 logger = logging.getLogger(__name__)
 
-min_matches_preselection = 20
+min_matches_preselection = 50
 
 
 class FeaturesDict(TypedDict):
     keypoints: np.ndarray
     descriptors: np.ndarray
     scores: Optional[np.ndarray]
+    lafs: Optional[np.ndarray]
     tile_idx: Optional[np.ndarray]
 
 
@@ -97,7 +98,7 @@ class MatcherBase:
         # Load extractor and matcher for the preselction
         if self._config["general"]["tile_selection"] == TileSelection.PRESELECTION:
             self._preselction_extractor = (
-                SuperPoint({"max_keypoints": 1024}).eval().to(self._device)
+                SuperPoint({"max_keypoints": 4096}).eval().to(self._device)
             )
             self._preselction_matcher = (
                 LightGlue(
