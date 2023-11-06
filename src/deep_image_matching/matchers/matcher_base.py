@@ -19,8 +19,6 @@ from ..visualization import viz_matches_cv2, viz_matches_mpl
 
 logger = logging.getLogger(__name__)
 
-min_matches_preselection = 50
-
 
 class FeaturesDict(TypedDict):
     keypoints: np.ndarray
@@ -54,16 +52,15 @@ class MatcherBase:
             "force_cpu": False,
             "do_viz": False,
             "fast_viz": True,
-            # "interactive_viz": False,
             "hide_matching_track": True,
             "do_viz_tiles": False,
             "tiling_grid": [1, 1],
             "tiling_overlap": 0,
-            "min_matches_per_tile": 5,
         }
     }
     required_inputs = []
     min_matches = 20
+    min_matches_per_tile = 20
     max_feat_no_tiling = 100000
 
     def __init__(self, **custom_config) -> None:
@@ -85,6 +82,27 @@ class MatcherBase:
         if not isinstance(custom_config, dict):
             raise TypeError("config must be a dictionary")
         self._update_config(custom_config)
+
+        # Get main processing parameters and save them as class members
+        self._tiling = self._config["general"]["tile_selection"]
+        logger.debug(f"Matching options: Tiling: {self._tiling.name}")
+
+        # Define saving directory
+        output_dir = self._config["general"]["output_dir"]
+        if output_dir is not None:
+            self._output_dir = Path(output_dir)
+            self._output_dir.mkdir(parents=True, exist_ok=True)
+        else:
+            self._output_dir = None
+        logger.debug(f"Saving directory: {self._output_dir}")
+
+        # Get device
+        self._device = torch.device(
+            "cuda"
+            if torch.cuda.is_available() and not self._config["general"]["force_cpu"]
+            else "cpu"
+        )
+        logger.debug(f"Running inference on device {self._device}")
 
         # All features detected on image 0 (FeaturesBase object with N keypoints)
         self._features0 = None
@@ -147,6 +165,7 @@ class MatcherBase:
     def match(
         self,
         feature_path: Path,
+        matches_path: Path,
         img0: Path,
         img1: Path,
         try_full_image: bool = False,
@@ -167,13 +186,6 @@ class MatcherBase:
         img1_name = img1.name
         self._features0 = get_features(self._feature_path, img0.name)
         self._features1 = get_features(self._feature_path, img1.name)
-
-        # Testing PRESELECTION
-        # self._matches = self._match_by_tile(
-        #     img0,
-        #     img1,
-        #     method=TileSelection.PRESELECTION,
-        # )
 
         # Perform matching (on tiles or full images)
         # If the features are not too many, try first to match all features together on full image, if it fails, try to match by tiles
@@ -218,21 +230,19 @@ class MatcherBase:
                 method=self._tiling,
             )
 
-        if self._matches is None:
-            logger.debug(
-                f"Too few matches found. Skipping image pair {img0.name}-{img1.name}"
-            )
-            return None
-
         # Save to h5 file
         n_matches = len(self._matches)
-        matches_path = self._output_dir / "matches.h5"
         with h5py.File(str(matches_path), "a", libver="latest") as fd:
             group = fd.require_group(img0_name)
             if n_matches >= self.min_matches:
                 group.create_dataset(
                     img1_name, data=self._matches
                 )  # or use require_dataset
+            else:
+                logger.debug(
+                    f"Too few matches found. Skipping image pair {img0.name}-{img1.name}"
+                )
+                return None
 
         logger.debug(f"Matching {img0_name}-{img1_name} done!")
 
@@ -261,32 +271,8 @@ class MatcherBase:
             else:
                 new_config[key] = {**new_config[key], **config[key]}
 
-        if not isinstance(new_config["general"]["tile_selection"], TileSelection):
-            raise TypeError("tile_selection must be a TileSelection enum")
-
         # Update the current config with the custom config
         self._config = new_config
-
-        # Get main processing parameters and save them as class members
-        self._tiling = self._config["general"]["tile_selection"]
-        logger.debug(f"Matching options: Tiling: {self._tiling.name}")
-
-        # Define saving directory
-        output_dir = self._config["general"]["output_dir"]
-        if output_dir is not None:
-            self._output_dir = Path(output_dir)
-            self._output_dir.mkdir(parents=True, exist_ok=True)
-        else:
-            self._output_dir = None
-        logger.debug(f"Saving directory: {self._output_dir}")
-
-        # Get device
-        self._device = torch.device(
-            "cuda"
-            if torch.cuda.is_available() and not self._config["general"]["force_cpu"]
-            else "cpu"
-        )
-        logger.debug(f"Running inference on device {self._device}")
 
     def _match_by_tile(
         self,
@@ -296,29 +282,18 @@ class MatcherBase:
         features1: FeaturesDict,
         method: TileSelection = TileSelection.PRESELECTION,
     ):
-        # # Get features from h5 file
-        # features0 = get_features(self._feature_path, img0.name)
-        # features1 = get_features(self._feature_path, img1.name)
-
-        # Compute tiles limits and origin
-        grid = self._config["general"]["tiling_grid"]
-        overlap = self._config["general"]["tiling_overlap"]
-        do_viz_tiles = self._config["general"]["do_viz_tiles"]
-        tiler = Tiler(grid=grid, overlap=overlap)
-        image0 = cv2.imread(str(img0), cv2.IMREAD_GRAYSCALE).astype(np.float32)
-        image1 = cv2.imread(str(img1), cv2.IMREAD_GRAYSCALE).astype(np.float32)
-        t0_lims, t0_origin = tiler.compute_limits_by_grid(image0)
-        t1_lims, t1_origin = tiler.compute_limits_by_grid(image1)
+        # Initialize empty matches array
+        matches_full = np.array([], dtype=np.int64).reshape(0, 2)
 
         # Select tile pairs to match
-        tile_pairs = self._tile_selection(image0, image1, t0_lims, t1_lims, method)
+        tile_pairs = self._tile_selection(img0, img1, method)
 
-        # If no tile pairs are selected, return None
+        # If no tile pairs are selected, return an empty array
         if len(tile_pairs) == 0:
-            return None
+            logger.debug("No tile pairs selected.")
+            return matches_full
 
         # Match each tile pair
-        matches_full = np.array([], dtype=np.int64).reshape(0, 2)
         for tidx0, tidx1 in tile_pairs:
             logger.debug(f"  - Matching tile pair ({tidx0}, {tidx1})")
 
@@ -369,10 +344,12 @@ class MatcherBase:
 
     def _tile_selection(
         self,
-        image0: np.ndarray,
-        image1: np.ndarray,
-        t0_lims: dict[int, np.ndarray],
-        t1_lims: dict[int, np.ndarray],
+        img0: Path,
+        img1: Path,
+        # image0: np.ndarray,
+        # image1: np.ndarray,
+        # t0_lims: dict[int, np.ndarray],
+        # t1_lims: dict[int, np.ndarray],
         method: TileSelection = TileSelection.PRESELECTION,
     ) -> List[Tuple[int, int]]:
         """
@@ -396,9 +373,15 @@ class MatcherBase:
             )
             return logic
 
-        # print(config)
-        # local_feat_extractor = config["config"].get("local_feat_extractor")
-        # print(local_feat_extractor)
+        # Compute tiles limits and origin
+        grid = self._config["general"]["tiling_grid"]
+        overlap = self._config["general"]["tiling_overlap"]
+        do_viz_tiles = self._config["general"]["do_viz_tiles"]
+        tiler = Tiler(grid=grid, overlap=overlap)
+        image0 = cv2.imread(str(img0), cv2.IMREAD_GRAYSCALE).astype(np.float32)
+        image1 = cv2.imread(str(img1), cv2.IMREAD_GRAYSCALE).astype(np.float32)
+        t0_lims, _ = tiler.compute_limits_by_grid(image0)
+        t1_lims, _ = tiler.compute_limits_by_grid(image1)
 
         # Select tile selection method
         if method == TileSelection.EXHAUSTIVE:
@@ -464,7 +447,7 @@ class MatcherBase:
 
             # TODO: implement a better way to prune matching pair
             # If not enough matches, return None and quit the matching
-            if len(res["matches"]) < min_matches_preselection:
+            if len(res["matches"]) < self.min_matches:
                 return []
 
             # Get keypoints in original image
@@ -499,7 +482,7 @@ class MatcherBase:
                 ret0 = points_in_rect(kp0, lim0)
                 ret1 = points_in_rect(kp1, lim1)
                 ret = ret0 & ret1
-                if sum(ret) > self._config["general"]["min_matches_per_tile"]:
+                if sum(ret) > self.min_matches_per_tile:
                     tile_pairs.append((tidx0, tidx1))
 
             # For Debugging...

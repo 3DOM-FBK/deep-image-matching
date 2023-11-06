@@ -13,8 +13,10 @@
 #   limitations under the License.
 
 import argparse
+import logging
 import os
 import warnings
+from pathlib import Path
 
 import h5py
 import numpy as np
@@ -22,6 +24,8 @@ from PIL import ExifTags, Image
 from tqdm import tqdm
 
 from .colmap.database import COLMAPDatabase, image_ids_to_pair_id
+
+logger = logging.getLogger(__name__)
 
 
 def get_focal(image_path, err_on_default=False):
@@ -78,21 +82,20 @@ def create_camera(db, image_path, camera_model):
 
 
 def add_keypoints(db, h5_path, image_path, camera_model, single_camera=True):
-    keypoint_f = h5py.File(os.path.join(h5_path, "keypoints.h5"), "r")
+    keypoint_f = h5py.File(str(h5_path), "r")
 
     camera_id = None
     fname_to_id = {}
     for filename in tqdm(list(keypoint_f.keys())):
-        keypoints = keypoint_f[filename][()]
+        keypoints = keypoint_f[filename]["keypoints"].__array__()
 
-        fname_with_ext = filename
-        path = os.path.join(image_path, fname_with_ext)
+        path = os.path.join(image_path, filename)
         if not os.path.isfile(path):
             raise IOError(f"Invalid image path {path}")
 
         if camera_id is None or not single_camera:
             camera_id = create_camera(db, path, camera_model)
-        image_id = db.add_image(fname_with_ext, camera_id)
+        image_id = db.add_image(filename, camera_id)
         fname_to_id[filename] = image_id
 
         db.add_keypoints(image_id, keypoints)
@@ -101,7 +104,7 @@ def add_keypoints(db, h5_path, image_path, camera_model, single_camera=True):
 
 
 def add_matches(db, h5_path, fname_to_id):
-    match_file = h5py.File(os.path.join(h5_path, "matches.h5"), "r")
+    match_file = h5py.File(str(h5_path), "r")
 
     added = set()
     n_keys = len(match_file.keys())
@@ -125,22 +128,27 @@ def add_matches(db, h5_path, fname_to_id):
                 added.add(pair_id)
 
                 pbar.update(1)
+    match_file.close()
 
 
-def import_into_colmap(
+def export_to_colmap(
     img_dir,
-    feature_dir=".featureout",
+    feature_path: Path,
+    match_path: Path,
     database_path="colmap.db",
-    img_ext=".jpg",
     camera_model="simple-radial",
     single_camera=True,
 ):
+    if database_path.exists():
+        logger.warning(f"Database path {database_path} already exists - deleting it")
+        database_path.unlink()
+
     db = COLMAPDatabase.connect(database_path)
     db.create_tables()
-    fname_to_id = add_keypoints(db, feature_dir, img_dir, camera_model, single_camera)
+    fname_to_id = add_keypoints(db, feature_path, img_dir, camera_model, single_camera)
     add_matches(
         db,
-        feature_dir,
+        match_path,
         fname_to_id,
     )
 

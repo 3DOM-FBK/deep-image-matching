@@ -5,7 +5,7 @@ from pathlib import Path
 from config import custom_config
 from src.deep_image_matching.gui import gui
 from src.deep_image_matching.image_matching import ImageMatching
-from src.deep_image_matching.io.h5_to_db import import_into_colmap
+from src.deep_image_matching.io.h5_to_db import export_to_colmap
 from src.deep_image_matching.utils import change_logger_level, setup_logger
 
 # TODO: improve configuation manamgement
@@ -169,7 +169,7 @@ def parse_args():
         if not args.pairs.exists():
             raise ValueError(f"File {args.pairs} does not exist")
     else:
-        args.pairs = None
+        args.pairs = args.outs / "pairs.txt"
 
     if args.strategy == "sequential":
         if args.overlap is None:
@@ -205,9 +205,6 @@ def main():
         )
     if args.matching in matchers_zoo:
         matching_method = args.matching
-    # else:
-    #     local_features = "detect_and_describe"
-    #     custom_config["general"]["detector_and_descriptor"] = args.local_features
 
     # Update configuration dictionary
     # TODO: improve configuration management
@@ -222,15 +219,13 @@ def main():
         retrieval_option=retrieval_option,
         local_features=local_features,
         matching_method=matching_method,
-        custom_config=custom_config,
-        min_matches_per_pair=5,
-        # max_feat_numb=max_features,
         pair_file=pair_file,
+        custom_config=custom_config,
         overlap=overlap,
     )
     pairs = img_matching.generate_pairs()
     feature_path = img_matching.extract_features()
-    keypoints, correspondences = img_matching.match_pairs(feature_path)
+    match_path = img_matching.match_pairs(feature_path)
 
     # Plot statistics
     images = img_matching.image_list
@@ -238,16 +233,36 @@ def main():
     logger.info(f"\tProcessed images: {len(images)}")
     logger.info(f"\tProcessed pairs: {len(pairs)}")
 
-    # Using also h5_to_db.py
-    database_path = Path(output_dir) / "database.db"
-    if database_path.exists():
-        database_path.unlink()
-    import_into_colmap(
+    # Export in colmap format
+    database_path = output_dir / "database.db"
+
+    export_to_colmap(
         img_dir=imgs_dir,
-        feature_dir=feature_path.parent,
+        feature_path=feature_path,
+        match_path=match_path,
         database_path=database_path,
         camera_model="simple-radial",
         single_camera=True,
+    )
+
+    # print("using pycolmap...")
+    import pycolmap
+    from deep_image_matching.hloc.reconstruction import (
+        create_empty_db,
+        get_image_ids,
+        import_images,
+    )
+    from deep_image_matching.hloc.triangulation import import_features, import_matches2
+
+    database = output_dir / "database_pycolmap.db"
+    camera_mode: pycolmap.CameraMode = pycolmap.CameraMode.AUTO
+
+    create_empty_db(database)
+    import_images(imgs_dir, database, camera_mode)
+    image_ids = get_image_ids(database)
+    import_features(image_ids, database, feature_path)
+    import_matches2(
+        image_ids, database, match_path, skip_geometric_verification=True
     )
 
     # Backward compatibility
