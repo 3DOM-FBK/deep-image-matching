@@ -169,6 +169,21 @@ confs = {
             "filter_threshold": 0.1,  # match threshold
         },
     },
+    "orb": {
+        "general": {
+            "quality": Quality.MEDIUM,
+            "tile_selection": TileSelection.NONE,
+            "geom_verification": GeometricVerification.PYDEGENSAC,
+            "tiling_grid": [3, 3],
+            "tiling_overlap": 50,
+            "gv_threshold": 3,
+            "gv_confidence": 0.99999,
+        },
+        "extractor": {
+            "name": "orb",
+        },
+        "matcher": {"name": "superglue"},
+    },
 }
 
 # Old configuration system

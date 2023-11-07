@@ -17,6 +17,7 @@
       "request": "launch",
       "program": "${file}",
       "console": "integratedTerminal",
+      // "args": ["--config", "orb", "--images", "data/easy_small", "--force"]
       "args": [
         "--config",
         "aliked+lightglue",
