@@ -29,7 +29,7 @@ class SuperPointExtractor(ExtractorBase):
         super().__init__(config)
 
         # Load extractor
-        SP_cfg = self._config.get("extractor", {})
+        SP_cfg = self._config.get("extractor")
         self._extractor = SuperPoint(SP_cfg).eval().to(self._device)
 
     @torch.no_grad()

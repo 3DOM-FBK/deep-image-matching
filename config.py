@@ -144,6 +144,31 @@ confs = {
             "name": "lightglue",
         },
     },
+    "alike+lightglue": {
+        "general": {
+            "quality": Quality.HIGH,
+            "tile_selection": TileSelection.PRESELECTION,
+            "geom_verification": GeometricVerification.PYDEGENSAC,
+            "tiling_grid": [3, 3],
+            "tiling_overlap": 50,
+            "gv_threshold": 3,
+            "gv_confidence": 0.99999,
+        },
+        "extractor": {
+            "name": "alike",
+            "keypoint_threshold": 0.005,
+            "top_k": 10000,
+            "n_limit": 10000,
+            "scores_th": 0.2,
+        },
+        "matcher": {
+            "name": "lightglue",
+            "n_layers": 9,
+            "depth_confidence": 0.95,  # early stopping, disable with -1
+            "width_confidence": 0.99,  # point pruning, disable with -1
+            "filter_threshold": 0.1,  # match threshold
+        },
+    },
 }
 
 # Old configuration system
