@@ -144,7 +144,7 @@ confs = {
             "name": "lightglue",
         },
     },
-    "alike+lightglue": {
+    "aliked+lightglue": {
         "general": {
             "quality": Quality.HIGH,
             "tile_selection": TileSelection.PRESELECTION,
@@ -155,11 +155,11 @@ confs = {
             "gv_confidence": 0.99999,
         },
         "extractor": {
-            "name": "alike",
-            "keypoint_threshold": 0.005,
-            "top_k": 10000,
-            "n_limit": 10000,
-            "scores_th": 0.2,
+            "name": "aliked",
+            "model_name": "aliked-n16rot",
+            "max_num_keypoints": 4000,
+            "detection_threshold": 0.2,
+            "nms_radius": 2,
         },
         "matcher": {
             "name": "lightglue",

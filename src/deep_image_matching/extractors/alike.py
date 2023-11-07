@@ -23,7 +23,6 @@ class AlikeExtractor(ExtractorBase):
     required_inputs = []
     grayscale = False
     descriptor_size = 96
-    detection_noise = 2.0
 
     def __init__(self, config: dict):
         # Init the base class
