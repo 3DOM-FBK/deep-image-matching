@@ -37,7 +37,7 @@
         "--config",
         "superpoint+lightglue",
         "--images",
-        "data/arsenale3",
+        "data/arsenale4",
         "--strategy",
         "bruteforce",
         "--force"
