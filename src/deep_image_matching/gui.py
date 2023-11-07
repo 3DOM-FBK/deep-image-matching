@@ -4,6 +4,8 @@ from pathlib import Path
 from pprint import pprint
 from tkinter import filedialog, messagebox, ttk
 
+from .config import confs
+
 
 class MatcherApp:
     def __init__(self, master):
@@ -15,17 +17,7 @@ class MatcherApp:
         self.out_dir = self.create_folder_button("Output directory")
 
         self.config = self.create_combobox(
-            "Choose available matching configuration:",
-            [
-                "superpoint+lightglue",
-                "superpoint+superglue",
-                "loftr",
-                "ALIKE",
-                "superpoint",
-                "KeyNetAffNetHardNet",
-                "DISK",
-                "ORB",
-            ],
+            "Choose available matching configuration:", list(confs.keys())
         )
 
         self.strategy = self.create_combobox(
@@ -39,10 +31,6 @@ class MatcherApp:
 
         self.overlap = self.create_int_entry(
             "If matching strategy == 'sequential', insert image overlap:"
-        )
-
-        self.max_features = self.create_int_entry(
-            "Max number of local features per image:"
         )
 
         self.error_label = tk.Label(master, text="", fg="red")
@@ -59,7 +47,6 @@ class MatcherApp:
             "strategy": self.strategy.get(),
             "pair_file": self.pair_file.get(),
             "image_overlap": self.overlap.get(),
-            "max_features": self.max_features.get(),
         }
         pprint(args)
 
@@ -73,7 +60,6 @@ class MatcherApp:
             "strategy": self.strategy.get(),
             "pair_file": self.pair_file.get(),
             "image_overlap": self.overlap.get(),
-            "max_features": self.max_features.get(),
         }
 
         if not args["image_dir"].exists() or not args["image_dir"].is_dir():
@@ -121,7 +107,7 @@ class MatcherApp:
     def create_combobox(self, label_text, values):
         label = tk.Label(self.master, text=label_text)
         label.pack()
-        combobox = ttk.Combobox(self.master, values=values)
+        combobox = ttk.Combobox(self.master, values=values, width=40)
         combobox.pack()
         return combobox
 

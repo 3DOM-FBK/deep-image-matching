@@ -21,7 +21,9 @@
         "--config",
         "aliked+lightglue",
         "--images",
-        "data/easy_small",
+        "data/arsenale4",
+        "--strategy",
+        "bruteforce",
         "--force"
       ]
       // "args": [
