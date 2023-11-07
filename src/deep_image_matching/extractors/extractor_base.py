@@ -1,7 +1,6 @@
 import inspect
 import logging
 from abc import ABCMeta, abstractmethod
-from copy import deepcopy
 from pathlib import Path
 from typing import Optional, Tuple, TypedDict, Union
 
@@ -10,7 +9,7 @@ import h5py
 import numpy as np
 import torch
 
-from ..utils.consts import Quality, TileSelection, def_cfg_general
+from ..utils.consts import Quality, TileSelection
 from ..utils.image import Image
 from ..utils.tiling import Tiler
 
@@ -46,25 +45,67 @@ def extractor_loader(root, model):
 
 
 class ExtractorBase(metaclass=ABCMeta):
-    default_conf = {"general": def_cfg_general}
+    general_conf = {
+        "output_dir": None,
+        "quality": Quality.HIGH,
+        "tile_selection": TileSelection.NONE,
+        "tiling_grid": [1, 1],
+        "tiling_overlap": 0,
+        "force_cpu": False,
+        "do_viz": False,
+    }
+    default_conf = {}
     required_inputs = []
     grayscale = True
     descriptor_size = 128
 
-    def __init__(self, **custom_config: dict):
+    def __init__(self, custom_config: dict):
         """
         Initialize the instance with a custom config. This is the method to be called by subclasses
 
         Args:
                 custom_config: a dictionary of options to
         """
-        # Set default config
-        self._config = self.default_conf
-
         # If a custom config is passed, update the default config
         if not isinstance(custom_config, dict):
             raise TypeError("opt must be a dictionary")
-        self._update_config(custom_config)
+        # self._update_config(custom_config)
+
+        # Update default config
+        self._config = {
+            "general": {
+                **self.general_conf,
+                **custom_config.get("general", {}),
+            },
+            "extractor": {
+                **self.default_conf,
+                **custom_config.get("extractor", {}),
+            },
+        }
+
+        # Get main processing parameters and save them as class members
+        self._quality = self._config["general"]["quality"]
+        self._tiling = self._config["general"]["tile_selection"]
+        logger.debug(
+            f"Matching options: Quality: {self._quality.name} - Tiling: {self._tiling.name}"
+        )
+
+        # Define saving directory
+        output_dir = self._config["general"]["output_dir"]
+        if output_dir is not None:
+            self._output_dir = Path(output_dir)
+            self._output_dir.mkdir(parents=True, exist_ok=True)
+        else:
+            self._output_dir = None
+        logger.debug(f"Saving directory: {self._output_dir}")
+
+        # Get device
+        self._device = (
+            "cuda"
+            if torch.cuda.is_available() and not self._config["general"]["force_cpu"]
+            else "cpu"
+        )
+        logger.debug(f"Running inference on device {self._device}")
 
     def extract(self, img: Union[Image, Path]) -> np.ndarray:
         """
@@ -177,67 +218,6 @@ class ExtractorBase(metaclass=ABCMeta):
             "Subclasses should implement _frame2tensor method to adapt the input image to the required format!"
         )
 
-    def _update_config(self, config: dict):
-        """
-        Update the config dictionary. This is called by : meth : ` update_config ` to allow subclasses to perform additional checks before and after configuration is updated.
-
-        Args:
-           config: The configuration dictionary to update in place. It is assumed that the keys and values are valid
-        """
-
-        # Make a deepcopy of the default config and update it with the custom config
-        new_config = deepcopy(self._config)
-        for key in config:
-            if key not in new_config:
-                new_config[key] = config[key]
-            else:
-                new_config[key] = {**new_config[key], **config[key]}
-
-        # Check general config
-        required_keys_general = [
-            "quality",
-            "tile_selection",
-            "force_cpu",
-        ]
-        missing_keys = [
-            key for key in required_keys_general if key not in new_config["general"]
-        ]
-        if missing_keys:
-            raise KeyError(
-                f"Missing required keys in 'general' config: {', '.join(missing_keys)}."
-            )
-        if not isinstance(new_config["general"]["quality"], Quality):
-            raise TypeError("quality must be a Quality enum")
-        if not isinstance(new_config["general"]["tile_selection"], TileSelection):
-            raise TypeError("tile_selection must be a TileSelection enum")
-
-        # Update the current config with the custom config
-        self._config = new_config
-
-        # Get main processing parameters and save them as class members
-        self._quality = self._config["general"]["quality"]
-        self._tiling = self._config["general"]["tile_selection"]
-        logger.debug(
-            f"Matching options: Quality: {self._quality.name} - Tiling: {self._tiling.name}"
-        )
-
-        # Define saving directory
-        output_dir = self._config["general"]["output_dir"]
-        if output_dir is not None:
-            self._output_dir = Path(output_dir)
-            self._output_dir.mkdir(parents=True, exist_ok=True)
-        else:
-            self._output_dir = None
-        logger.debug(f"Saving directory: {self._output_dir}")
-
-        # Get device
-        self._device = (
-            "cuda"
-            if torch.cuda.is_available() and not self._config["general"]["force_cpu"]
-            else "cpu"
-        )
-        logger.debug(f"Running inference on device {self._device}")
-
     def _extract_by_tile(self, image: np.ndarray, select_unique: bool = True):
         """
         Extract features from an image by tiles. This is called by :meth:`extract` to extract features from the image.
@@ -343,3 +323,40 @@ class ExtractorBase(metaclass=ABCMeta):
             features["keypoints"] *= 4
 
         return features
+
+    # def _update_config(self, config: dict):
+    #     """
+    #     Update the config dictionary. This is called by : meth : ` update_config ` to allow subclasses to perform additional checks before and after configuration is updated.
+
+    #     Args:
+    #        config: The configuration dictionary to update in place. It is assumed that the keys and values are valid
+    #     """
+
+    #     # Make a deepcopy of the default config and update it with the custom config
+    #     new_config = deepcopy(self._config)
+    #     for key in config:
+    #         if key not in new_config:
+    #             new_config[key] = config[key]
+    #         else:
+    #             new_config[key] = {**new_config[key], **config[key]}
+
+    #     # Check general config
+    #     required_keys_general = [
+    #         "quality",
+    #         "tile_selection",
+    #         "force_cpu",
+    #     ]
+    #     missing_keys = [
+    #         key for key in required_keys_general if key not in new_config["general"]
+    #     ]
+    #     if missing_keys:
+    #         raise KeyError(
+    #             f"Missing required keys in 'general' config: {', '.join(missing_keys)}."
+    #         )
+    #     if not isinstance(new_config["general"]["quality"], Quality):
+    #         raise TypeError("quality must be a Quality enum")
+    #     if not isinstance(new_config["general"]["tile_selection"], TileSelection):
+    #         raise TypeError("tile_selection must be a TileSelection enum")
+
+    #     # Update the current config with the custom config
+    #     self._config = new_config
