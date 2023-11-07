@@ -64,7 +64,6 @@ class MatcherBase(metaclass=ABCMeta):
     preselction_resize_max = 1024
 
     def __init__(self, **custom_config) -> None:
-        # cfg_general, **matcher_cfg
         """
         Base class for matchers. It defines the basic interface for matchers and basic functionalities that are shared among all matchers, in particular the `match` method. It must be subclassed to implement a new matcher.
 
@@ -354,6 +353,13 @@ class MatcherBase(metaclass=ABCMeta):
 
         """
 
+        def frame2tensor(image: np.ndarray, device: str = "cpu"):
+            if len(image.shape) == 2:
+                image = image[None][None]
+            elif len(image.shape) == 3:
+                image = image.transpose(2, 0, 1)[None]
+            return torch.tensor(image / 255.0, dtype=torch.float).to(device)
+
         def points_in_rect(points: np.ndarray, rect: np.ndarray) -> np.ndarray:
             logic = np.all(points > rect[:2], axis=1) & np.all(
                 points < rect[2:], axis=1
@@ -414,10 +420,10 @@ class MatcherBase(metaclass=ABCMeta):
             # Run SuperPoint on downsampled images
             with torch.no_grad():
                 feats0 = self._preselction_extractor(
-                    {"image": self._frame2tensor(i0, self._device)}
+                    {"image": frame2tensor(i0, self._device)}
                 )
                 feats1 = self._preselction_extractor(
-                    {"image": self._frame2tensor(i1, self._device)}
+                    {"image": frame2tensor(i1, self._device)}
                 )
 
                 # Match features with LightGlue
@@ -472,39 +478,32 @@ class MatcherBase(metaclass=ABCMeta):
                     tile_pairs.append((tidx0, tidx1))
 
             # For Debugging...
-            if True:
-                from matplotlib import pyplot as plt
+            # if False:
+            #     from matplotlib import pyplot as plt
 
-                out_dir = Path("sandbox/preselection")
-                out_dir.mkdir(parents=True, exist_ok=True)
-                image0 = cv2.imread(str(img0), cv2.IMREAD_GRAYSCALE)
-                image1 = cv2.imread(str(img1), cv2.IMREAD_GRAYSCALE)
-                c = "r"
-                s = 5
-                fig, axes = plt.subplots(1, 2)
-                for ax, img, kp in zip(axes, [image0, image1], [kp0, kp1]):
-                    ax.imshow(cv2.cvtColor(img, cv2.COLOR_BAYER_BG2BGR))
-                    ax.scatter(kp[:, 0], kp[:, 1], s=s, c=c)
-                    ax.axis("off")
-                for lim0, lim1 in zip(t0_lims.values(), t1_lims.values()):
-                    axes[0].axvline(lim0[0])
-                    axes[0].axhline(lim0[1])
-                    axes[1].axvline(lim1[0])
-                    axes[1].axhline(lim1[1])
-                # axes[1].get_yaxis().set_visible(False)
-                fig.tight_layout()
-                plt.show()
-                fig.savefig(out_dir / f"{img0.name}-{img1.name}.jpg")
-                plt.close()
+            #     out_dir = Path("sandbox/preselection")
+            #     out_dir.mkdir(parents=True, exist_ok=True)
+            #     image0 = cv2.imread(str(img0), cv2.IMREAD_GRAYSCALE)
+            #     image1 = cv2.imread(str(img1), cv2.IMREAD_GRAYSCALE)
+            #     c = "r"
+            #     s = 5
+            #     fig, axes = plt.subplots(1, 2)
+            #     for ax, img, kp in zip(axes, [image0, image1], [kp0, kp1]):
+            #         ax.imshow(cv2.cvtColor(img, cv2.COLOR_BAYER_BG2BGR))
+            #         ax.scatter(kp[:, 0], kp[:, 1], s=s, c=c)
+            #         ax.axis("off")
+            #     for lim0, lim1 in zip(t0_lims.values(), t1_lims.values()):
+            #         axes[0].axvline(lim0[0])
+            #         axes[0].axhline(lim0[1])
+            #         axes[1].axvline(lim1[0])
+            #         axes[1].axhline(lim1[1])
+            #     # axes[1].get_yaxis().set_visible(False)
+            #     fig.tight_layout()
+            #     plt.show()
+            #     fig.savefig(out_dir / f"{img0.name}-{img1.name}.jpg")
+            #     plt.close()
 
         return tile_pairs
-
-    def _frame2tensor(self, image: np.ndarray, device: str = "cpu"):
-        if len(image.shape) == 2:
-            image = image[None][None]
-        elif len(image.shape) == 3:
-            image = image.transpose(2, 0, 1)[None]
-        return torch.tensor(image / 255.0, dtype=torch.float).to(device)
 
     def viz_matches(
         self,

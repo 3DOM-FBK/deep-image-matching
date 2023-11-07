@@ -47,11 +47,11 @@ confs = {
             "tiling_overlap": 100,
             "geom_verification": GeometricVerification.PYDEGENSAC,
             "gv_threshold": 3,
-            "gv_confidence": 0.99999,
+            "gv_confidence": 0.9999,
         },
         "extractor": {
             "name": "superpoint",
-            "keypoint_threshold": 0.05,
+            "keypoint_threshold": 0.005,
             "max_keypoints": 10000,
         },
         "matcher": {
@@ -70,7 +70,7 @@ confs = {
             "tiling_overlap": 50,
             "geom_verification": GeometricVerification.PYDEGENSAC,
             "gv_threshold": 3,
-            "gv_confidence": 0.99999,
+            "gv_confidence": 0.9999,
         },
         "extractor": {
             "name": "superpoint",
