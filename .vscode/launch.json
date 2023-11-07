@@ -19,7 +19,7 @@
       "console": "integratedTerminal",
       "args": [
         "--config",
-        "alike+lightglue",
+        "aliked+lightglue",
         "--images",
         "data/easy_small",
         "--force"

@@ -8,10 +8,7 @@ from src.deep_image_matching.image_matching import ImageMatching
 from src.deep_image_matching.io.h5_to_db import export_to_colmap
 from src.deep_image_matching.utils import change_logger_level, setup_logger
 
-# TODO: improve configuation manamgement
-# The default configuration for each method (extractor and matchers)  must be defined inside each class.
-# The user should be able to override the default configuration by passing a dictionary to the constructor.
-# The user should be able to chose a configuration from a predefined list of configurations (e.g, confs_zoo) to be sure that the configuration is valid.
+# TODO: Add checks to the combination of extractor and matcher chosen by the user
 
 logger = setup_logger(log_level="info")
 
