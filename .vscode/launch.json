@@ -31,9 +31,7 @@
       //   "data/statua_hard",
       //   "--strategy",
       //   "bruteforce",
-      //   "--force",
-      //   "-n",
-      //   "10000"
+      //   "--force"
       // ]
       "args": [
         "--config",

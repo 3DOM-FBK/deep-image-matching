@@ -45,6 +45,7 @@ def correspondence_matrix_from_matches0(
 
 class SuperGlueMatcher(MatcherBase):
     default_config = {
+        "name": "superglue",
         "weights": "outdoor",
         "sinkhorn_iterations": 20,
         "match_threshold": 0.3,

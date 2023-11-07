@@ -1,40 +1,152 @@
 from src.deep_image_matching import GeometricVerification, Quality, TileSelection
 
-# Similar to HLOC
-# extractors_confs = {
-#     "superpoint_tiling": {
-#         "model": {
-#             "name": "superpoint",
-#             "keypoint_threshold": 0.005,
-#             "max_keypoints": 4096,
-#         },
-#         "general": {
-#             "quality": Quality.HIGH,
-#             "tiling_grid": [3, 3],
-#             "tiling_overlap": 50,
-#             "geom_verification": GeometricVerification.PYDEGENSAC,
-#             "gv_threshold": 3,
-#             "gv_confidence": 0.99999,
-#         },
-#     },
-#     "superpoint_fast": {
-#         "model": {
-#             "name": "superpoint",
-#             "keypoint_threshold": 0.005,
-#             "max_keypoints": 1024,
-#         },
-#         "general": {
-#             "quality": Quality.HIGH,
-#             "tiling_grid": [3, 3],
-#             "tiling_overlap": 50,
-#             "geom_verification": GeometricVerification.PYDEGENSAC,
-#             "gv_threshold": 3,
-#             "gv_confidence": 0.99999,
-#         },
-#     },
-# }
+extractors_zoo = [
+    "superpoint",
+    "alike",
+    "aliked",
+    "orb",
+    "disk",
+    "keynetaffnethardnet",
+    "sift",
+]
+matchers_zoo = [
+    "superglue",
+    "lightglue",
+    "loftr",
+    "adalam",
+    "smnn",
+    "nn",
+    "snn",
+    "mnn",
+    "smnn",
+]
+retrieval_zoo = ["netvlad", "openibl", "cosplace", "dir"]
+matching_strategy = ["bruteforce", "sequential", "retrieval", "custom_pairs"]
+
+# The configuration systme is ispired from that to HLOC
+# The confiugration is defined by a desired name (e.g., "superpoint+lightglue") and it must be a dictionary with the following keys:
+# - 'general': general configuration
+# - 'extractor': extractor configuratio
+# - 'matcher': matcher configuration
+# Each configration can be retrieved by calling the function get_config(name)
 
 
+def get_config(name: str):
+    try:
+        return confs[name]
+    except KeyError:
+        raise ValueError(f"Invalid configuration name: {name}")
+
+
+confs = {
+    "superpoint+lightglue": {
+        "general": {
+            "quality": Quality.HIGH,
+            "tile_selection": TileSelection.PRESELECTION,
+            "tiling_grid": [3, 3],
+            "tiling_overlap": 100,
+            "geom_verification": GeometricVerification.PYDEGENSAC,
+            "gv_threshold": 3,
+            "gv_confidence": 0.99999,
+        },
+        "extractor": {
+            "name": "superpoint",
+            "keypoint_threshold": 0.05,
+            "max_keypoints": 10000,
+        },
+        "matcher": {
+            "name": "lightglue",
+            "n_layers": 9,
+            "depth_confidence": -1,  # 0.95,  # early stopping, disable with -1
+            "width_confidence": -1,  # 0.99,  # point pruning, disable with -1
+            "filter_threshold": 0.1,  # match threshold
+        },
+    },
+    "superpoint+lightglue_tiling": {
+        "general": {
+            "quality": Quality.HIGH,
+            "tile_selection": TileSelection.PRESELECTION,
+            "tiling_grid": [3, 3],
+            "tiling_overlap": 50,
+            "geom_verification": GeometricVerification.PYDEGENSAC,
+            "gv_threshold": 3,
+            "gv_confidence": 0.99999,
+        },
+        "extractor": {
+            "name": "superpoint",
+            "keypoint_threshold": 0.005,
+            "max_keypoints": 4096,
+        },
+        "matcher": {
+            "name": "lightglue",
+            "n_layers": 9,
+            "depth_confidence": -1,  # 0.95,  # early stopping, disable with -1
+            "width_confidence": -1,  # 0.99,  # point pruning, disable with -1
+            "filter_threshold": 0.1,  # match threshold
+        },
+    },
+    "superpoint+lightglue_fast": {
+        "general": {
+            "quality": Quality.MEDIUM,
+            "tile_selection": TileSelection.NONE,
+            "geom_verification": GeometricVerification.PYDEGENSAC,
+            "gv_threshold": 3,
+            "gv_confidence": 0.99999,
+        },
+        "extractor": {
+            "name": "superpoint",
+            "keypoint_threshold": 0.005,
+            "max_keypoints": 1024,
+        },
+        "matcher": {
+            "name": "lightglue",
+            "n_layers": 7,
+            "depth_confidence": 0.95,  # early stopping, disable with -1
+            "width_confidence": 0.99,  # point pruning, disable with -1
+            "filter_threshold": 0.1,  # match threshold
+        },
+    },
+    "superpoint+superglue": {
+        "general": {
+            "quality": Quality.HIGH,
+            "tile_selection": TileSelection.PRESELECTION,
+            "tiling_grid": [3, 3],
+            "tiling_overlap": 50,
+            "geom_verification": GeometricVerification.PYDEGENSAC,
+            "gv_threshold": 3,
+            "gv_confidence": 0.99999,
+        },
+        "extractor": {
+            "name": "superpoint",
+            "keypoint_threshold": 0.005,
+            "max_keypoints": 4096,
+        },
+        "matcher": {
+            "name": "superglue",
+            "match_threshold": 0.3,
+        },
+    },
+    "disk+lightglue": {
+        "general": {
+            "quality": Quality.HIGH,
+            "tile_selection": TileSelection.PRESELECTION,
+            "tiling_grid": [3, 3],
+            "tiling_overlap": 50,
+            "geom_verification": GeometricVerification.PYDEGENSAC,
+            "gv_threshold": 3,
+            "gv_confidence": 0.99999,
+        },
+        "extractor": {
+            "name": "disk",
+            "max_keypoints": 4096,
+        },
+        "matcher": {
+            "name": "lightglue",
+        },
+    },
+}
+
+# Old configuration system
 custom_config = {
     "general": {
         # "detector_and_descriptor": "ALIKE",  # To be used in combination with --detect_and_describe option. ALIKE, ORB, DISK, SuperPoint, KeyNetAffNetHardNet

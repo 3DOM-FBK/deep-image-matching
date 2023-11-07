@@ -32,7 +32,7 @@ def apply_geometric_verification(
     _, inlMask = geometric_verification(
         kpts0=mkpts0,
         kpts1=mkpts1,
-        method=config["geometric_verification"],
+        method=config["geom_verification"],
         threshold=config["gv_threshold"],
         confidence=config["gv_confidence"],
     )
@@ -54,28 +54,24 @@ class ImageMatching:
         # TODO: add default values for not necessary parameters
         self,
         imgs_dir: Path,
+        output_dir: Path,
         matching_strategy: str,
         retrieval_option: str,
         local_features: str,
         matching_method: str,
-        custom_config: dict,
-        min_matches_per_pair: int = 30,
-        # max_feat_numb: int = 2048,
         pair_file: Path = None,
+        custom_config: dict = {},
         overlap: int = 1,
     ):
         self.image_dir = Path(imgs_dir)
+        self.output_dir = Path(output_dir)
         self.matching_strategy = matching_strategy
         self.retrieval_option = retrieval_option
         self.local_features = local_features
         self.matching_method = matching_method
         self.custom_config = custom_config
-        self.min_matches_per_pair = min_matches_per_pair
-        # self.max_feat_numb = max_feat_numb
         self.pair_file = Path(pair_file) if pair_file is not None else None
         self.overlap = overlap
-        self.keypoints = {}
-        self.correspondences = {}
 
         # Check that parameters are valid
         if retrieval_option == "sequential":
@@ -102,6 +98,9 @@ class ImageMatching:
         elif len(images) == 1:
             raise ValueError("Image folder must contain at least two images")
 
+        # Initialize output directory
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+
         # Initialize extractor
         try:
             Extractor = extractor_loader(extractors, self.local_features)
@@ -109,7 +108,7 @@ class ImageMatching:
             raise ValueError(
                 f"Invalid local feature extractor. {self.local_features} is not supported."
             )
-        self._extractor = Extractor(**self.custom_config)
+        self._extractor = Extractor(self.custom_config)
 
         # Initialize matcher
         try:
@@ -124,18 +123,6 @@ class ImageMatching:
             )
         else:
             self._matcher = Matcher(**self.custom_config)
-
-    @property
-    def img_format(self):
-        return self.image_list.img_format
-
-    @property
-    def width(self):
-        return self.image_list.width
-
-    @property
-    def height(self):
-        return self.image_list.height
 
     @property
     def img_names(self):
@@ -222,11 +209,6 @@ class ImageMatching:
                 if im1.name in group:
                     del group[im1.name]
                 group.create_dataset(im1.name, data=correspondences_cleaned)
-
-            # Save keypoints and correspondences
-            # self.keypoints[im0.name] = kpts0
-            # self.keypoints[im1.name] = kpts1
-            # self.correspondences[(im0, im1)] = correspondences
 
             logger.debug(f"Pairs: {pair[0].name} - {pair[1].name} done.")
 

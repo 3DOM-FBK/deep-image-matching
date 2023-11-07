@@ -33,14 +33,13 @@ def featuresDict_2_lightglue(feats: FeaturesDict, device: torch.device) -> dict:
 
 class LightGlueMatcher(MatcherBase):
     default_conf = {
-        "LightGlue": {
-            "flash": True,  # enable FlashAttention if available.
-            "mp": False,  # enable mixed precision
-            "depth_confidence": 0.95,  # early stopping, disable with -1
-            "width_confidence": 0.99,  # point pruning, disable with -1
-            "filter_threshold": 0.1,  # match threshold
-            "weights": None,
-        }
+        "name": "lightglue",
+        "flash": True,  # enable FlashAttention if available.
+        "mp": False,  # enable mixed precision
+        "depth_confidence": 0.95,  # early stopping, disable with -1
+        "width_confidence": 0.99,  # point pruning, disable with -1
+        "filter_threshold": 0.1,  # match threshold
+        "weights": None,
     }
     required_inputs = []
     min_matches = 20
