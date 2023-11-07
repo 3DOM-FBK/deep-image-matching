@@ -5,10 +5,9 @@ import h5py
 import numpy as np
 from tqdm import tqdm
 
-from . import extractors, matchers
+from . import extractors
 from .extractors.extractor_base import extractor_loader
 from .io.h5 import get_features, get_matches
-from .matchers.matcher_base import matcher_loader
 from .utils.geometric_verification import geometric_verification
 from .utils.image import ImageList
 from .utils.pairs_generator import PairsGenerator
@@ -111,18 +110,18 @@ class ImageMatching:
         self._extractor = Extractor(self.custom_config)
 
         # Initialize matcher
-        try:
-            Matcher = matcher_loader(matchers, self.matching_method)
-        except AttributeError:
-            raise ValueError(
-                f"Invalid matcher. {self.local_features} is not supported."
-            )
-        if self.matching_method == "lightglue":
-            self._matcher = Matcher(
-                local_features=self.local_features, **self.custom_config
-            )
-        else:
-            self._matcher = Matcher(**self.custom_config)
+        # try:
+        #     Matcher = matcher_loader(matchers, self.matching_method)
+        # except AttributeError:
+        #     raise ValueError(
+        #         f"Invalid matcher. {self.local_features} is not supported."
+        #     )
+        # if self.matching_method == "lightglue":
+        #     self._matcher = Matcher(
+        #         local_features=self.local_features, **self.custom_config
+        #     )
+        # else:
+        #     self._matcher = Matcher(**self.custom_config)
 
     @property
     def img_names(self):
