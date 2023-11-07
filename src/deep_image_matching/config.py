@@ -23,13 +23,6 @@ matchers_zoo = [
 retrieval_zoo = ["netvlad", "openibl", "cosplace", "dir"]
 matching_strategy = ["bruteforce", "sequential", "retrieval", "custom_pairs"]
 
-# The configuration systme is ispired from that to HLOC
-# The confiugration is defined by a desired name (e.g., "superpoint+lightglue") and it must be a dictionary with the following keys:
-# - 'general': general configuration
-# - 'extractor': extractor configuratio
-# - 'matcher': matcher configuration
-# Each configration can be retrieved by calling the function get_config(name)
-
 
 def get_config(name: str):
     try:
@@ -38,6 +31,13 @@ def get_config(name: str):
         raise ValueError(f"Invalid configuration name: {name}")
 
 
+# The confiugration is defined by a desired name (e.g., "superpoint+lightglue") and it must be a dictionary with the following keys:
+# - 'general': general configuration
+# - 'extractor': extractor configuratio
+# - 'matcher': matcher configuration
+# The 'extractor' and 'matcher' values must contain a 'name' key with the name of the extractor/matcher to be used. Additionally, the other parameters of the extractor/matcher can be specified.
+# Each configration can be retrieved by calling the function get_config(name)
+# The configuration systme is ispired from that to HLOC
 confs = {
     "superpoint+lightglue": {
         "general": {

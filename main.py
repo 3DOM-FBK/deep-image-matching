@@ -2,7 +2,13 @@ import argparse
 import shutil
 from pathlib import Path
 
-from config import confs, extractors_zoo, matchers_zoo, matching_strategy, retrieval_zoo
+from src.deep_image_matching.config import (
+    confs,
+    extractors_zoo,
+    matchers_zoo,
+    matching_strategy,
+    retrieval_zoo,
+)
 from src.deep_image_matching.gui import gui
 from src.deep_image_matching.image_matching import ImageMatching
 from src.deep_image_matching.io.h5_to_db import export_to_colmap
@@ -52,7 +58,6 @@ def parse_args():
         choices=retrieval_zoo,
         default=None,
     )
-    # parser.add_argument("-n", "--max_features", type=int, default=4000)
     parser.add_argument("-f", "--force", action="store_true", default=False)
     parser.add_argument("-V", "--verbose", action="store_true", default=False)
 
@@ -66,7 +71,6 @@ def parse_args():
         args.strategy = gui_out["strategy"]
         args.pairs = gui_out["pair_file"]
         args.overlap = gui_out["image_overlap"]
-        # args.max_features = gui_out["max_features"]
 
     return args
 
