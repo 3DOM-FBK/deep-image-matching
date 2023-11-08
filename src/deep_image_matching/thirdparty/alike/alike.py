@@ -1,12 +1,11 @@
 import logging
+import math
 import os
+import time
+from copy import deepcopy
+
 import cv2
 import torch
-from copy import deepcopy
-import torch.nn.functional as F
-from torchvision.transforms import ToTensor
-import math
-import time
 
 from .alnet import ALNet
 from .soft_detect import DKD

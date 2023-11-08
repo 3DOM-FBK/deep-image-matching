@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 # TODO: skip the loading of hloc extractor, but implement it directly here.
 class SuperPointExtractor(ExtractorBase):
     default_conf = {
+        "name:": "superpoint",
         "nms_radius": 4,
         "keypoint_threshold": 0.005,
         "max_keypoints": -1,
@@ -23,14 +24,12 @@ class SuperPointExtractor(ExtractorBase):
     descriptor_size = 256
     detection_noise = 2.0
 
-    def __init__(self, **config: dict):
+    def __init__(self, config: dict):
         # Init the base class
-        super().__init__(**config)
-
-        # TODO: improve configuration management!
-        SP_cfg = {**self.default_conf, **self._config.get("SuperPoint", {})}
+        super().__init__(config)
 
         # Load extractor
+        SP_cfg = self._config.get("extractor")
         self._extractor = SuperPoint(SP_cfg).eval().to(self._device)
 
     @torch.no_grad()

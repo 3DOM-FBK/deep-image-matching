@@ -21,12 +21,11 @@ class DiskExtractor(ExtractorBase):
     grayscale = False
     descriptor_size = 128
 
-    def __init__(self, **config: dict):
+    def __init__(self, config: dict):
         # Init the base class
-        super().__init__(**config)
+        super().__init__(config)
 
-        # TODO: improve configuration management!
-        disk_cfg = self._config["DISK"]
+        disk_cfg = self._config.get("extractor")
 
         # Load extractor
         self._extractor = DISK(disk_cfg).eval().to(self._device)

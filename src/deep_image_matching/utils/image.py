@@ -1,37 +1,335 @@
+import logging
+from datetime import datetime
 from pathlib import Path
+from typing import Union
 
 import cv2
+import exifread
+import numpy as np
+
+from .sensor_width_database import SensorWidthDatabase
+
+logger = logging.getLogger(__name__)
+
+
+def read_image(
+    path: Union[str, Path],
+    color: bool = True,
+) -> np.ndarray:
+    """
+    Reads image with OpenCV and returns it as a NumPy array.
+
+    Args:
+        path (Union[str, Path]): The path of the image.
+        color (bool, optional): Whether to read the image as color (RGB) or grayscale. Defaults to True.
+
+    Returns:
+        np.ndarray: The image as a NumPy array.
+    """
+
+    if not Path(path).exists():
+        raise ValueError(f"File {path} does not exist")
+
+    if color:
+        flag = cv2.IMREAD_COLOR
+    else:
+        flag = cv2.IMREAD_GRAYSCALE
+
+    try:
+        image = cv2.imread(str(path), flag)
+    except:
+        logger.error(f"Impossible to load image {path}")
+        raise RuntimeError(f"Impossible to load image {path}")
+
+    if color:
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+    return image
+
+
+# Kept for compatibility with old code, but should be removed
+class Image_old:
+    def __init__(self, path: Path, img_id: int = None, read_exif: bool = False):
+        path = Path(path)
+        if not path.exists():
+            raise ValueError(f"File {path} does not exist")
+
+        self.id = img_id
+        self.name = path.stem
+        self.path = path
 
 
 class Image:
-    def __init__(self, img_id: int, absolute_path: Path):
-        self.id = img_id
-        self.name = absolute_path.stem
-        self.absolute_path = absolute_path
+    """A class representing an image.
+
+    Attributes:
+        _path (Path): The path to the image file.
+        _value_array (np.ndarray): Numpy array containing pixel values. If available, it can be accessed with `Image.value`.
+        _width (int): The width of the image in pixels.
+        _height (int): The height of the image in pixels.
+        _exif_data (dict): The EXIF metadata of the image, if available.
+        _date_time (datetime): The date and time the image was taken, if available.
+
+    """
+
+    DATE_FMT = "%Y-%m-%d"
+    TIME_FMT = "%H:%M:%S"
+    DATETIME_FMT = "%Y:%m:%d %H:%M:%S"
+
+    def __init__(
+        self, path: Union[str, Path], id: int = None, skip_exif: bool = False
+    ) -> None:
+        """
+        __init__ Create Image object as a lazy loader for image data
+
+        Args:
+            path (Union[str, Path]): path to the image
+        """
+        path = Path(path)
+        if not path.exists():
+            raise ValueError(f"File {path} does not exist")
+
+        self._path = path
+        self._id = id
+        self._width = None
+        self._height = None
+        self._exif_data = None
+        self._date_time = None
+        self._focal_length = None
+
+        if not skip_exif:
+            self.read_exif()
+
+    def __repr__(self) -> str:
+        """Returns a string representation of the image"""
+        return f"Image {self._path}"
+
+    def __str__(self) -> str:
+        """Returns a string representation of the image"""
+        return f"Image {self._path}"
+
+    @property
+    def id(self) -> int:
+        """Returns the id of the image"""
+        if self._id is None:
+            logger.error(f"Image id not available for {self.name}. Set it first")
+        return self._id
+
+    @property
+    def name(self) -> str:
+        """Returns the name of the image (including extension)"""
+        return self._path.name
+
+    @property
+    def stem(self) -> str:
+        """Returns the name of the image (excluding extension)"""
+        return self._path.stem
+
+    @property
+    def path(self) -> Path:
+        """Path of the image"""
+        return self._path
+
+    @property
+    def parent(self) -> str:
+        """Path to the parent folder of the image"""
+        return self._path.parent
+
+    @property
+    def extension(self) -> str:
+        """Returns the extension  of the image"""
+        return self._path.suffix
+
+    @property
+    def height(self) -> int:
+        """Returns the height of the image in pixels"""
+        if self._height is None:
+            logger.error(f"Image height not available for {self.name}.")
+            return None
+        return int(self._height)
+
+    @property
+    def width(self) -> int:
+        """Returns the width of the image in pixels"""
+        if self._width is None:
+            logger.error(f"Image width not available for {self.name}.")
+            return None
+        return int(self._width)
+
+    @property
+    def exif(self) -> dict:
+        """exif Returns the exif of the image"""
+        if self._exif_data is None:
+            logger.error(f"No exif data available for {self.name}.")
+            return None
+        return self._exif_data
+
+    @property
+    def date(self) -> str:
+        """Returns the date and time of the image in a string format."""
+        if self._date_time is None:
+            logger.error(f"No exif data available for {self.name}.")
+            return None
+        return self._date_time.strftime(self.DATE_FMT)
+
+    @property
+    def time(self) -> str:
+        """time Returns the time of the image from exif as a string"""
+        if self._date_time is None:
+            logger.error(f"No exif data available for {self.name}.")
+            return None
+        return self._date_time.strftime(self.TIME_FMT)
+
+    @property
+    def datetime(self) -> datetime:
+        """Returns the date and time of the image as datetime object."""
+        if self._date_time is None:
+            logger.error(f"No exif data available for {self.name}.")
+            return None
+        return self._date_time
+
+    @property
+    def timestamp(self) -> str:
+        """Returns the date and time of the image in a string format."""
+        if self._date_time is None:
+            logger.error(f"No exif data available for {self.name}.")
+            return None
+        return self._date_time.strftime(self.DATETIME_FMT)
+
+    @property
+    def focal_length(self) -> float:
+        """Returns the focal length of the image in mm."""
+        if self._focal_length is None:
+            logger.error(f"Focal length not available in exif data for {self.name}.")
+            return None
+        return self._focal_length
+
+    def read(self) -> np.ndarray:
+        """Returns the image (pixel values) as numpy array"""
+        return read_image(self._path)
+
+    def read_exif(self) -> None:
+        """Read image exif with exifread and store them in a dictionary"""
+        try:
+            with open(self._path, "rb") as f:
+                self._exif_data = exifread.process_file(f, details=False, debug=False)
+        except OSError:
+            logger.warning(f"No exif data available for {self.name}.")
+
+        # Get image size
+        if (
+            "Image ImageWidth" in self._exif_data.keys()
+            and "Image ImageLength" in self._exif_data.keys()
+        ):
+            self._width = self._exif_data["Image ImageWidth"].printable
+            self._height = self._exif_data["Image ImageLength"].printable
+        elif (
+            "EXIF ExifImageWidth" in self._exif_data.keys()
+            and "EXIF ExifImageLength" in self._exif_data.keys()
+        ):
+            self._width = self._exif_data["EXIF ExifImageWidth"].printable
+            self._height = self._exif_data["EXIF ExifImageLength"].printable
+        else:
+            logger.warning(
+                "Image width and height found in exif. Try to load the image and get image size from numpy array"
+            )
+            try:
+                img = Image(self.path)
+                self.height, self.width = img.height, img.width
+
+            except OSError:
+                raise RuntimeError("Unable to get image dimensions.")
+
+        # Get Image Date and Time
+        if "Image DateTime" in self._exif_data.keys():
+            date_str = self._exif_data["Image DateTime"].printable
+        elif "EXIF DateTimeOriginal" in self._exif_data.keys():
+            date_str = self._exif_data["EXIF DateTimeOriginal"].printable
+        else:
+            logger.warning(f"Date not available in exif for {self.name}")
+            date_str = None
+        if date_str is not None:
+            self._date_time = datetime.strptime(date_str, self.DATETIME_FMT)
+
+        # Get Focal Length
+        if "EXIF FocalLength" in self._exif_data.keys():
+            self._focal_length = float(self._exif_data["EXIF FocalLength"].printable)
+
+        # TODO: Get GPS coordinates from exif
+
+    def get_intrinsics_from_exif(self) -> np.ndarray:
+        """Constructs the camera intrinsics from exif tag.
+
+        Equation: focal_px=max(w_px,h_px)*focal_mm / ccdw_mm
+
+        Note:
+            References for this functions can be found:
+
+            * https://github.com/colmap/colmap/blob/e3948b2098b73ae080b97901c3a1f9065b976a45/src/util/bitmap.cc#L282
+            * https://openmvg.readthedocs.io/en/latest/software/SfM/SfMInit_ImageListing/
+            * https://photo.stackexchange.com/questions/40865/how-can-i-get-the-image-sensor-dimensions-in-mm-to-get-circle-of-confusion-from # noqa: E501
+
+        Returns:
+            K (np.ndarray): intrinsics matrix (3x3 numpy array).
+        """
+        if self._exif_data is None or len(self._exif_data) == 0:
+            try:
+                self.read_exif()
+            except OSError:
+                logger.error("Unable to read exif data.")
+                return None
+        try:
+            focal_length_mm = float(self._exif_data["EXIF FocalLength"].printable)
+        except OSError:
+            logger.error("Focal length non found in exif data.")
+            return None
+        try:
+            sensor_width_db = SensorWidthDatabase()
+            sensor_width_mm = sensor_width_db.lookup(
+                self._exif_data["Image Make"].printable,
+                self._exif_data["Image Model"].printable,
+            )
+        except OSError:
+            logger.error("Unable to get sensor size in mm from sensor database")
+            return None
+
+        img_w_px = self.width
+        img_h_px = self.height
+        focal_length_px = max(img_h_px, img_w_px) * focal_length_mm / sensor_width_mm
+        center_x = img_w_px / 2
+        center_y = img_h_px / 2
+        K = np.array(
+            [
+                [focal_length_px, 0.0, center_x],
+                [0.0, focal_length_px, center_y],
+                [0.0, 0.0, 1.0],
+            ],
+            dtype=float,
+        )
+        return K
 
 
 class ImageList:
+    image_ext = [".jpg", ".JPG", ".png"]
+
     def __init__(self, img_dir: Path):
         self.images = []
         self.current_idx = 0
         i = 0
         all_imgs = [
-            image
-            for image in img_dir.glob("*")
-            if image.suffix in [".jpg", ".JPG", ".png"]
+            image for image in img_dir.glob("*") if image.suffix in self.image_ext
         ]
         all_imgs.sort()
 
         for image in all_imgs:
-            self.add_image(i, image)
+            self.add_image(image, i)
             i += 1
-
-        self._img_format = Path(all_imgs[0]).suffix
-        image = cv2.imread(str(Path(all_imgs[0])))
-        self._height, self._width = image.shape[:2]
 
     def __len__(self):
         return len(self.images)
+
+    def __repr__(self) -> str:
+        return f"ImageList with {len(self.images)} images"
 
     def __getitem__(self, img_id):
         return self.images[img_id]
@@ -46,8 +344,8 @@ class ImageList:
         self.current_idx += 1
         return self.images[cur]
 
-    def add_image(self, img_id: int, absolute_path: Path):
-        new_image = Image(img_id, absolute_path)
+    def add_image(self, path: Path, img_id: int):
+        new_image = Image(path, img_id)
         self.images.append(new_image)
 
     @property
@@ -56,16 +354,16 @@ class ImageList:
 
     @property
     def img_paths(self):
-        return [im.absolute_path for im in self.images]
+        return [im.path for im in self.images]
 
-    @property
-    def img_format(self):
-        return self._img_format
 
-    @property
-    def width(self):
-        return self._width
+if __name__ == "__main__":
+    image_path = "data/easy_small/01_Camera1.jpg"
 
-    @property
-    def height(self):
-        return self._height
+    img = Image(image_path)
+
+    image_dir = "data/easy_small"
+
+    img_list = ImageList(image_dir)
+
+    print("done")

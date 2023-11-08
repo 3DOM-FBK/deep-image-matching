@@ -33,28 +33,27 @@ def featuresDict_2_lightglue(feats: FeaturesDict, device: torch.device) -> dict:
 
 class LightGlueMatcher(MatcherBase):
     default_conf = {
-        "LightGlue": {
-            "flash": True,  # enable FlashAttention if available.
-            "mp": False,  # enable mixed precision
-            "depth_confidence": 0.95,  # early stopping, disable with -1
-            "width_confidence": 0.99,  # point pruning, disable with -1
-            "filter_threshold": 0.1,  # match threshold
-            "weights": None,
-        }
+        "name": "lightglue",
+        "flash": True,  # enable FlashAttention if available.
+        "mp": False,  # enable mixed precision
+        "depth_confidence": 0.95,  # early stopping, disable with -1
+        "width_confidence": 0.99,  # point pruning, disable with -1
+        "filter_threshold": 0.1,  # match threshold
+        "weights": None,
     }
     required_inputs = []
     min_matches = 20
     max_feat_no_tiling = 200000
 
-    def __init__(self, local_features="superpoint", **config) -> None:
+    def __init__(self, local_features="superpoint", config={}) -> None:
         """Initializes a LightGlueMatcher"""
 
         self._localfeatures = local_features
-        super().__init__(**config)
+        super().__init__(config)
 
         # load the matcher
-        sg_cfg = {**self.default_conf, **self._config.get("LightGlue", {})}
-        self._matcher = LightGlue(self._localfeatures, **sg_cfg).eval().to(self._device)
+        cfg = {**self.default_conf, **self._config.get("LightGlue", {})}
+        self._matcher = LightGlue(self._localfeatures, **cfg).eval().to(self._device)
 
         if self._localfeatures == "disk":
             self.max_feat_no_tiling = 50000
