@@ -25,17 +25,3 @@ class Quality(Enum):
     MEDIUM = 2
     HIGH = 3
     HIGHEST = 4
-
-
-def_cfg_general = {
-    "max_keypoints": 4096,
-    "tile_selection": TileSelection.NONE,
-    "tiling_grid": [1, 1],
-    "output_dir": "results",
-    "tiling_overlap": 0,
-    "force_cpu": False,
-    "do_viz": False,
-    "fast_viz": True,
-    "hide_matching_track": True,
-    "do_viz_tiles": False,
-}

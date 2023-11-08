@@ -5,9 +5,11 @@ import h5py
 import numpy as np
 from tqdm import tqdm
 
-from . import extractors
+from . import extractors, matchers
 from .extractors.extractor_base import extractor_loader
 from .io.h5 import get_features, get_matches
+from .matchers.matcher_base import matcher_loader
+from .utils.consts import GeometricVerification, Quality, TileSelection
 from .utils.geometric_verification import geometric_verification
 from .utils.image import ImageList
 from .utils.pairs_generator import PairsGenerator
@@ -49,6 +51,20 @@ def get_pairs_from_file(pair_file: Path) -> list:
 
 
 class ImageMatching:
+    default_conf_general = {
+        "quality": Quality.MEDIUM,
+        "tile_selection": TileSelection.NONE,
+        "geom_verification": GeometricVerification.PYDEGENSAC,
+        "output_dir": "output",
+        "tiling_grid": [1, 1],
+        "tiling_overlap": 0,
+        "force_cpu": False,
+        "do_viz": False,
+        "fast_viz": True,
+        "hide_matching_track": True,
+        "do_viz_tiles": False,
+    }
+
     def __init__(
         # TODO: add default values for not necessary parameters
         self,
@@ -68,9 +84,15 @@ class ImageMatching:
         self.retrieval_option = retrieval_option
         self.local_features = local_features
         self.matching_method = matching_method
-        self.custom_config = custom_config
         self.pair_file = Path(pair_file) if pair_file is not None else None
         self.overlap = overlap
+
+        # Merge default and custom config
+        self.custom_config = custom_config
+        self.custom_config["general"] = {
+            **self.default_conf_general,
+            **custom_config["general"],
+        }
 
         # Check that parameters are valid
         if retrieval_option == "sequential":
@@ -110,18 +132,18 @@ class ImageMatching:
         self._extractor = Extractor(self.custom_config)
 
         # Initialize matcher
-        # try:
-        #     Matcher = matcher_loader(matchers, self.matching_method)
-        # except AttributeError:
-        #     raise ValueError(
-        #         f"Invalid matcher. {self.local_features} is not supported."
-        #     )
-        # if self.matching_method == "lightglue":
-        #     self._matcher = Matcher(
-        #         local_features=self.local_features, **self.custom_config
-        #     )
-        # else:
-        #     self._matcher = Matcher(**self.custom_config)
+        try:
+            Matcher = matcher_loader(matchers, self.matching_method)
+        except AttributeError:
+            raise ValueError(
+                f"Invalid matcher. {self.local_features} is not supported."
+            )
+        if self.matching_method == "lightglue":
+            self._matcher = Matcher(
+                local_features=self.local_features, **self.custom_config
+            )
+        else:
+            self._matcher = Matcher(**self.custom_config)
 
     @property
     def img_names(self):

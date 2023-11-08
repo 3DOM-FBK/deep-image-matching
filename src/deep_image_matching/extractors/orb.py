@@ -3,7 +3,10 @@ import logging
 import cv2
 import numpy as np
 
-from .extractor_base import ExtractorBase
+if __name__ == "__main__":
+    from deep_image_matching.extractors.extractor_base import ExtractorBase
+else:
+    from .extractor_base import ExtractorBase
 
 logger = logging.getLogger(__name__)
 
@@ -59,4 +62,22 @@ class ORBExtractor(ExtractorBase):
 
 
 if __name__ == "__main__":
-    pass
+    from pprint import pprint
+
+    from deep_image_matching import GeometricVerification, Quality, TileSelection
+
+    image_path = "data/easy_small/01_Camera1.jpg"
+    cfg = {
+        "general": {
+            "quality": Quality.MEDIUM,
+            "tile_selection": TileSelection.NONE,
+            "geom_verification": GeometricVerification.PYDEGENSAC,
+        },
+        "extractor": {"name": "orb"},
+    }
+    pprint(cfg)
+
+    extractor = ORBExtractor(cfg)
+    extractor.extract(image_path)
+
+    print("done")
