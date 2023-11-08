@@ -39,7 +39,7 @@ pip install -r requirements.txt
 Before running check options with `python ./main.py --help`, then:
 
 ```
-python ./main.py cli -i assets/imgs -o assets/outs -m sequential -v 1 -f superglue -n 8000
+python ./main.py cli  --config "superpoint+lightglue" --images "assets/imgs" --outs "output" --strategy "sequential" --overlap 2
 ```
 
 See other examples in run.bat. If you want to customize detector and descpritor options, change default options in config.py.
@@ -47,7 +47,7 @@ See other examples in run.bat. If you want to customize detector and descpritor 
 To run with the GUI:
 
 ```
-python ./main.py gui
+python ./main.py --gui
 ```
 
 ## Multiview tests
