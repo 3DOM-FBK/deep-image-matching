@@ -2,7 +2,7 @@ import argparse
 import shutil
 from pathlib import Path
 
-from src.deep_image_matching.config import (
+from config import (
     confs,
     extractors_zoo,
     matchers_zoo,

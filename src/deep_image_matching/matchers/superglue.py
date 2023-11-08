@@ -54,13 +54,14 @@ class SuperGlueMatcher(MatcherBase):
     min_matches = 20
     max_feat_no_tiling = 50000
 
-    def __init__(self, **config) -> None:
+    def __init__(self, config) -> None:
         """Initializes a SuperGlueMatcher object with the given options dictionary."""
 
-        super().__init__(**config)
+        super().__init__(config)
 
         # initialize the Matching object with given configuration
-        self._matcher = SuperGlue(config["superglue"]).eval().to(self._device)
+        cfg = {**self.default_conf, **self._config.get("superglue", {})}
+        self._matcher = SuperGlue(cfg).eval().to(self._device)
 
     @torch.no_grad()
     def _match_pairs(

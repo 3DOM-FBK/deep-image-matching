@@ -4,7 +4,7 @@ from pathlib import Path
 from pprint import pprint
 from tkinter import filedialog, messagebox, ttk
 
-from .config import confs
+from config import confs
 
 
 class MatcherApp:

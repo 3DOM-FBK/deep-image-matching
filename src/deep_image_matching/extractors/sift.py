@@ -47,8 +47,6 @@ class SIFTExtractor(ExtractorBase):
         kpts = cv2.KeyPoint_convert(kp)
         des = des.astype(float).T
 
-        logger.debug(f"Extracted {len(kpts)} keypoints")
-
         # Convert tensors to numpy arrays
         feats = FeaturesDict(keypoints=kpts, descriptors=des)
 

@@ -63,7 +63,7 @@ class MatcherBase(metaclass=ABCMeta):
     max_feat_no_tiling = 100000
     preselction_resize_max = 1024
 
-    def __init__(self, **custom_config) -> None:
+    def __init__(self, custom_config) -> None:
         """
         Base class for matchers. It defines the basic interface for matchers and basic functionalities that are shared among all matchers, in particular the `match` method. It must be subclassed to implement a new matcher.
 
@@ -76,7 +76,6 @@ class MatcherBase(metaclass=ABCMeta):
         # If a custom config is passed, update the default config
         if not isinstance(custom_config, dict):
             raise TypeError("opt must be a dictionary")
-        # self._update_config(custom_config)
 
         # Update default config
         self._config = {

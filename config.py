@@ -14,11 +14,7 @@ matchers_zoo = [
     "lightglue",
     "loftr",
     "adalam",
-    "smnn",
-    "nn",
-    "snn",
-    "mnn",
-    "smnn",
+    "kornia_matcher",
 ]
 retrieval_zoo = ["netvlad", "openibl", "cosplace", "dir"]
 matching_strategy = ["bruteforce", "sequential", "retrieval", "custom_pairs"]
@@ -169,7 +165,7 @@ confs = {
             "filter_threshold": 0.1,  # match threshold
         },
     },
-    "orb": {
+    "orb+kornia_matcher": {
         "general": {
             "quality": Quality.MEDIUM,
             "tile_selection": TileSelection.NONE,
@@ -182,7 +178,7 @@ confs = {
         "extractor": {
             "name": "orb",
         },
-        "matcher": {"name": "superglue"},
+        "matcher": {"name": "kornia_matcher", "match_mode": "snn"},
     },
 }
 
