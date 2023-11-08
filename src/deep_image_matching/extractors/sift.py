@@ -14,7 +14,7 @@ else:
 logger = logging.getLogger(__name__)
 
 
-class ORBExtractor(ExtractorBase):
+class SIFTExtractor(ExtractorBase):
     default_conf = {
         "n_features": 1000,
         "scaleFactor": 1.2,
@@ -29,7 +29,7 @@ class ORBExtractor(ExtractorBase):
     required_inputs = []
     grayscale = True
     as_float = False
-    descriptor_size = 32
+    descriptor_size = 128
 
     def __init__(self, config: dict):
         # Init the base class
@@ -37,21 +37,10 @@ class ORBExtractor(ExtractorBase):
 
         # Load extractor
         cfg = self._config.get("extractor")
-        self._extractor = cv2.ORB_create(
-            nfeatures=cfg["n_features"],
-            scaleFactor=cfg["scaleFactor"],
-            nlevels=cfg["nlevels"],
-            edgeThreshold=cfg["edgeThreshold"],
-            firstLevel=cfg["firstLevel"],
-            WTA_K=cfg["WTA_K"],
-            scoreType=cfg["scoreType"],
-            patchSize=cfg["patchSize"],
-            fastThreshold=cfg["fastThreshold"],
-        )
+        self._extractor = cv2.SIFT_create()
 
     def _extract(self, image: np.ndarray) -> np.ndarray:
-        kp = self._extractor.detect(image, None)
-        kp, des = self._extractor.compute(image, kp)
+        kp, des = self._extractor.detectAndCompute(image, None)
         kpts = cv2.KeyPoint_convert(kp)
         des = des.astype(float).T
 
@@ -78,8 +67,8 @@ if __name__ == "__main__":
     image_path = Path("data/easy_small/01_Camera1.jpg")
     cfg = {
         "general": {
-            "quality": Quality.HIGH,
-            "tile_selection": TileSelection.PRESELECTION,
+            "quality": Quality.MEDIUM,
+            "tile_selection": TileSelection.GRID,
             "tile_grid": [3, 3],
             "tile_overlap": 50,
             "geom_verification": GeometricVerification.PYDEGENSAC,
@@ -89,10 +78,11 @@ if __name__ == "__main__":
     }
     pprint(cfg)
 
-    extractor = ORBExtractor(cfg)
+    extractor = SIFTExtractor(cfg)
     feats_path = extractor.extract(image_path)
 
     features = get_features(feats_path, image_path.name)
+
     img = cv2.imread(str(image_path), cv2.IMREAD_GRAYSCALE)
     kp = cv2.KeyPoint_convert(features["keypoints"])
     img = cv2.drawKeypoints(img, kp, img, color=(0, 0, 255), flags=0)
