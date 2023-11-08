@@ -267,6 +267,7 @@ class MatcherBase(metaclass=ABCMeta):
         features0: FeaturesDict,
         features1: FeaturesDict,
         method: TileSelection = TileSelection.PRESELECTION,
+        select_unique: bool = True,
     ):
         # Initialize empty matches array
         matches_full = np.array([], dtype=np.int64).reshape(0, 2)
@@ -309,6 +310,15 @@ class MatcherBase(metaclass=ABCMeta):
             matches_orig[:, 1] = idx1[correspondences[:, 1]]
             matches_full = np.vstack((matches_full, matches_orig))
 
+            # Select unique matches
+            if select_unique is True:
+                matches_full, idx, counts = np.unique(
+                    matches_full, axis=0, return_index=True, return_counts=True
+                )
+                if any(counts > 1):
+                    logger.warning(
+                        f"Found {sum(counts>1)} duplicate matches in tile pair ({tidx0}, {tidx1})"
+                    )
             # # Visualize matches on tile
             # if do_viz_tiles is True:
             #     out_img_path = str(self._output_dir / f"matches_tile_{tidx0}-{tidx1}.jpg")
