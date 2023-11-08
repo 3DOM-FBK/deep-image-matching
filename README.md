@@ -52,17 +52,21 @@ python ./main.py gui
 
 ## Multiview tests
 
-- [x] SuperGlue
-- [x] LightGlue with SuperPoint
-- [ ] LoFTR
-- [ ] ALIKE
-- [ ] ORB opencv
+Supported extractors:
+- [x] SuperPoint
 - [x] DISK
-- [x] Superpoint
+- [x] ALIKE
+- [x] ALIKED
+- [ ] ORB (opencv)
 - [ ] Superpoint free
 - [ ] KeyNet + OriNet + HardNet8
-- [ ] SIFT opencv
-- [ ] ALIKED
+- [ ] SIFT (opencv)
+
+Matchers:
+- [x] Lightglue (with Superpoint, Disk and ALIKED) 
+- [x] SuperGlue (with Superpoint) 
+- [ ] LoFTR
+- [ ] Nearest neighbor 
 
 ## TODO
 
