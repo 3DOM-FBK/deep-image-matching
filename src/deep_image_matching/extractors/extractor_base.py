@@ -153,6 +153,7 @@ class ExtractorBase(metaclass=ABCMeta):
         else:
             # Extract features by tiles
             features = self._extract_by_tile(image_, select_unique=True)
+        logger.debug(f"Extracted {len(features['keypoints'])} keypoints")
 
         # Retrieve original image coordinates if matching was performed on up/down-sampled images
         features = self._resize_features(self._quality, features)

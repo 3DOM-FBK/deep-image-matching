@@ -7,3 +7,4 @@ pydegensac
 easydict
 pyquaternion
 kornia
+exifread

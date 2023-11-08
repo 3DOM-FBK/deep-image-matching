@@ -45,15 +45,15 @@ class LightGlueMatcher(MatcherBase):
     min_matches = 20
     max_feat_no_tiling = 200000
 
-    def __init__(self, local_features="superpoint", **config) -> None:
+    def __init__(self, local_features="superpoint", config={}) -> None:
         """Initializes a LightGlueMatcher"""
 
         self._localfeatures = local_features
-        super().__init__(**config)
+        super().__init__(config)
 
         # load the matcher
-        sg_cfg = {**self.default_conf, **self._config.get("LightGlue", {})}
-        self._matcher = LightGlue(self._localfeatures, **sg_cfg).eval().to(self._device)
+        cfg = {**self.default_conf, **self._config.get("LightGlue", {})}
+        self._matcher = LightGlue(self._localfeatures, **cfg).eval().to(self._device)
 
         if self._localfeatures == "disk":
             self.max_feat_no_tiling = 50000

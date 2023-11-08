@@ -140,10 +140,10 @@ class ImageMatching:
             )
         if self.matching_method == "lightglue":
             self._matcher = Matcher(
-                local_features=self.local_features, **self.custom_config
+                local_features=self.local_features, config=self.custom_config
             )
         else:
-            self._matcher = Matcher(**self.custom_config)
+            self._matcher = Matcher(self.custom_config)
 
     @property
     def img_names(self):
