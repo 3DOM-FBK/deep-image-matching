@@ -17,23 +17,24 @@
       "request": "launch",
       "program": "${file}",
       "console": "integratedTerminal",
-      // "args": ["--config", "orb", "--images", "data/easy_small", "--force"]
       "args": [
         "--config",
-        "aliked+lightglue",
+        "superpoint+lightglue",
         "--images",
-        "data/arsenale4",
-        "--strategy",
-        "bruteforce",
+        "data/easy_small",
         "--force"
       ]
+      // "args": ["--config", "orb", "--images", "data/easy_small", "--force"]
       // "args": [
       //   "--config",
-      //   "superpoint+lightglue",
+      //   "aliked+lightglue",
       //   "--images",
-      //   "data/easy_small",
+      //   "data/arsenale4",
+      //   "--strategy",
+      //   "bruteforce",
       //   "--force"
       // ]
+
       // "args": [
       //   "--config",
       //   "superpoint+lightglue",

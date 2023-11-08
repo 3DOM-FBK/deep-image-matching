@@ -112,14 +112,14 @@ class ExtractorBase(metaclass=ABCMeta):
         Extract features from an image. This is the main method of the feature extractor.
 
         Args:
-                img: Image to extract features from.
+                img: Image to extract features from. It can be either a path to an image or an Image object
 
         Returns:
                 List of features extracted from the image. Each feature is a 2D NumPy array
         """
         # Load image
 
-        im_path = img if isinstance(img, Path) else img.absolute_path
+        im_path = img if isinstance(img, Path) else img.path
         image = cv2.imread(str(im_path)).astype(np.float32)
 
         if self.grayscale:
