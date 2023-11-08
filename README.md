@@ -71,15 +71,11 @@ Matchers:
 ## TODO
 
 - [x] extend to tile processing
-- [ ] recover full operability of all the local features extraction and matching after last major code revision
 - [ ] add kornia features
 - [ ] manage image rotation
 - [ ] add image retrieval with global descriptors
 - [x] add GUI
-- [ ] lightglue with DISK features to be implemented
 - [ ] Add exporting to Metashape
 - [ ] Add pycolmap compatibility
 - [ ] Add visualization for extracted features and matches
-- [ ] Improve repository organization
-- [ ] Add tests
-- [ ] Add documentation, example and docstrings
+- [ ] Add tests, documentation and examples
