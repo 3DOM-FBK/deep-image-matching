@@ -4,9 +4,9 @@ extractors_zoo = [
     "superpoint",
     "alike",
     "aliked",
-    "orb",
     "disk",
     "keynetaffnethardnet",
+    "orb",
     "sift",
 ]
 matchers_zoo = [
@@ -193,7 +193,20 @@ confs = {
         "extractor": {
             "name": "sift",
         },
-        "matcher": {"name": "kornia_matcher", "match_mode": "snn"},
+        "matcher": {"name": "kornia_matcher", "match_mode": "smnn"},
+    },
+    "loftr": {
+        "general": {
+            "quality": Quality.HIGH,
+            "tile_selection": TileSelection.PRESELECTION,
+            "geom_verification": GeometricVerification.PYDEGENSAC,
+            "tiling_grid": [3, 3],
+            "tiling_overlap": 50,
+            "gv_threshold": 3,
+            "gv_confidence": 0.99999,
+        },
+        "extractor": {"name": None},
+        "matcher": {"name": "loftr", "pretrained": "outdoor"},
     },
 }
 

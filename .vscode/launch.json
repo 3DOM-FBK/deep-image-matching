@@ -17,20 +17,20 @@
       "request": "launch",
       "program": "${file}",
       "console": "integratedTerminal",
-      // "args": [
-      //   "--config",
-      //   "superpoint+superglue",
-      //   "--images",
-      //   "data/easy_small",
-      //   "--force"
-      // ]
       "args": [
         "--config",
-        "sift+kornia_matcher",
+        "superpoint+lightglue",
         "--images",
         "data/easy_small",
         "--force"
       ]
+      // "args": [
+      //   "--config",
+      //   "sift+kornia_matcher",
+      //   "--images",
+      //   "data/easy_small",
+      //   "--force"
+      // ]
       // "args": [
       //   "--config",
       //   "aliked+lightglue",

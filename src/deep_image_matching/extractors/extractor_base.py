@@ -197,16 +197,21 @@ class ExtractorBase(metaclass=ABCMeta):
 
         # Save also keypoints and descriptors separately
         # NOTE: for backward compatibility. To be removed if not needed anymore
-        with h5py.File(str(output_dir / "keypoints.h5"), "a", libver="latest") as fd:
-            if im_name in fd:
-                del fd[im_name]
-            fd[im_name] = features["keypoints"]
+        if False:
+            with h5py.File(
+                str(output_dir / "keypoints.h5"), "a", libver="latest"
+            ) as fd:
+                if im_name in fd:
+                    del fd[im_name]
+                fd[im_name] = features["keypoints"]
 
-        desc_dim = features["descriptors"].shape[0]
-        with h5py.File(str(output_dir / "descriptors.h5"), "a", libver="latest") as fd:
-            if im_name in fd:
-                del fd[im_name]
-            fd[im_name] = features["descriptors"].reshape(-1, desc_dim)
+            desc_dim = features["descriptors"].shape[0]
+            with h5py.File(
+                str(output_dir / "descriptors.h5"), "a", libver="latest"
+            ) as fd:
+                if im_name in fd:
+                    del fd[im_name]
+                fd[im_name] = features["descriptors"].reshape(-1, desc_dim)
 
         return feature_path
 
@@ -350,40 +355,3 @@ class ExtractorBase(metaclass=ABCMeta):
             features["keypoints"] *= 4
 
         return features
-
-    # def _update_config(self, config: dict):
-    #     """
-    #     Update the config dictionary. This is called by : meth : ` update_config ` to allow subclasses to perform additional checks before and after configuration is updated.
-
-    #     Args:
-    #        config: The configuration dictionary to update in place. It is assumed that the keys and values are valid
-    #     """
-
-    #     # Make a deepcopy of the default config and update it with the custom config
-    #     new_config = deepcopy(self._config)
-    #     for key in config:
-    #         if key not in new_config:
-    #             new_config[key] = config[key]
-    #         else:
-    #             new_config[key] = {**new_config[key], **config[key]}
-
-    #     # Check general config
-    #     required_keys_general = [
-    #         "quality",
-    #         "tile_selection",
-    #         "force_cpu",
-    #     ]
-    #     missing_keys = [
-    #         key for key in required_keys_general if key not in new_config["general"]
-    #     ]
-    #     if missing_keys:
-    #         raise KeyError(
-    #             f"Missing required keys in 'general' config: {', '.join(missing_keys)}."
-    #         )
-    #     if not isinstance(new_config["general"]["quality"], Quality):
-    #         raise TypeError("quality must be a Quality enum")
-    #     if not isinstance(new_config["general"]["tile_selection"], TileSelection):
-    #         raise TypeError("tile_selection must be a TileSelection enum")
-
-    #     # Update the current config with the custom config
-    #     self._config = new_config

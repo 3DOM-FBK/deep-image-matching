@@ -38,7 +38,7 @@ pip install -r requirements.txt
 
 Before running check options with `python ./main.py --help`, then:
 
-```
+```bash
 python ./main.py cli  --config "superpoint+lightglue" --images "assets/imgs" --outs "output" --strategy "sequential" --overlap 2
 ```
 
@@ -46,27 +46,29 @@ See other examples in run.bat. If you want to customize detector and descpritor 
 
 To run with the GUI:
 
-```
+```bash
 python ./main.py --gui
 ```
 
 ## Multiview tests
 
 Supported extractors:
+
 - [x] SuperPoint
 - [x] DISK
 - [x] ALIKE
 - [x] ALIKED
 - [ ] Superpoint free
 - [ ] KeyNet + OriNet + HardNet8
-- [x] ORB (opencv) 
+- [x] ORB (opencv)
 - [x] SIFT (opencv)
 
 Matchers:
-- [x] Lightglue (with Superpoint, Disk and ALIKED) 
-- [x] SuperGlue (with Superpoint) 
+
+- [x] Lightglue (with Superpoint, Disk and ALIKED)
+- [x] SuperGlue (with Superpoint)
 - [ ] LoFTR
-- [X] Nearest neighbor (with KORNIA DescriptorMatcher)
+- [x] Nearest neighbor (with KORNIA DescriptorMatcher)
 
 ## TODO
 

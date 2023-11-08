@@ -10,10 +10,10 @@ logger = logging.getLogger(__name__)
 
 
 # Refer to https://kornia.readthedocs.io/en/latest/feature.html#kornia.feature.DescriptorMatcher for more information
-class KorniaMatcher(MatcherBase):
+class AdalamMatcher(MatcherBase):
     default_conf = {
-        "name": "kornia_matcher",
-        "match_mode": "smnn",
+        "name": "adalam",
+        "match_mode": "adalam",
         "th": 0.8,
     }
     required_inputs = []
@@ -24,8 +24,8 @@ class KorniaMatcher(MatcherBase):
         super().__init__(config)
 
         # load the matcher
-        cfg = {**self.default_conf, **self._config.get("kornia_matcher", {})}
-        self._matcher = KF.DescriptorMatcher(cfg["match_mode"], cfg["th"])
+        cfg = {**self.default_conf, **self._config.get("adalam", {})}
+        self._matcher = KF.GeometryAwareDescriptorMatcher(cfg["match_mode"], cfg["th"])
 
     @torch.no_grad()
     def _match_pairs(
@@ -33,14 +33,20 @@ class KorniaMatcher(MatcherBase):
         feats0: FeaturesDict,
         feats1: FeaturesDict,
     ) -> np.ndarray:
+        if "lafs" not in feats0.keys() or "lafs" not in feats1.keys():
+            raise ValueError("LAFs not found in features. Unable to match with Adalam.")
         desc1 = feats0["descriptors"].T
         desc2 = feats1["descriptors"].T
+        lafs1 = feats0["lafs"]
+        lafs2 = feats1["lafs"]
 
         desc1 = torch.tensor(desc1, dtype=torch.float).to(self._device)
         desc2 = torch.tensor(desc2, dtype=torch.float).to(self._device)
+        lafs1 = torch.tensor(lafs1, dtype=torch.float).to(self._device)
+        lafs2 = torch.tensor(lafs2, dtype=torch.float).to(self._device)
 
         # match the features
-        dist, idx = self._matcher(desc1, desc2)
+        dist, idx = self._matcher(desc1, desc2, lafs1, lafs2)
 
         # get matching array (indices of matched keypoints in image0 and image1)
         matches01_idx = idx.cpu().numpy()
