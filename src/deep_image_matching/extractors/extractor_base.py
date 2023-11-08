@@ -57,6 +57,7 @@ class ExtractorBase(metaclass=ABCMeta):
     default_conf = {}
     required_inputs = []
     grayscale = True
+    as_float = True
     descriptor_size = 128
 
     def __init__(self, custom_config: dict):
@@ -107,7 +108,7 @@ class ExtractorBase(metaclass=ABCMeta):
         )
         logger.debug(f"Running inference on device {self._device}")
 
-    def extract(self, img: Union[Image, Path]) -> np.ndarray:
+    def extract(self, img: Union[Image, Path, str]) -> np.ndarray:
         """
         Extract features from an image. This is the main method of the feature extractor.
 
@@ -117,10 +118,25 @@ class ExtractorBase(metaclass=ABCMeta):
         Returns:
                 List of features extracted from the image. Each feature is a 2D NumPy array
         """
-        # Load image
 
-        im_path = img if isinstance(img, Path) else img.path
-        image = cv2.imread(str(im_path)).astype(np.float32)
+        if isinstance(img, str):
+            im_path = Path(img)
+        elif isinstance(img, Image):
+            im_path = img.path
+        elif isinstance(img, Path):
+            im_path = img
+        else:
+            raise TypeError(
+                "Invalid image path. 'img' must be a string, a Path or an Image object"
+            )
+        if not im_path.exists():
+            raise ValueError(f"Image {im_path} does not exist")
+
+        # Load image
+        image = cv2.imread(str(im_path))
+
+        if self.as_float:
+            image = image.astype(np.float32)
 
         if self.grayscale:
             image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -179,6 +195,7 @@ class ExtractorBase(metaclass=ABCMeta):
                 raise error
 
         # Save also keypoints and descriptors separately
+        # NOTE: for backward compatibility. To be removed if not needed anymore
         with h5py.File(str(output_dir / "keypoints.h5"), "a", libver="latest") as fd:
             if im_name in fd:
                 del fd[im_name]
@@ -253,18 +270,27 @@ class ExtractorBase(metaclass=ABCMeta):
                 (kpts_full, feat_tile["keypoints"] + np.array(lim[0:2]))
             )
             descriptors_full = np.hstack((descriptors_full, feat_tile["descriptors"]))
-            scores_full = np.concatenate((scores_full, feat_tile["scores"]))
             tile_idx_full = np.concatenate(
                 (
                     tile_idx_full,
                     np.ones(feat_tile["keypoints"].shape[0], dtype=np.float32) * idx,
                 )
             )
+            if "scores" in feat_tile:
+                scores_full = np.concatenate((scores_full, feat_tile["scores"]))
+            else:
+                scores_full = None
+
+        if scores_full is None:
+            logger.warning("No scores found in features")
+
+        # Select unique keypoints
         if select_unique is True:
             kpts_full, unique_idx = np.unique(kpts_full, axis=0, return_index=True)
             descriptors_full = descriptors_full[:, unique_idx]
-            scores_full = scores_full[unique_idx]
             tile_idx_full = tile_idx_full[unique_idx]
+            if scores_full is not None:
+                scores_full = scores_full[unique_idx]
 
         # Make FeaturesDict object
         features = FeaturesDict(

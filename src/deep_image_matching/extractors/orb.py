@@ -4,9 +4,12 @@ import cv2
 import numpy as np
 
 if __name__ == "__main__":
-    from deep_image_matching.extractors.extractor_base import ExtractorBase
+    from deep_image_matching.extractors.extractor_base import (
+        ExtractorBase,
+        FeaturesDict,
+    )
 else:
-    from .extractor_base import ExtractorBase
+    from .extractor_base import ExtractorBase, FeaturesDict
 
 logger = logging.getLogger(__name__)
 
@@ -24,9 +27,9 @@ class ORBExtractor(ExtractorBase):
         "fastThreshold": 0,
     }
     required_inputs = []
-    grayscale = False
-    descriptor_size = 256
-    detection_noise = 2.0
+    grayscale = True
+    as_float = False
+    descriptor_size = 32
 
     def __init__(self, config: dict):
         # Init the base class
@@ -50,10 +53,12 @@ class ORBExtractor(ExtractorBase):
         kp = self._extractor.detect(image, None)
         kp, des = self._extractor.compute(image, kp)
         kpts = cv2.KeyPoint_convert(kp)
-        des = des.astype(float)
+        des = des.astype(float).T
+
+        logger.debug(f"Extracted {len(kpts)} keypoints")
 
         # Convert tensors to numpy arrays
-        feats = {"keypoints": kpts, "descriptors": des}
+        feats = FeaturesDict(keypoints=kpts, descriptors=des)
 
         return feats
 
@@ -62,22 +67,28 @@ class ORBExtractor(ExtractorBase):
 
 
 if __name__ == "__main__":
+    from pathlib import Path
     from pprint import pprint
 
     from deep_image_matching import GeometricVerification, Quality, TileSelection
 
-    image_path = "data/easy_small/01_Camera1.jpg"
+    logging.basicConfig(level=logging.DEBUG)
+
+    image_path = Path("data/easy_small/01_Camera1.jpg")
     cfg = {
         "general": {
-            "quality": Quality.MEDIUM,
-            "tile_selection": TileSelection.NONE,
+            "quality": Quality.HIGH,
+            "tile_selection": TileSelection.PRESELECTION,
+            "tile_grid": [3, 3],
+            "tile_overlap": 50,
             "geom_verification": GeometricVerification.PYDEGENSAC,
+            "output_dir": "sandbox",
         },
         "extractor": {"name": "orb"},
     }
     pprint(cfg)
 
     extractor = ORBExtractor(cfg)
-    extractor.extract(image_path)
+    feats_path = extractor.extract(image_path)
 
     print("done")
