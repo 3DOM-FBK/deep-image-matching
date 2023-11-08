@@ -26,7 +26,7 @@
       // ]
       "args": [
         "--config",
-        "orb+kornia_matcher",
+        "sift+kornia_matcher",
         "--images",
         "data/easy_small",
         "--force"
