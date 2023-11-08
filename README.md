@@ -66,7 +66,7 @@ Matchers:
 - [x] Lightglue (with Superpoint, Disk and ALIKED) 
 - [x] SuperGlue (with Superpoint) 
 - [ ] LoFTR
-- [ ] Nearest neighbor 
+- [X] Nearest neighbor (with KORNIA DescriptorMatcher)
 
 ## TODO
 
