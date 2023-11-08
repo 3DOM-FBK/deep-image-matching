@@ -78,4 +78,5 @@ Matchers:
 - [ ] Add exporting to Metashape
 - [ ] Add pycolmap compatibility
 - [ ] Add visualization for extracted features and matches
+- [ ] improve speed
 - [ ] Add tests, documentation and examples
