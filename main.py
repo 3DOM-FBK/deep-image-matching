@@ -169,12 +169,12 @@ def main():
     overlap = args.overlap
 
     # Load configuration
-    custom_config = confs[args.config]
-    local_features = custom_config["extractor"]["name"]
-    matching_method = custom_config["matcher"]["name"]
+    config = confs[args.config]
+    local_features = config["extractor"]["name"]
+    matching_method = config["matcher"]["name"]
 
     # Update configuration dictionary
-    custom_config["general"]["output_dir"] = output_dir
+    config["general"]["output_dir"] = output_dir
 
     # Generate pairs and matching
     img_matching = ImageMatching(
@@ -185,22 +185,15 @@ def main():
         local_features=local_features,
         matching_method=matching_method,
         pair_file=pair_file,
-        custom_config=custom_config,
+        config=config,
         overlap=overlap,
     )
     pairs = img_matching.generate_pairs()
     feature_path = img_matching.extract_features()
     match_path = img_matching.match_pairs(feature_path)
 
-    # Plot statistics
-    images = img_matching.image_list
-    logger.info("Finished matching and exporting")
-    logger.info(f"\tProcessed images: {len(images)}")
-    logger.info(f"\tProcessed pairs: {len(pairs)}")
-
     # Export in colmap format
     database_path = output_dir / "database.db"
-
     export_to_colmap(
         img_dir=imgs_dir,
         feature_path=feature_path,
@@ -212,33 +205,36 @@ def main():
 
     # Tests using pycolmap
     # print("using pycolmap...")
-    import pycolmap
-    from deep_image_matching.hloc.reconstruction import (
-        create_empty_db,
-        get_image_ids,
-        import_images,
-    )
-    from deep_image_matching.hloc.triangulation import import_features, import_matches2
+    try:
+        import pycolmap
+        from deep_image_matching.hloc.reconstruction import (
+            create_empty_db,
+            get_image_ids,
+            import_images,
+        )
+        from deep_image_matching.hloc.triangulation import (
+            import_features,
+            import_matches2,
+        )
 
-    database = output_dir / "database_pycolmap.db"
-    camera_mode: pycolmap.CameraMode = pycolmap.CameraMode.AUTO
+        database = output_dir / "database_pycolmap.db"
+        camera_mode: pycolmap.CameraMode = pycolmap.CameraMode.AUTO
 
-    create_empty_db(database)
-    import_images(imgs_dir, database, camera_mode)
-    image_ids = get_image_ids(database)
-    import_features(image_ids, database, feature_path)
-    import_matches2(image_ids, database, match_path, skip_geometric_verification=True)
+        create_empty_db(database)
+        import_images(imgs_dir, database, camera_mode)
+        image_ids = get_image_ids(database)
+        import_features(image_ids, database, feature_path)
+        import_matches2(
+            image_ids, database, match_path, skip_geometric_verification=True
+        )
+    except:
+        logger.error("Error using pycolmap")
 
-    # Backward compatibility
-    # Export in colmap format
-    # ExportToColmap(
-    #     images,
-    #     img_matching.width,
-    #     img_matching.height,
-    #     keypoints,
-    #     correspondences,
-    #     output_dir,
-    # )
+    # Plot statistics
+    images = img_matching.image_list
+    logger.info("Finished matching and exporting")
+    logger.info(f"\tProcessed images: {len(images)}")
+    logger.info(f"\tProcessed pairs: {len(pairs)}")
 
 
 if __name__ == "__main__":

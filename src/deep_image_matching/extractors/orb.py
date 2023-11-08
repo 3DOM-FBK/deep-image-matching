@@ -3,13 +3,7 @@ import logging
 import cv2
 import numpy as np
 
-if __name__ == "__main__":
-    from deep_image_matching.extractors.extractor_base import (
-        ExtractorBase,
-        FeaturesDict,
-    )
-else:
-    from .extractor_base import ExtractorBase, FeaturesDict
+from .extractor_base import ExtractorBase, FeaturesDict
 
 logger = logging.getLogger(__name__)
 

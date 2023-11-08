@@ -39,7 +39,6 @@ def matcher_loader(root, model):
     classes = [c for c in classes if issubclass(c[1], MatcherBase)]
     assert len(classes) == 1, classes
     return classes[0][1]
-    # return getattr(module, 'Model')
 
 
 # NOTE: The MatcherBase class should contain all the common methods and attributes for all the matchers and must be used as a base class.

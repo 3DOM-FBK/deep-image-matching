@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 
 from ..thirdparty.database import COLMAPDatabase
-from .h5_to_db import get_focal
+from ..io.h5_to_db import get_focal
 
 
 def ExportToColmap(

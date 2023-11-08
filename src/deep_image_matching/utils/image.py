@@ -253,7 +253,14 @@ class Image:
 
         # Get Focal Length
         if "EXIF FocalLength" in self._exif_data.keys():
-            self._focal_length = float(self._exif_data["EXIF FocalLength"].printable)
+            try:
+                self._focal_length = float(
+                    self._exif_data["EXIF FocalLength"].printable
+                )
+            except:
+                logging.warning(
+                    f"Unable to convert focal length to float for {self.name}"
+                )
 
         # TODO: Get GPS coordinates from exif
 
