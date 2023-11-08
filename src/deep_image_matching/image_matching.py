@@ -1,13 +1,15 @@
 import logging
 from pathlib import Path
 
+import h5py
 import numpy as np
 from tqdm import tqdm
 
 from . import extractors, matchers
 from .extractors.extractor_base import extractor_loader
-from .io.h5 import get_features
+from .io.h5 import get_features, get_matches
 from .matchers.matcher_base import matcher_loader
+from .utils.consts import GeometricVerification, Quality, TileSelection
 from .utils.geometric_verification import geometric_verification
 from .utils.image import ImageList
 from .utils.pairs_generator import PairsGenerator
@@ -31,39 +33,66 @@ def apply_geometric_verification(
     _, inlMask = geometric_verification(
         kpts0=mkpts0,
         kpts1=mkpts1,
-        method=config["geometric_verification"],
+        method=config["geom_verification"],
         threshold=config["gv_threshold"],
         confidence=config["gv_confidence"],
     )
     return correspondences[inlMask]
 
 
+def get_pairs_from_file(pair_file: Path) -> list:
+    pairs = []
+    with open(pair_file, "r") as txt_file:
+        lines = txt_file.readlines()
+        for line in lines:
+            im1, im2 = line.strip().split(" ", 1)
+            pairs.append((im1, im2))
+    return pairs
+
+
 class ImageMatching:
+    default_conf_general = {
+        "quality": Quality.MEDIUM,
+        "tile_selection": TileSelection.NONE,
+        "geom_verification": GeometricVerification.PYDEGENSAC,
+        "output_dir": "output",
+        "tiling_grid": [1, 1],
+        "tiling_overlap": 0,
+        "force_cpu": False,
+        "do_viz": False,
+        "fast_viz": True,
+        "hide_matching_track": True,
+        "do_viz_tiles": False,
+    }
+
     def __init__(
         # TODO: add default values for not necessary parameters
         self,
         imgs_dir: Path,
+        output_dir: Path,
         matching_strategy: str,
         retrieval_option: str,
         local_features: str,
         matching_method: str,
-        custom_config: dict,
-        min_matches_per_pair: int = 30,
-        # max_feat_numb: int = 2048,
         pair_file: Path = None,
+        custom_config: dict = {},
         overlap: int = 1,
     ):
+        self.image_dir = Path(imgs_dir)
+        self.output_dir = Path(output_dir)
         self.matching_strategy = matching_strategy
         self.retrieval_option = retrieval_option
         self.local_features = local_features
         self.matching_method = matching_method
-        self.custom_config = custom_config
-        self.min_matches_per_pair = min_matches_per_pair
-        # self.max_feat_numb = max_feat_numb
-        self.pair_file = Path(self.pair_file) if pair_file is not None else None
+        self.pair_file = Path(pair_file) if pair_file is not None else None
         self.overlap = overlap
-        self.keypoints = {}
-        self.correspondences = {}
+
+        # Merge default and custom config
+        self.custom_config = custom_config
+        self.custom_config["general"] = {
+            **self.default_conf_general,
+            **custom_config["general"],
+        }
 
         # Check that parameters are valid
         if retrieval_option == "sequential":
@@ -90,6 +119,9 @@ class ImageMatching:
         elif len(images) == 1:
             raise ValueError("Image folder must contain at least two images")
 
+        # Initialize output directory
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+
         # Initialize extractor
         try:
             Extractor = extractor_loader(extractors, self.local_features)
@@ -97,7 +129,7 @@ class ImageMatching:
             raise ValueError(
                 f"Invalid local feature extractor. {self.local_features} is not supported."
             )
-        self._extractor = Extractor(**self.custom_config)
+        self._extractor = Extractor(self.custom_config)
 
         # Initialize matcher
         try:
@@ -108,71 +140,25 @@ class ImageMatching:
             )
         if self.matching_method == "lightglue":
             self._matcher = Matcher(
-                local_features=self.local_features, **self.custom_config
+                local_features=self.local_features, config=self.custom_config
             )
         else:
-            self._matcher = Matcher(**self.custom_config)
-
-        # if self.local_features == "superpoint":
-        #     extractor = SuperPointExtractor(**self.custom_config)
-        # elif self.local_features == "disk":
-        #     extractor = DiskExtractor(**self.custom_config)
-        # else:
-
-        # if self.matching_method == "lightglue":
-        #     matcher = LightGlueMatcher(
-        #         local_features=self.local_features, **matcher_cfg
-        #     )
-        # elif self.matching_method == "superglue":
-        #     if self.local_features != "superpoint":
-        #         raise ValueError(
-        #             "Invalid local features for SuperGlue matcher. SuperGlue supports only SuperPoint features."
-        #         )
-        #     matcher = SuperGlueMatcher(**matcher_cfg)
-        # elif self.matching_method == "loftr":
-        #     raise NotImplementedError("LOFTR is not implemented yet")
-        # matcher = LOFTRMatcher(**matcher_cfg)
-        # elif self.local_features == "detect_and_describe":
-        #     matcher_cfg["ALIKE"]["n_limit"] = self.max_feat_numb
-        #     detector_and_descriptor = matcher_cfg["general"]["detector_and_descriptor"]
-        #     local_feat_conf = matcher_cfg[detector_and_descriptor]
-        #     local_feat_extractor = LocalFeatureExtractor(
-        #         detector_and_descriptor,
-        #         local_feat_conf,
-        #         self.max_feat_numb,
-        #     )
-        #     matcher = DetectAndDescribe(**matcher_cfg)
-        #     matcher_cfg["general"]["local_feat_extractor"] = local_feat_extractor
-        # else:
-        #     raise ValueError(
-        #         "Invalid local feature extractor. Supported extractors: lightglue, superglue, loftr, detect_and_describe"
-        #     )
-
-    @property
-    def img_format(self):
-        return self.image_list.img_format
-
-    @property
-    def width(self):
-        return self.image_list.width
-
-    @property
-    def height(self):
-        return self.image_list.height
+            self._matcher = Matcher(self.custom_config)
 
     @property
     def img_names(self):
         return self.image_list.img_names
 
     def generate_pairs(self):
-        self.pairs = []
         if self.pair_file is not None and self.matching_strategy == "custom_pairs":
-            assert self.pair_file.exists(), f"File {self.pair_file} does not exist"
-            with open(self.pair_file, "r") as txt_file:
-                lines = txt_file.readlines()
-                for line in lines:
-                    im1, im2 = line.strip().split(" ", 1)
-                    self.pairs.append((im1, im2))
+            if not self.pair_file.exists():
+                raise FileExistsError(f"File {self.pair_file} does not exist")
+
+            pairs = get_pairs_from_file(self.pair_file)
+            self.pairs = [
+                (self.image_dir / im1, self.image_dir / im2) for im1, im2 in pairs
+            ]
+
         else:
             pairs_generator = PairsGenerator(
                 self.image_list.img_paths,
@@ -181,15 +167,13 @@ class ImageMatching:
                 self.overlap,
             )
             self.pairs = pairs_generator.run()
-            # with open(self.pair_file, "w") as txt_file:
-            #     lines = txt_file.readlines()
-            #     for line in lines:
-            #         im1, im2 = line.strip().split(" ", 1)
-            #         self.pairs.append((im1, im2))
+            with open(self.pair_file, "w") as txt_file:
+                for pair in self.pairs:
+                    txt_file.write(f"{pair[0].name} {pair[1].name}\n")
 
         return self.pairs
 
-    def extract_features(self):
+    def extract_features(self) -> Path:
         # Extract features
         logger.info("Extracting features...")
         for img in tqdm(self.image_list):
@@ -199,11 +183,14 @@ class ImageMatching:
 
         return feature_path
 
-    def match_pairs(self, feature_path: Path):
+    def match_pairs(self, feature_path: Path) -> Path:
         # Check that feature_path exists
         feature_path = Path(feature_path)
         if not feature_path.exists():
             raise ValueError(f"Feature path {feature_path} does not exist")
+
+        # Define matches path
+        matches_path = feature_path.parent / "matches.h5"
 
         # Match pairs
         logger.info("Matching features...")
@@ -214,43 +201,38 @@ class ImageMatching:
             im1 = pair[1]
 
             # Run matching
-            correspondences = self._matcher.match(
+            matches = self._matcher.match(
                 feature_path=feature_path,
+                matches_path=matches_path,
                 img0=im0,
                 img1=im1,
             )
-            if correspondences is None:
-                logger.info(
-                    f"Image pair {im0.name} - {im1.name} discarded by preselection."
-                )
+
+            if matches is None:
                 continue
 
             # Get original keypoints from h5 file
             kpts0 = get_features(feature_path, im0.name)["keypoints"]
             kpts1 = get_features(feature_path, im1.name)["keypoints"]
-
-            # Check if there are enough correspondences
-            if len(correspondences) < self.min_matches_per_pair:
-                logger.info(
-                    f"Not enough correspondences found between {im0.name} and {im1.name} ({len(correspondences)}). Skipping image pair"
-                )
-                continue
+            correspondences = get_matches(matches_path, im0.name, im1.name)
 
             # Apply geometric verification
-            correspondences = apply_geometric_verification(
+            correspondences_cleaned = apply_geometric_verification(
                 kpts0=kpts0,
                 kpts1=kpts1,
                 correspondences=correspondences,
                 config=self.custom_config["general"],
             )
 
-            # Save keypoints and correspondences
-            self.keypoints[im0.name] = kpts0
-            self.keypoints[im1.name] = kpts1
-            self.correspondences[(im0, im1)] = correspondences
+            # Update matches in h5 file
+            with h5py.File(str(matches_path), "a", libver="latest") as fd:
+                group = fd.require_group(im0.name)
+                if im1.name in group:
+                    del group[im1.name]
+                group.create_dataset(im1.name, data=correspondences_cleaned)
 
             logger.debug(f"Pairs: {pair[0].name} - {pair[1].name} done.")
 
         logger.info("Matching done!")
 
-        return self.keypoints, self.correspondences
+        return matches_path

@@ -21,27 +21,39 @@
       //   "--config",
       //   "superpoint+superglue",
       //   "--images",
-      //   "data/easy_small"
+      //   "data/easy_small",
+      //   "--force"
       // ]
       "args": [
         "--config",
-        "superpoint+lightglue",
+        "sift+kornia_matcher",
         "--images",
-        "data/arsenale2",
-        "--strategy",
-        "bruteforce",
-        "--force",
-        "-n",
-        "10000"
-        // "-V"
-        // "--overlap",
-        // "5"
+        "data/easy_small",
+        "--force"
       ]
       // "args": [
       //   "--config",
-      //   "disk+lightglue",
+      //   "aliked+lightglue",
       //   "--images",
-      //   "data/arsenale_hard",
+      //   "data/arsenale4",
+      //   "--strategy",
+      //   "bruteforce",
+      //   "--force"
+      // ]
+      // "args": [
+      //   "--config",
+      //   "superpoint+lightglue",
+      //   "--images",
+      //   "data/statua_hard",
+      //   "--strategy",
+      //   "bruteforce",
+      //   "--force"
+      // ]
+      // "args": [
+      //   "--config",
+      //   "superpoint+lightglue",
+      //   "--images",
+      //   "data/arsenale4",
       //   "--strategy",
       //   "bruteforce",
       //   "--force"
@@ -54,6 +66,16 @@
       "program": "${file}",
       "console": "integratedTerminal",
       "args": ["--gui"]
+    },
+    {
+      "name": "Debug module",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      }
     }
   ]
 }

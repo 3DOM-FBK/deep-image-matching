@@ -2,58 +2,21 @@ import argparse
 import shutil
 from pathlib import Path
 
-from config import custom_config
+from config import (
+    confs,
+    extractors_zoo,
+    matchers_zoo,
+    matching_strategy,
+    retrieval_zoo,
+)
 from src.deep_image_matching.gui import gui
 from src.deep_image_matching.image_matching import ImageMatching
-from src.deep_image_matching.io.export_to_colmap import ExportToColmap
-from src.deep_image_matching.io.h5_to_db import import_into_colmap
+from src.deep_image_matching.io.h5_to_db import export_to_colmap
 from src.deep_image_matching.utils import change_logger_level, setup_logger
 
-# TODO: improve configuation manamgement
-# The default configuration for each method (extractor and matchers)  must be defined inside each class.
-# The user should be able to override the default configuration by passing a dictionary to the constructor.
-# The user should be able to chose a configuration from a predefined list of configurations (e.g, confs_zoo) to be sure that the configuration is valid.
+# TODO: Add checks to the combination of extractor and matcher chosen by the user
 
 logger = setup_logger(log_level="info")
-
-
-features_zoo = [
-    "superpoint",
-    "alike",
-    "aliked",
-    "orb",
-    "disk",
-    "keynetaffnethardnet",
-    "sift",
-]
-matchers_zoo = [
-    "superglue",
-    "lightglue",
-    "loftr",
-    "adalam",
-    "smnn",
-    "nn",
-    "snn",
-    "mnn",
-    "smnn",
-]
-retrieval_zoo = ["netvlad", "openibl", "cosplace", "dir"]
-matching_strategy = ["bruteforce", "sequential", "retrieval", "custom_pairs"]
-
-confs_zoo = {
-    "superpoint+lightglue": {"extractor": "superpoint", "matcher": "lightglue"},
-    "disk+lightglue": {"extractor": "disk", "matcher": "lightglue"},
-    "superpoint+superglue": {"extractor": "superpoint", "matcher": "superglue"},
-    # "aliked+lightglue": {"extractor": "aliked", "matcher": "lightglue"},
-    # "sift+lightglue": {"extractor": "sift", "matcher": "lightglue"},
-    # "keynetaffnethardnet+adalam": {
-    #     "extractor": "keynetaffnethardnet",
-    #     "matcher": "adalam",
-    # },
-    # "loftr": {"extractor": None, "matcher": "loftr"},
-    # "alike": {"extractor": "alike", "matcher": None},
-    # "orb": {"extractor": "orb", "matcher": None},
-}
 
 
 def parse_args():
@@ -72,7 +35,7 @@ def parse_args():
         "--config",
         type=str,
         help="Extactor and matcher configuration",
-        choices=confs_zoo.keys(),
+        choices=confs.keys(),
         default="superpoint+lightglue",
     )
     parser.add_argument(
@@ -95,7 +58,6 @@ def parse_args():
         choices=retrieval_zoo,
         default=None,
     )
-    parser.add_argument("-n", "--max_features", type=int, default=4000)
     parser.add_argument("-f", "--force", action="store_true", default=False)
     parser.add_argument("-V", "--verbose", action="store_true", default=False)
 
@@ -109,7 +71,12 @@ def parse_args():
         args.strategy = gui_out["strategy"]
         args.pairs = gui_out["pair_file"]
         args.overlap = gui_out["image_overlap"]
-        args.max_features = gui_out["max_features"]
+
+    return args
+
+
+def initialization():
+    args = parse_args()
 
     # Checks for input arguments
     if args.images is None:
@@ -136,12 +103,17 @@ def parse_args():
     if args.config is None:
         raise ValueError("--config option is required")
     else:
-        if args.config not in confs_zoo:
+        args.cfg = confs[args.config]
+        local_features = confs[args.config]["extractor"]["name"]
+        if local_features not in extractors_zoo:
             raise ValueError(
-                f"Invalid configuration option: {args.config}. Valid options are: {confs_zoo.keys()}"
+                f"Invalid extractor option: {local_features}. Valid options are: {extractors_zoo}"
             )
-        args.local_features = confs_zoo[args.config]["extractor"]
-        args.matching = confs_zoo[args.config]["matcher"]
+        matching = confs[args.config]["matcher"]["name"]
+        if matching not in matchers_zoo:
+            raise ValueError(
+                f"Invalid matcher option: {matching}. Valid options are: {matchers_zoo}"
+            )
 
     if args.strategy is None:
         raise ValueError("--strategy option is required")
@@ -170,7 +142,7 @@ def parse_args():
         if not args.pairs.exists():
             raise ValueError(f"File {args.pairs} does not exist")
     else:
-        args.pairs = None
+        args.pairs = args.outs / "pairs.txt"
 
     if args.strategy == "sequential":
         if args.overlap is None:
@@ -188,50 +160,37 @@ def parse_args():
 
 def main():
     # Parse arguments
-    args = parse_args()
+    args = initialization()
     imgs_dir = args.images
     output_dir = args.outs
     matching_strategy = args.strategy
     retrieval_option = args.retrieval
     pair_file = args.pairs
     overlap = args.overlap
-    max_features = args.max_features
 
-    # TODO: temporary! Must be replaced by a configuration
-    if args.local_features in features_zoo:
-        local_features = args.local_features
-    else:
-        raise ValueError(
-            f"Invalid combination of extractor and matcher. Chose one of the following combinations: {confs_zoo.keys()}"
-        )
-    if args.matching in matchers_zoo:
-        matching_method = args.matching
-    # else:
-    #     local_features = "detect_and_describe"
-    #     custom_config["general"]["detector_and_descriptor"] = args.local_features
+    # Load configuration
+    custom_config = confs[args.config]
+    local_features = custom_config["extractor"]["name"]
+    matching_method = custom_config["matcher"]["name"]
 
     # Update configuration dictionary
-    # TODO: improve configuration management
     custom_config["general"]["output_dir"] = output_dir
-    if max_features is not None:
-        custom_config["SuperPoint"]["max_keypoints"] = max_features
 
     # Generate pairs and matching
     img_matching = ImageMatching(
         imgs_dir=imgs_dir,
+        output_dir=output_dir,
         matching_strategy=matching_strategy,
         retrieval_option=retrieval_option,
         local_features=local_features,
         matching_method=matching_method,
-        custom_config=custom_config,
-        min_matches_per_pair=20,
-        # max_feat_numb=max_features,
         pair_file=pair_file,
+        custom_config=custom_config,
         overlap=overlap,
     )
     pairs = img_matching.generate_pairs()
     feature_path = img_matching.extract_features()
-    keypoints, correspondences = img_matching.match_pairs(feature_path)
+    match_path = img_matching.match_pairs(feature_path)
 
     # Plot statistics
     images = img_matching.image_list
@@ -239,28 +198,47 @@ def main():
     logger.info(f"\tProcessed images: {len(images)}")
     logger.info(f"\tProcessed pairs: {len(pairs)}")
 
-    # Using also h5_to_db.py
-    database_path = Path(output_dir) / "database.db"
-    if database_path.exists():
-        database_path.unlink()
-    import_into_colmap(
+    # Export in colmap format
+    database_path = output_dir / "database.db"
+
+    export_to_colmap(
         img_dir=imgs_dir,
-        feature_dir=feature_path.parent,
+        feature_path=feature_path,
+        match_path=match_path,
         database_path=database_path,
         camera_model="simple-radial",
-        single_camera=False,
+        single_camera=True,
     )
+
+    # Tests using pycolmap
+    # print("using pycolmap...")
+    import pycolmap
+    from deep_image_matching.hloc.reconstruction import (
+        create_empty_db,
+        get_image_ids,
+        import_images,
+    )
+    from deep_image_matching.hloc.triangulation import import_features, import_matches2
+
+    database = output_dir / "database_pycolmap.db"
+    camera_mode: pycolmap.CameraMode = pycolmap.CameraMode.AUTO
+
+    create_empty_db(database)
+    import_images(imgs_dir, database, camera_mode)
+    image_ids = get_image_ids(database)
+    import_features(image_ids, database, feature_path)
+    import_matches2(image_ids, database, match_path, skip_geometric_verification=True)
 
     # Backward compatibility
     # Export in colmap format
-    ExportToColmap(
-        images,
-        img_matching.width,
-        img_matching.height,
-        keypoints,
-        correspondences,
-        output_dir,
-    )
+    # ExportToColmap(
+    #     images,
+    #     img_matching.width,
+    #     img_matching.height,
+    #     keypoints,
+    #     correspondences,
+    #     output_dir,
+    # )
 
 
 if __name__ == "__main__":
