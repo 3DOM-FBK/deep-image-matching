@@ -9,14 +9,13 @@ from config import (
     matching_strategy,
     retrieval_zoo,
 )
+from src.deep_image_matching import logger
 from src.deep_image_matching.gui import gui
 from src.deep_image_matching.image_matching import ImageMatching
 from src.deep_image_matching.io.h5_to_db import export_to_colmap
-from src.deep_image_matching.utils import change_logger_level, setup_logger
+from src.deep_image_matching.utils import change_logger_level
 
 # TODO: Add checks to the combination of extractor and matcher chosen by the user
-
-logger = setup_logger(log_level="info")
 
 
 def parse_args():
@@ -185,7 +184,7 @@ def main():
         local_features=local_features,
         matching_method=matching_method,
         pair_file=pair_file,
-        config=config,
+        custom_config=config,
         overlap=overlap,
     )
     pairs = img_matching.generate_pairs()
@@ -204,29 +203,34 @@ def main():
     )
 
     # Tests using pycolmap
-    # print("using pycolmap...")
     try:
         import pycolmap
-        from deep_image_matching.hloc.reconstruction import (
-            create_empty_db,
-            get_image_ids,
-            import_images,
-        )
-        from deep_image_matching.hloc.triangulation import (
-            import_features,
-            import_matches2,
-        )
+        from deep_image_matching import reconstruction, triangulation
+        from deep_image_matching.hloc import visualization
 
         database = output_dir / "database_pycolmap.db"
         camera_mode: pycolmap.CameraMode = pycolmap.CameraMode.AUTO
 
-        create_empty_db(database)
-        import_images(imgs_dir, database, camera_mode)
-        image_ids = get_image_ids(database)
-        import_features(image_ids, database, feature_path)
-        import_matches2(
+        reconstruction.create_empty_db(database)
+        reconstruction.import_images(imgs_dir, database, camera_mode)
+        image_ids = reconstruction.get_image_ids(database)
+        triangulation.import_features(image_ids, database, feature_path)
+        triangulation.import_matches2(
             image_ids, database, match_path, skip_geometric_verification=True
         )
+
+        # Run reconstruction
+        model = reconstruction.run_reconstruction(
+            sfm_dir=output_dir, database_path=database, image_dir=imgs_dir, verbose=True
+        )
+        if reconstruction is not None:
+            logger.info(
+                f"Reconstruction statistics:\n{model.summary()}"
+                + f"\n\tnum_input_images = {len(image_ids)}"
+            )
+
+        visualization.visualize_sfm_2d(model, imgs_dir, color_by="visibility", n=5)
+
     except:
         logger.error("Error using pycolmap")
 

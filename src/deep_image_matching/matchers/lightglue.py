@@ -1,12 +1,8 @@
-import logging
-
 import numpy as np
 import torch
 
 from ..thirdparty.LightGlue.lightglue import LightGlue
 from .matcher_base import FeaturesDict, MatcherBase
-
-logger = logging.getLogger(__name__)
 
 
 def featuresDict_2_lightglue(feats: FeaturesDict, device: torch.device) -> dict:

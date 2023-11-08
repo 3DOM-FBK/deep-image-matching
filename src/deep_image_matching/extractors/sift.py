@@ -5,8 +5,6 @@ import numpy as np
 
 from .extractor_base import ExtractorBase, FeaturesDict
 
-logger = logging.getLogger(__name__)
-
 
 class SIFTExtractor(ExtractorBase):
     default_conf = {

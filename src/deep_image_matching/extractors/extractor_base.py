@@ -1,5 +1,4 @@
 import inspect
-import logging
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
 from typing import Optional, Tuple, TypedDict, Union
@@ -9,11 +8,10 @@ import h5py
 import numpy as np
 import torch
 
+from .. import logger
 from ..utils.consts import Quality, TileSelection
 from ..utils.image import Image
 from ..utils.tiling import Tiler
-
-logger = logging.getLogger(__name__)
 
 
 class FeaturesDict(TypedDict):

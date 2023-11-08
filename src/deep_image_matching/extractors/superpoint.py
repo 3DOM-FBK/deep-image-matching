@@ -1,12 +1,8 @@
-import logging
-
 import numpy as np
 import torch
 
 from ..hloc.extractors.superpoint import SuperPoint
 from .extractor_base import ExtractorBase
-
-logger = logging.getLogger(__name__)
 
 
 # TODO: skip the loading of hloc extractor, but implement it directly here.

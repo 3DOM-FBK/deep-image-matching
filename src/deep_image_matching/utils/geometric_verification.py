@@ -1,13 +1,11 @@
 import importlib
-import logging
 from typing import Tuple
 
 import cv2
 import numpy as np
 
+from .. import logger
 from .consts import GeometricVerification
-
-logger = logging.getLogger(__name__)
 
 
 def geometric_verification(
