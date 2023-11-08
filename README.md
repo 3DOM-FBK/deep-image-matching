@@ -57,10 +57,10 @@ Supported extractors:
 - [x] DISK
 - [x] ALIKE
 - [x] ALIKED
-- [ ] ORB (opencv)
 - [ ] Superpoint free
 - [ ] KeyNet + OriNet + HardNet8
-- [ ] SIFT (opencv)
+- [x] ORB (opencv) 
+- [x] SIFT (opencv)
 
 Matchers:
 - [x] Lightglue (with Superpoint, Disk and ALIKED) 
