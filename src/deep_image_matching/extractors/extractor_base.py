@@ -284,14 +284,14 @@ class ExtractorBase(metaclass=ABCMeta):
 
         if scores_full is None:
             logger.warning("No scores found in features")
+            scores_full = np.ones(kpts_full.shape[0], dtype=np.float32)
 
         # Select unique keypoints
         if select_unique is True:
             kpts_full, unique_idx = np.unique(kpts_full, axis=0, return_index=True)
             descriptors_full = descriptors_full[:, unique_idx]
             tile_idx_full = tile_idx_full[unique_idx]
-            if scores_full is not None:
-                scores_full = scores_full[unique_idx]
+            scores_full = scores_full[unique_idx]
 
         # Make FeaturesDict object
         features = FeaturesDict(

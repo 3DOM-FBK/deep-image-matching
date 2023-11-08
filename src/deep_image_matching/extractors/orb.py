@@ -53,8 +53,15 @@ class ORBExtractor(ExtractorBase):
     def _extract(self, image: np.ndarray) -> np.ndarray:
         kp = self._extractor.detect(image, None)
         kp, des = self._extractor.compute(image, kp)
-        kpts = cv2.KeyPoint_convert(kp)
-        des = des.astype(float).T
+        if kp:
+            kpts = cv2.KeyPoint_convert(kp)
+            des = des.astype(float).T
+        else:
+            kpts = np.array([], dtype=np.float32).reshape(0, 2)
+            des = np.array([], dtype=np.float32).reshape(
+                self.descriptor_size,
+                0,
+            )
 
         # Convert tensors to numpy arrays
         feats = FeaturesDict(keypoints=kpts, descriptors=des)

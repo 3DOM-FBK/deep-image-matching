@@ -44,8 +44,15 @@ class SIFTExtractor(ExtractorBase):
 
     def _extract(self, image: np.ndarray) -> np.ndarray:
         kp, des = self._extractor.detectAndCompute(image, None)
-        kpts = cv2.KeyPoint_convert(kp)
-        des = des.astype(float).T
+        if kp:
+            kpts = cv2.KeyPoint_convert(kp)
+            des = des.astype(float).T
+        else:
+            kpts = np.array([], dtype=np.float32).reshape(0, 2)
+            des = np.array([], dtype=np.float32).reshape(
+                self.descriptor_size,
+                0,
+            )
 
         # Convert tensors to numpy arrays
         feats = FeaturesDict(keypoints=kpts, descriptors=des)
@@ -88,7 +95,7 @@ if __name__ == "__main__":
     kp = cv2.KeyPoint_convert(features["keypoints"])
     img = cv2.drawKeypoints(img, kp, img, color=(0, 0, 255), flags=0)
 
-    window = cv2.namedWindow("image", cv2.WINDOW_NORMAL)
+    cv2.namedWindow("image", cv2.WINDOW_NORMAL)
     cv2.imshow("image", img)
     cv2.waitKey()
     cv2.destroyAllWindows()

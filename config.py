@@ -167,8 +167,8 @@ confs = {
     },
     "orb+kornia_matcher": {
         "general": {
-            "quality": Quality.MEDIUM,
-            "tile_selection": TileSelection.NONE,
+            "quality": Quality.HIGH,
+            "tile_selection": TileSelection.PRESELECTION,
             "geom_verification": GeometricVerification.PYDEGENSAC,
             "tiling_grid": [3, 3],
             "tiling_overlap": 50,
@@ -177,6 +177,21 @@ confs = {
         },
         "extractor": {
             "name": "orb",
+        },
+        "matcher": {"name": "kornia_matcher", "match_mode": "snn"},
+    },
+    "sift+kornia_matcher": {
+        "general": {
+            "quality": Quality.HIGH,
+            "tile_selection": TileSelection.PRESELECTION,
+            "geom_verification": GeometricVerification.PYDEGENSAC,
+            "tiling_grid": [3, 3],
+            "tiling_overlap": 50,
+            "gv_threshold": 3,
+            "gv_confidence": 0.99999,
+        },
+        "extractor": {
+            "name": "sift",
         },
         "matcher": {"name": "kornia_matcher", "match_mode": "snn"},
     },
