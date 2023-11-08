@@ -9,11 +9,10 @@ from config import (
     matching_strategy,
     retrieval_zoo,
 )
-from src.deep_image_matching import logger
+from src.deep_image_matching import change_logger_level, logger
 from src.deep_image_matching.gui import gui
 from src.deep_image_matching.image_matching import ImageMatching
 from src.deep_image_matching.io.h5_to_db import export_to_colmap
-from src.deep_image_matching.utils import change_logger_level
 
 # TODO: Add checks to the combination of extractor and matcher chosen by the user
 
@@ -206,7 +205,6 @@ def main():
     try:
         import pycolmap
         from deep_image_matching import reconstruction, triangulation
-        from deep_image_matching.hloc import visualization
 
         database = output_dir / "database_pycolmap.db"
         camera_mode: pycolmap.CameraMode = pycolmap.CameraMode.AUTO
@@ -228,8 +226,6 @@ def main():
                 f"Reconstruction statistics:\n{model.summary()}"
                 + f"\n\tnum_input_images = {len(image_ids)}"
             )
-
-        visualization.visualize_sfm_2d(model, imgs_dir, color_by="visibility", n=5)
 
     except:
         logger.error("Error using pycolmap")
