@@ -1,12 +1,8 @@
-import logging
-
 import numpy as np
 import torch
 
 from ..thirdparty.SuperGlue.models.superglue import SuperGlue
 from .matcher_base import FeaturesDict, MatcherBase
-
-logger = logging.getLogger(__name__)
 
 
 def features_2_sg(

@@ -1,12 +1,8 @@
-import logging
-
 import numpy as np
 import torch
 
 from ..hloc.extractors.disk import DISK
 from .extractor_base import ExtractorBase
-
-logger = logging.getLogger(__name__)
 
 # TODO: use Kornia implementation of DISK
 

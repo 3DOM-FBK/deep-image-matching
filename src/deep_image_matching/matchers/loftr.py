@@ -1,4 +1,3 @@
-import logging
 from pathlib import Path
 
 import kornia as K
@@ -6,11 +5,10 @@ import numpy as np
 import torch
 from kornia import feature as KF
 
+from .. import logger
 from ..utils.consts import TileSelection
 from ..utils.tiling import Tiler
 from .matcher_base import FeaturesDict, MatcherBase
-
-logger = logging.getLogger(__name__)
 
 
 class LOFTRMatcher(MatcherBase):

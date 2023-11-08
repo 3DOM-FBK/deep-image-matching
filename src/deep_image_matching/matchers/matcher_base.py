@@ -1,5 +1,4 @@
 import inspect
-import logging
 from abc import ABCMeta
 from itertools import product
 from pathlib import Path
@@ -10,6 +9,7 @@ import h5py
 import numpy as np
 import torch
 
+from .. import logger
 from ..hloc.extractors.superpoint import SuperPoint
 from ..io.h5 import get_features
 from ..thirdparty.LightGlue.lightglue import LightGlue
@@ -17,8 +17,6 @@ from ..utils.consts import Quality, TileSelection
 from ..utils.geometric_verification import geometric_verification
 from ..utils.tiling import Tiler
 from ..visualization import viz_matches_cv2, viz_matches_mpl
-
-logger = logging.getLogger(__name__)
 
 
 class FeaturesDict(TypedDict):

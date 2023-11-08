@@ -1,11 +1,10 @@
-import logging
 from pathlib import Path
 
 import h5py
 import numpy as np
 from tqdm import tqdm
 
-from . import extractors, matchers
+from . import extractors, logger, matchers
 from .extractors.extractor_base import extractor_loader
 from .io.h5 import get_features, get_matches
 from .matchers.matcher_base import matcher_loader
@@ -13,8 +12,6 @@ from .utils.consts import GeometricVerification, Quality, TileSelection
 from .utils.geometric_verification import geometric_verification
 from .utils.image import ImageList
 from .utils.pairs_generator import PairsGenerator
-
-logger = logging.getLogger(__name__)
 
 
 def make_correspondence_matrix(matches: np.ndarray) -> np.ndarray:

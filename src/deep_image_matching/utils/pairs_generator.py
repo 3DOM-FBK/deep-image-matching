@@ -1,8 +1,7 @@
-import logging
 from pathlib import Path
 from typing import List, Union
 
-logger = logging.getLogger(__name__)
+from .. import logger
 
 
 def SequentialPairs(img_list: List[Union[str, Path]], overlap: int) -> List[tuple]:

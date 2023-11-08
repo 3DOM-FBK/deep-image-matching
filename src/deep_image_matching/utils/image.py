@@ -7,9 +7,8 @@ import cv2
 import exifread
 import numpy as np
 
+from .. import logger
 from .sensor_width_database import SensorWidthDatabase
-
-logger = logging.getLogger(__name__)
 
 
 def read_image(
@@ -35,11 +34,7 @@ def read_image(
     else:
         flag = cv2.IMREAD_GRAYSCALE
 
-    try:
-        image = cv2.imread(str(path), flag)
-    except:
-        logger.error(f"Impossible to load image {path}")
-        raise RuntimeError(f"Impossible to load image {path}")
+    image = cv2.imread(str(path), flag)
 
     if color:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)

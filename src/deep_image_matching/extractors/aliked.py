@@ -1,14 +1,8 @@
-import logging
-
 import numpy as np
 import torch
 
 from ..thirdparty.LightGlue.lightglue.aliked import ALIKED
-
-# from ..thirdparty.ALIKED.nets.aliked import ALIKED
 from .extractor_base import ExtractorBase
-
-logger = logging.getLogger(__name__)
 
 # TODO: replace LightGlue implementation of ALIKED with the original ALIKED code
 

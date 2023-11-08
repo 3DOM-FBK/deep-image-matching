@@ -1,4 +1,3 @@
-import logging
 from pathlib import Path
 
 import cv2
@@ -6,7 +5,7 @@ import h5py
 import numpy as np
 import torch
 
-logger = logging.getLogger(__name__)
+from .. import logger
 
 
 def names_to_pair(name0, name1, separator="/"):

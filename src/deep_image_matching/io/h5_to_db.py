@@ -13,7 +13,6 @@
 #   limitations under the License.
 
 import argparse
-import logging
 import os
 import warnings
 from pathlib import Path
@@ -23,9 +22,8 @@ import numpy as np
 from PIL import ExifTags, Image
 from tqdm import tqdm
 
-from .colmap.database import COLMAPDatabase, image_ids_to_pair_id
-
-logger = logging.getLogger(__name__)
+from .. import logger
+from ..utils.database import COLMAPDatabase, image_ids_to_pair_id
 
 
 def get_focal(image_path, err_on_default=False):

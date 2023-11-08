@@ -1,12 +1,8 @@
-import logging
-
 import numpy as np
 import torch
 from kornia import feature as KF
 
 from .matcher_base import FeaturesDict, MatcherBase
-
-logger = logging.getLogger(__name__)
 
 
 # Refer to https://kornia.readthedocs.io/en/latest/feature.html#kornia.feature.DescriptorMatcher for more information
