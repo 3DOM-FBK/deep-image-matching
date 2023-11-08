@@ -186,7 +186,7 @@ def main():
         custom_config=config,
         overlap=overlap,
     )
-    pairs = img_matching.generate_pairs()
+    pair_path = img_matching.generate_pairs()
     feature_path = img_matching.extract_features()
     match_path = img_matching.match_pairs(feature_path)
 
@@ -217,6 +217,11 @@ def main():
             image_ids, database, match_path, skip_geometric_verification=True
         )
 
+        # Run geometric verification
+        reconstruction.estimation_and_geometric_verification(
+            database, pair_path, verbose=True
+        )
+
         # Run reconstruction
         model = reconstruction.run_reconstruction(
             sfm_dir=output_dir, database_path=database, image_dir=imgs_dir, verbose=True
@@ -231,10 +236,10 @@ def main():
         logger.error("Error using pycolmap")
 
     # Plot statistics
-    images = img_matching.image_list
-    logger.info("Finished matching and exporting")
-    logger.info(f"\tProcessed images: {len(images)}")
-    logger.info(f"\tProcessed pairs: {len(pairs)}")
+    # images = img_matching.image_list
+    # logger.info("Finished matching and exporting")
+    # logger.info(f"\tProcessed images: {len(images)}")
+    # logger.info(f"\tProcessed pairs: {len(pairs)}")
 
 
 if __name__ == "__main__":

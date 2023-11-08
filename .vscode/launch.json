@@ -17,13 +17,13 @@
       "request": "launch",
       "program": "${file}",
       "console": "integratedTerminal",
-      "args": [
-        "--config",
-        "superpoint+lightglue",
-        "--images",
-        "data/easy_small",
-        "--force"
-      ]
+      // "args": [
+      //   "--config",
+      //   "superpoint+lightglue",
+      //   "--images",
+      //   "data/easy_small",
+      //   "--force"
+      // ]
       // "args": [
       //   "--config",
       //   "sift+kornia_matcher",
@@ -31,15 +31,15 @@
       //   "data/easy_small",
       //   "--force"
       // ]
-      // "args": [
-      //   "--config",
-      //   "aliked+lightglue",
-      //   "--images",
-      //   "data/arsenale4",
-      //   "--strategy",
-      //   "bruteforce",
-      //   "--force"
-      // ]
+      "args": [
+        "--config",
+        "aliked+lightglue",
+        "--images",
+        "data/arsenale4",
+        "--strategy",
+        "bruteforce",
+        "--force"
+      ]
       // "args": [
       //   "--config",
       //   "superpoint+lightglue",

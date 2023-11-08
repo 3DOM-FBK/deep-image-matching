@@ -1,4 +1,3 @@
-import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Union
@@ -253,7 +252,7 @@ class Image:
                     self._exif_data["EXIF FocalLength"].printable
                 )
             except:
-                logging.warning(
+                logger.warning(
                     f"Unable to convert focal length to float for {self.name}"
                 )
 
