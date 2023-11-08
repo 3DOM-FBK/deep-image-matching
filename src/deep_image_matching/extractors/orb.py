@@ -16,7 +16,8 @@ logger = logging.getLogger(__name__)
 
 class ORBExtractor(ExtractorBase):
     default_conf = {
-        "n_features": 1000,
+        "name:": "orb",
+        "n_features": 4000,
         "scaleFactor": 1.2,
         "nlevels": 1,
         "edgeThreshold": 1,

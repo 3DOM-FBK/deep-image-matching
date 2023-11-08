@@ -16,15 +16,12 @@ logger = logging.getLogger(__name__)
 
 class SIFTExtractor(ExtractorBase):
     default_conf = {
-        "n_features": 1000,
-        "scaleFactor": 1.2,
-        "nlevels": 1,
-        "edgeThreshold": 1,
-        "firstLevel": 0,
-        "WTA_K": 2,
-        "scoreType": 0,
-        "patchSize": 31,
-        "fastThreshold": 0,
+        "name:": "sift",
+        "n_features": 4000,
+        "nOctaveLayers": 3,
+        "contrastThreshold": 0.04,
+        "edgeThreshold": 10,
+        "sigma": 1.6,
     }
     required_inputs = []
     grayscale = True
@@ -37,7 +34,13 @@ class SIFTExtractor(ExtractorBase):
 
         # Load extractor
         cfg = self._config.get("extractor")
-        self._extractor = cv2.SIFT_create()
+        self._extractor = cv2.SIFT_create(
+            nfeatures=cfg["n_features"],
+            nOctaveLayers=cfg["nOctaveLayers"],
+            contrastThreshold=cfg["contrastThreshold"],
+            edgeThreshold=cfg["edgeThreshold"],
+            sigma=cfg["sigma"],
+        )
 
     def _extract(self, image: np.ndarray) -> np.ndarray:
         kp, des = self._extractor.detectAndCompute(image, None)
