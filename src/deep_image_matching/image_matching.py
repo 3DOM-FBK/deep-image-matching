@@ -168,7 +168,7 @@ class ImageMatching:
                 for pair in self.pairs:
                     txt_file.write(f"{pair[0].name} {pair[1].name}\n")
 
-        return self.pairs
+        return self.pair_file
 
     def extract_features(self) -> Path:
         # Extract features

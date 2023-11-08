@@ -310,29 +310,30 @@ class MatcherBase(metaclass=ABCMeta):
             matches_orig[:, 1] = idx1[correspondences[:, 1]]
             matches_full = np.vstack((matches_full, matches_orig))
 
-            # Select unique matches
-            if select_unique is True:
-                matches_full, idx, counts = np.unique(
-                    matches_full, axis=0, return_index=True, return_counts=True
+        # Select unique matches
+        if select_unique is True:
+            matches_full, idx, counts = np.unique(
+                matches_full, axis=0, return_index=True, return_counts=True
+            )
+            if any(counts > 1):
+                logger.warning(
+                    f"Found {sum(counts>1)} duplicate matches in tile pair ({tidx0}, {tidx1})"
                 )
-                if any(counts > 1):
-                    logger.warning(
-                        f"Found {sum(counts>1)} duplicate matches in tile pair ({tidx0}, {tidx1})"
-                    )
-            # # Visualize matches on tile
-            # if do_viz_tiles is True:
-            #     out_img_path = str(self._output_dir / f"matches_tile_{tidx0}-{tidx1}.jpg")
-            #     self.viz_matches(
-            #         tile0,
-            #         tile1,
-            #         mkpts0,
-            #         mkpts1,
-            #         out_img_path,
-            #         fast_viz=True,
-            #         hide_matching_track=True,
-            #         autoresize=True,
-            #         max_long_edge=1200,
-            #     )
+
+        # # Visualize matches on tile
+        # if do_viz_tiles is True:
+        #     out_img_path = str(self._output_dir / f"matches_tile_{tidx0}-{tidx1}.jpg")
+        #     self.viz_matches(
+        #         tile0,
+        #         tile1,
+        #         mkpts0,
+        #         mkpts1,
+        #         out_img_path,
+        #         fast_viz=True,
+        #         hide_matching_track=True,
+        #         autoresize=True,
+        #         max_long_edge=1200,
+        #     )
 
         logger.debug("Matching by tile completed.")
 
