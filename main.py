@@ -204,68 +204,68 @@ def main():
     # Tests using pycolmap
     try:
         import pycolmap
-
-        def run_pycolmap(
-            database: Path,
-            image_dir: Path,
-            feature_path: Path,
-            match_path: Path,
-            pair_path: Path,
-            output_dir: Path,
-            camera_mode: pycolmap.CameraMode = pycolmap.CameraMode.AUTO,
-            skip_geometric_verification: bool = False,
-            verbose: bool = True,
-        ) -> pycolmap.Reconstruction:
-            from deep_image_matching import reconstruction, triangulation
-
-            reconstruction.create_empty_db(database)
-            reconstruction.import_images(image_dir, database, camera_mode)
-            image_ids = reconstruction.get_image_ids(database)
-            triangulation.import_features(image_ids, database, feature_path)
-            triangulation.import_matches2(
-                image_ids,
-                database,
-                match_path,
-                skip_geometric_verification=skip_geometric_verification,
-            )
-
-            # Run geometric verification
-            if not skip_geometric_verification:
-                reconstruction.estimation_and_geometric_verification(
-                    database, pair_path, verbose=verbose
-                )
-
-            # Run reconstruction
-            model = reconstruction.run_reconstruction(
-                sfm_dir=output_dir,
-                database_path=database,
-                image_dir=image_dir,
-                verbose=verbose,
-            )
-            if reconstruction is not None:
-                logger.info(
-                    f"Reconstruction statistics:\n{model.summary()}"
-                    + f"\n\tnum_input_images = {len(image_ids)}"
-                )
-
-            return model
-
-        database = output_dir / "database_pycolmap.db"
-        camera_mode: pycolmap.CameraMode = pycolmap.CameraMode.AUTO
-
-        model = run_pycolmap(
-            database=database,
-            image_dir=imgs_dir,
-            feature_path=feature_path,
-            match_path=match_path,
-            pair_path=pair_path,
-            output_dir=output_dir,
-            camera_mode=camera_mode,
-            skip_geometric_verification=True,
-            verbose=True,
-        )
     except ImportError:
         raise ("Pycomlap is not available, skipping reconstruction")
+
+    def run_pycolmap(
+        database: Path,
+        image_dir: Path,
+        feature_path: Path,
+        match_path: Path,
+        pair_path: Path,
+        output_dir: Path,
+        camera_mode: pycolmap.CameraMode = pycolmap.CameraMode.AUTO,
+        skip_geometric_verification: bool = False,
+        verbose: bool = True,
+    ) -> pycolmap.Reconstruction:
+        from deep_image_matching import reconstruction, triangulation
+
+        reconstruction.create_empty_db(database)
+        reconstruction.import_images(image_dir, database, camera_mode)
+        image_ids = reconstruction.get_image_ids(database)
+        triangulation.import_features(image_ids, database, feature_path)
+        triangulation.import_matches2(
+            image_ids,
+            database,
+            match_path,
+            skip_geometric_verification=skip_geometric_verification,
+        )
+
+        # Run geometric verification
+        if not skip_geometric_verification:
+            reconstruction.estimation_and_geometric_verification(
+                database, pair_path, verbose=verbose
+            )
+
+        # Run reconstruction
+        model = reconstruction.run_reconstruction(
+            sfm_dir=output_dir,
+            database_path=database,
+            image_dir=image_dir,
+            verbose=verbose,
+        )
+        if reconstruction is not None:
+            logger.info(
+                f"Reconstruction statistics:\n{model.summary()}"
+                + f"\n\tnum_input_images = {len(image_ids)}"
+            )
+
+        return model
+
+    database = output_dir / "database_pycolmap.db"
+    camera_mode: pycolmap.CameraMode = pycolmap.CameraMode.AUTO
+
+    model = run_pycolmap(
+        database=database,
+        image_dir=imgs_dir,
+        feature_path=feature_path,
+        match_path=match_path,
+        pair_path=pair_path,
+        output_dir=output_dir,
+        camera_mode=camera_mode,
+        skip_geometric_verification=True,
+        verbose=True,
+    )
 
     # Export in Bundler format for Metashape
     import shutil
