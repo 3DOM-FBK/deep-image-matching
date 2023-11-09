@@ -205,7 +205,8 @@ def main():
     try:
         import pycolmap
     except ImportError:
-        raise ("Pycomlap is not available, skipping reconstruction")
+        logger.error("Pycomlap is not available, skipping reconstruction")
+        return
 
     def run_pycolmap(
         database: Path,
@@ -268,29 +269,38 @@ def main():
     )
 
     # Export in Bundler format for Metashape
-    import shutil
-    import subprocess
-    from pprint import pprint
+    def export_to_bundler(
+        database: Path, imgs_dir: Path, output_dir: Path, out_name: str = "bundler"
+    ) -> bool:
+        import shutil
+        import subprocess
+        from pprint import pprint
 
-    colamp_path = "colmap"
-    out_name = "bundler"
-    cmd = [
-        colamp_path,
-        "model_converter",
-        "--input_path",
-        str(database.parent.resolve()),
-        "--output_path",
-        str(database.parent.resolve() / out_name),
-        "--output_type",
-        "Bundler",
-    ]
-    ret = subprocess.run(cmd, capture_output=True)
-    if ret.returncode != 0:
-        logger.error("Unable to export to Bundler format")
-        pprint(ret.stdout.decode("utf-8"))
-    else:
+        colamp_path = "colmap"
+
+        cmd = [
+            colamp_path,
+            "model_converter",
+            "--input_path",
+            str(database.parent.resolve()),
+            "--output_path",
+            str(database.parent.resolve() / out_name),
+            "--output_type",
+            "Bundler",
+        ]
+        ret = subprocess.run(cmd, capture_output=True)
+        if ret.returncode != 0:
+            logger.error("Unable to export to Bundler format")
+            pprint(ret.stdout.decode("utf-8"))
+            return False
+
         shutil.copytree(imgs_dir, output_dir / "images", dirs_exist_ok=True)
         logger.info("Export to Bundler format completed successfully")
+
+        return True
+
+    out_name = "bundler"
+    export_to_bundler(database, imgs_dir, output_dir, out_name)
 
     # TODO: avoid duplicates in matched features!
     # Now it is possible that a feature in one image is matched with more than one feature in the other image (due to the overlap in tiling)
