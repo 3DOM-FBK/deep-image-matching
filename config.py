@@ -39,15 +39,16 @@ confs = {
         "general": {
             "quality": Quality.HIGH,
             "tile_selection": TileSelection.PRESELECTION,
-            "tiling_grid": [3, 3],
-            "tiling_overlap": 100,
+            "tiling_grid": [2, 2],
+            "tiling_overlap": 0,
             "geom_verification": GeometricVerification.PYDEGENSAC,
             "gv_threshold": 3,
             "gv_confidence": 0.9999,
+            "preselction_resize_max": 2000,
         },
         "extractor": {
             "name": "superpoint",
-            "keypoint_threshold": 0.005,
+            "keypoint_threshold": 0.0001,
             "max_keypoints": 10000,
         },
         "matcher": {
@@ -55,7 +56,7 @@ confs = {
             "n_layers": 9,
             "depth_confidence": -1,  # 0.95,  # early stopping, disable with -1
             "width_confidence": -1,  # 0.99,  # point pruning, disable with -1
-            "filter_threshold": 0.1,  # match threshold
+            "filter_threshold": 0.6,  # match threshold
         },
     },
     "superpoint+lightglue_tiling": {
