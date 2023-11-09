@@ -204,36 +204,111 @@ def main():
     # Tests using pycolmap
     try:
         import pycolmap
-        from deep_image_matching import reconstruction, triangulation
+
+        def run_pycolmap(
+            database: Path,
+            image_dir: Path,
+            feature_path: Path,
+            match_path: Path,
+            pair_path: Path,
+            output_dir: Path,
+            camera_mode: pycolmap.CameraMode = pycolmap.CameraMode.AUTO,
+            skip_geometric_verification: bool = False,
+            verbose: bool = True,
+        ) -> pycolmap.Reconstruction:
+            from deep_image_matching import reconstruction, triangulation
+
+            reconstruction.create_empty_db(database)
+            reconstruction.import_images(image_dir, database, camera_mode)
+            image_ids = reconstruction.get_image_ids(database)
+            triangulation.import_features(image_ids, database, feature_path)
+            triangulation.import_matches2(
+                image_ids,
+                database,
+                match_path,
+                skip_geometric_verification=skip_geometric_verification,
+            )
+
+            # Run geometric verification
+            if not skip_geometric_verification:
+                reconstruction.estimation_and_geometric_verification(
+                    database, pair_path, verbose=verbose
+                )
+
+            # Run reconstruction
+            model = reconstruction.run_reconstruction(
+                sfm_dir=output_dir,
+                database_path=database,
+                image_dir=image_dir,
+                verbose=verbose,
+            )
+            if reconstruction is not None:
+                logger.info(
+                    f"Reconstruction statistics:\n{model.summary()}"
+                    + f"\n\tnum_input_images = {len(image_ids)}"
+                )
+
+            return model
 
         database = output_dir / "database_pycolmap.db"
         camera_mode: pycolmap.CameraMode = pycolmap.CameraMode.AUTO
 
-        reconstruction.create_empty_db(database)
-        reconstruction.import_images(imgs_dir, database, camera_mode)
-        image_ids = reconstruction.get_image_ids(database)
-        triangulation.import_features(image_ids, database, feature_path)
-        triangulation.import_matches2(
-            image_ids, database, match_path, skip_geometric_verification=True
+        model = run_pycolmap(
+            database=database,
+            image_dir=imgs_dir,
+            feature_path=feature_path,
+            match_path=match_path,
+            pair_path=pair_path,
+            output_dir=output_dir,
+            camera_mode=camera_mode,
+            skip_geometric_verification=True,
+            verbose=True,
         )
+    except ImportError:
+        raise ("Pycomlap is not available, skipping reconstruction")
 
-        # Run geometric verification
-        reconstruction.estimation_and_geometric_verification(
-            database, pair_path, verbose=True
-        )
+    # Export in Bundler format for Metashape
+    import shutil
+    import subprocess
+    from pprint import pprint
 
-        # Run reconstruction
-        model = reconstruction.run_reconstruction(
-            sfm_dir=output_dir, database_path=database, image_dir=imgs_dir, verbose=True
-        )
-        if reconstruction is not None:
-            logger.info(
-                f"Reconstruction statistics:\n{model.summary()}"
-                + f"\n\tnum_input_images = {len(image_ids)}"
-            )
+    colamp_path = "colmap"
+    out_name = "bundler"
+    cmd = [
+        colamp_path,
+        "model_converter",
+        "--input_path",
+        str(database.parent.resolve()),
+        "--output_path",
+        str(database.parent.resolve() / out_name),
+        "--output_type",
+        "Bundler",
+    ]
+    ret = subprocess.run(cmd, capture_output=True)
+    if ret.returncode != 0:
+        logger.error("Unable to export to Bundler format")
+        pprint(ret.stdout.decode("utf-8"))
+    else:
+        shutil.copytree(imgs_dir, output_dir / "images", dirs_exist_ok=True)
+        logger.info("Export to Bundler format completed successfully")
 
-    except:
-        logger.error("Error using pycolmap")
+    # TODO: avoid duplicates in matched features!
+    # Now it is possible that a feature in one image is matched with more than one feature in the other image (due to the overlap in tiling)
+    # import h5py
+    # import numpy as np
+
+    # f_db = h5py.File(str(feature_path), "r", libver="latest")
+    # m_db = h5py.File(str(match_path), "r", libver="latest")
+
+    # keys = list(f_db.keys())
+    # kp0 = f_db[keys[0]]["keypoints"][:]
+    # kp1 = f_db[keys[1]]["keypoints"][:]
+    # unique, counts = np.unique(kp0, axis=0, return_counts=True)
+
+    # matches01 = m_db[keys[0]][keys[1]][:]
+
+    # f_db.close()
+    # m_db.close()
 
     # Plot statistics
     # images = img_matching.image_list
@@ -241,8 +316,8 @@ def main():
     # logger.info(f"\tProcessed images: {len(images)}")
     # logger.info(f"\tProcessed pairs: {len(pairs)}")
 
+    logger.info("Matching completed.")
+
 
 if __name__ == "__main__":
     main()
-
-    logger.info("Done")

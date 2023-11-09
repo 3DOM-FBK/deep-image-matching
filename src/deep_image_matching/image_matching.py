@@ -142,6 +142,17 @@ class ImageMatching:
         else:
             self._matcher = Matcher(self.custom_config)
 
+        # Print configuration
+        logger.info("Running image matching with the following configuration:")
+        logger.info(f"  Image folder: {self.image_dir}")
+        logger.info(f"  Output folder: {self.output_dir}")
+        logger.info(f"  Matching strategy: {self.matching_strategy}")
+        logger.info(f"  Retrieval option: {self.retrieval_option}")
+        logger.info(f"  Feature extraction method: {self.local_features}")
+        logger.info(f"  Matching method: {self.matching_method}")
+        logger.info(f"  Overlap: {self.overlap}")
+        logger.info(f"  Number of images: {len(self.image_list)}")
+
     @property
     def img_names(self):
         return self.image_list.img_names
