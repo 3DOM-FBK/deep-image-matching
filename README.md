@@ -2,7 +2,7 @@
 
 ## DEEP-IMAGE-MATCHING
 
-Multivew matcher for COLMAP. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database. It supports both CLI and GUI.
+Multivew matcher for COLMAP. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI.
 
 Key features:
 
@@ -11,10 +11,10 @@ Key features:
 - [x] SOTA deep-learning and hand-crafted features
 - [x] full combatibility with COLMAP
 - [ ] Support for image rotations
-- [ ] Compatibility with Agisoft Metashape
+- [x] Compatibility with Agisoft Metashape
 - [ ] support image retrieval with deep-learning local features
 
-The repo is under construction but it already works with SuperGlue, LightGlue, ALIKE, DISK, Key.Net+HardNet8, ORB.
+The repo is under construction but it already works with SuperPoint, DISK, ALIKE, ALIKE, ORB and SIFT local features and LightGlue, SuperGlue and nearest neighbor matchers.
 
 Feel free to collaborate!
 
@@ -23,7 +23,7 @@ Feel free to collaborate!
 Install in a conda environment:
 
 ```bash
-conda create -n deep-image-matching python=3.9.17
+conda create -n deep-image-matching python=3.10
 conda activate deep-image-matching
 ```
 
@@ -31,7 +31,7 @@ Install pytorch. See [https://pytorch.org/get-started/locally/#linux-pip](https:
 
 ```bash
 python -m pip install --upgrade pip
-pip install -r requirements.txt
+pip install -e .
 ```
 
 ## Example usage
@@ -70,15 +70,16 @@ Matchers:
 - [ ] LoFTR
 - [x] Nearest neighbor (with KORNIA DescriptorMatcher)
 
-## TODO
+## TODO:
 
-- [x] extend to tile processing
+- [x] Tile processing
 - [ ] add kornia features
 - [ ] manage image rotation
 - [ ] add image retrieval with global descriptors
 - [x] add GUI
 - [x] Add pycolmap compatibility
-- [x] Add exporting to Bundler format, ready for Metashape importing (only on linux with pycolmap).
+- [x] Add exporting to Bundler format ready for importing into Metashape (only on linux with pycolmap)
 - [ ] Add visualization for extracted features and matches
-- [ ] improve speed
+- [ ] Improve speed
+- [ ] Autoselect tiling grid in order to fit images in GPU memory 
 - [ ] Add tests, documentation and examples
