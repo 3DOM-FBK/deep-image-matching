@@ -77,7 +77,7 @@ Matchers:
 - [ ] manage image rotation
 - [ ] add image retrieval with global descriptors
 - [x] add GUI
-- [ ] Add exporting to Metashape
+- [x] Add exporting to Bundler format, ready for Metashape importing (only on linux with pycolmap).
 - [ ] Add pycolmap compatibility
 - [ ] Add visualization for extracted features and matches
 - [ ] improve speed
