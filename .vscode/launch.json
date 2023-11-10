@@ -16,7 +16,7 @@
       "console": "integratedTerminal",
       "args": [
         "--config",
-        "superpoint+lightglue",
+        "superpoint+lightglue_fast",
         "--images",
         "data/easy_small",
         "--force"
@@ -59,7 +59,7 @@
       //   "--config",
       //   "superpoint+lightglue",
       //   "--images",
-      //   "data/belvedere_stereo",
+      //   "data/belvedere2",
       //   "--strategy",
       //   "bruteforce",
       //   "--force"

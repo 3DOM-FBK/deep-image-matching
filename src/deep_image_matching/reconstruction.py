@@ -70,6 +70,7 @@ def run_reconstruction(
     models_path = sfm_dir / "models"
     models_path.mkdir(exist_ok=True, parents=True)
     logger.info("Running 3D reconstruction...")
+    # options = {"ignore_two_view_track": False}
     if options is None:
         options = {}
     options = {"num_threads": min(multiprocessing.cpu_count(), 16), **options}
