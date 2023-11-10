@@ -1,5 +1,3 @@
-import logging
-
 import cv2
 import numpy as np
 
@@ -61,8 +59,6 @@ if __name__ == "__main__":
 
     from deep_image_matching import GeometricVerification, Quality, TileSelection
     from deep_image_matching.io.h5 import get_features
-
-    logging.basicConfig(level=logging.DEBUG)
 
     image_path = Path("data/easy_small/01_Camera1.jpg")
     cfg = {

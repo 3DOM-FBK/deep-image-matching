@@ -1,6 +1,6 @@
-import logging
-
 from packaging import version
+
+from .. import logger
 
 __version__ = "1.5"
 
@@ -16,7 +16,6 @@ __version__ = "1.5"
 # logger.addHandler(handler)
 # logger.propagate = False
 
-logger = logging.getLogger("hloc")
 
 try:
     import pycolmap
