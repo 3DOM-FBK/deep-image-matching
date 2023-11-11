@@ -23,7 +23,7 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--gui", action="store_true", help="Run command line interface", default=False
+        "--gui", action="store_true", help="Run GUI interface", default=False
     )
 
     parser.add_argument("-i", "--images", type=str, help="Input image folder")
