@@ -14,7 +14,7 @@ Key features:
 - [x] Compatibility with Agisoft Metashape
 - [ ] support image retrieval with deep-learning local features
 
-The repo is under construction but it already works with SuperPoint, DISK, ALIKE, ALIKE, ORB and SIFT local features and LightGlue, SuperGlue and nearest neighbor matchers.
+The repo is under construction but it already works with SuperPoint, DISK, ALIKE, ALIKES, ORB and SIFT local features and LightGlue, SuperGlue and nearest neighbor matchers.
 
 Feel free to collaborate!
 
