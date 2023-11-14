@@ -68,7 +68,9 @@ Matchers:
 - [x] Lightglue (with Superpoint, Disk and ALIKED)
 - [x] SuperGlue (with Superpoint)
 - [ ] LoFTR
-- [x] Nearest neighbor (with KORNIA DescriptorMatcher)
+- [x] Nearest neighbor (with KORNIA Descriptor Matcher)
+- [ ] GlueStick
+- [ ] RoMa
 
 ## TODO:
 
@@ -80,6 +82,7 @@ Matchers:
 - [x] Add pycolmap compatibility
 - [x] Add exporting to Bundler format ready for importing into Metashape (only on linux with pycolmap)
 - [ ] Add visualization for extracted features and matches
-- [ ] Improve speed
+- [ ] add possbility to use multiple features together
+- [ ] Improve speed (parallization and threading) 
 - [ ] Autoselect tiling grid in order to fit images in GPU memory 
 - [ ] Add tests, documentation and examples
