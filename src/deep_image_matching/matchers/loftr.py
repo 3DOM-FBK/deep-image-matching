@@ -12,17 +12,14 @@ from .matcher_base import FeaturesDict, MatcherBase
 
 
 class LOFTRMatcher(MatcherBase):
-    def __init__(self, **config) -> None:
+    def __init__(self, config={}) -> None:
         """Initializes a LOFTRMatcher with Kornia object with the given options dictionary."""
 
-        raise NotImplementedError(
-            "LOFTR is not correctely implemented yet. It needs to be updated to the new version of the Matcher. Please use LightGlue in the meanwhile!"
-        )
+        super().__init__(config)
 
-        super().__init__(**config["general"])
-
+        model = config["matcher"]["pretrained"]
         self.matcher = (
-            KF.LoFTR(pretrained=config["loftr"]["pretrained"]).to(self.device).eval()
+            KF.LoFTR(pretrained=model).to(self._device).eval()
         )
 
     def _frame2tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor:
@@ -34,9 +31,27 @@ class LOFTRMatcher(MatcherBase):
 
     def _match_pairs(
         self,
-        image0: np.ndarray,
-        image1: np.ndarray,
+        feats0: FeaturesDict,
+        feats1: FeaturesDict,
     ):
+
+        print('Arrivato qui. Apri loftr.py. Bisogna fare upload delle immagini')
+        quit()
+        image0 = 0# np.ndarray
+        image1 = 0# np.ndarray
+
+        ## Load image
+        #image = cv2.imread(str(im_path))
+#
+        #if self.as_float:
+        #    image = image.astype(np.float32)
+#
+        #if self.grayscale:
+        #    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+#
+        ## Resize images if needed
+        #image_ = self._resize_image(self._quality, image)
+
         """Matches keypoints and descriptors in two given images
         (no matter if they are tiles or full-res images) using
         the LoFTR algorithm.

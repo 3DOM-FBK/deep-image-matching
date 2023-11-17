@@ -8,6 +8,7 @@ extractors_zoo = [
     "keynetaffnethardnet",
     "orb",
     "sift",
+    "no_extractor",
 ]
 matchers_zoo = [
     "superglue",
@@ -15,6 +16,7 @@ matchers_zoo = [
     "loftr",
     "adalam",
     "kornia_matcher",
+    "roma",
 ]
 retrieval_zoo = ["netvlad", "openibl", "cosplace", "dir"]
 matching_strategy = ["bruteforce", "sequential", "retrieval", "custom_pairs"]
@@ -198,6 +200,19 @@ confs = {
     "loftr": {
         "general": {
             "quality": Quality.HIGH,
+            "tile_selection": TileSelection.NONE,
+            "geom_verification": GeometricVerification.PYDEGENSAC,
+            "tiling_grid": [3, 3],
+            "tiling_overlap": 50,
+            "gv_threshold": 3,
+            "gv_confidence": 0.99999,
+        },
+        "extractor": {"name": "no_extractor"},
+        "matcher": {"name": "loftr", "pretrained": "outdoor"},
+    },
+    "roma": {
+        "general": {
+            "quality": Quality.HIGH,
             "tile_selection": TileSelection.PRESELECTION,
             "geom_verification": GeometricVerification.PYDEGENSAC,
             "tiling_grid": [3, 3],
@@ -205,8 +220,8 @@ confs = {
             "gv_threshold": 3,
             "gv_confidence": 0.99999,
         },
-        "extractor": {"name": None},
-        "matcher": {"name": "loftr", "pretrained": "outdoor"},
+        "extractor": {"name": "no_extractor"},
+        "matcher": {"name": "roma", "pretrained": "outdoor"},
     },
 }
 

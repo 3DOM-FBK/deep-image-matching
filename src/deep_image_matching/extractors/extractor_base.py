@@ -145,12 +145,15 @@ class ExtractorBase(metaclass=ABCMeta):
         if self._config["general"]["tile_selection"] == TileSelection.NONE:
             # Extract features from the whole image
             features = self._extract(image_)
+            features["im_path"] = im_path
             features["tile_idx"] = np.zeros(
                 features["keypoints"].shape[0], dtype=np.float32
             )
+
         else:
             # Extract features by tiles
             features = self._extract_by_tile(image_, select_unique=True)
+            features["im_path"] = im_path
         logger.debug(f"Extracted {len(features['keypoints'])} keypoints")
 
         # Retrieve original image coordinates if matching was performed on up/down-sampled images
@@ -182,8 +185,11 @@ class ExtractorBase(metaclass=ABCMeta):
                     del fd[im_name]
                 grp = fd.create_group(im_name)
                 for k, v in features.items():
+                    if k == 'im_path':
+                        grp.create_dataset(k, data=str(v))
                     if isinstance(v, np.ndarray):
                         grp.create_dataset(k, data=v)
+
             except OSError as error:
                 if "No space left on device" in error.args[0]:
                     logger.error(
