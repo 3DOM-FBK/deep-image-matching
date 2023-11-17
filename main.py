@@ -154,7 +154,7 @@ def initialization():
         change_logger_level("debug")
 
     return args
-
+    quit()
 
 def main():
     # Parse arguments
@@ -187,8 +187,10 @@ def main():
         overlap=overlap,
     )
     pair_path = img_matching.generate_pairs()
+
     feature_path = img_matching.extract_features()
     match_path = img_matching.match_pairs(feature_path)
+    print('ok'); quit()
 
     # Export in colmap format
     database_path = output_dir / "database.db"

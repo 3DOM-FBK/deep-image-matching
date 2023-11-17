@@ -50,9 +50,11 @@ def get_features(
     with h5py.File(str(path), "r", libver="latest") as fd:
         if name in fd:
             try:
+                im_path = fd[name]["im_path"][()]
                 kpts = np.array(fd[name]["keypoints"]).astype(np.float32)
                 descr = np.array(fd[name]["descriptors"]).astype(np.float32)
                 feats = {
+                    "im_path": im_path,
                     "keypoints": kpts,
                     "descriptors": descr,
                 }
