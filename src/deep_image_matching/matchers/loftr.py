@@ -60,7 +60,7 @@ class LOFTRMatcher(MatcherBase):
         return image
     
     def _update_features(self, feature_path, im0_name, im1_name, new_keypoints0, new_keypoints1, matches0) -> None:
-        for im_name, new_keypoints in zip([im0_name, im1_name], [new_keypoints0, new_keypoints1]):
+        for i, im_name, new_keypoints in zip([0, 1], [im0_name, im1_name], [new_keypoints0, new_keypoints1]):
             features = get_features(feature_path, im_name)
             existing_keypoints = features["keypoints"]
             
@@ -75,6 +75,20 @@ class LOFTRMatcher(MatcherBase):
                         if isinstance(v, np.ndarray):
                             grp.create_dataset(k, data=v)
 
+            else:
+                n_exisiting_keypoints = existing_keypoints.shape[0]
+                features["keypoints"] = np.vstack((existing_keypoints, new_keypoints))
+                matches0[:,i] = matches0[:,i] + n_exisiting_keypoints
+                with h5py.File(feature_path, "r+", libver="latest") as fd:
+                    del fd[im_name]
+                    grp = fd.create_group(im_name)
+                    for k, v in features.items():
+                        if k == 'im_path' or k == 'feature_path':
+                            grp.create_dataset(k, data=str(v))
+                        if isinstance(v, np.ndarray):
+                            grp.create_dataset(k, data=v)
+
+    @torch.no_grad()
     def _match_pairs(
         self,
         feats0: FeaturesDict,
@@ -132,13 +146,8 @@ class LOFTRMatcher(MatcherBase):
 
         # Create a 1-to-1 matching array
         matches0 = np.arange(mkpts0.shape[0])
-        self._update_features(feature_path, Path(im_path0).name, Path(im_path1).name, mkpts0, mkpts1, matches0)
         matches = np.hstack((matches0.reshape((-1, 1)), matches0.reshape((-1, 1))))
-
-        matches_dict = {
-            "matches0": matches0,
-            "matches01": matches,
-        }
+        self._update_features(feature_path, Path(im_path0).name, Path(im_path1).name, mkpts0, mkpts1, matches)
 
         return matches
 
