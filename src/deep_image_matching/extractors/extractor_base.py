@@ -130,6 +130,9 @@ class ExtractorBase(metaclass=ABCMeta):
         if not im_path.exists():
             raise ValueError(f"Image {im_path} does not exist")
 
+        output_dir = Path(self._config["general"]["output_dir"])
+        feature_path = output_dir / "features.h5"
+
         # Load image
         image = cv2.imread(str(im_path))
 
@@ -145,7 +148,8 @@ class ExtractorBase(metaclass=ABCMeta):
         if self._config["general"]["tile_selection"] == TileSelection.NONE:
             # Extract features from the whole image
             features = self._extract(image_)
-            features["im_path"] = im_path
+            features["feature_path"] = str(feature_path)
+            features["im_path"] = str(im_path)
             features["tile_idx"] = np.zeros(
                 features["keypoints"].shape[0], dtype=np.float32
             )
@@ -153,7 +157,8 @@ class ExtractorBase(metaclass=ABCMeta):
         else:
             # Extract features by tiles
             features = self._extract_by_tile(image_, select_unique=True)
-            features["im_path"] = im_path
+            features["feature_path"] = str(feature_path)
+            features["im_path"] = str(im_path)
         logger.debug(f"Extracted {len(features['keypoints'])} keypoints")
 
         # Retrieve original image coordinates if matching was performed on up/down-sampled images
@@ -165,9 +170,7 @@ class ExtractorBase(metaclass=ABCMeta):
         # Save features to disk in h5 format (TODO: MOVE it to another method)
         # def save_features_to_h5(self)
         as_half = True  # TODO: add this to the config
-        output_dir = Path(self._config["general"]["output_dir"])
         output_dir.mkdir(parents=True, exist_ok=True)
-        feature_path = output_dir / "features.h5"
         im_name = im_path.name
 
         # If as_half is True then the features are converted to float32 or float16.
@@ -185,7 +188,7 @@ class ExtractorBase(metaclass=ABCMeta):
                     del fd[im_name]
                 grp = fd.create_group(im_name)
                 for k, v in features.items():
-                    if k == 'im_path':
+                    if k == 'im_path' or k == 'feature_path':
                         grp.create_dataset(k, data=str(v))
                     if isinstance(v, np.ndarray):
                         grp.create_dataset(k, data=v)
