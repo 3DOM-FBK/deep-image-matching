@@ -20,7 +20,7 @@ class KorniaMatcher(MatcherBase):
         super().__init__(config)
 
         # load the matcher
-        cfg = {**self.default_conf, **self._config.get("kornia_matcher", {})}
+        cfg = {**self.default_conf, **self._config.get("matcher", {})}
         self._matcher = KF.DescriptorMatcher(cfg["match_mode"], cfg["th"])
 
     @torch.no_grad()
@@ -29,17 +29,29 @@ class KorniaMatcher(MatcherBase):
         feats0: FeaturesDict,
         feats1: FeaturesDict,
     ) -> np.ndarray:
+        
+        #print(feats0["descriptors"][:5,:5])
+        #print(feats1["descriptors"][:5,:5])
+        #print(feats0["descriptors"][0,:]-feats1["descriptors"][0,:])
+
+
         desc1 = feats0["descriptors"].T
         desc2 = feats1["descriptors"].T
 
         desc1 = torch.tensor(desc1, dtype=torch.float).to(self._device)
         desc2 = torch.tensor(desc2, dtype=torch.float).to(self._device)
 
+        #print(desc1.shape)
+        #print(desc2.shape)
+
         # match the features
         dist, idx = self._matcher(desc1, desc2)
 
         # get matching array (indices of matched keypoints in image0 and image1)
         matches01_idx = idx.cpu().numpy()
+        #print(dist)
+        #print(matches01_idx)
+
 
         return matches01_idx
 
