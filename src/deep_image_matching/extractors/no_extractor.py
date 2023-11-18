@@ -25,22 +25,27 @@ class NoExtractor(ExtractorBase):
         super().__init__(config)
 
         # Load extractor
-        cfg = self._config.get("extractor")
-        self._extractor = ALike(
-            **configs[cfg["model"]],
-            device=cfg["device"],
-            top_k=cfg["top_k"],
-            scores_th=cfg["scores_th"],
-            n_limit=cfg["n_limit"],
-        )
+        #cfg = self._config.get("extractor")
+        #self._extractor = ALike(
+        #    **configs[cfg["model"]],
+        #    device=cfg["device"],
+        #    top_k=cfg["top_k"],
+        #    scores_th=cfg["scores_th"],
+        #    n_limit=cfg["n_limit"],
+        #)
 
     @torch.no_grad()
     def _extract(self, image: np.ndarray) -> np.ndarray:
         # Extract features
-        feats = self._extractor(image, sub_pixel=True)
+        #feats = self._extractor(image, sub_pixel=True)
 
         # Transpose descriptors
-        feats["descriptors"] = feats["descriptors"].T
+        #feats["descriptors"] = feats["descriptors"].T
+
+        feats = {}
+        feats["keypoints"] = np.array([])
+        feats["descriptors"] = np.array([])
+        feats["scores"] = np.array([])
 
         return feats
 
