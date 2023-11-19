@@ -270,6 +270,7 @@ class MatcherBase(metaclass=ABCMeta):
         method: TileSelection = TileSelection.PRESELECTION,
         select_unique: bool = True,
     ):
+
         # Initialize empty matches array
         matches_full = np.array([], dtype=np.int64).reshape(0, 2)
 

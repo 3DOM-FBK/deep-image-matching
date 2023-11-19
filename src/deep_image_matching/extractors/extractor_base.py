@@ -135,10 +135,8 @@ class ExtractorBase(metaclass=ABCMeta):
 
         # Load image
         image = cv2.imread(str(im_path))
-
         if self.as_float:
             image = image.astype(np.float32)
-
         if self.grayscale:
             image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
