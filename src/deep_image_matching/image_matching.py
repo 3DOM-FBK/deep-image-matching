@@ -13,6 +13,10 @@ from .utils.geometric_verification import geometric_verification
 from .utils.image import ImageList
 from .utils.pairs_generator import PairsGenerator
 
+from .extractors.superpoint import SuperPointExtractor
+from .matchers.lightglue import LightGlueMatcher
+import cv2
+
 
 def make_correspondence_matrix(matches: np.ndarray) -> np.ndarray:
     kpts_number = matches.shape[0]
@@ -169,6 +173,53 @@ class ImageMatching:
                     txt_file.write(f"{pair[0].name} {pair[1].name}\n")
 
         return self.pair_file
+    
+    def estimate_rotations(self):
+        rotations = [0, 90, 180, 270]
+        best_rotations = []
+        SPextractor = SuperPointExtractor({})
+        LGmatcher = LightGlueMatcher()
+        features = {
+            "feat0" : None,
+            "feat1" : None,
+        }
+        for pair in self.pairs:
+            matchesXrotation = []
+            # Reference image
+            image0 = cv2.imread(str(pair[0]))
+            H, W = image0.shape[:2]
+            new_width = 500
+            new_height = int(H * 500/W)
+            image0 = cv2.resize(image0, (new_width, new_height))
+            image0 = cv2.cvtColor(image0, cv2.COLOR_BGR2GRAY)
+            features["feat0"] = SPextractor._extract(image0)
+            for rotation, cv2rotation in zip(rotations, [None, cv2.ROTATE_90_CLOCKWISE, cv2.ROTATE_180, cv2.ROTATE_90_COUNTERCLOCKWISE]):
+                # Load image
+                image1 = cv2.imread(str(pair[1]))
+                H, W = image1.shape[:2]
+                new_width = 500
+                new_height = int(H * 500/W)
+                image1 = cv2.resize(image1, (new_width, new_height))
+                image1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
+                #rotation_matrix = cv2.getRotationMatrix2D((new_width / 2, new_height / 2), rotation, 1.0)
+                #rotated_image = cv2.warpAffine(image, rotation_matrix, (new_width, new_height))
+                if rotation != 0:
+                    image1 = cv2.rotate(image1, cv2rotation)
+                features["feat1"] = SPextractor._extract(image1)
+                matches = LGmatcher._match_pairs(features["feat0"],features["feat1"])
+                matchesXrotation.append((rotation, matches.shape[0]))
+            index_of_max = max(range(len(matchesXrotation)), key=lambda i: matchesXrotation[i][1])
+            print("index_of_max", index_of_max)
+            print("matchesXrotation", matchesXrotation)
+            # E' interattivo, man mano devo ruotare le immagini, va fatto su una cartella a parte
+            best_rotations.append((pair, rotations[index_of_max]))
+
+        out_file = self.pair_file.parent / f"{self.pair_file.stem}_rot.txt"
+        with open(out_file, "w") as txt_file:
+            for element in best_rotations:
+                txt_file.write(f"{element[0][0].name} {element[0][1].name} {element[1]}\n")
+        quit()
+
 
     def extract_features(self) -> Path:
         # Extract features
