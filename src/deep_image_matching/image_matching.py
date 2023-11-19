@@ -307,3 +307,43 @@ class ImageMatching:
         logger.info("Matching done!")
 
         return matches_path
+
+    def rotate_back_features(self, feature_path : Path) -> None:
+        #images = self.image_list.img_names
+        for img, theta in self.rotated_images:
+            features = get_features(feature_path, img)
+            keypoints = features["keypoints"]
+            rotated_keypoints = np.empty(keypoints.shape)
+            im = cv2.imread(str(self.image_dir / img))
+            H, W = im.shape[:2]
+
+            if theta == 180:
+                for r in range(keypoints.shape[0]):
+                    x, y = keypoints[r, 0], keypoints[r, 1]
+                    y_rot = H - y
+                    x_rot = W - x
+                    rotated_keypoints[r, 0], rotated_keypoints[r, 1] = x_rot, y_rot
+
+            if theta == 90:
+                for r in range(keypoints.shape[0]):
+                    x, y = keypoints[r, 0], keypoints[r, 1]
+                    y_rot = W - x
+                    x_rot = y
+                    rotated_keypoints[r, 0], rotated_keypoints[r, 1] = x_rot, y_rot
+
+            if theta == 270:
+                for r in range(keypoints.shape[0]):
+                    x, y = keypoints[r, 0], keypoints[r, 1]
+                    y_rot = x
+                    x_rot = H - y
+                    rotated_keypoints[r, 0], rotated_keypoints[r, 1] = x_rot, y_rot
+            
+            with h5py.File(feature_path, "r+", libver="latest") as fd:
+                del fd[img]
+                features["keypoints"] = rotated_keypoints
+                grp = fd.create_group(img)
+                for k, v in features.items():
+                    if k == 'im_path' or k == 'feature_path':
+                        grp.create_dataset(k, data=str(v))
+                    if isinstance(v, np.ndarray):
+                        grp.create_dataset(k, data=v)

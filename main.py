@@ -187,9 +187,10 @@ def main():
         overlap=overlap,
     )
     pair_path = img_matching.generate_pairs()
-    img_matching.rotate_upright_images()
+    img_matching.rotate_upright_images() # Try to rotate images so they will be all "upright", useful for deep-learning approaches that usually are not rotation invariant
     feature_path = img_matching.extract_features()
-    match_path = img_matching.match_pairs(feature_path)
+    match_path = img_matching.match_pairs(feature_path) # Features are extracted on "upright" images, this function report back images on their original orientation 
+    img_matching.rotate_back_features(feature_path)
 
     # Export in colmap format
     database_path = output_dir / "database.db"
