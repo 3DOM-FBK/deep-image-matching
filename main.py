@@ -187,7 +187,7 @@ def main():
         overlap=overlap,
     )
     pair_path = img_matching.generate_pairs()
-
+    img_matching.estimate_rotations()
     feature_path = img_matching.extract_features()
     match_path = img_matching.match_pairs(feature_path)
 
