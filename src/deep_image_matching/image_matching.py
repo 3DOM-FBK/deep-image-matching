@@ -209,7 +209,7 @@ class ImageMatching:
             # Target image - find the best rotation
             target_img = pair[1].name
             if target_img not in processed_images:
-                processed_images.append(target_img)
+                #processed_images.append(target_img)
                 image1 = cv2.imread(str(path_to_upright_dir / target_img))
                 for rotation, cv2rotation in zip(rotations, cv2_rot_params):
                     H, W = image1.shape[:2]
@@ -225,10 +225,10 @@ class ImageMatching:
                     matches = LGmatcher._match_pairs(features["feat0"],features["feat1"])
                     matchesXrotation.append((rotation, matches.shape[0]))
                 index_of_max = max(range(len(matchesXrotation)), key=lambda i: matchesXrotation[i][1])
-                if index_of_max != 0:
+                n_matches = matchesXrotation[index_of_max][1]
+                if index_of_max != 0 and n_matches>100:
+                    processed_images.append(target_img)
                     self.rotated_images.append((pair[1].name, rotations[index_of_max]))
-
-                if index_of_max != 0:
                     rotated_image1 = cv2.rotate(image1, cv2_rot_params[index_of_max])
                     cv2.imwrite(str(path_to_upright_dir / target_img), rotated_image1)
 
