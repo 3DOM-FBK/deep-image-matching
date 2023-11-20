@@ -1,4 +1,5 @@
 from pathlib import Path
+from PIL import Image
 
 import cv2
 import kornia as K
@@ -6,6 +7,7 @@ import numpy as np
 import torch
 from kornia import feature as KF
 import h5py
+import sys
 
 from .. import logger
 from ..utils.consts import Quality, TileSelection
@@ -14,16 +16,17 @@ from .matcher_base import FeaturesDict, MatcherBase
 from typing import Tuple
 from ..io.h5 import get_features
 
-class LOFTRMatcher(MatcherBase):
+roma_path = Path(__file__).parent.parent / "thirdparty/RoMa"
+sys.path.append(str(roma_path))
+from roma import roma_outdoor
+
+class RomaMatcher(MatcherBase):
     def __init__(self, config={}) -> None:
         """Initializes a LOFTRMatcher with Kornia object with the given options dictionary."""
 
         super().__init__(config)
 
-        model = config["matcher"]["pretrained"]
-        self.matcher = (
-            KF.LoFTR(pretrained=model).to(self._device).eval()
-        )
+        self.matcher = roma_outdoor(device=self._device)
 
         self.grayscale = True
         self.as_float = True
@@ -110,30 +113,20 @@ class LOFTRMatcher(MatcherBase):
         im_path0 = feats0["im_path"]
         im_path1 = feats1["im_path"]
 
-        # Load image
-        image0 = cv2.imread(im_path0)
-        image1 = cv2.imread(im_path1)
-
-        #if self.as_float:
-        #    image0 = image0.astype(np.float32)
-        #    image1 = image1.astype(np.float32)
-#
-        #if self.grayscale:
-        #    image0 = cv2.cvtColor(image0, cv2.COLOR_BGR2GRAY)
-        #    image1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
-#
-        ## Resize images if needed
-        #image0 = self._resize_image(self._quality, image0)
-        #image1 = self._resize_image(self._quality, image1)
-
-        # Covert images to tensor
-        timg0_ = self._frame2tensor(image0, self._device)
-        timg1_ = self._frame2tensor(image1, self._device)
+        # PER ROMA CI VUOLE VERSIONE DI PYTORCH PIU' RECENTE E SE NECESSARIO L"INSTALLAZIONE DI XFORMERS (attenzione a usare le versioni giuste)
 
         # Run inference
         with torch.inference_mode():
-            input_dict = {"image0": timg0_, "image1": timg1_}
-            correspondences = self.matcher(input_dict)
+            W_A, H_A = Image.open(im_path0).size
+            W_B, H_B = Image.open(im_path1).size
+
+            warp, certainty = self.matcher.match(im_path0, im_path1, device=self._device)
+            matches, certainty = self.matcher.sample(warp, certainty)
+            kptsA, kptsB = self.matcher.to_pixel_coordinates(matches, H_A, W_A, H_B, W_B)
+
+            print('here, ciao')
+
+            quit()
 
         # Get matches and build features
         mkpts0 = correspondences["keypoints0"].cpu().numpy()

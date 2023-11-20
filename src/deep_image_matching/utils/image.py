@@ -91,8 +91,11 @@ class Image:
         self._date_time = None
         self._focal_length = None
 
-        if not skip_exif:
-            self.read_exif()
+        #try:
+        #    if not skip_exif:
+        #        self.read_exif()
+        #except:
+        #    raise RuntimeError("Unable to read exif data.")
 
     def __repr__(self) -> str:
         """Returns a string representation of the image"""
