@@ -2,17 +2,21 @@
 
 ## DEEP-IMAGE-MATCHING
 
+<img src="assets/nadar_sift_matches.png" alt="Image 1" width="200" height="150" />
+<img src="assets/image2.jpg" alt="Image 2" width="200" height="150" />
+<img src="assets/image3.jpg" alt="Image 3" width="200" height="150" />
+
 Multivew matcher for COLMAP. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI.
 
 Key features:
 
-- [x] multiview
-- [x] large format images
+- [x] Multiview
+- [x] Large format images
 - [x] SOTA deep-learning and hand-crafted features
-- [x] full combatibility with COLMAP
-- [ ] Support for image rotations
+- [x] Full combatibility with COLMAP
+- [x] Support for image rotations
 - [x] Compatibility with Agisoft Metashape
-- [ ] support image retrieval with deep-learning local features
+- [ ] Support image retrieval with deep-learning local features
 
 The repo is under construction but it already works with SuperPoint, DISK, ALIKE, ALIKES, ORB and SIFT local features and LightGlue, SuperGlue and nearest neighbor matchers.
 
@@ -59,7 +63,7 @@ Supported extractors:
 - [x] ALIKE
 - [x] ALIKED
 - [ ] Superpoint free
-- [ ] KeyNet + OriNet + HardNet8
+- [x] KeyNet + OriNet + HardNet8
 - [x] ORB (opencv)
 - [x] SIFT (opencv)
 
@@ -67,22 +71,23 @@ Matchers:
 
 - [x] Lightglue (with Superpoint, Disk and ALIKED)
 - [x] SuperGlue (with Superpoint)
-- [ ] LoFTR
+- [x] LoFTR
 - [x] Nearest neighbor (with KORNIA Descriptor Matcher)
 - [ ] GlueStick
 - [ ] RoMa
 
 ## TODO:
 
-- [x] Tile processing
-- [ ] add kornia features
-- [ ] manage image rotation
-- [ ] add image retrieval with global descriptors
+- [x] Tile processing for high resolution images
+- [x] Manage image rotations
+- [ ] Add image retrieval with global descriptors
 - [x] add GUI
 - [x] Add pycolmap compatibility
 - [x] Add exporting to Bundler format ready for importing into Metashape (only on linux with pycolmap)
 - [ ] Add visualization for extracted features and matches
-- [ ] add possbility to use multiple features together
-- [ ] Improve speed (parallization and threading) 
-- [ ] Autoselect tiling grid in order to fit images in GPU memory 
+- [ ] Add possbility to use multiple features together
+- [ ] Add script to join databases with different local features
+- [ ] Improve speed (parallization and threading)
+- [ ] Autoselect tiling grid in order to fit images in GPU memory
 - [ ] Add tests, documentation and examples
+- [ ] Apply mask during feature extraction
