@@ -2,9 +2,8 @@
 
 ## DEEP-IMAGE-MATCHING
 
-<img src="assets/nadar_sift_matches.png" alt="Prova 1" width="200" height="150" />
-<img src="assets/nadar_disk_matches.png" alt="Prova 2" width="200" height="150" />
-<img src="assets/nadar_disk.png" alt="Prova 3" width="200" height="150" />
+| SIFT | DISK | DISK |
+|<img src="assets/nadar_sift_matches.png" alt="Prova 1" width="200" height="150" /> | <img src="assets/nadar_disk_matches.png" alt="Prova 2" width="200" height="150" /> | <img src="assets/nadar_disk.png" alt="Prova 3" width="200" height="150" />
 
 Multivew matcher for COLMAP. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI.
 
