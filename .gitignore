@@ -3,6 +3,7 @@ data/
 res/
 output/
 sandbox/
+assets/outs
 
 # VScode
 .vscode/
