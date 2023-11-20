@@ -113,34 +113,25 @@ class RomaMatcher(MatcherBase):
         im_path0 = feats0["im_path"]
         im_path1 = feats1["im_path"]
 
-        # PER ROMA CI VUOLE VERSIONE DI PYTORCH PIU' RECENTE E SE NECESSARIO L"INSTALLAZIONE DI XFORMERS (attenzione a usare le versioni giuste)
-
         # Run inference
         with torch.inference_mode():
+            # /home/luca/Desktop/gitprojects/github_3dom/deep-image-matching/src/deep_image_matching/thirdparty/RoMa/roma/models/matcher.py
+            # in class RegressionMatcher(nn.Module) def __init__ hardcoded self.upsample_res = (int(864/4), int(864/4))
             W_A, H_A = Image.open(im_path0).size
             W_B, H_B = Image.open(im_path1).size
 
-            warp, certainty = self.matcher.match(im_path0, im_path1, device=self._device)
+            warp, certainty = self.matcher.match(str(im_path0), str(im_path1), device=self._device, batched=False)
             matches, certainty = self.matcher.sample(warp, certainty)
             kptsA, kptsB = self.matcher.to_pixel_coordinates(matches, H_A, W_A, H_B, W_B)
+            kptsA, kptsB = kptsA.cpu().numpy(), kptsB.cpu().numpy()
 
-            print('here, ciao')
-
-            quit()
-
-        # Get matches and build features
-        mkpts0 = correspondences["keypoints0"].cpu().numpy()
-        mkpts1 = correspondences["keypoints1"].cpu().numpy()
-        features0 = FeaturesDict(keypoints=mkpts0)
-        features1 = FeaturesDict(keypoints=mkpts1)
-
-        # Get match confidence
-        mconf = correspondences["confidence"].cpu().numpy()
+        features0 = FeaturesDict(keypoints=kptsA)
+        features1 = FeaturesDict(keypoints=kptsB)
 
         # Create a 1-to-1 matching array
-        matches0 = np.arange(mkpts0.shape[0])
+        matches0 = np.arange(kptsA.shape[0])
         matches = np.hstack((matches0.reshape((-1, 1)), matches0.reshape((-1, 1))))
-        self._update_features(feature_path, Path(im_path0).name, Path(im_path1).name, mkpts0, mkpts1, matches)
+        self._update_features(feature_path, Path(im_path0).name, Path(im_path1).name, kptsA, kptsB, matches)
 
         return matches
 

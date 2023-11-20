@@ -442,7 +442,8 @@ class RegressionMatcher(nn.Module):
         self.sample_mode = sample_mode
         self.upsample_preds = upsample_preds
         #self.upsample_res = (14*16*6, 14*16*6)
-        self.upsample_res = (864/4, 864/4)
+        #self.upsample_res = (int(864/4), int(864/4))
+        self.upsample_res = (int(14*16*6/2), int(14*16*6/2))
         self.symmetric = symmetric
         self.sample_thresh = 0.05
         self.recrop_upsample = recrop_upsample
@@ -594,7 +595,7 @@ class RegressionMatcher(nn.Module):
                 )
                 im_A, im_B = test_transform((im_A, im_B))
                 batch = {"im_A": im_A[None].to(device), "im_B": im_B[None].to(device)}
-            else:
+            else:               
                 b, c, h, w = im_A.shape
                 b, c, h2, w2 = im_B.shape
                 assert w == w2 and h == h2, "For batched images we assume same size"
