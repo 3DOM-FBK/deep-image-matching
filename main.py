@@ -69,6 +69,7 @@ def parse_args():
         args.strategy = gui_out["strategy"]
         args.pairs = gui_out["pair_file"]
         args.overlap = gui_out["image_overlap"]
+        args.force = True
 
     return args
 

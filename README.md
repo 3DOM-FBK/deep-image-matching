@@ -56,7 +56,7 @@ To run with the GUI:
 python ./main.py --gui
 ```
 
-![X1](assets/gui.png)
+![X4](assets/gui.png)
 
 ## Multiview tests
 
