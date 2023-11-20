@@ -95,12 +95,12 @@ class MatcherApp:
             else:
                 args["image_overlap"] = int(args["image_overlap"])
 
-        if not args["max_features"]:
-            self.error_label[
-                "text"
-            ] = "Invalid max number of local features per image. Using the default value."
-        else:
-            args["max_features"] = int(args["max_features"])
+        #if not args["max_features"]:
+        #    self.error_label[
+        #        "text"
+        #    ] = "Invalid max number of local features per image. Using the default value."
+        #else:
+        #    args["max_features"] = int(args["max_features"])
 
         return args
 
