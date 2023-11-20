@@ -5,7 +5,7 @@
 
 |   SIFT                      |   DISK                      |   DISK                           |
 | ----------------------------| ----------------------------| ---------------------------------|
-| ![Prova 1](assets/nadar_sift_matches.png) | ![Prova 2](assets/nadar_disk_matches.png) | ![Prova 3](assets/nadar_disk.png) |
+| ![X1](assets/nadar_sift_matches.png) | ![X2](assets/nadar_disk_matches.png) | ![X3](assets/nadar_disk.png) |
 
 
 Multivew matcher for COLMAP. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI.
@@ -45,7 +45,7 @@ pip install -e .
 Before running check options with `python ./main.py --help`, then:
 
 ```bash
-python ./main.py cli  --config "superpoint+lightglue" --images "assets/imgs" --outs "output" --strategy "sequential" --overlap 2
+python ./main.py  --config superpoint+lightglue --images assets/example_images --outs assets/output --strategy sequential --overlap 1
 ```
 
 See other examples in run.bat. If you want to customize detector and descpritor options, change default options in config.py.
@@ -55,6 +55,8 @@ To run with the GUI:
 ```bash
 python ./main.py --gui
 ```
+
+![X1](assets/gui.png)
 
 ## Multiview tests
 
