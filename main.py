@@ -211,7 +211,7 @@ def main():
     )
 
     # Try to run reconstruction with pycolmap
-    use_pycolmap = True
+    use_pycolmap = False
     try:
         import pycolmap
     except ImportError:
