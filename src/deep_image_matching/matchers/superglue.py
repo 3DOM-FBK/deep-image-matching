@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from ..thirdparty.SuperGlue.models.superglue import SuperGlue
+from ..thirdparty.SuperGluePretrainedNetwork.models.superglue import SuperGlue
 from .matcher_base import FeaturesDict, MatcherBase
 
 

@@ -1,3 +1,5 @@
+from pathlib import Path
+from pprint import pprint
 import os
 import cv2
 import h5py
@@ -147,6 +149,17 @@ class ImageMatching:
         else:
             self._matcher = Matcher(self.custom_config)
 
+        # Print configuration
+        logger.info("Running image matching with the following configuration:")
+        logger.info(f"  Image folder: {self.image_dir}")
+        logger.info(f"  Output folder: {self.output_dir}")
+        logger.info(f"  Number of images: {len(self.image_list)}")
+        logger.info(f"  Matching strategy: {self.matching_strategy}")
+        logger.info(f"  Retrieval option: {self.retrieval_option}")
+        logger.info(f"  Overlap: {self.overlap}")
+        logger.info(f"  Feature extraction method: {self.local_features}")
+        logger.info(f"  Matching method: {self.matching_method}")
+
     @property
     def img_names(self):
         return self.image_list.img_names
@@ -245,16 +258,22 @@ class ImageMatching:
 
 
     def extract_features(self) -> Path:
+        logger.info(f"Extracting features with {self.local_features}...")
+        logger.info(f"{self.local_features} configuration: ")
+        pprint(self.custom_config["extractor"])
+
         # Extract features
-        logger.info("Extracting features...")
         for img in tqdm(self.image_list):
             feature_path = self._extractor.extract(img)
 
-        logger.info("Features extracted")
+        logger.info("Features extracted!")
 
         return feature_path
 
     def match_pairs(self, feature_path: Path) -> Path:
+        logger.info(f"Matching features with {self.matching_method}...")
+        logger.info(f"{self.matching_method} configuration: ")
+        pprint(self.custom_config["matcher"])
         # Check that feature_path exists
         feature_path = Path(feature_path)
         if not feature_path.exists():

@@ -86,6 +86,15 @@ class MatcherBase(metaclass=ABCMeta):
             },
         }
 
+        if "min_matches" in custom_config["general"]:
+            self.min_matches = custom_config["general"]["min_matches"]
+        if "min_matches_per_tile" in custom_config["general"]:
+            self.min_matches_per_tile = custom_config["general"]["min_matches_per_tile"]
+        if "preselction_resize_max" in custom_config["general"]:
+            self.preselction_resize_max = custom_config["general"][
+                "preselction_resize_max"
+            ]
+
         # Get main processing parameters and save them as class members
         self._tiling = self._config["general"]["tile_selection"]
         logger.debug(f"Matching options: Tiling: {self._tiling.name}")

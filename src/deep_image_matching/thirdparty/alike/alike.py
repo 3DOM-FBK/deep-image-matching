@@ -1,4 +1,3 @@
-import logging
 import math
 import os
 import time
@@ -7,6 +6,7 @@ from copy import deepcopy
 import cv2
 import torch
 
+from .. import logger
 from .alnet import ALNet
 from .soft_detect import DKD
 
@@ -90,8 +90,8 @@ class ALike(ALNet):
             self.load_state_dict(state_dict)
             self.to(self.device)
             self.eval()
-            logging.info(f"Loaded model parameters from {model_path}")
-            logging.info(
+            logger.info(f"Loaded model parameters from {model_path}")
+            logger.info(
                 f"Number of model parameters: {sum(p.numel() for p in self.parameters() if p.requires_grad) / 1e3}KB"
             )
 

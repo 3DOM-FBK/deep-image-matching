@@ -1,7 +1,4 @@
 {
-  // Use IntelliSense to learn about possible attributes.
-  // Hover to view descriptions of existing attributes.
-  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
   "version": "0.2.0",
   "configurations": [
     {
@@ -17,13 +14,13 @@
       "request": "launch",
       "program": "${file}",
       "console": "integratedTerminal",
-      // "args": [
-      //   "--config",
-      //   "superpoint+lightglue",
-      //   "--images",
-      //   "data/easy_small",
-      //   "--force"
-      // ]
+      "args": [
+        "--config",
+        "superpoint+lightglue_fast",
+        "--images",
+        "data/easy_small",
+        "--force"
+      ]
       // "args": [
       //   "--config",
       //   "sift+kornia_matcher",
@@ -31,15 +28,15 @@
       //   "data/easy_small",
       //   "--force"
       // ]
-      "args": [
-        "--config",
-        "aliked+lightglue",
-        "--images",
-        "data/arsenale4",
-        "--strategy",
-        "bruteforce",
-        "--force"
-      ]
+      // "args": [
+      //   "--config",
+      //   "aliked+lightglue",
+      //   "--images",
+      //   "data/arsenale4",
+      //   "--strategy",
+      //   "bruteforce",
+      //   "--force"
+      // ]
       // "args": [
       //   "--config",
       //   "superpoint+lightglue",
@@ -58,6 +55,15 @@
       //   "bruteforce",
       //   "--force"
       // ]
+      // "args": [
+      //   "--config",
+      //   "superpoint+lightglue",
+      //   "--images",
+      //   "data/belvedere2",
+      //   "--strategy",
+      //   "bruteforce",
+      //   "--force"
+      // ]
     },
     {
       "name": "Python GUI",
@@ -66,16 +72,6 @@
       "program": "${file}",
       "console": "integratedTerminal",
       "args": ["--gui"]
-    },
-    {
-      "name": "Debug module",
-      "type": "python",
-      "request": "launch",
-      "program": "${file}",
-      "console": "integratedTerminal",
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}"
-      }
     }
   ]
 }
