@@ -40,6 +40,14 @@ python -m pip install --upgrade pip
 pip install -e .
 ```
 
+Install hloc (https://github.com/cvg/Hierarchical-Localization/tree/master):
+```
+git clone --recursive https://github.com/cvg/Hierarchical-Localization/
+cd Hierarchical-Localization/
+python -m pip install -e .
+git submodule update --init --recursive
+```
+
 ## Example usage
 
 Before running check options with `python ./main.py --help`, then:
