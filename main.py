@@ -39,7 +39,7 @@ def parse_args():
     parser.add_argument(
         "-m",
         "--strategy",
-        choices=["bruteforce", "sequential", "retrieval", "custom_pairs"],
+        choices=["bruteforce", "sequential", "retrieval", "custom_pairs", "matching_lowres"],
         default="sequential",
     )
     parser.add_argument("-p", "--pairs", type=str, default=None)
