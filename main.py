@@ -23,7 +23,7 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--gui", action="store_true", help="Run command line interface", default=False
+        "--gui", action="store_true", help="Run GUI interface", default=False
     )
 
     parser.add_argument("-i", "--images", type=str, help="Input image folder")
@@ -58,6 +58,7 @@ def parse_args():
     )
     parser.add_argument("-f", "--force", action="store_true", default=False)
     parser.add_argument("-V", "--verbose", action="store_true", default=False)
+    parser.add_argument('--upright', action='store_true', help='...', default=False)
 
     args = parser.parse_args()
 
@@ -69,6 +70,8 @@ def parse_args():
         args.strategy = gui_out["strategy"]
         args.pairs = gui_out["pair_file"]
         args.overlap = gui_out["image_overlap"]
+        args.upright = gui_out["upright"]
+        args.force = True
 
     return args
 
@@ -187,8 +190,10 @@ def main():
         overlap=overlap,
     )
     pair_path = img_matching.generate_pairs()
+    if args.upright: img_matching.rotate_upright_images() # Try to rotate images so they will be all "upright", useful for deep-learning approaches that usually are not rotation invariant
     feature_path = img_matching.extract_features()
-    match_path = img_matching.match_pairs(feature_path)
+    match_path = img_matching.match_pairs(feature_path) # Features are extracted on "upright" images, this function report back images on their original orientation 
+    if args.upright: img_matching.rotate_back_features(feature_path)
 
     # Export in colmap format
     database_path = output_dir / "database.db"

@@ -1,29 +1,56 @@
 from pathlib import Path
 
+import cv2
 import kornia as K
 import numpy as np
 import torch
 from kornia import feature as KF
+import h5py
 
 from .. import logger
-from ..utils.consts import TileSelection
+from ..utils.consts import Quality, TileSelection
 from ..utils.tiling import Tiler
 from .matcher_base import FeaturesDict, MatcherBase
-
+from typing import Tuple
+from ..io.h5 import get_features
 
 class LOFTRMatcher(MatcherBase):
-    def __init__(self, **config) -> None:
+    def __init__(self, config={}) -> None:
         """Initializes a LOFTRMatcher with Kornia object with the given options dictionary."""
 
-        raise NotImplementedError(
-            "LOFTR is not correctely implemented yet. It needs to be updated to the new version of the Matcher. Please use LightGlue in the meanwhile!"
-        )
+        super().__init__(config)
 
-        super().__init__(**config["general"])
-
+        model = config["matcher"]["pretrained"]
         self.matcher = (
-            KF.LoFTR(pretrained=config["loftr"]["pretrained"]).to(self.device).eval()
+            KF.LoFTR(pretrained=model).to(self._device).eval()
         )
+
+        self.grayscale = True
+        self.as_float = True
+        self._quality = config["general"]["quality"]
+
+
+    def _resize_image(self, quality: Quality, image: np.ndarray) -> Tuple[np.ndarray]:
+        """
+        Resize images based on the specified quality.
+
+        Args:
+            quality (Quality): The quality level for resizing.
+            image (np.ndarray): The first image.
+
+        Returns:
+            Tuple[np.ndarray]: Resized images.
+
+        """
+        if quality == Quality.HIGHEST:
+            image_ = cv2.pyrUp(image)
+        elif quality == Quality.HIGH:
+            image_ = image
+        elif quality == Quality.MEDIUM:
+            image_ = cv2.pyrDown(image)
+        elif quality == Quality.LOW:
+            image_ = cv2.pyrDown(cv2.pyrDown(image))
+        return image_
 
     def _frame2tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor:
         image = K.image_to_tensor(np.array(image), False).float() / 255.0
@@ -31,30 +58,73 @@ class LOFTRMatcher(MatcherBase):
         if image.shape[1] > 2:
             image = K.color.rgb_to_grayscale(image)
         return image
+    
+    def _update_features(self, feature_path, im0_name, im1_name, new_keypoints0, new_keypoints1, matches0) -> None:
+        for i, im_name, new_keypoints in zip([0, 1], [im0_name, im1_name], [new_keypoints0, new_keypoints1]):
+            features = get_features(feature_path, im_name)
+            existing_keypoints = features["keypoints"]
+            
+            if len(existing_keypoints.shape) == 1:
+                features["keypoints"] = new_keypoints
+                with h5py.File(feature_path, "r+", libver="latest") as fd:
+                    del fd[im_name]
+                    grp = fd.create_group(im_name)
+                    for k, v in features.items():
+                        if k == 'im_path' or k == 'feature_path':
+                            grp.create_dataset(k, data=str(v))
+                        if isinstance(v, np.ndarray):
+                            grp.create_dataset(k, data=v)
 
+            else:
+                n_exisiting_keypoints = existing_keypoints.shape[0]
+                features["keypoints"] = np.vstack((existing_keypoints, new_keypoints))
+                matches0[:,i] = matches0[:,i] + n_exisiting_keypoints
+                with h5py.File(feature_path, "r+", libver="latest") as fd:
+                    del fd[im_name]
+                    grp = fd.create_group(im_name)
+                    for k, v in features.items():
+                        if k == 'im_path' or k == 'feature_path':
+                            grp.create_dataset(k, data=str(v))
+                        if isinstance(v, np.ndarray):
+                            grp.create_dataset(k, data=v)
+
+    @torch.no_grad()
     def _match_pairs(
         self,
-        image0: np.ndarray,
-        image1: np.ndarray,
+        feats0: FeaturesDict,
+        feats1: FeaturesDict,
     ):
+
         """Matches keypoints and descriptors in two given images
         (no matter if they are tiles or full-res images) using
         the LoFTR algorithm.
 
-        This method takes in two images as Numpy arrays, and returns
-        the matches between keypoints and descriptors in those images
-        using the SuperGlue algorithm.
-
         Args:
-            image0 (np.ndarray): the first image to match, as Numpy array
-            image1 (np.ndarray): the second image to match, as Numpy array
 
         Returns:
-            Tuple[FeaturesBase, FeaturesBase, np.ndarray, np.ndarray]: a
-            tuple containing the features of the first image, the features
-            of the second image, the matches between them and the match
-            onfidence.
+
         """
+
+        feature_path = feats0['feature_path']
+
+        im_path0 = feats0["im_path"]
+        im_path1 = feats1["im_path"]
+
+        # Load image
+        image0 = cv2.imread(im_path0)
+        image1 = cv2.imread(im_path1)
+
+        #if self.as_float:
+        #    image0 = image0.astype(np.float32)
+        #    image1 = image1.astype(np.float32)
+#
+        #if self.grayscale:
+        #    image0 = cv2.cvtColor(image0, cv2.COLOR_BGR2GRAY)
+        #    image1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
+#
+        ## Resize images if needed
+        #image0 = self._resize_image(self._quality, image0)
+        #image1 = self._resize_image(self._quality, image1)
 
         # Covert images to tensor
         timg0_ = self._frame2tensor(image0, self._device)
@@ -77,13 +147,9 @@ class LOFTRMatcher(MatcherBase):
         # Create a 1-to-1 matching array
         matches0 = np.arange(mkpts0.shape[0])
         matches = np.hstack((matches0.reshape((-1, 1)), matches0.reshape((-1, 1))))
+        self._update_features(feature_path, Path(im_path0).name, Path(im_path1).name, mkpts0, mkpts1, matches)
 
-        matches_dict = {
-            "matches0": matches0,
-            "matches01": matches,
-        }
-
-        return features0, features1, matches_dict, mconf
+        return matches
 
     def _match_by_tile(
         self,

@@ -122,6 +122,7 @@ def add_matches(db, h5_path, fname_to_id):
 
                 matches = group[key_2][()]
                 db.add_matches(id_1, id_2, matches)
+                #db.add_two_view_geometry(id_1, id_2, matches)
 
                 added.add(pair_id)
 

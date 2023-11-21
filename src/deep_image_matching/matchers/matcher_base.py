@@ -158,6 +158,7 @@ class MatcherBase(metaclass=ABCMeta):
         feats0: dict,
         feats1: dict,
     ) -> np.ndarray:
+        
         """
         _match_pairs _summary_
 
@@ -278,6 +279,7 @@ class MatcherBase(metaclass=ABCMeta):
         method: TileSelection = TileSelection.PRESELECTION,
         select_unique: bool = True,
     ):
+
         # Initialize empty matches array
         matches_full = np.array([], dtype=np.int64).reshape(0, 2)
 
