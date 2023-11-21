@@ -50,6 +50,8 @@ git submodule update --init --recursive
 
 ## Example usage
 
+### Sequential matching with LighGlue
+
 Before running check options with `python ./main.py --help`, then:
 
 ```bash
@@ -65,6 +67,10 @@ python ./main.py --gui
 ```
 
 ![X4](assets/gui.png)
+
+### Merging databases with different local features
+
+See scripts in the `./scripts` dir
 
 ## Multiview tests
 
@@ -97,11 +103,8 @@ Matchers:
 - [x] Add pycolmap compatibility
 - [x] Add exporting to Bundler format ready for importing into Metashape (only on linux with pycolmap)
 - [ ] Add visualization for extracted features and matches
-- [ ] Add possbility to use multiple features together
-- [ ] Add script to join databases with different local features
 - [ ] Improve speed (parallization and threading)
 - [ ] Autoselect tiling grid in order to fit images in GPU memory
 - [ ] Add tests, documentation and examples
 - [ ] Apply mask during feature extraction
-- [ ] Script to merge databases
-- [ ] Script to eliminate static tie points
+- [ ] Check scripts
