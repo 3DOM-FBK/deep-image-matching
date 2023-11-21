@@ -1,8 +1,10 @@
-from database import COLMAPDatabase
-from database import blob_to_array
-from database import array_to_blob
-from database import pair_id_to_image_ids
 import numpy as np
+
+from src.deep_image_matching.utils.database import (
+    COLMAPDatabase,
+    blob_to_array,
+    pair_id_to_image_ids,
+)
 
 db_path1 = r"/media/luca/T7/2022-06-30/joined1.db"
 db1 = COLMAPDatabase.connect(db_path1)
@@ -24,26 +26,32 @@ for row in rows:
 # Read existing kpts from database 2
 keypoints2 = dict(
     (image_id, blob_to_array(data, np.float32, (-1, 6)))
-    for image_id, data in db2.execute(
-        "SELECT image_id, data FROM keypoints"))
+    for image_id, data in db2.execute("SELECT image_id, data FROM keypoints")
+)
 
 # Read existing matches from database 2
-#matches2 = dict(
+# matches2 = dict(
 #    (pair_id_to_image_ids(pair_id),
 #     blob_to_array(data, np.uint32, (-1, 2)))
 #    for pair_id, data in db2.execute("SELECT pair_id, data FROM matches")
-#)
+# )
 matches2 = {}
 for pair_id, r, c, data in db2.execute("SELECT pair_id, rows, cols, data FROM matches"):
-    if data != None:
+    if data is not None:
         pair_id = pair_id_to_image_ids(pair_id)
-        matches2[(int(pair_id[0]), int(pair_id[1]))] = blob_to_array(data, np.uint32, (-1, 2))
+        matches2[(int(pair_id[0]), int(pair_id[1]))] = blob_to_array(
+            data, np.uint32, (-1, 2)
+        )
 
 two_views_matches2 = {}
-for pair_id, r, c, data in db2.execute("SELECT pair_id, rows, cols, data FROM two_view_geometries"):
-    if data != None:
+for pair_id, r, c, data in db2.execute(
+    "SELECT pair_id, rows, cols, data FROM two_view_geometries"
+):
+    if data is not None:
         pair_id = pair_id_to_image_ids(pair_id)
-        two_views_matches2[(int(pair_id[0]), int(pair_id[1]))] = blob_to_array(data, np.uint32, (-1, 2))
+        two_views_matches2[(int(pair_id[0]), int(pair_id[1]))] = blob_to_array(
+            data, np.uint32, (-1, 2)
+        )
 
 # Store all imgs
 img_list = list(keypoints2.keys())
@@ -52,33 +60,41 @@ img_list = list(keypoints2.keys())
 imgs2 = dict(
     (image_id, (name, camera_id))
     for image_id, name, camera_id in db2.execute(
-        "SELECT image_id, name, camera_id FROM images"))
+        "SELECT image_id, name, camera_id FROM images"
+    )
+)
 
 for image_id in list(imgs2.keys()):
     db3.add_image(imgs2[image_id][0], imgs2[image_id][1])
 
 # Read existing kpts from database 1
 keypoints1 = dict(
-    (image_id, blob_to_array(data, np.float32, (-1, 2))) # (-1, 6)
-    for image_id, data in db1.execute(
-        "SELECT image_id, data FROM keypoints"))
+    (image_id, blob_to_array(data, np.float32, (-1, 2)))  # (-1, 6)
+    for image_id, data in db1.execute("SELECT image_id, data FROM keypoints")
+)
 print("keypoints2 shape", np.shape(keypoints2[img_list[0]]))
-print(keypoints2[img_list[0]][:5,:])
+print(keypoints2[img_list[0]][:5, :])
 print("keypoints1 shape", np.shape(keypoints1[img_list[0]]))
-print(keypoints1[img_list[0]][:5,:])
+print(keypoints1[img_list[0]][:5, :])
 
 # Read existing matches from database 1
 matches1 = {}
 for pair_id, r, c, data in db1.execute("SELECT pair_id, rows, cols, data FROM matches"):
-    if data != None:
+    if data is not None:
         pair_id = pair_id_to_image_ids(pair_id)
-        matches1[(int(pair_id[0]), int(pair_id[1]))] = blob_to_array(data, np.uint32, (-1, 2))
+        matches1[(int(pair_id[0]), int(pair_id[1]))] = blob_to_array(
+            data, np.uint32, (-1, 2)
+        )
 
 two_views_matches1 = {}
-for pair_id, r, c, data in db1.execute("SELECT pair_id, rows, cols, data FROM two_view_geometries"):
-    if data != None:
+for pair_id, r, c, data in db1.execute(
+    "SELECT pair_id, rows, cols, data FROM two_view_geometries"
+):
+    if data is not None:
         pair_id = pair_id_to_image_ids(pair_id)
-        two_views_matches1[(int(pair_id[0]), int(pair_id[1]))] = blob_to_array(data, np.uint32, (-1, 2))
+        two_views_matches1[(int(pair_id[0]), int(pair_id[1]))] = blob_to_array(
+            data, np.uint32, (-1, 2)
+        )
 
 n_kpts_dict = {}
 
@@ -86,7 +102,7 @@ n_kpts_dict = {}
 for im_id in img_list:
     n_kpts = np.shape(keypoints1[im_id])[0]
     keypoints = np.vstack((keypoints1[im_id][:, :2], keypoints2[im_id][:, :2]))
-    #keypoints = np.vstack((keypoints1[im_id], keypoints2[im_id]))
+    # keypoints = np.vstack((keypoints1[im_id], keypoints2[im_id]))
     db3.add_keypoints(im_id, keypoints)
     n_kpts_dict[im_id] = n_kpts
 
