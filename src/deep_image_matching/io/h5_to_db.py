@@ -150,6 +150,8 @@ def export_to_colmap(
         match_path,
         fname_to_id,
     )
+    
+
 
     db.commit()
     return

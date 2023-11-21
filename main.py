@@ -230,15 +230,15 @@ def main():
             output_dir: Path,
             camera_mode: pycolmap.CameraMode = pycolmap.CameraMode.AUTO,
             skip_geometric_verification: bool = False,
+            cameras=None,
             verbose: bool = True,
-            cams=None,
         ) -> pycolmap.Reconstruction:
             reconstruction.create_empty_db(database)
             reconstruction.import_images(image_dir, database, camera_mode)
 
             # Update cameras intrinsics in the database
-            if cams is not None:
-                reconstruction.update_cameras(database, cams)
+            if cameras is not None:
+                reconstruction.update_cameras(database, cameras)
 
             image_ids = reconstruction.get_image_ids(database)
             triangulation.import_features(image_ids, database, feature_path)
@@ -337,8 +337,8 @@ def main():
             output_dir=output_dir,
             camera_mode=camera_mode,
             skip_geometric_verification=True,
+            cameras=[cam1, cam2],
             verbose=True,
-            cams=[cam1, cam2],
         )
 
     logger.info("Matching completed.")
