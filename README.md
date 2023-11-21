@@ -8,7 +8,7 @@
 | ![X1](assets/nadar_sift_matches.png) | ![X2](assets/nadar_disk_matches.png) | ![X3](assets/nadar_disk.png) |
 
 
-Multivew matcher for COLMAP. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI.
+Multivew matcher for COLMAP. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI. Feel free to collaborate!
 
 Key features:
 
@@ -18,11 +18,28 @@ Key features:
 - [x] Full combatibility with COLMAP
 - [x] Support for image rotations
 - [x] Compatibility with Agisoft Metashape
-- [ ] Support image retrieval with deep-learning local features
+- [x] Support image retrieval with deep-learning local features
 
-The repo is under construction but it already works with SuperPoint, DISK, ALIKE, ALIKES, ORB and SIFT local features and LightGlue, SuperGlue and nearest neighbor matchers.
+Supported extractors:
 
-Feel free to collaborate!
+- [x] SuperPoint
+- [x] DISK
+- [x] ALIKE
+- [x] ALIKED
+- [ ] Superpoint free
+- [x] KeyNet + OriNet + HardNet8
+- [x] ORB (opencv)
+- [x] SIFT (opencv)
+
+Matchers:
+
+- [x] Lightglue (with Superpoint, Disk and ALIKED)
+- [x] SuperGlue (with Superpoint)
+- [x] LoFTR
+- [x] Nearest neighbor (with KORNIA Descriptor Matcher)
+- [ ] GlueStick
+- [X] RoMa
+
 
 ## Install and run
 
@@ -72,27 +89,6 @@ python ./main.py --gui
 
 See scripts in the `./scripts` dir
 
-## Multiview tests
-
-Supported extractors:
-
-- [x] SuperPoint
-- [x] DISK
-- [x] ALIKE
-- [x] ALIKED
-- [ ] Superpoint free
-- [x] KeyNet + OriNet + HardNet8
-- [x] ORB (opencv)
-- [x] SIFT (opencv)
-
-Matchers:
-
-- [x] Lightglue (with Superpoint, Disk and ALIKED)
-- [x] SuperGlue (with Superpoint)
-- [x] LoFTR
-- [x] Nearest neighbor (with KORNIA Descriptor Matcher)
-- [ ] GlueStick
-- [X] RoMa
 
 ## TODO:
 
