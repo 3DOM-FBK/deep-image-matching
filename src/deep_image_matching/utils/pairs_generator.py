@@ -1,9 +1,12 @@
-from pathlib import Path
-from typing import List, Union
-from src.deep_image_matching.image_retrieval import ImageRetrieval
+import sys
 
+from pathlib import Path
+from typing import List, Union, Tuple
+from src.deep_image_matching.image_retrieval import ImageRetrieval
 from .. import logger
 
+#from extractors.superpoint import SuperPointExtractor
+#from matchers.lightglue import LightGlueMatcher
 
 def SequentialPairs(img_list: List[Union[str, Path]], overlap: int) -> List[tuple]:
     pairs = []
@@ -16,7 +19,7 @@ def SequentialPairs(img_list: List[Union[str, Path]], overlap: int) -> List[tupl
     return pairs
 
 
-def BruteForce(img_list: List[Union[str, Path]], overlap: int) -> List[tuple]:
+def BruteForce(img_list: List[Union[str, Path]]) -> List[tuple]:
     pairs = []
     for i in range(len(img_list) - 1):
         for j in range(i + 1, len(img_list)):
@@ -25,6 +28,11 @@ def BruteForce(img_list: List[Union[str, Path]], overlap: int) -> List[tuple]:
             pairs.append((im1, im2))
     return pairs
 
+def MatchingLowres(brute_pairs: List[Tuple[Union[str, Path]]]):
+    print('here')
+    #KNextractor = SuperPointExtractor({})
+    #KorniaMatcher = LightGlueMatcher()
+    quit()
 
 class PairsGenerator:
     def __init__(
@@ -61,12 +69,20 @@ class PairsGenerator:
         import hloc
 
         logger.info("Retrieval matching, generating pairs ..")
-        brute_pairs = BruteForce(self.img_paths, self.overlap)
+        brute_pairs = BruteForce(self.img_paths)
         with open(self.output_dir / "retrieval_pairs.txt", "w") as txt_file:
             for pair in brute_pairs:
                 txt_file.write(f"{pair[0]} {pair[1]}\n")
         pairs = ImageRetrieval(self.image_dir, self.output_dir, self.retrieval_option, self.output_dir / "retrieval_pairs.txt")
         return pairs
+    
+    def matching_lowres(self):
+        logger.info("Low resolution matching, generating pairs ..")
+        brute_pairs = BruteForce(self.img_paths)
+        pairs = MatchingLowres(brute_pairs)
+        quit()
+
+        return
 
     def run(self):
         generate_pairs = getattr(self, self.strategy)
