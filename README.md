@@ -78,7 +78,7 @@ Matchers:
 - [x] LoFTR
 - [x] Nearest neighbor (with KORNIA Descriptor Matcher)
 - [ ] GlueStick
-- [ ] RoMa
+- [X] RoMa
 
 ## TODO:
 
@@ -95,3 +95,5 @@ Matchers:
 - [ ] Autoselect tiling grid in order to fit images in GPU memory
 - [ ] Add tests, documentation and examples
 - [ ] Apply mask during feature extraction
+- [ ] Script to merge databases
+- [ ] Script to eliminate static tie points
