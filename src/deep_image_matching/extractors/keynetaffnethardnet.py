@@ -1,9 +1,10 @@
-import numpy as np
-import torch
 import kornia as K
 import kornia.feature as KF
+import numpy as np
+import torch
 
 from .extractor_base import ExtractorBase, FeaturesDict
+
 
 # TODO: skip the loading of hloc extractor, but implement it directly here.
 class KeyNet(ExtractorBase):
@@ -31,8 +32,10 @@ class KeyNet(ExtractorBase):
     @torch.no_grad()
     def _extract(self, image: np.ndarray) -> np.ndarray:
         image = K.image_to_tensor(image, False).float() / 255.0
-        if self._device == "cpu": image = image.cpu()
-        if self._device == "cuda": image = image.cuda()
+        if self._device == "cpu":
+            image = image.cpu()
+        if self._device == "cuda":
+            image = image.cuda()
         keypts = self._extractor(image)
         laf = keypts[0].cpu().detach().numpy()
         kpts = keypts[0].cpu().detach().numpy()[-1, :, :, -1]

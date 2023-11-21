@@ -1,7 +1,4 @@
 {
-  // Use IntelliSense to learn about possible attributes.
-  // Hover to view descriptions of existing attributes.
-  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
   "version": "0.2.0",
   "configurations": [
     {
@@ -21,7 +18,9 @@
       //   "--config",
       //   "superpoint+lightglue",
       //   "--images",
-      //   "data/easy_small",
+      //   "data/arsenale_uav",
+      //   "--strategy",
+      //   "bruteforce",
       //   "--force"
       // ]
       // "args": [
@@ -31,33 +30,24 @@
       //   "data/easy_small",
       //   "--force"
       // ]
-      "args": [
-        "--config",
-        "aliked+lightglue",
-        "--images",
-        "data/arsenale4",
-        "--strategy",
-        "bruteforce",
-        "--force"
-      ]
       // "args": [
       //   "--config",
-      //   "superpoint+lightglue",
-      //   "--images",
-      //   "data/statua_hard",
-      //   "--strategy",
-      //   "bruteforce",
-      //   "--force"
-      // ]
-      // "args": [
-      //   "--config",
-      //   "superpoint+lightglue",
+      //   "aliked+lightglue",
       //   "--images",
       //   "data/arsenale4",
       //   "--strategy",
       //   "bruteforce",
       //   "--force"
       // ]
+      "args": [
+        "--config",
+        "roma",
+        "--images",
+        "data/belvedere_stereo",
+        "--strategy",
+        "bruteforce",
+        "--force"
+      ]
     },
     {
       "name": "Python GUI",

@@ -29,11 +29,13 @@ class PairsGenerator:
     def __init__(
         self,
         img_paths: List[Path],
+        pair_file: Path,
         strategy: str,
         retrieval_option: Union[str, None] = None,
         overlap: int = 1,
     ) -> None:
         self.img_paths = img_paths
+        self.pair_file = pair_file
         self.strategy = strategy
         self.retrieval_option = retrieval_option
         self.overlap = overlap
@@ -57,4 +59,9 @@ class PairsGenerator:
     def run(self):
         generate_pairs = getattr(self, self.strategy)
         pairs = generate_pairs()
+
+        with open(self.pair_file, "w") as txt_file:
+            for pair in pairs:
+                txt_file.write(f"{pair[0].name} {pair[1].name}\n")
+
         return pairs
