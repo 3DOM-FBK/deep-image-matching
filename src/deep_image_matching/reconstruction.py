@@ -51,6 +51,27 @@ def import_images(
         )
 
 
+def update_cameras(database_path: Path, cameras: [List[pycolmap.Camera]]):
+    if not all([isinstance(cam, pycolmap.Camera) for cam in cameras]):
+        raise ValueError("cameras must be a list of pycolmap.Camera objects.")
+
+    db = COLMAPDatabase.connect(database_path)
+
+    num_cameras = len(db.execute("SELECT * FROM cameras;").fetchall())
+    if num_cameras != len(cameras):
+        raise ValueError(
+            f"Number of cameras in the database ({num_cameras}) "
+            f"does not match the number of cameras provided ({len(cameras)})."
+        )
+
+    for camera_id, cam in enumerate(cameras, start=1):
+        db.update_camera(
+            camera_id, cam.model_id, cam.width, cam.height, cam.params, True
+        )
+    db.commit()
+    db.close()
+
+
 def get_image_ids(database_path: Path) -> Dict[str, int]:
     db = COLMAPDatabase.connect(database_path)
     images = {}

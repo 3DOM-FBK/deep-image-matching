@@ -50,7 +50,7 @@
       // ]
       "args": [
         "--config",
-        "roma",
+        "superpoint+lightglue",
         "--images",
         "data/belvedere_stereo",
         "--strategy",
