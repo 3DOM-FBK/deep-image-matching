@@ -219,6 +219,7 @@ def main():
         use_pycolmap = False
 
     if use_pycolmap:
+        from deep_image_matching import reconstruction, triangulation
 
         def run_reconstruction_pycolmap(
             database: Path,
@@ -230,11 +231,15 @@ def main():
             camera_mode: pycolmap.CameraMode = pycolmap.CameraMode.AUTO,
             skip_geometric_verification: bool = False,
             verbose: bool = True,
+            cams=None,
         ) -> pycolmap.Reconstruction:
-            from deep_image_matching import reconstruction, triangulation
-
             reconstruction.create_empty_db(database)
             reconstruction.import_images(image_dir, database, camera_mode)
+
+            # Update cameras intrinsics in the database
+            if cams is not None:
+                reconstruction.update_cameras(database, cams)
+
             image_ids = reconstruction.get_image_ids(database)
             triangulation.import_features(image_ids, database, feature_path)
             triangulation.import_matches2(
@@ -283,6 +288,45 @@ def main():
         database = output_dir / "database_pycolmap.db"
         camera_mode: pycolmap.CameraMode = pycolmap.CameraMode.AUTO
 
+        cam1 = pycolmap.Camera(
+            model="FULL_OPENCV",
+            width=6012,
+            height=4008,
+            params=[
+                9.26789262766209504e03,
+                9.26789262766209504e03,
+                3.05349107994520591e03,
+                1.94835654532114540e03,
+                -8.07042713029020586e-02,
+                9.46617629940955385e-02,
+                3.31782983128223608e-04,
+                -4.32106111976037410e-04,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+            ],
+        )
+        cam2 = pycolmap.Camera(
+            model="FULL_OPENCV",
+            width=6012,
+            height=4008,
+            params=[
+                6.62174345720628298e03,
+                6.62174345720628298e03,
+                3.01324420057086490e03,
+                1.94347461466223308e03,
+                -9.41830394356213407e-02,
+                8.55303528514532035e-02,
+                1.68948638308769863e-04,
+                -8.74637609310216697e-04,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+            ],
+        )
+
         # Run reconstruction
         model = run_reconstruction_pycolmap(
             database=database,
@@ -294,6 +338,7 @@ def main():
             camera_mode=camera_mode,
             skip_geometric_verification=True,
             verbose=True,
+            cams=[cam1, cam2],
         )
 
     logger.info("Matching completed.")
