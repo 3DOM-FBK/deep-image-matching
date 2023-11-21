@@ -19,7 +19,7 @@ matchers_zoo = [
     "roma",
 ]
 retrieval_zoo = ["netvlad", "openibl", "cosplace", "dir"]
-matching_strategy = ["bruteforce", "sequential", "retrieval", "custom_pairs"]
+matching_strategy = ["bruteforce", "sequential", "retrieval", "custom_pairs", "matching_lowres"]
 
 
 def get_config(name: str):
