@@ -1,22 +1,22 @@
 import os
+import shutil
+from pathlib import Path
+
 import cv2
 import h5py
 import numpy as np
 from tqdm import tqdm
-from pathlib import Path
-import shutil
 
 from . import extractors, logger, matchers
 from .extractors.extractor_base import extractor_loader
+from .extractors.superpoint import SuperPointExtractor
 from .io.h5 import get_features, get_matches
+from .matchers.lightglue import LightGlueMatcher
 from .matchers.matcher_base import matcher_loader
 from .utils.consts import GeometricVerification, Quality, TileSelection
 from .utils.geometric_verification import geometric_verification
 from .utils.image import ImageList
 from .utils.pairs_generator import PairsGenerator
-
-from .extractors.superpoint import SuperPointExtractor
-from .matchers.lightglue import LightGlueMatcher
 
 
 def make_correspondence_matrix(matches: np.ndarray) -> np.ndarray:
@@ -138,7 +138,7 @@ class ImageMatching:
             Matcher = matcher_loader(matchers, self.matching_method)
         except AttributeError:
             raise ValueError(
-                f"Invalid matcher. {self.local_features} is not supported."
+                f"Invalid matcher. {self.matching_method} is not supported."
             )
         if self.matching_method == "lightglue":
             self._matcher = Matcher(
@@ -164,36 +164,40 @@ class ImageMatching:
         else:
             pairs_generator = PairsGenerator(
                 self.image_list.img_paths,
+                self.pair_file,
                 self.matching_strategy,
                 self.retrieval_option,
                 self.overlap,
             )
             self.pairs = pairs_generator.run()
-            with open(self.pair_file, "w") as txt_file:
-                for pair in self.pairs:
-                    txt_file.write(f"{pair[0].name} {pair[1].name}\n")
 
         return self.pair_file
-    
+
     def rotate_upright_images(self):
-        path_to_upright_dir = self.output_dir / "upright_images"        
+        logger.info("Rotating upright images...")
+        path_to_upright_dir = self.output_dir / "upright_images"
         os.makedirs(path_to_upright_dir, exist_ok=False)
         images = os.listdir(self.image_dir)
         processed_images = []
 
         for img in images:
             shutil.copy(self.image_dir / img, path_to_upright_dir / img)
-        
+
         rotations = [0, 90, 180, 270]
-        cv2_rot_params = [None, cv2.ROTATE_90_CLOCKWISE, cv2.ROTATE_180, cv2.ROTATE_90_COUNTERCLOCKWISE]
+        cv2_rot_params = [
+            None,
+            cv2.ROTATE_90_CLOCKWISE,
+            cv2.ROTATE_180,
+            cv2.ROTATE_90_COUNTERCLOCKWISE,
+        ]
         self.rotated_images = []
         SPextractor = SuperPointExtractor({})
         LGmatcher = LightGlueMatcher()
         features = {
-            "feat0" : None,
-            "feat1" : None,
+            "feat0": None,
+            "feat1": None,
         }
-        for pair in self.pairs:
+        for pair in tqdm(self.pairs):
             matchesXrotation = []
 
             # Reference image
@@ -201,7 +205,7 @@ class ImageMatching:
             image0 = cv2.imread(str(path_to_upright_dir / ref_image))
             H, W = image0.shape[:2]
             new_width = 500
-            new_height = int(H * 500/W)
+            new_height = int(H * 500 / W)
             image0 = cv2.resize(image0, (new_width, new_height))
             image0 = cv2.cvtColor(image0, cv2.COLOR_BGR2GRAY)
             features["feat0"] = SPextractor._extract(image0)
@@ -209,24 +213,28 @@ class ImageMatching:
             # Target image - find the best rotation
             target_img = pair[1].name
             if target_img not in processed_images:
-                #processed_images.append(target_img)
+                # processed_images.append(target_img)
                 image1 = cv2.imread(str(path_to_upright_dir / target_img))
                 for rotation, cv2rotation in zip(rotations, cv2_rot_params):
                     H, W = image1.shape[:2]
                     new_width = 500
-                    new_height = int(H * 500/W)
+                    new_height = int(H * 500 / W)
                     _image1 = cv2.resize(image1, (new_width, new_height))
                     _image1 = cv2.cvtColor(_image1, cv2.COLOR_BGR2GRAY)
-                    #rotation_matrix = cv2.getRotationMatrix2D((new_width / 2, new_height / 2), rotation, 1.0)
-                    #rotated_image = cv2.warpAffine(image, rotation_matrix, (new_width, new_height))
+                    # rotation_matrix = cv2.getRotationMatrix2D((new_width / 2, new_height / 2), rotation, 1.0)
+                    # rotated_image = cv2.warpAffine(image, rotation_matrix, (new_width, new_height))
                     if rotation != 0:
                         _image1 = cv2.rotate(_image1, cv2rotation)
                     features["feat1"] = SPextractor._extract(_image1)
-                    matches = LGmatcher._match_pairs(features["feat0"],features["feat1"])
+                    matches = LGmatcher._match_pairs(
+                        features["feat0"], features["feat1"]
+                    )
                     matchesXrotation.append((rotation, matches.shape[0]))
-                index_of_max = max(range(len(matchesXrotation)), key=lambda i: matchesXrotation[i][1])
+                index_of_max = max(
+                    range(len(matchesXrotation)), key=lambda i: matchesXrotation[i][1]
+                )
                 n_matches = matchesXrotation[index_of_max][1]
-                if index_of_max != 0 and n_matches>100:
+                if index_of_max != 0 and n_matches > 100:
                     processed_images.append(target_img)
                     self.rotated_images.append((pair[1].name, rotations[index_of_max]))
                     rotated_image1 = cv2.rotate(image1, cv2_rot_params[index_of_max])
@@ -236,13 +244,14 @@ class ImageMatching:
         with open(out_file, "w") as txt_file:
             for element in self.rotated_images:
                 txt_file.write(f"{element[0]} {element[1]}\n")
-        
+
         # Update image directory to the dir with upright images
         # Features will be rotate accordingly on exporting, if the images have been rotated
         self.image_dir = path_to_upright_dir
         self.image_list = ImageList(path_to_upright_dir)
         images = self.image_list.img_names
 
+        logger.info("Images rotated upright")
 
     def extract_features(self) -> Path:
         # Extract features
@@ -308,8 +317,8 @@ class ImageMatching:
 
         return matches_path
 
-    def rotate_back_features(self, feature_path : Path) -> None:
-        #images = self.image_list.img_names
+    def rotate_back_features(self, feature_path: Path) -> None:
+        # images = self.image_list.img_names
         for img, theta in self.rotated_images:
             features = get_features(feature_path, img)
             keypoints = features["keypoints"]
@@ -337,13 +346,13 @@ class ImageMatching:
                     y_rot = x
                     x_rot = H - y
                     rotated_keypoints[r, 0], rotated_keypoints[r, 1] = x_rot, y_rot
-            
+
             with h5py.File(feature_path, "r+", libver="latest") as fd:
                 del fd[img]
                 features["keypoints"] = rotated_keypoints
                 grp = fd.create_group(img)
                 for k, v in features.items():
-                    if k == 'im_path' or k == 'feature_path':
+                    if k == "im_path" or k == "feature_path":
                         grp.create_dataset(k, data=str(v))
                     if isinstance(v, np.ndarray):
                         grp.create_dataset(k, data=v)
