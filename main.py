@@ -58,7 +58,7 @@ def parse_args():
     )
     parser.add_argument("-f", "--force", action="store_true", default=False)
     parser.add_argument("-V", "--verbose", action="store_true", default=False)
-    parser.add_argument('--upright', action='store_true', help='...', default=False)
+    parser.add_argument("--upright", action="store_true", help="...", default=False)
 
     args = parser.parse_args()
 
@@ -190,10 +190,14 @@ def main():
         overlap=overlap,
     )
     pair_path = img_matching.generate_pairs()
-    if args.upright: img_matching.rotate_upright_images() # Try to rotate images so they will be all "upright", useful for deep-learning approaches that usually are not rotation invariant
+    if args.upright:
+        img_matching.rotate_upright_images()  # Try to rotate images so they will be all "upright", useful for deep-learning approaches that usually are not rotation invariant
     feature_path = img_matching.extract_features()
-    match_path = img_matching.match_pairs(feature_path) # Features are extracted on "upright" images, this function report back images on their original orientation 
-    if args.upright: img_matching.rotate_back_features(feature_path)
+    match_path = img_matching.match_pairs(
+        feature_path
+    )  # Features are extracted on "upright" images, this function report back images on their original orientation
+    if args.upright:
+        img_matching.rotate_back_features(feature_path)
 
     # Export in colmap format
     database_path = output_dir / "database.db"
@@ -273,7 +277,6 @@ def main():
 
             else:
                 logger.error("Pycolmap reconstruction failed")
-                use_pycolmap = False
             return model
 
         # Define database path and camera mode
@@ -292,65 +295,6 @@ def main():
             skip_geometric_verification=True,
             verbose=True,
         )
-
-    # Export in Bundler format for Metashape using colmap CLI
-    if not use_pycolmap:
-
-        def export_to_bundler(
-            database: Path, image_dir: Path, output_dir: Path, out_name: str = "bundler"
-        ) -> bool:
-            import subprocess
-            from pprint import pprint
-
-            colamp_path = "colmap"
-
-            cmd = [
-                colamp_path,
-                "model_converter",
-                "--input_path",
-                str(database.parent.resolve()),
-                "--output_path",
-                str(database.parent.resolve() / out_name),
-                "--output_type",
-                "Bundler",
-            ]
-            ret = subprocess.run(cmd, capture_output=True)
-            if ret.returncode != 0:
-                logger.error("Unable to export to Bundler format")
-                pprint(ret.stdout.decode("utf-8"))
-                return False
-
-            shutil.copytree(image_dir, output_dir / "images", dirs_exist_ok=True)
-            logger.info("Export to Bundler format completed successfully")
-
-            return True
-
-        out_name = "bundler"
-        export_to_bundler(database, imgs_dir, output_dir, out_name)
-
-    # TODO: avoid duplicates in matched features!
-    # Now it is possible that a feature in one image is matched with more than one feature in the other image (due to the overlap in tiling)
-    # import h5py
-    # import numpy as np
-
-    # f_db = h5py.File(str(feature_path), "r", libver="latest")
-    # m_db = h5py.File(str(match_path), "r", libver="latest")
-
-    # keys = list(f_db.keys())
-    # kp0 = f_db[keys[0]]["keypoints"][:]
-    # kp1 = f_db[keys[1]]["keypoints"][:]
-    # unique, counts = np.unique(kp0, axis=0, return_counts=True)
-
-    # matches01 = m_db[keys[0]][keys[1]][:]
-
-    # f_db.close()
-    # m_db.close()
-
-    # Plot statistics
-    # images = img_matching.image_list
-    # logger.info("Finished matching and exporting")
-    # logger.info(f"\tProcessed images: {len(images)}")
-    # logger.info(f"\tProcessed pairs: {len(pairs)}")
 
     logger.info("Matching completed.")
 
