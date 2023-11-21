@@ -219,6 +219,8 @@ def main():
         use_pycolmap = False
 
     if use_pycolmap:
+        from typing import Any, Dict, Optional
+
         from deep_image_matching import reconstruction, triangulation
 
         def run_reconstruction_pycolmap(
@@ -229,8 +231,9 @@ def main():
             pair_path: Path,
             output_dir: Path,
             camera_mode: pycolmap.CameraMode = pycolmap.CameraMode.AUTO,
-            skip_geometric_verification: bool = False,
             cameras=None,
+            skip_geometric_verification: bool = False,
+            options: Optional[Dict[str, Any]] = None,
             verbose: bool = True,
         ) -> pycolmap.Reconstruction:
             reconstruction.create_empty_db(database)
@@ -261,6 +264,7 @@ def main():
                 database_path=database,
                 image_dir=image_dir,
                 verbose=verbose,
+                options=options,
             )
             if model is not None:
                 logger.info(
@@ -326,6 +330,13 @@ def main():
                 0.0,
             ],
         )
+        options = (
+            {
+                "ba_refine_focal_length": False,
+                "ba_refine_principal_point": False,
+                "ba_refine_extra_params": False,
+            },
+        )
 
         # Run reconstruction
         model = run_reconstruction_pycolmap(
@@ -336,8 +347,9 @@ def main():
             pair_path=pair_path,
             output_dir=output_dir,
             camera_mode=camera_mode,
-            skip_geometric_verification=True,
             cameras=[cam1, cam2],
+            skip_geometric_verification=True,
+            options=options,
             verbose=True,
         )
 
