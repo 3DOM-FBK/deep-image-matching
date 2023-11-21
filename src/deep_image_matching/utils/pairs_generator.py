@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import List, Union
+from src.deep_image_matching.image_retrieval import ImageRetrieval
 
 from .. import logger
 
@@ -32,11 +33,15 @@ class PairsGenerator:
         strategy: str,
         retrieval_option: Union[str, None] = None,
         overlap: int = 1,
+        image_dir: str = "",
+        output_dir: str = "",
     ) -> None:
         self.img_paths = img_paths
         self.strategy = strategy
         self.retrieval_option = retrieval_option
         self.overlap = overlap
+        self.image_dir = image_dir
+        self.output_dir = output_dir
 
     def bruteforce(self):
         logger.info("Bruteforce matching, generating pairs ..")
@@ -51,8 +56,15 @@ class PairsGenerator:
         return pairs
 
     def retrieval(self):
+        import hloc
+
         logger.info("Retrieval matching, generating pairs ..")
-        raise NotImplementedError("Retrieval needs to be implemented. Exit")
+        brute_pairs = BruteForce(self.img_paths, self.overlap)
+        with open(self.output_dir / "retrieval_pairs.txt", "w") as txt_file:
+            for pair in brute_pairs:
+                txt_file.write(f"{pair[0]} {pair[1]}\n")
+        pairs = ImageRetrieval(self.image_dir, self.output_dir, self.retrieval_option, self.output_dir / "retrieval_pairs.txt")
+        return pairs
 
     def run(self):
         generate_pairs = getattr(self, self.strategy)

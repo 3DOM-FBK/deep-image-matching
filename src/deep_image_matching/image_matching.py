@@ -167,6 +167,8 @@ class ImageMatching:
                 self.matching_strategy,
                 self.retrieval_option,
                 self.overlap,
+                self.image_dir,
+                self.output_dir,
             )
             self.pairs = pairs_generator.run()
             with open(self.pair_file, "w") as txt_file:
