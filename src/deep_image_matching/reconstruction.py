@@ -1,4 +1,3 @@
-import argparse
 import multiprocessing
 import shutil
 from pathlib import Path
@@ -12,7 +11,6 @@ from .triangulation import (
     estimation_and_geometric_verification,
     import_features,
     import_matches,
-    parse_option_args,
 )
 from .utils.database import COLMAPDatabase
 
@@ -126,6 +124,72 @@ def run_reconstruction(
 
 
 def main(
+    database: Path,
+    image_dir: Path,
+    feature_path: Path,
+    match_path: Path,
+    pair_path: Path,
+    output_dir: Path,
+    camera_mode: pycolmap.CameraMode = pycolmap.CameraMode.AUTO,
+    cameras=None,
+    skip_geometric_verification: bool = False,
+    options: Optional[Dict[str, Any]] = None,
+    verbose: bool = True,
+) -> pycolmap.Reconstruction:
+    create_empty_db(database)
+    import_images(image_dir, database, camera_mode)
+
+    # Update cameras intrinsics in the database
+    if cameras is not None:
+        update_cameras(database, cameras)
+
+    image_ids = get_image_ids(database)
+    import_features(image_ids, database, feature_path)
+    import_matches(
+        image_ids,
+        database,
+        match_path,
+        skip_geometric_verification=skip_geometric_verification,
+    )
+
+    # Run geometric verification
+    if not skip_geometric_verification:
+        estimation_and_geometric_verification(
+            database, pair_path, verbose=verbose
+        )
+
+    # Run reconstruction
+    model = run_reconstruction(
+        sfm_dir=output_dir,
+        database_path=database,
+        image_dir=image_dir,
+        verbose=verbose,
+        options=options,
+    )
+    if model is not None:
+        logger.info(
+            f"Reconstruction statistics:\n{model.summary()}"
+            + f"\n\tnum_input_images = {len(image_ids)}"
+        )
+
+        # Export reconstruction in Colmap format
+        model.write(output_dir)
+        shutil.copytree(image_dir, output_dir / "images", dirs_exist_ok=True)
+
+        # Export reconstruction in Bundler format
+        fname = "bundler"
+        model.export_bundler(
+            output_dir / (fname + ".out"),
+            output_dir / (fname + "_list.txt"),
+            skip_distortion=True,
+        )
+
+    else:
+        logger.error("Pycolmap reconstruction failed")
+    return model
+
+
+def main_hloc(
     sfm_dir: Path,
     image_dir: Path,
     pairs: Path,
@@ -172,45 +236,4 @@ def main(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--sfm_dir", type=Path, required=True)
-    parser.add_argument("--image_dir", type=Path, required=True)
-
-    parser.add_argument("--pairs", type=Path, required=True)
-    parser.add_argument("--features", type=Path, required=True)
-    parser.add_argument("--matches", type=Path, required=True)
-
-    parser.add_argument(
-        "--camera_mode",
-        type=str,
-        default="AUTO",
-        choices=list(pycolmap.CameraMode.__members__.keys()),
-    )
-    parser.add_argument("--skip_geometric_verification", action="store_true")
-    parser.add_argument("--min_match_score", type=float)
-    parser.add_argument("--verbose", action="store_true")
-
-    parser.add_argument(
-        "--image_options",
-        nargs="+",
-        default=[],
-        help="List of key=value from {}".format(pycolmap.ImageReaderOptions().todict()),
-    )
-    parser.add_argument(
-        "--mapper_options",
-        nargs="+",
-        default=[],
-        help="List of key=value from {}".format(
-            pycolmap.IncrementalMapperOptions().todict()
-        ),
-    )
-    args = parser.parse_args().__dict__
-
-    image_options = parse_option_args(
-        args.pop("image_options"), pycolmap.ImageReaderOptions()
-    )
-    mapper_options = parse_option_args(
-        args.pop("mapper_options"), pycolmap.IncrementalMapperOptions()
-    )
-
-    main(**args, image_options=image_options, mapper_options=mapper_options)
+    pass
