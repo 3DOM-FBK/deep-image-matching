@@ -13,7 +13,7 @@ from .matchers.matcher_base import matcher_loader
 from .utils.consts import GeometricVerification, Quality, TileSelection
 from .utils.geometric_verification import geometric_verification
 from .utils.image import ImageList
-from .utils.pairs_generator import PairsGenerator
+from .pairs_generator import PairsGenerator
 
 from .extractors.superpoint import SuperPointExtractor
 from .matchers.lightglue import LightGlueMatcher
