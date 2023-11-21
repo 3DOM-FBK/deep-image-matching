@@ -6,7 +6,7 @@ from copy import deepcopy
 import cv2
 import torch
 
-from .. import logger
+from ... import logger
 from .alnet import ALNet
 from .soft_detect import DKD
 
