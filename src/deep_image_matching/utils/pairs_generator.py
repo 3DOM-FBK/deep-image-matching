@@ -41,19 +41,19 @@ class PairsGenerator:
         self.overlap = overlap
 
     def bruteforce(self):
-        logger.info("Bruteforce matching, generating pairs ..")
+        logger.debug("Bruteforce matching, generating pairs ..")
         pairs = BruteForce(self.img_paths, self.overlap)
-        logger.info(f"Number of pairs: {len(pairs)}")
+        logger.info(f"  Number of pairs: {len(pairs)}")
         return pairs
 
     def sequential(self):
-        logger.info("Sequential matching, generating pairs ..")
+        logger.debug("Sequential matching, generating pairs ..")
         pairs = SequentialPairs(self.img_paths, self.overlap)
-        logger.info(f"Number of pairs: {len(pairs)}")
+        logger.info(f"  Number of pairs: {len(pairs)}")
         return pairs
 
     def retrieval(self):
-        logger.info("Retrieval matching, generating pairs ..")
+        logger.debug("Retrieval matching, generating pairs ..")
         raise NotImplementedError("Retrieval needs to be implemented. Exit")
 
     def run(self):

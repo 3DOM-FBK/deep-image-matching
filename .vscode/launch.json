@@ -39,6 +39,15 @@
       //   "bruteforce",
       //   "--force"
       // ]
+      // "args": [
+      //   "--config",
+      //   "aliked+lightglue",
+      //   "--images",
+      //   "data/arsenale4",
+      //   "--strategy",
+      //   "bruteforce",
+      //   "--force"
+      // ]
       "args": [
         "--config",
         "roma",
@@ -56,16 +65,6 @@
       "program": "${file}",
       "console": "integratedTerminal",
       "args": ["--gui"]
-    },
-    {
-      "name": "Debug module",
-      "type": "python",
-      "request": "launch",
-      "program": "${file}",
-      "console": "integratedTerminal",
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}"
-      }
     }
   ]
 }

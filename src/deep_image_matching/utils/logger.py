@@ -21,24 +21,39 @@ from datetime import date, datetime
 from pathlib import Path
 
 
-def get_logger():
-    logger = logging.getLogger()
+def get_logger(name: str = None):
+    logger = logging.getLogger(name)
     return logger
 
 
-def change_logger_level(level: str):
-    logger = get_logger()
+def change_logger_level(name: str = None, level: str = "warning"):
+    logger = get_logger(name)
     log_level = logging.getLevelName(level.upper())
-    logger.setLevel(log_level)
     for handler in logger.handlers:
         handler.setLevel(log_level)
 
 
 def setup_logger(
+    name: str = None,
     log_level: str = "info",
     log_folder: str = None,
     logfile_basename: str = "log",
 ) -> logging.Logger:
+    # Check if logger already exists
+    if logging.getLogger(name).hasHandlers():
+        logger = logging.getLogger(name)
+        logger.debug(f"Logger {logger.name} already exists")
+        return logger
+
+    # Set log line template
+    if log_level == "debug":
+        log_line_template = "%(color_on)s%(asctime)s | | [%(filename)s -> %(funcName)s], line %(lineno)d - [%(levelname)-8s] %(message)s%(color_off)s"
+    else:
+        log_line_template = (
+            "%(color_on)s%(asctime)s | [%(levelname)-8s] %(message)s%(color_off)s"
+        )
+
+    # Set log file
     if log_folder is not None:
         log_folder = Path(log_folder)
         log_folder.mkdir(exist_ok=True, parents=True)
@@ -49,17 +64,9 @@ def setup_logger(
     else:
         log_file = None
 
-    # log_line_template = "%(color_on)s[%(created)d] [%(threadName)s] [%(levelname)-8s] %(message)s%(color_off)s"
-
-    if log_level == "debug":
-        log_line_template = "%(color_on)s%(asctime)s | | [%(filename)s -> %(funcName)s], line %(lineno)d - [%(levelname)-8s] %(message)s%(color_off)s"
-    else:
-        log_line_template = (
-            "%(color_on)s%(asctime)s | [%(levelname)-8s] %(message)s%(color_off)s"
-        )
-
     # Setup logging
-    if not configure_logging(
+    logger = configure_logging(
+        name=name,
         console_log_output="stdout",
         console_log_level=log_level,
         console_log_color=True,
@@ -67,35 +74,8 @@ def setup_logger(
         logfile_log_level=log_level,
         logfile_log_color=False,
         log_line_template=log_line_template,
-    ):
-        print("Failed to setup logging, aborting.")
-        raise RuntimeError
-
-    return get_logger()
-
-
-def deprecated(func):
-    """This is a decorator which can be used to mark functions
-    as deprecated. It will result in a warning being emitted
-    and a logging warning when the function is used."""
-
-    @functools.wraps(func)
-    def new_func(*args, **kwargs):
-        message = kwargs.get("message", None)
-        if message is None:
-            message = f"Depracated {func.__name__}."
-        warnings.simplefilter("always", DeprecationWarning)  # turn off filter
-        msg = f"Call to deprecated function {func.__name__}."
-        warnings.warn(
-            msg,
-            category=DeprecationWarning,
-            stacklevel=2,
-        )
-        logging.warning(msg)
-        warnings.simplefilter("default", DeprecationWarning)  # reset filter
-        return func(*args, **kwargs)
-
-    return new_func
+    )
+    return logger
 
 
 # Logging formatter supporting colorized output
@@ -126,6 +106,7 @@ class LogFormatter(logging.Formatter):
 
 # configure logging
 def configure_logging(
+    name,
     console_log_output,
     console_log_level,
     console_log_color,
@@ -133,13 +114,10 @@ def configure_logging(
     logfile_log_level,
     logfile_log_color,
     log_line_template,
-):
+) -> logging.Logger:
     # Create logger
-    # For simplicity, we use the root logger, i.e. call 'logging.getLogger()'
-    # without name argument. This way we can simply use module methods for
-    # for logging throughout the script. An alternative would be exporting
-    # the logger, i.e. 'global logger; logger = logging.getLogger("<name>")'
-    logger = logging.getLogger()
+
+    logger = logging.getLogger(name)
 
     # Set global log level to 'debug' (required for handler levels to work)
     logger.setLevel(logging.DEBUG)
@@ -199,23 +177,28 @@ def configure_logging(
         logfile_handler.setFormatter(logfile_formatter)
         logger.addHandler(logfile_handler)
 
-    # Success
-    return True
+    return logger
 
 
-# Call main function
-if __name__ == "__main__":
-    CONSOLE_LOG_LEVEL = "info"
-    LOGFILE_LEVEL = "info"
-    LOG_FOLDER = "logs"
-    LOG_BASE_NAME = "icepy4d"
+def deprecated(func):
+    """This is a decorator which can be used to mark functions
+    as deprecated. It will result in a warning being emitted
+    and a logging warning when the function is used."""
 
-    # Setup logger
-    setup_logger(LOG_FOLDER, LOG_BASE_NAME, CONSOLE_LOG_LEVEL, LOGFILE_LEVEL)
+    @functools.wraps(func)
+    def new_func(*args, **kwargs):
+        message = kwargs.get("message", None)
+        if message is None:
+            message = f"Depracated {func.__name__}."
+        warnings.simplefilter("always", DeprecationWarning)  # turn off filter
+        msg = f"Call to deprecated function {func.__name__}."
+        warnings.warn(
+            msg,
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        logging.warning(msg)
+        warnings.simplefilter("default", DeprecationWarning)  # reset filter
+        return func(*args, **kwargs)
 
-    # Log some messages
-    logging.debug("Debug message")
-    logging.info("Info message")
-    logging.warning("Warning message")
-    logging.error("Error message")
-    logging.critical("Critical message")
+    return new_func
