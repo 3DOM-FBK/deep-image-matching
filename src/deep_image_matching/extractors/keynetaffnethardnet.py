@@ -1,8 +1,9 @@
 import numpy as np
 import torch
+import kornia as K
+import kornia.feature as KF
 
-from .extractor_base import ExtractorBase
-
+from .extractor_base import ExtractorBase, FeaturesDict
 
 # TODO: skip the loading of hloc extractor, but implement it directly here.
 class KeyNet(ExtractorBase):
@@ -18,22 +19,25 @@ class KeyNet(ExtractorBase):
         # Init the base class
         super().__init__(config)
 
-        raise NotImplementedError("KeyNetAffNet is not implemented yet")
+        cfg = self._config.get("extractor")
+
+        # Load extractor
+        self._extractor = KF.KeyNetAffNetHardNet(
+            num_features=cfg["n_features"],
+            upright=cfg["upright"],
+            device=self._device,
+        )
 
     @torch.no_grad()
     def _extract(self, image: np.ndarray) -> np.ndarray:
-        # Convert image from numpy array to tensor
-        image_ = self._frame2tensor(image, self._device)
-
-        # Extract features
-        feats = self._extractor({"image": image_})
-
-        # Remove elements from list/tuple
-        feats = {
-            k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()
-        }
-        # Convert tensors to numpy arrays
-        feats = {k: v.cpu().numpy() for k, v in feats.items()}
+        image = K.image_to_tensor(image, False).float() / 255.0
+        if self._device == "cpu": image = image.cpu()
+        if self._device == "cuda": image = image.cuda()
+        keypts = self._extractor(image)
+        laf = keypts[0].cpu().detach().numpy()
+        kpts = keypts[0].cpu().detach().numpy()[-1, :, :, -1]
+        des = keypts[2].cpu().detach().numpy()[-1, :, :].T
+        feats = FeaturesDict(keypoints=kpts, descriptors=des)
 
         return feats
 
