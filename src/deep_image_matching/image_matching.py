@@ -206,8 +206,8 @@ class ImageMatching:
             cv2.ROTATE_90_COUNTERCLOCKWISE,
         ]
         self.rotated_images = []
-        SPextractor = SuperPointExtractor({})
-        LGmatcher = LightGlueMatcher()
+        SPextractor = SuperPointExtractor({"general": {}})
+        LGmatcher = LightGlueMatcher(local_features="superpoint", config={"general": {}})
         features = {
             "feat0": None,
             "feat1": None,

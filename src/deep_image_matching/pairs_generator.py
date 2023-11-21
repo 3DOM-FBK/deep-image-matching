@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import List, Union, Tuple
 from src.deep_image_matching.image_retrieval import ImageRetrieval
 from . import logger
+from tqdm import tqdm
 
 from .extractors.keynetaffnethardnet import KeyNet
 from .matchers.kornia_matcher import KorniaMatcher
@@ -15,6 +16,7 @@ from src.deep_image_matching import GeometricVerification
 MIN_N_MATCHES = 100
 
 KeyNetAffNetHardNetConfig = {
+    "general": {},
     "extractor": {
         "name": "keynetaffnethardnet",
         "n_features": 8000,
@@ -46,7 +48,7 @@ def MatchingLowres(brute_pairs: List[Tuple[Union[str, Path]]]):
     pairs = []
     KNextractor = KeyNet(KeyNetAffNetHardNetConfig)
     KorniaMatch = KorniaMatcher(KeyNetAffNetHardNetConfig)
-    for pair in brute_pairs:
+    for pair in tqdm(brute_pairs):
         im0_path = pair[0]
         im1_path = pair[1]
 
@@ -77,7 +79,7 @@ def MatchingLowres(brute_pairs: List[Tuple[Union[str, Path]]]):
             confidence=0.99,
     )
         count_true = np.count_nonzero(inlMask)
-        print(im0_path.name, im1_path.name, count_true)
+        #print(im0_path.name, im1_path.name, count_true)
         if count_true > MIN_N_MATCHES:
             pairs.append(pair)
     return pairs
@@ -102,15 +104,9 @@ class PairsGenerator:
         self.output_dir = output_dir
 
     def bruteforce(self):
-<<<<<<< HEAD:src/deep_image_matching/utils/pairs_generator.py
         logger.debug("Bruteforce matching, generating pairs ..")
-        pairs = BruteForce(self.img_paths, self.overlap)
-        logger.info(f"  Number of pairs: {len(pairs)}")
-=======
-        logger.info("Bruteforce matching, generating pairs ..")
         pairs = BruteForce(self.img_paths)
         logger.info(f"Number of pairs: {len(pairs)}")
->>>>>>> 36d107e (Added preselection at low res):src/deep_image_matching/pairs_generator.py
         return pairs
 
     def sequential(self):
