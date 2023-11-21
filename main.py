@@ -219,74 +219,7 @@ def main():
         use_pycolmap = False
 
     if use_pycolmap:
-        from typing import Any, Dict, Optional
-
-        from deep_image_matching import reconstruction, triangulation
-
-        def run_reconstruction_pycolmap(
-            database: Path,
-            image_dir: Path,
-            feature_path: Path,
-            match_path: Path,
-            pair_path: Path,
-            output_dir: Path,
-            camera_mode: pycolmap.CameraMode = pycolmap.CameraMode.AUTO,
-            cameras=None,
-            skip_geometric_verification: bool = False,
-            options: Optional[Dict[str, Any]] = None,
-            verbose: bool = True,
-        ) -> pycolmap.Reconstruction:
-            reconstruction.create_empty_db(database)
-            reconstruction.import_images(image_dir, database, camera_mode)
-
-            # Update cameras intrinsics in the database
-            if cameras is not None:
-                reconstruction.update_cameras(database, cameras)
-
-            image_ids = reconstruction.get_image_ids(database)
-            triangulation.import_features(image_ids, database, feature_path)
-            triangulation.import_matches2(
-                image_ids,
-                database,
-                match_path,
-                skip_geometric_verification=skip_geometric_verification,
-            )
-
-            # Run geometric verification
-            if not skip_geometric_verification:
-                reconstruction.estimation_and_geometric_verification(
-                    database, pair_path, verbose=verbose
-                )
-
-            # Run reconstruction
-            model = reconstruction.run_reconstruction(
-                sfm_dir=output_dir,
-                database_path=database,
-                image_dir=image_dir,
-                verbose=verbose,
-                options=options,
-            )
-            if model is not None:
-                logger.info(
-                    f"Reconstruction statistics:\n{model.summary()}"
-                    + f"\n\tnum_input_images = {len(image_ids)}"
-                )
-
-                # Export reconstruction in Colmap format
-                model.write(output_dir)
-                shutil.copytree(image_dir, output_dir / "images", dirs_exist_ok=True)
-
-                # Export reconstruction in Bundler format
-                fname = "bundler"
-                model.export_bundler(
-                    output_dir / (fname + ".out"),
-                    output_dir / (fname + "_list.txt"),
-                    skip_distortion=True,
-                )
-
-            else:
-                logger.error("Pycolmap reconstruction failed")
-            return model
+        from deep_image_matching import reconstruction
 
         # Define database path and camera mode
         database = output_dir / "database_pycolmap.db"
@@ -345,7 +278,7 @@ def main():
         options = {}
 
         # Run reconstruction
-        model = run_reconstruction_pycolmap(
+        model = reconstruction.main(
             database=database,
             image_dir=imgs_dir,
             feature_path=feature_path,
@@ -358,6 +291,41 @@ def main():
             options=options,
             verbose=True,
         )
+
+    # Export in Bundler format for Metashape using colmap CLI
+    if not use_pycolmap:
+
+        def export_to_bundler(
+            database: Path, image_dir: Path, output_dir: Path, out_name: str = "bundler"
+        ) -> bool:
+            import subprocess
+            from pprint import pprint
+
+            colamp_path = "colmap"
+
+            cmd = [
+                colamp_path,
+                "model_converter",
+                "--input_path",
+                str(database.parent.resolve()),
+                "--output_path",
+                str(database.parent.resolve() / out_name),
+                "--output_type",
+                "Bundler",
+            ]
+            ret = subprocess.run(cmd, capture_output=True)
+            if ret.returncode != 0:
+                logger.error("Unable to export to Bundler format")
+                pprint(ret.stdout.decode("utf-8"))
+                return False
+
+            shutil.copytree(image_dir, output_dir / "images", dirs_exist_ok=True)
+            logger.info("Export to Bundler format completed successfully")
+
+            return True
+
+        out_name = "bundler"
+        export_to_bundler(database, imgs_dir, output_dir, out_name)
 
     logger.info("Matching completed.")
 

@@ -77,7 +77,7 @@ def import_features(
     db.close()
 
 
-def import_matches(
+def import_matches_hloc(
     image_ids: Dict[str, int],
     database_path: Path,
     matches_path: Path,
@@ -110,7 +110,7 @@ def import_matches(
     db.close()
 
 
-def import_matches2(
+def import_matches(
     image_ids: Dict[str, int],
     database_path: Path,
     matches_path: Path,
