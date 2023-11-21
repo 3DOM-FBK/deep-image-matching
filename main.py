@@ -293,39 +293,39 @@ def main():
         )
 
     # Export in Bundler format for Metashape using colmap CLI
-    if not use_pycolmap:
+    # if not use_pycolmap:
 
-        def export_to_bundler(
-            database: Path, image_dir: Path, output_dir: Path, out_name: str = "bundler"
-        ) -> bool:
-            import subprocess
-            from pprint import pprint
+    #     def export_to_bundler(
+    #         database: Path, image_dir: Path, output_dir: Path, out_name: str = "bundler"
+    #     ) -> bool:
+    #         import subprocess
+    #         from pprint import pprint
 
-            colamp_path = "colmap"
+    #         colamp_path = "colmap"
 
-            cmd = [
-                colamp_path,
-                "model_converter",
-                "--input_path",
-                str(database.parent.resolve()),
-                "--output_path",
-                str(database.parent.resolve() / out_name),
-                "--output_type",
-                "Bundler",
-            ]
-            ret = subprocess.run(cmd, capture_output=True)
-            if ret.returncode != 0:
-                logger.error("Unable to export to Bundler format")
-                pprint(ret.stdout.decode("utf-8"))
-                return False
+    #         cmd = [
+    #             colamp_path,
+    #             "model_converter",
+    #             "--input_path",
+    #             str(database.parent.resolve()),
+    #             "--output_path",
+    #             str(database.parent.resolve() / out_name),
+    #             "--output_type",
+    #             "Bundler",
+    #         ]
+    #         ret = subprocess.run(cmd, capture_output=True)
+    #         if ret.returncode != 0:
+    #             logger.error("Unable to export to Bundler format")
+    #             pprint(ret.stdout.decode("utf-8"))
+    #             return False
 
-            shutil.copytree(image_dir, output_dir / "images", dirs_exist_ok=True)
-            logger.info("Export to Bundler format completed successfully")
+    #         shutil.copytree(image_dir, output_dir / "images", dirs_exist_ok=True)
+    #         logger.info("Export to Bundler format completed successfully")
 
-            return True
+    #         return True
 
-        out_name = "bundler"
-        export_to_bundler(database, imgs_dir, output_dir, out_name)
+    #     out_name = "bundler"
+    #     export_to_bundler(database, imgs_dir, output_dir, out_name)
 
     logger.info("Matching completed.")
 
