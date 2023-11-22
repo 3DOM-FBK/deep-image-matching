@@ -21,15 +21,11 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Matching with hand-crafted and deep-learning based local features and image retrieval."
     )
-
     parser.add_argument(
         "--gui", action="store_true", help="Run GUI interface", default=False
     )
-
     parser.add_argument("-i", "--images", type=str, help="Input image folder")
-
     parser.add_argument("-o", "--outs", type=str, help="Output folder", default=None)
-
     parser.add_argument(
         "-c",
         "--config",
@@ -38,7 +34,6 @@ def parse_args():
         choices=confs.keys(),
         default="superpoint+lightglue",
     )
-
     parser.add_argument(
         "-m",
         "--strategy",
@@ -52,11 +47,9 @@ def parse_args():
         default="sequential",
         help="Matching strategy",
     )
-
     parser.add_argument(
         "-p", "--pairs", type=str, default=None, help="Specify pairs for matching"
     )
-
     parser.add_argument(
         "-v",
         "--overlap",
@@ -64,7 +57,6 @@ def parse_args():
         help="Image overlap, if using sequential overlap strategy",
         default=1,
     )
-
     parser.add_argument(
         "-r",
         "--retrieval",
@@ -72,27 +64,25 @@ def parse_args():
         default=None,
         help="Specify image retrieval method",
     )
-
+    parser.add_argument(
+        "--upright",
+        action="store_true",
+        help="Enable the estimation of the best image rotation for the matching (useful in case of aerial datasets).",
+        default=False,
+    )
     parser.add_argument(
         "-f",
         "--force",
         action="store_true",
         default=False,
-        help="Force execution without confirmation",
+        help="Force overwrite of output folder",
     )
-
     parser.add_argument(
         "-V",
         "--verbose",
         action="store_true",
         default=False,
-        help="Enable verbose mode",
     )
-
-    parser.add_argument(
-        "--upright", action="store_true", help="Enable upright feature", default=False
-    )
-
     args = parser.parse_args()
 
     if args.gui is True:
