@@ -14,15 +14,15 @@
       "request": "launch",
       "program": "${file}",
       "console": "integratedTerminal",
-      // "args": [
-      //   "--config",
-      //   "superpoint+lightglue",
-      //   "--images",
-      //   "data/arsenale_uav",
-      //   "--strategy",
-      //   "bruteforce",
-      //   "--force"
-      // ]
+      "args": [
+        "--config",
+        "superpoint+lightglue",
+        "--images",
+        "assets/example_cyprus",
+        "--strategy",
+        "bruteforce",
+        "--force"
+      ]
       // "args": [
       //   "--config",
       //   "sift+kornia_matcher",
@@ -48,15 +48,15 @@
       //   "bruteforce",
       //   "--force"
       // ]
-      "args": [
-        "--config",
-        "superpoint+lightglue",
-        "--images",
-        "data/belvedere_stereo",
-        "--strategy",
-        "bruteforce",
-        "--force"
-      ],   
+      // "args": [
+      //   "--config",
+      //   "superpoint+lightglue",
+      //   "--images",
+      //   "data/belvedere_stereo",
+      //   "--strategy",
+      //   "bruteforce",
+      //   "--force"
+      // ],
     },
     {
       "name": "Python GUI",

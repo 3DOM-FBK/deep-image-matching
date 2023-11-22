@@ -9,7 +9,7 @@ from config import (
     matching_strategy,
     retrieval_zoo,
 )
-from src.deep_image_matching import change_logger_level, logger
+from src.deep_image_matching import change_logger_level, logger, timer
 from src.deep_image_matching.gui import gui
 from src.deep_image_matching.image_matching import ImageMatching
 from src.deep_image_matching.io.h5_to_db import export_to_colmap
@@ -196,14 +196,25 @@ def main():
         overlap=overlap,
     )
     pair_path = img_matching.generate_pairs()
+    timer.update("generate_pairs")
+
     if args.upright:
-        img_matching.rotate_upright_images()  # Try to rotate images so they will be all "upright", useful for deep-learning approaches that usually are not rotation invariant
+        # Try to rotate images so they will be all "upright", useful for deep-learning approaches that usually are not rotation invariant
+        img_matching.rotate_upright_images()
+        timer.update("rotate_upright_images")
+
+    # Extract features
     feature_path = img_matching.extract_features()
-    match_path = img_matching.match_pairs(
-        feature_path
-    )  # Features are extracted on "upright" images, this function report back images on their original orientation
+    timer.update("extract_features")
+
+    # Matching
+    match_path = img_matching.match_pairs(feature_path)
+    timer.update("matching")
+
+    # Features are extracted on "upright" images, this function report back images on their original orientation
     if args.upright:
         img_matching.rotate_back_features(feature_path)
+        timer.update("rotate_back_features")
 
     # Export in colmap format
     database_path = output_dir / "database.db"
@@ -215,6 +226,7 @@ def main():
         camera_model="simple-radial",
         single_camera=True,
     )
+    timer.update("export_to_colmap")
 
     # Try to run reconstruction with pycolmap
     use_pycolmap = False
@@ -297,6 +309,7 @@ def main():
             options=options,
             verbose=True,
         )
+        timer.update("pycolmap reconstruction")
 
     # Export in Bundler format for Metashape using colmap CLI
     # if not use_pycolmap:
@@ -333,7 +346,7 @@ def main():
     #     out_name = "bundler"
     #     export_to_bundler(database, imgs_dir, output_dir, out_name)
 
-    logger.info("Matching completed.")
+    timer.print("Matching completed.")
 
 
 if __name__ == "__main__":
