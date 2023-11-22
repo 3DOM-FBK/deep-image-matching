@@ -110,6 +110,7 @@ See scripts in the `./scripts` dir
 
 If you find the repository useful for your work consider citing the papers:
 
+```bibtex
 @article{morelli2022photogrammetry,
   title={PHOTOGRAMMETRY NOW AND THEN--FROM HAND-CRAFTED TO DEEP-LEARNING TIE POINTS--},
   author={Morelli, Luca and Bellavia, Fabio and Menna, Fabio and Remondino, Fabio},
@@ -119,7 +120,8 @@ If you find the repository useful for your work consider citing the papers:
   year={2022},
   publisher={Copernicus GmbH}
 }
-
+```
+```bibtex
 @article{ioli2023replicable,
   title={a Replicable Open-Source Multi-Camera System for Low-Cost 4d Glacier Monitoring},
   author={Ioli, F and Bruno, E and Calzolari, D and Galbiati, M and Mannocchi, A and Manzoni, P and Martini, M and Bianchi, A and Cina, A and De Michele, C and others},
@@ -129,5 +131,5 @@ If you find the repository useful for your work consider citing the papers:
   year={2023},
   publisher={Copernicus GmbH}
 }
-
-Depending on the options used, consider citing the corresponding work of [KORNIA](https://github.com/kornia/kornia), [HLOC](https://github.com/cvg/Hierarchical-Localizationgithub kor), and local features.
+```
+Depending on the options used, consider citing the corresponding work of [KORNIA](https://github.com/kornia/kornia), [HLOC](https://github.com/cvg/Hierarchical-Localizationgithub), and local features.
