@@ -2,11 +2,9 @@
 
 ## DEEP-IMAGE-MATCHING
 
-
-|   SIFT                      |   DISK                      |   DISK                           |
-| ----------------------------| ----------------------------| ---------------------------------|
+| SIFT                                 | DISK                                 | DISK                         |
+| ------------------------------------ | ------------------------------------ | ---------------------------- |
 | ![X1](assets/nadar_sift_matches.png) | ![X2](assets/nadar_disk_matches.png) | ![X3](assets/nadar_disk.png) |
-
 
 Multivew matcher for COLMAP. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI. Feel free to collaborate!
 
@@ -15,7 +13,7 @@ Key features:
 - [x] Multiview
 - [x] Large format images
 - [x] SOTA deep-learning and hand-crafted features
-- [x] Full combatibility with COLMAP
+- [x] Full compatibility with COLMAP
 - [x] Support for image rotations
 - [x] Compatibility with Agisoft Metashape
 - [x] Support image retrieval with deep-learning local features
@@ -38,8 +36,7 @@ Matchers:
 - [x] LoFTR
 - [x] Nearest neighbor (with KORNIA Descriptor Matcher)
 - [ ] GlueStick
-- [X] RoMa
-
+- [x] RoMa
 
 ## Install and run
 
@@ -58,6 +55,7 @@ pip install -e .
 ```
 
 Install hloc (https://github.com/cvg/Hierarchical-Localization/tree/master):
+
 ```
 git clone --recursive https://github.com/cvg/Hierarchical-Localization/
 cd Hierarchical-Localization/
@@ -89,7 +87,6 @@ python ./main.py --gui
 
 See scripts in the `./scripts` dir
 
-
 ## TODO:
 
 - [x] Tile processing for high resolution images
@@ -99,7 +96,7 @@ See scripts in the `./scripts` dir
 - [x] Add pycolmap compatibility
 - [x] Add exporting to Bundler format ready for importing into Metashape (only on linux with pycolmap)
 - [ ] Add visualization for extracted features and matches
-- [ ] Improve speed (parallization and threading)
+- [ ] Improve speed
 - [ ] Autoselect tiling grid in order to fit images in GPU memory
 - [ ] Add tests, documentation and examples
 - [ ] Apply mask during feature extraction
