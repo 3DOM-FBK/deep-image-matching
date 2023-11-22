@@ -130,4 +130,4 @@ If you find the repository useful for your work consider citing the papers:
 }
 ```
 
-Depending on the options used, consider citing the corresponding work of [KORNIA](https://github.com/kornia/kornia), [HLOC](https://github.com/cvg/Hierarchical-Localizationgithub), and local features.
+Depending on the options used, consider citing the corresponding work of [KORNIA](https://github.com/kornia/kornia), [HLOC](https://github.com/cvg/Hierarchical-Localization), and local features.
