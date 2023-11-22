@@ -4,14 +4,14 @@ import numpy as np
 
 from pathlib import Path
 from typing import List, Union, Tuple
-from src.deep_image_matching.image_retrieval import ImageRetrieval
-from . import logger
 from tqdm import tqdm
 
+from . import logger
 from .extractors.keynetaffnethardnet import KeyNet
 from .matchers.kornia_matcher import KorniaMatcher
 from .utils.geometric_verification import geometric_verification
-from src.deep_image_matching import GeometricVerification
+from .image_retrieval import ImageRetrieval
+from . import GeometricVerification
 
 MIN_N_MATCHES = 100
 
@@ -116,7 +116,6 @@ class PairsGenerator:
         return pairs
 
     def retrieval(self):
-        import hloc
 
         logger.info("Retrieval matching, generating pairs ..")
         brute_pairs = BruteForce(self.img_paths)
