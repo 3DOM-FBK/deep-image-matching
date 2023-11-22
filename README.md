@@ -15,7 +15,7 @@ Key features:
 - [x] SOTA deep-learning and hand-crafted features
 - [x] Full compatibility with COLMAP
 - [x] Support for image rotations
-- [x] Compatibility with Agisoft Metashape
+- [x] Compatibility with Agisoft Metashape (only on Linux and MacOS by using pycolmap)
 - [x] Support image retrieval with deep-learning local features
 
 Supported extractors:
@@ -94,7 +94,7 @@ See scripts in the `./scripts` dir
 - [ ] Add image retrieval with global descriptors
 - [x] add GUI
 - [x] Add pycolmap compatibility
-- [x] Add exporting to Bundler format ready for importing into Metashape (only on linux with pycolmap)
+- [x] Add exporting to Bundler format ready for importing into Metashape (only on Linux and MacOS by using pycolmap)
 - [ ] Add visualization for extracted features and matches
 - [ ] Improve speed
 - [ ] Autoselect tiling grid in order to fit images in GPU memory
