@@ -29,8 +29,9 @@ dependencies = [
     "easydict",
     "pytest",
     "pyquaternion",
-    "pillow"
-    "ttkthemes"
+    "pillow",
+    "ttkthemes",
+    "pycolamp",
 ]
 requires-python = ">=3.8"
 

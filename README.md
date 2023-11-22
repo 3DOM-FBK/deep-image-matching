@@ -120,7 +120,7 @@ If you find the repository useful for your work consider citing the papers:
 
 ```bibtex
 @article{ioli2023replicable,
-  title={a Replicable Open-Source Multi-Camera System for Low-Cost 4d Glacier Monitoring},
+  title={A Replicable Open-Source Multi-Camera System for Low-Cost 4d Glacier Monitoring},
   author={Ioli, F and Bruno, E and Calzolari, D and Galbiati, M and Mannocchi, A and Manzoni, P and Martini, M and Bianchi, A and Cina, A and De Michele, C and others},
   journal={The International Archives of the Photogrammetry, Remote Sensing and Spatial Information Sciences},
   volume={48},

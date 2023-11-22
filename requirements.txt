@@ -1,5 +1,8 @@
 numpy
+torch
+torchvision
 scipy
+pillow
 matplotlib
 opencv-python
 opencv-contrib-python
@@ -8,3 +11,6 @@ easydict
 pyquaternion
 kornia
 exifread
+ttkthemes
+pytest
+pycolamp
