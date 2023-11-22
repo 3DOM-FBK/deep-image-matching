@@ -27,15 +27,18 @@ def parse_args():
     )
 
     parser.add_argument("-i", "--images", type=str, help="Input image folder")
+
     parser.add_argument("-o", "--outs", type=str, help="Output folder", default=None)
+
     parser.add_argument(
         "-c",
         "--config",
         type=str,
-        help="Extactor and matcher configuration",
+        help="Extractor and matcher configuration",
         choices=confs.keys(),
         default="superpoint+lightglue",
     )
+
     parser.add_argument(
         "-m",
         "--strategy",
@@ -47,8 +50,13 @@ def parse_args():
             "matching_lowres",
         ],
         default="sequential",
+        help="Matching strategy",
     )
-    parser.add_argument("-p", "--pairs", type=str, default=None)
+
+    parser.add_argument(
+        "-p", "--pairs", type=str, default=None, help="Specify pairs for matching"
+    )
+
     parser.add_argument(
         "-v",
         "--overlap",
@@ -56,15 +64,34 @@ def parse_args():
         help="Image overlap, if using sequential overlap strategy",
         default=1,
     )
+
     parser.add_argument(
         "-r",
         "--retrieval",
         choices=retrieval_zoo,
         default=None,
+        help="Specify image retrieval method",
     )
-    parser.add_argument("-f", "--force", action="store_true", default=False)
-    parser.add_argument("-V", "--verbose", action="store_true", default=False)
-    parser.add_argument("--upright", action="store_true", help="...", default=False)
+
+    parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        default=False,
+        help="Force execution without confirmation",
+    )
+
+    parser.add_argument(
+        "-V",
+        "--verbose",
+        action="store_true",
+        default=False,
+        help="Enable verbose mode",
+    )
+
+    parser.add_argument(
+        "--upright", action="store_true", help="Enable upright feature", default=False
+    )
 
     args = parser.parse_args()
 
