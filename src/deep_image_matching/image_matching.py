@@ -1,24 +1,26 @@
-from pathlib import Path
-from pprint import pprint
 import os
 import shutil
 from pathlib import Path
+from pprint import pprint
 
 import cv2
 import h5py
 import numpy as np
 from tqdm import tqdm
 
-from . import extractors, logger, matchers
+from . import Timer, extractors, logger, matchers
 from .extractors.extractor_base import extractor_loader
 from .extractors.superpoint import SuperPointExtractor
 from .io.h5 import get_features, get_matches
 from .matchers.lightglue import LightGlueMatcher
 from .matchers.matcher_base import matcher_loader
+from .pairs_generator import PairsGenerator
 from .utils.consts import GeometricVerification, Quality, TileSelection
 from .utils.geometric_verification import geometric_verification
 from .utils.image import ImageList
-from .pairs_generator import PairsGenerator
+
+DEBUG = False
+timer_loc = Timer(logger=logger)
 
 
 def make_correspondence_matrix(matches: np.ndarray) -> np.ndarray:
@@ -207,7 +209,9 @@ class ImageMatching:
         ]
         self.rotated_images = []
         SPextractor = SuperPointExtractor({"general": {}})
-        LGmatcher = LightGlueMatcher(local_features="superpoint", config={"general": {}})
+        LGmatcher = LightGlueMatcher(
+            local_features="superpoint", config={"general": {}}
+        )
         features = {
             "feat0": None,
             "feat1": None,
