@@ -104,3 +104,30 @@ See scripts in the `./scripts` dir
 - [ ] Add tests, documentation and examples
 - [ ] Apply mask during feature extraction
 - [ ] Check scripts
+
+
+## References
+
+If you find the repository useful for your work consider citing the papers:
+
+@article{morelli2022photogrammetry,
+  title={PHOTOGRAMMETRY NOW AND THEN--FROM HAND-CRAFTED TO DEEP-LEARNING TIE POINTS--},
+  author={Morelli, Luca and Bellavia, Fabio and Menna, Fabio and Remondino, Fabio},
+  journal={The International Archives of the Photogrammetry, Remote Sensing and Spatial Information Sciences},
+  volume={48},
+  pages={163--170},
+  year={2022},
+  publisher={Copernicus GmbH}
+}
+
+@article{ioli2023replicable,
+  title={a Replicable Open-Source Multi-Camera System for Low-Cost 4d Glacier Monitoring},
+  author={Ioli, F and Bruno, E and Calzolari, D and Galbiati, M and Mannocchi, A and Manzoni, P and Martini, M and Bianchi, A and Cina, A and De Michele, C and others},
+  journal={The International Archives of the Photogrammetry, Remote Sensing and Spatial Information Sciences},
+  volume={48},
+  pages={137--144},
+  year={2023},
+  publisher={Copernicus GmbH}
+}
+
+Depending on the options used, consider citing the corresponding work of [KORNIA](https://github.com/kornia/kornia), [HLOC](https://github.com/cvg/Hierarchical-Localizationgithub kor), and local features.
