@@ -1,17 +1,15 @@
-import sys
+from pathlib import Path
+from typing import List, Tuple, Union
+
 import cv2
 import numpy as np
-
-from pathlib import Path
-from typing import List, Union, Tuple
 from tqdm import tqdm
 
-from . import logger
+from . import GeometricVerification, logger
 from .extractors.keynetaffnethardnet import KeyNet
+from .image_retrieval import ImageRetrieval
 from .matchers.kornia_matcher import KorniaMatcher
 from .utils.geometric_verification import geometric_verification
-from .image_retrieval import ImageRetrieval
-from . import GeometricVerification
 
 MIN_N_MATCHES = 100
 
@@ -20,10 +18,11 @@ KeyNetAffNetHardNetConfig = {
     "extractor": {
         "name": "keynetaffnethardnet",
         "n_features": 8000,
-        "upright" : False,
+        "upright": False,
     },
     "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.95},
 }
+
 
 def SequentialPairs(img_list: List[Union[str, Path]], overlap: int) -> List[tuple]:
     pairs = []
@@ -35,6 +34,7 @@ def SequentialPairs(img_list: List[Union[str, Path]], overlap: int) -> List[tupl
             pairs.append((im1, im2))
     return pairs
 
+
 def BruteForce(img_list: List[Union[str, Path]]) -> List[tuple]:
     pairs = []
     for i in range(len(img_list) - 1):
@@ -43,6 +43,7 @@ def BruteForce(img_list: List[Union[str, Path]]) -> List[tuple]:
             im2 = img_list[j]
             pairs.append((im1, im2))
     return pairs
+
 
 def MatchingLowres(brute_pairs: List[Tuple[Union[str, Path]]]):
     pairs = []
@@ -55,14 +56,14 @@ def MatchingLowres(brute_pairs: List[Tuple[Union[str, Path]]]):
         im0 = cv2.imread(str(im0_path))
         H, W = im0.shape[:2]
         new_width = 500
-        new_height = int(H * 500/W)
+        new_height = int(H * 500 / W)
         im0 = cv2.resize(im0, (new_width, new_height))
         im0 = cv2.cvtColor(im0, cv2.COLOR_BGR2GRAY)
 
         im1 = cv2.imread(str(im1_path))
         H, W = im1.shape[:2]
         new_width = 500
-        new_height = int(H * 500/W)
+        new_height = int(H * 500 / W)
         im0 = cv2.resize(im0, (new_width, new_height))
         im1 = cv2.cvtColor(im1, cv2.COLOR_BGR2GRAY)
 
@@ -77,12 +78,13 @@ def MatchingLowres(brute_pairs: List[Tuple[Union[str, Path]]]):
             method=GeometricVerification.PYDEGENSAC,
             threshold=4,
             confidence=0.99,
-    )
+        )
         count_true = np.count_nonzero(inlMask)
-        #print(im0_path.name, im1_path.name, count_true)
+        # print(im0_path.name, im1_path.name, count_true)
         if count_true > MIN_N_MATCHES:
             pairs.append(pair)
     return pairs
+
 
 class PairsGenerator:
     def __init__(
@@ -116,15 +118,19 @@ class PairsGenerator:
         return pairs
 
     def retrieval(self):
-
         logger.info("Retrieval matching, generating pairs ..")
         brute_pairs = BruteForce(self.img_paths)
         with open(self.output_dir / "retrieval_pairs.txt", "w") as txt_file:
             for pair in brute_pairs:
                 txt_file.write(f"{pair[0]} {pair[1]}\n")
-        pairs = ImageRetrieval(self.image_dir, self.output_dir, self.retrieval_option, self.output_dir / "retrieval_pairs.txt")
+        pairs = ImageRetrieval(
+            self.image_dir,
+            self.output_dir,
+            self.retrieval_option,
+            self.output_dir / "retrieval_pairs.txt",
+        )
         return pairs
-    
+
     def matching_lowres(self):
         logger.info("Low resolution matching, generating pairs ..")
         brute_pairs = BruteForce(self.img_paths)

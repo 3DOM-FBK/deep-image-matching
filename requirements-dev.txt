@@ -1,9 +1,7 @@
-numpy
 mkdocs
 pytest
-flake8
 black
-isort
+ruff
 mkdocs
 mkdocs-material
 mkdocstrings[python]
