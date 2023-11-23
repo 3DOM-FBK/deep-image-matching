@@ -1,5 +1,5 @@
 import inspect
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 from itertools import product
 from pathlib import Path
 from typing import Optional, TypedDict
@@ -9,7 +9,7 @@ import h5py
 import numpy as np
 import torch
 
-from .. import logger
+from .. import Timer, logger, timeit
 from ..hloc.extractors.superpoint import SuperPoint
 from ..io.h5 import get_features
 from ..thirdparty.LightGlue.lightglue import LightGlue
@@ -28,6 +28,16 @@ class FeaturesDict(TypedDict):
 
 
 def matcher_loader(root, model):
+    """
+    Load a matcher class from a specified module.
+
+    Args:
+        root (module): The root module containing the specified matcher module.
+        model (str): The name of the matcher module to load.
+
+    Returns:
+        type: The matcher class.
+    """
     module_path = f"{root.__name__}.{model}"
     module = __import__(module_path, fromlist=[""])
     classes = inspect.getmembers(module, inspect.isclass)
@@ -44,6 +54,21 @@ def matcher_loader(root, model):
 
 
 class MatcherBase(metaclass=ABCMeta):
+    """
+    Base class for matchers. It defines the basic interface for matchers
+    and basic functionalities that are shared among all matchers,
+    in particular the `match` method. It must be subclassed to implement a new matcher.
+
+    Attributes:
+        general_conf (dict): Default configuration for general settings.
+        default_conf (dict): Default configuration for matcher-specific settings.
+        required_inputs (list): List of required input parameters.
+        min_matches (int): Minimum number of matches required.
+        min_matches_per_tile (int): Minimum number of matches required per tile.
+        max_feat_no_tiling (int): Maximum number of features without tiling.
+        preselction_resize_max (int): Maximum resize dimension for preselection.
+    """
+
     general_conf = {
         "output_dir": None,
         "quality": Quality.HIGH,
@@ -62,14 +87,15 @@ class MatcherBase(metaclass=ABCMeta):
 
     def __init__(self, custom_config) -> None:
         """
-        Base class for matchers. It defines the basic interface for matchers and basic functionalities that are shared among all matchers, in particular the `match` method. It must be subclassed to implement a new matcher.
+        Initializes the MatcherBase object.
 
         Args:
-            opt (dict): Options for the matcher.
+            custom_config (dict): Options for the matcher.
 
         Raises:
-            TypeError: If `opt` is not a dictionary.
+            TypeError: If `custom_config` is not a dictionary.
         """
+
         # If a custom config is passed, update the default config
         if not isinstance(custom_config, dict):
             raise TypeError("opt must be a dictionary")
@@ -153,28 +179,29 @@ class MatcherBase(metaclass=ABCMeta):
     def matches0(self):
         return self._matches0
 
+    @timeit
+    @abstractmethod
     def _match_pairs(
         self,
         feats0: dict,
         feats1: dict,
     ) -> np.ndarray:
-        
         """
-        _match_pairs _summary_
+        Perform matching between two sets of features.
 
         Args:
-            feats0 (dict): _description_
-            feats1 (dict): _description_
+            feats0 (dict): Features of the first image.
+            feats1 (dict): Features of the second image.
 
         Raises:
-            NotImplementedError: _description_
+            NotImplementedError: Subclasses must implement _match_pairs() method.
 
         Returns:
-            np.ndarray: _description_
+            np.ndarray: Array containing the indices of matched keypoints.
         """
         raise NotImplementedError("Subclasses must implement _match_pairs() method.")
 
-    # @timeit
+    @timeit
     def match(
         self,
         feature_path: Path,
@@ -183,7 +210,24 @@ class MatcherBase(metaclass=ABCMeta):
         img1: Path,
         try_full_image: bool = False,
     ) -> np.ndarray:
-        """ """
+        """
+        Match features between two images.
+
+        Args:
+            feature_path (Path): Path to the feature file.
+            matches_path (Path): Path to save the matches.
+            img0 (Path): Path to the first image.
+            img1 (Path): Path to the second image.
+            try_full_image (bool, optional): Flag to attempt matching on full images. Defaults to False.
+
+        Raises:
+            RuntimeError: If there are too many features to match on full images.
+
+        Returns:
+            np.ndarray: Array containing the indices of matched keypoints.
+        """
+
+        timer_match = Timer()
 
         # Check that feature_path exists
         if not Path(feature_path).exists():
@@ -196,6 +240,7 @@ class MatcherBase(metaclass=ABCMeta):
         img1_name = img1.name
         self._features0 = get_features(self._feature_path, img0.name)
         self._features1 = get_features(self._feature_path, img1.name)
+        timer_match.update("load h5 features")
 
         # Perform matching (on tiles or full images)
         # If the features are not too many, try first to match all features together on full image, if it fails, try to match by tiles
@@ -220,6 +265,7 @@ class MatcherBase(metaclass=ABCMeta):
                     f"Tile selection was {self._tiling.name}. Matching full images..."
                 )
                 self._matches = self._match_pairs(self._features0, self._features1)
+                timer_match.update("[match] try to match full images")
             except Exception as e:
                 if "CUDA out of memory" in str(e):
                     logger.warning(
@@ -239,6 +285,7 @@ class MatcherBase(metaclass=ABCMeta):
                 self._features1,
                 method=self._tiling,
             )
+            timer_match.update("tile matching")
 
         # Save to h5 file
         n_matches = len(self._matches)
@@ -253,6 +300,8 @@ class MatcherBase(metaclass=ABCMeta):
                     f"Too few matches found. Skipping image pair {img0.name}-{img1.name}"
                 )
                 return None
+        timer_match.update("save to h5")
+        timer_match.print(f"{__class__.__name__} match")
 
         logger.debug(f"Matching {img0_name}-{img1_name} done!")
 
@@ -270,6 +319,7 @@ class MatcherBase(metaclass=ABCMeta):
 
         return self._matches
 
+    @timeit
     def _match_by_tile(
         self,
         img0: Path,
@@ -279,7 +329,20 @@ class MatcherBase(metaclass=ABCMeta):
         method: TileSelection = TileSelection.PRESELECTION,
         select_unique: bool = True,
     ):
+        """
+        Match features between two images using a tiling approach.
 
+        Args:
+            img0 (Path): Path to the first image.
+            img1 (Path): Path to the second image.
+            features0 (FeaturesDict): Features of the first image.
+            features1 (FeaturesDict): Features of the second image.
+            method (TileSelection, optional): Tile selection method. Defaults to TileSelection.PRESELECTION.
+            select_unique (bool, optional): Flag to select unique matches. Defaults to True.
+
+        Returns:
+            np.ndarray: Array containing the indices of matched keypoints.
+        """
         # Initialize empty matches array
         matches_full = np.array([], dtype=np.int64).reshape(0, 2)
 
@@ -350,6 +413,7 @@ class MatcherBase(metaclass=ABCMeta):
 
         return matches_full
 
+    @timeit
     def _tile_selection(
         self,
         img0: Path,
@@ -360,15 +424,12 @@ class MatcherBase(metaclass=ABCMeta):
         Selects tile pairs for matching based on the specified method.
 
         Args:
-            image0 (np.ndarray): The first image.
-            image1 (np.ndarray): The second image.
-            t0_lims (dict[int, np.ndarray]): The limits of tiles in image0.
-            t1_lims (dict[int, np.ndarray]): The limits of tiles in image1.
-            method (TileSelection, optional): The tile selection method. Defaults to TileSelection.PRESELECTION.
+            img0 (Path): Path to the first image.
+            img1 (Path): Path to the second image.
+            method (TileSelection, optional): Tile selection method. Defaults to TileSelection.PRESELECTION.
 
         Returns:
             List[Tuple[int, int]]: The selected tile pairs.
-
         """
 
         def frame2tensor(image: np.ndarray, device: str = "cpu"):

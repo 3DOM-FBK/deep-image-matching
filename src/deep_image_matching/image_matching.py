@@ -6,6 +6,7 @@ from pprint import pprint
 import cv2
 import h5py
 import numpy as np
+import torch
 from tqdm import tqdm
 
 from . import Timer, extractors, logger, matchers
@@ -18,9 +19,6 @@ from .pairs_generator import PairsGenerator
 from .utils.consts import GeometricVerification, Quality, TileSelection
 from .utils.geometric_verification import geometric_verification
 from .utils.image import ImageList
-
-DEBUG = False
-timer_loc = Timer(logger=logger)
 
 
 def make_correspondence_matrix(matches: np.ndarray) -> np.ndarray:
@@ -270,7 +268,8 @@ class ImageMatching:
         self.image_list = ImageList(path_to_upright_dir)
         images = self.image_list.img_names
 
-        logger.info("Images rotated upright")
+        torch.cuda.empty_cache()
+        logger.info(f"Images rotated and saved in {path_to_upright_dir}")
 
     def extract_features(self) -> Path:
         logger.info(f"Extracting features with {self.local_features}...")
@@ -281,11 +280,14 @@ class ImageMatching:
         for img in tqdm(self.image_list):
             feature_path = self._extractor.extract(img)
 
+        torch.cuda.empty_cache()
         logger.info("Features extracted!")
 
         return feature_path
 
     def match_pairs(self, feature_path: Path) -> Path:
+        timer = Timer()
+
         logger.info(f"Matching features with {self.matching_method}...")
         logger.info(f"{self.matching_method} configuration: ")
         pprint(self.custom_config["matcher"])
@@ -300,7 +302,7 @@ class ImageMatching:
         # Match pairs
         logger.info("Matching features...")
         logger.info("")
-        for pair in tqdm(self.pairs):
+        for i, pair in enumerate(tqdm(self.pairs)):
             logger.debug(f"Matching image pair: {pair[0].name} - {pair[1].name}")
             im0 = self.image_dir / pair[0].name
             im1 = self.image_dir / pair[1].name
@@ -312,6 +314,7 @@ class ImageMatching:
                 img0=im0,
                 img1=im1,
             )
+            timer.update(f"{i} - match pair")
 
             if matches is None:
                 continue
@@ -320,6 +323,7 @@ class ImageMatching:
             kpts0 = get_features(feature_path, im0.name)["keypoints"]
             kpts1 = get_features(feature_path, im1.name)["keypoints"]
             correspondences = get_matches(matches_path, im0.name, im1.name)
+            timer.update(f"{i} - get matches")
 
             # Apply geometric verification
             correspondences_cleaned = apply_geometric_verification(
@@ -328,6 +332,7 @@ class ImageMatching:
                 correspondences=correspondences,
                 config=self.custom_config["general"],
             )
+            timer.update(f"{i} - geom verif")
 
             # Update matches in h5 file
             with h5py.File(str(matches_path), "a", libver="latest") as fd:
@@ -335,16 +340,19 @@ class ImageMatching:
                 if im1.name in group:
                     del group[im1.name]
                 group.create_dataset(im1.name, data=correspondences_cleaned)
-
             logger.debug(f"Pairs: {pair[0].name} - {pair[1].name} done.")
+            timer.update("\n")
 
+        torch.cuda.empty_cache()
         logger.info("Matching done!")
+        timer.print("matching")
 
         return matches_path
 
     def rotate_back_features(self, feature_path: Path) -> None:
+        logger.info("Rotating features back...")
         # images = self.image_list.img_names
-        for img, theta in self.rotated_images:
+        for img, theta in tqdm(self.rotated_images):
             features = get_features(feature_path, img)
             keypoints = features["keypoints"]
             rotated_keypoints = np.empty(keypoints.shape)
@@ -381,3 +389,5 @@ class ImageMatching:
                         grp.create_dataset(k, data=str(v))
                     if isinstance(v, np.ndarray):
                         grp.create_dataset(k, data=v)
+
+        logger.info("Features rotated back!")
