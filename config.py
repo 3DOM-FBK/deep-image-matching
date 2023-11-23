@@ -19,7 +19,13 @@ matchers_zoo = [
     "roma",
 ]
 retrieval_zoo = ["netvlad", "openibl", "cosplace", "dir"]
-matching_strategy = ["bruteforce", "sequential", "retrieval", "custom_pairs", "matching_lowres"]
+matching_strategy = [
+    "bruteforce",
+    "sequential",
+    "retrieval",
+    "custom_pairs",
+    "matching_lowres",
+]
 
 
 def get_config(name: str):
@@ -51,7 +57,7 @@ confs = {
         "extractor": {
             "name": "superpoint",
             "keypoint_threshold": 0.0001,
-            "max_keypoints": 10000,
+            "max_keypoints": 4096,
         },
         "matcher": {
             "name": "lightglue",
@@ -237,7 +243,7 @@ confs = {
         "extractor": {
             "name": "keynetaffnethardnet",
             "n_features": 2000,
-            "upright" : True,
+            "upright": True,
         },
         "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.99},
     },

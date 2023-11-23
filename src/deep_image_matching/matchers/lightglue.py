@@ -1,12 +1,8 @@
 import numpy as np
 import torch
 
-# from deep_image_matching import Timer, logger
 from ..thirdparty.LightGlue.lightglue import LightGlue
 from .matcher_base import FeaturesDict, MatcherBase
-
-# DEBUG = True
-# timer_lg = Timer(logger=logger)
 
 
 def featuresDict_2_lightglue(feats: FeaturesDict, device: torch.device) -> dict:
