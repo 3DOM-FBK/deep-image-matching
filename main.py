@@ -246,7 +246,7 @@ def main():
     timer.update("export_to_colmap")
 
     # Try to run reconstruction with pycolmap
-    use_pycolmap = False
+    use_pycolmap = True
     try:
         import pycolmap
     except ImportError:
@@ -363,7 +363,7 @@ def main():
     #     out_name = "bundler"
     #     export_to_bundler(database, imgs_dir, output_dir, out_name)
 
-    timer.print("Matching completed.")
+    timer.print("Deep Image Matching")
 
 
 if __name__ == "__main__":

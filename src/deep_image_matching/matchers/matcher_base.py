@@ -9,7 +9,7 @@ import h5py
 import numpy as np
 import torch
 
-from .. import Timer, logger, timeit
+from .. import Timer, logger
 from ..hloc.extractors.superpoint import SuperPoint
 from ..io.h5 import get_features
 from ..thirdparty.LightGlue.lightglue import LightGlue
@@ -154,7 +154,7 @@ class MatcherBase(metaclass=ABCMeta):
         # Load extractor and matcher for the preselction
         if self._config["general"]["tile_selection"] == TileSelection.PRESELECTION:
             self._preselction_extractor = (
-                SuperPoint({"max_keypoints": 4096}).eval().to(self._device)
+                SuperPoint({"max_keypoints": 2048}).eval().to(self._device)
             )
             self._preselction_matcher = (
                 LightGlue(
@@ -162,6 +162,7 @@ class MatcherBase(metaclass=ABCMeta):
                     n_layers=7,
                     depth_confidence=0.9,
                     width_confidence=0.95,
+                    flash=False,
                 )
                 .eval()
                 .to(self._device)
@@ -179,7 +180,6 @@ class MatcherBase(metaclass=ABCMeta):
     def matches0(self):
         return self._matches0
 
-    @timeit
     @abstractmethod
     def _match_pairs(
         self,
@@ -201,7 +201,6 @@ class MatcherBase(metaclass=ABCMeta):
         """
         raise NotImplementedError("Subclasses must implement _match_pairs() method.")
 
-    @timeit
     def match(
         self,
         feature_path: Path,
@@ -227,7 +226,7 @@ class MatcherBase(metaclass=ABCMeta):
             np.ndarray: Array containing the indices of matched keypoints.
         """
 
-        timer_match = Timer()
+        timer_match = Timer(log_level="debug")
 
         # Check that feature_path exists
         if not Path(feature_path).exists():
@@ -319,7 +318,6 @@ class MatcherBase(metaclass=ABCMeta):
 
         return self._matches
 
-    @timeit
     def _match_by_tile(
         self,
         img0: Path,
@@ -413,7 +411,6 @@ class MatcherBase(metaclass=ABCMeta):
 
         return matches_full
 
-    @timeit
     def _tile_selection(
         self,
         img0: Path,

@@ -86,7 +86,7 @@ class Timer:
         self.will_print[name] = True
         self.last_time = now
 
-    def print(self, text: str = "Timer"):
+    def print(self, text: str = "Timer", sep: str = ", "):
         """
         Prints the accumulated timing information.
 
@@ -98,7 +98,7 @@ class Timer:
         for key in self.times:
             val = self.times[key]
             if self.will_print[key]:
-                msg = msg + f"{key}={val:.3f}; "
+                msg = msg + f"{key}={val:.3f}{sep}"
                 total += val
         msg = msg + f"Total={total:.3f}"
         # self.logger.info(msg)
