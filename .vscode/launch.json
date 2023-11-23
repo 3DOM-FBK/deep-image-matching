@@ -20,8 +20,12 @@
         "--images",
         "assets/example_cyprus",
         "--strategy",
-        "bruteforce",
-        "--force"
+        "retrieval",
+        "--retrieval",
+        "netvlad",
+        "--upright",
+        "--force",
+        "-V"
       ]
       // "args": [
       //   "--config",
