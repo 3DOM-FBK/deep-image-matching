@@ -255,7 +255,7 @@ def main():
 
     # Try to run reconstruction with pycolmap
     use_pycolmap = True
-    verbose = False
+    verbose = False  # config["general"]["verbose"]
     try:
         import pycolmap
     except ImportError:

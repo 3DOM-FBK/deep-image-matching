@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 
-from . import GeometricVerification, logger
+from . import GeometricVerification, Timer, logger
 from .extractors.keynetaffnethardnet import KeyNet
 from .image_retrieval import ImageRetrieval
 from .matchers.kornia_matcher import KorniaMatcher
@@ -17,7 +17,7 @@ KeyNetAffNetHardNetConfig = {
     "general": {},
     "extractor": {
         "name": "keynetaffnethardnet",
-        "n_features": 8000,
+        "n_features": 2000,
         "upright": False,
     },
     "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.95},
@@ -45,33 +45,41 @@ def BruteForce(img_list: List[Union[str, Path]]) -> List[tuple]:
     return pairs
 
 
-def MatchingLowres(brute_pairs: List[Tuple[Union[str, Path]]]):
+def MatchingLowres(brute_pairs: List[Tuple[Union[str, Path]]], resize_max: int = 500):
+    timer = Timer(log_level="debug")
+
     pairs = []
     KNextractor = KeyNet(KeyNetAffNetHardNetConfig)
     KorniaMatch = KorniaMatcher(KeyNetAffNetHardNetConfig)
+    timer.update("intialization")
+
     for pair in tqdm(brute_pairs):
         im0_path = pair[0]
         im1_path = pair[1]
 
-        im0 = cv2.imread(str(im0_path))
-        H, W = im0.shape[:2]
-        new_width = 500
-        new_height = int(H * 500 / W)
-        im0 = cv2.resize(im0, (new_width, new_height))
-        im0 = cv2.cvtColor(im0, cv2.COLOR_BGR2GRAY)
+        # Read and resize images
+        im0 = cv2.imread(str(im0_path), cv2.IMREAD_GRAYSCALE)
+        im1 = cv2.imread(str(im1_path), cv2.IMREAD_GRAYSCALE)
 
-        im1 = cv2.imread(str(im1_path))
-        H, W = im1.shape[:2]
-        new_width = 500
-        new_height = int(H * 500 / W)
-        im0 = cv2.resize(im0, (new_width, new_height))
-        im1 = cv2.cvtColor(im1, cv2.COLOR_BGR2GRAY)
+        size0 = im0.shape[:2][::-1]
+        size1 = im1.shape[:2][::-1]
+        scale0 = resize_max / max(size0)
+        scale1 = resize_max / max(size1)
+        size0_new = tuple(int(round(x * scale0)) for x in size0)
+        size1_new = tuple(int(round(x * scale1)) for x in size1)
+        im0 = cv2.resize(im0, size0_new)
+        im1 = cv2.resize(im1, size1_new)
+        timer.update("read images")
 
         features0 = KNextractor._extract(im0)
         features1 = KNextractor._extract(im1)
+        timer.update("extract features")
+
         matches01_idx = KorniaMatch._match_pairs(features0, features1)
         mkpts0 = features0["keypoints"][matches01_idx[:, 0]]
         mkpts1 = features1["keypoints"][matches01_idx[:, 1]]
+        timer.update("match features")
+
         _, inlMask = geometric_verification(
             kpts0=mkpts0,
             kpts1=mkpts1,
@@ -80,9 +88,14 @@ def MatchingLowres(brute_pairs: List[Tuple[Union[str, Path]]]):
             confidence=0.99,
         )
         count_true = np.count_nonzero(inlMask)
+        timer.update("geometric verification")
+
         # print(im0_path.name, im1_path.name, count_true)
         if count_true > MIN_N_MATCHES:
             pairs.append(pair)
+
+    timer.print("low-res pair generation")
+
     return pairs
 
 
