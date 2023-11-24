@@ -247,6 +247,7 @@ def main():
 
     # Try to run reconstruction with pycolmap
     use_pycolmap = True
+    verbose = False
     try:
         import pycolmap
     except ImportError:
@@ -324,7 +325,7 @@ def main():
             cameras=cameras,
             skip_geometric_verification=True,
             options=options,
-            verbose=True,
+            verbose=verbose,
         )
         timer.update("pycolmap reconstruction")
 
