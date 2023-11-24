@@ -18,11 +18,9 @@
         "--config",
         "superpoint+lightglue",
         "--images",
-        "assets/example_square",
+        "assets/example_cyprus",
         "--strategy",
         "matching_lowres",
-        // "--retrieval",
-        // "netvlad",
         "--upright",
         "--force",
         "-V"

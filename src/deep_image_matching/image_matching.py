@@ -314,7 +314,7 @@ class ImageMatching:
                 img0=im0,
                 img1=im1,
             )
-            timer.update(f"Pair {i} - match pair")
+            timer.update("Match pair")
 
             if matches is None:
                 continue
@@ -323,7 +323,7 @@ class ImageMatching:
             kpts0 = get_features(feature_path, im0.name)["keypoints"]
             kpts1 = get_features(feature_path, im1.name)["keypoints"]
             correspondences = get_matches(matches_path, im0.name, im1.name)
-            timer.update(f"Pair {i} - get matches")
+            timer.update("Get matches")
 
             # Apply geometric verification
             correspondences_cleaned = apply_geometric_verification(
@@ -332,7 +332,7 @@ class ImageMatching:
                 correspondences=correspondences,
                 config=self.custom_config["general"],
             )
-            timer.update(f"Pair {i} - geom verif")
+            timer.update("Geom verif")
 
             # Update matches in h5 file
             with h5py.File(str(matches_path), "a", libver="latest") as fd:
@@ -341,7 +341,7 @@ class ImageMatching:
                     del group[im1.name]
                 group.create_dataset(im1.name, data=correspondences_cleaned)
             logger.debug(f"Pairs: {pair[0].name} - {pair[1].name} done.")
-            timer.update(f"Pair {i} - h5 save")
+            timer.update("h5 save")
 
         torch.cuda.empty_cache()
         timer.print("matching")
