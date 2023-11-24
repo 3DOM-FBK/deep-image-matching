@@ -42,6 +42,18 @@ def get_config(name: str):
 # The 'extractor' and 'matcher' values must contain a 'name' key with the name of the extractor/matcher to be used. Additionally, the other parameters of the extractor/matcher can be specified.
 # Each configration can be retrieved by calling the function get_config(name)
 # The configuration systme is ispired from that to HLOC
+
+conf_general = {
+    "quality": Quality.HIGH,
+    "tile_selection": TileSelection.PRESELECTION,
+    "tiling_grid": [3, 3],
+    "tiling_overlap": 0,
+    "geom_verification": GeometricVerification.PYDEGENSAC,
+    "gv_threshold": 4,
+    "gv_confidence": 0.9999,
+    "preselction_resize_max": 2000,
+}
+
 confs = {
     "superpoint+lightglue": {
         "general": {
@@ -62,6 +74,7 @@ confs = {
         "matcher": {
             "name": "lightglue",
             "n_layers": 9,
+            "flash": True,  # enable FlashAttention if available.
             "depth_confidence": -1,  # 0.95,  # early stopping, disable with -1
             "width_confidence": -1,  # 0.99,  # point pruning, disable with -1
             "filter_threshold": 0.5,  # match threshold
