@@ -18,10 +18,14 @@
         "--config",
         "superpoint+lightglue",
         "--images",
-        "assets/example_cyprus",
+        "assets/example_square",
         "--strategy",
-        "bruteforce",
-        "--force"
+        "matching_lowres",
+        // "--retrieval",
+        // "netvlad",
+        "--upright",
+        "--force",
+        "-V"
       ]
       // "args": [
       //   "--config",
