@@ -9,7 +9,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from . import Timer, extractors, logger, matchers, timeit
+from . import Timer, extractors, logger, matchers
 from .extractors.extractor_base import extractor_loader
 from .extractors.superpoint import SuperPointExtractor
 from .io.h5 import get_features, get_matches
