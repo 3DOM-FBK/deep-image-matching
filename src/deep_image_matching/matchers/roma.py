@@ -1,24 +1,24 @@
+import sys
 from pathlib import Path
-from PIL import Image
+from typing import Tuple
 
 import cv2
+import h5py
 import kornia as K
 import numpy as np
 import torch
-from kornia import feature as KF
-import h5py
-import sys
+from PIL import Image
 
 from .. import logger
+from ..io.h5 import get_features
 from ..utils.consts import Quality, TileSelection
 from ..utils.tiling import Tiler
 from .matcher_base import FeaturesDict, MatcherBase
-from typing import Tuple
-from ..io.h5 import get_features
 
 roma_path = Path(__file__).parent.parent / "thirdparty/RoMa"
 sys.path.append(str(roma_path))
 from roma import roma_outdoor
+
 
 class RomaMatcher(MatcherBase):
     def __init__(self, config={}) -> None:
@@ -31,7 +31,6 @@ class RomaMatcher(MatcherBase):
         self.grayscale = True
         self.as_float = True
         self._quality = config["general"]["quality"]
-
 
     def _resize_image(self, quality: Quality, image: np.ndarray) -> Tuple[np.ndarray]:
         """
@@ -61,19 +60,23 @@ class RomaMatcher(MatcherBase):
         if image.shape[1] > 2:
             image = K.color.rgb_to_grayscale(image)
         return image
-    
-    def _update_features(self, feature_path, im0_name, im1_name, new_keypoints0, new_keypoints1, matches0) -> None:
-        for i, im_name, new_keypoints in zip([0, 1], [im0_name, im1_name], [new_keypoints0, new_keypoints1]):
+
+    def _update_features(
+        self, feature_path, im0_name, im1_name, new_keypoints0, new_keypoints1, matches0
+    ) -> None:
+        for i, im_name, new_keypoints in zip(
+            [0, 1], [im0_name, im1_name], [new_keypoints0, new_keypoints1]
+        ):
             features = get_features(feature_path, im_name)
             existing_keypoints = features["keypoints"]
-            
+
             if len(existing_keypoints.shape) == 1:
                 features["keypoints"] = new_keypoints
                 with h5py.File(feature_path, "r+", libver="latest") as fd:
                     del fd[im_name]
                     grp = fd.create_group(im_name)
                     for k, v in features.items():
-                        if k == 'im_path' or k == 'feature_path':
+                        if k == "im_path" or k == "feature_path":
                             grp.create_dataset(k, data=str(v))
                         if isinstance(v, np.ndarray):
                             grp.create_dataset(k, data=v)
@@ -81,12 +84,12 @@ class RomaMatcher(MatcherBase):
             else:
                 n_exisiting_keypoints = existing_keypoints.shape[0]
                 features["keypoints"] = np.vstack((existing_keypoints, new_keypoints))
-                matches0[:,i] = matches0[:,i] + n_exisiting_keypoints
+                matches0[:, i] = matches0[:, i] + n_exisiting_keypoints
                 with h5py.File(feature_path, "r+", libver="latest") as fd:
                     del fd[im_name]
                     grp = fd.create_group(im_name)
                     for k, v in features.items():
-                        if k == 'im_path' or k == 'feature_path':
+                        if k == "im_path" or k == "feature_path":
                             grp.create_dataset(k, data=str(v))
                         if isinstance(v, np.ndarray):
                             grp.create_dataset(k, data=v)
@@ -97,7 +100,6 @@ class RomaMatcher(MatcherBase):
         feats0: FeaturesDict,
         feats1: FeaturesDict,
     ):
-
         """Matches keypoints and descriptors in two given images
         (no matter if they are tiles or full-res images) using
         the LoFTR algorithm.
@@ -108,7 +110,7 @@ class RomaMatcher(MatcherBase):
 
         """
 
-        feature_path = feats0['feature_path']
+        feature_path = feats0["feature_path"]
 
         im_path0 = feats0["im_path"]
         im_path1 = feats1["im_path"]
@@ -120,9 +122,13 @@ class RomaMatcher(MatcherBase):
             W_A, H_A = Image.open(im_path0).size
             W_B, H_B = Image.open(im_path1).size
 
-            warp, certainty = self.matcher.match(str(im_path0), str(im_path1), device=self._device, batched=False)
+            warp, certainty = self.matcher.match(
+                str(im_path0), str(im_path1), device=self._device, batched=False
+            )
             matches, certainty = self.matcher.sample(warp, certainty)
-            kptsA, kptsB = self.matcher.to_pixel_coordinates(matches, H_A, W_A, H_B, W_B)
+            kptsA, kptsB = self.matcher.to_pixel_coordinates(
+                matches, H_A, W_A, H_B, W_B
+            )
             kptsA, kptsB = kptsA.cpu().numpy(), kptsB.cpu().numpy()
 
         features0 = FeaturesDict(keypoints=kptsA)
@@ -131,7 +137,14 @@ class RomaMatcher(MatcherBase):
         # Create a 1-to-1 matching array
         matches0 = np.arange(kptsA.shape[0])
         matches = np.hstack((matches0.reshape((-1, 1)), matches0.reshape((-1, 1))))
-        self._update_features(feature_path, Path(im_path0).name, Path(im_path1).name, kptsA, kptsB, matches)
+        self._update_features(
+            feature_path,
+            Path(im_path0).name,
+            Path(im_path1).name,
+            kptsA,
+            kptsB,
+            matches,
+        )
 
         return matches
 
