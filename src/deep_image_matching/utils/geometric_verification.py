@@ -4,10 +4,11 @@ from typing import Tuple
 import cv2
 import numpy as np
 
-from .. import logger
+from .. import logger, timeit
 from .consts import GeometricVerification
 
 
+@timeit
 def geometric_verification(
     kpts0: np.ndarray = None,
     kpts1: np.ndarray = None,

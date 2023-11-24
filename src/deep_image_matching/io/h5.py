@@ -5,7 +5,7 @@ import h5py
 import numpy as np
 import torch
 
-from .. import logger
+from .. import logger, timeit
 
 
 def names_to_pair(name0, name1, separator="/"):
@@ -55,7 +55,7 @@ def get_features(
                 kpts = np.array(fd[name]["keypoints"]).astype(np.float32)
                 descr = np.array(fd[name]["descriptors"]).astype(np.float32)
                 feats = {
-                    "feature_path" : feature_path,
+                    "feature_path": feature_path,
                     "im_path": im_path,
                     "keypoints": kpts,
                     "descriptors": descr,

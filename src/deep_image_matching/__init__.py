@@ -4,5 +4,5 @@ from .utils.timer import Timer, timeit  # noqa: F401
 
 __version__ = "0.0.1"
 
-logger = setup_logger(name="dim", log_level="info")
+logger = setup_logger(name="deep-image-matching", log_level="info")
 timer = Timer(logger=logger)
