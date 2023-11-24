@@ -19,17 +19,19 @@ dependencies = [
     "numpy",
     "scipy",
     "matplotlib",
-    "kornia",
+    "pillow",
+    "pandas",
     "opencv-python",
     "opencv-contrib-python",
+    "torch",
+    "torchvision",
+    "kornia",
     "h5py",
     "tqdm",
     "easydict",
     "pytest",
-    "pillow",
     "ttkthemes",
     "exifread",
-    "pandas",
 ]
 requires-python = ">=3.8"
 

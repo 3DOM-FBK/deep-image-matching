@@ -56,7 +56,7 @@ def geometric_verification(
         try:
             pydegensac = importlib.import_module("pydegensac")
         except:
-            logger.error(
+            logger.warning(
                 "Pydegensac not available. Using MAGSAC++ (OpenCV) for geometric verification."
             )
             fallback = True
@@ -79,7 +79,7 @@ def geometric_verification(
             )
         except Exception as err:
             # Fall back to MAGSAC++ if pydegensac fails
-            logger.error(
+            logger.warning(
                 f"{err}. Unable to perform geometric verification with Pydegensac. Trying using MAGSAC++ (OpenCV) instead."
             )
             fallback = True
