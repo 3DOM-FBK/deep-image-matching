@@ -2,13 +2,7 @@ import argparse
 import shutil
 from pathlib import Path
 
-from config import (
-    confs,
-    extractors_zoo,
-    matchers_zoo,
-    matching_strategy,
-    retrieval_zoo,
-)
+from config import conf_general, confs, opt_zoo
 from src.deep_image_matching import change_logger_level, logger, timer
 from src.deep_image_matching.gui import gui
 from src.deep_image_matching.image_matching import ImageMatching
@@ -60,7 +54,7 @@ def parse_args():
     parser.add_argument(
         "-r",
         "--retrieval",
-        choices=retrieval_zoo,
+        choices=opt_zoo["retrieval"],
         default=None,
         help="Specify image retrieval method",
     )
@@ -100,20 +94,22 @@ def parse_args():
 
 
 def initialization():
+    """Do checks on the input arguments and return the configuration dictionary with the following keys: general, extractor, matcher"""
     args = parse_args()
 
-    # Checks for input arguments
+    # Input folder
     if args.images is None:
         raise ValueError("--images option is required")
     else:
         args.images = Path(args.images)
         if not args.images.exists() or not args.images.is_dir():
             raise ValueError(f"Folder {args.images} does not exist")
+
+    # Output folder
     if args.outs is None:
         args.outs = Path("output") / f"{args.images.name}_{args.config}_{args.strategy}"
     else:
         args.outs = Path(args.outs)
-
     if args.outs.exists():
         if args.force:
             logger.warning(f"{args.outs} already exists, removing {args.outs}")
@@ -124,39 +120,40 @@ def initialization():
             )
     args.outs.mkdir(parents=True)
 
-    if args.config is None:
-        raise ValueError("--config option is required")
-    else:
-        args.cfg = confs[args.config]
-        local_features = confs[args.config]["extractor"]["name"]
-        if local_features not in extractors_zoo:
-            raise ValueError(
-                f"Invalid extractor option: {local_features}. Valid options are: {extractors_zoo}"
-            )
-        matching = confs[args.config]["matcher"]["name"]
-        if matching not in matchers_zoo:
-            raise ValueError(
-                f"Invalid matcher option: {matching}. Valid options are: {matchers_zoo}"
-            )
+    # Check extraction and matching configuration
+    if args.config is None or args.config not in confs:
+        raise ValueError(
+            "--config option is required and must be a valid configuration (check config.py))"
+        )
+    extractor = confs[args.config]["extractor"]["name"]
+    if extractor not in opt_zoo["extractors"]:
+        raise ValueError(
+            f"Invalid extractor option: {extractor}. Valid options are: {opt_zoo['extractors']}"
+        )
+    matcher = confs[args.config]["matcher"]["name"]
+    if matcher not in opt_zoo["matchers"]:
+        raise ValueError(
+            f"Invalid matcher option: {matcher}. Valid options are: {opt_zoo['matchers']}"
+        )
 
+    # Matching strategy
     if args.strategy is None:
         raise ValueError("--strategy option is required")
-    if args.strategy not in matching_strategy:
+    if args.strategy not in opt_zoo["matching_strategy"]:
         raise ValueError(
-            f"Invalid strategy option: {args.strategy}. Valid options are: {matching_strategy}"
+            f"Invalid strategy option: {args.strategy}. Valid options are: {opt_zoo['matching_strategy']}"
         )
     if args.strategy == "retrieval":
         if args.retrieval is None:
             raise ValueError(
                 "--retrieval option is required when --strategy is set to retrieval"
             )
-        elif args.retrieval not in retrieval_zoo:
+        elif args.retrieval not in opt_zoo["retrieval"]:
             raise ValueError(
-                f"Invalid retrieval option: {args.retrieval}. Valid options are: {retrieval_zoo}"
+                f"Invalid retrieval option: {args.retrieval}. Valid options are: {opt_zoo['retrieval']}"
             )
     else:
         args.retrieval = None
-
     if args.strategy == "custom_pairs":
         if args.pairs is None:
             raise ValueError(
@@ -167,7 +164,6 @@ def initialization():
             raise ValueError(f"File {args.pairs} does not exist")
     else:
         args.pairs = args.outs / "pairs.txt"
-
     if args.strategy == "sequential":
         if args.overlap is None:
             raise ValueError(
@@ -179,44 +175,56 @@ def initialization():
     if args.verbose:
         change_logger_level(logger.name, "debug")
 
-    return args
+    # Build configuration dictionary
+    conf_general["image_dir"] = args.images
+    conf_general["output_dir"] = args.outs
+    conf_general["matching_strategy"] = args.strategy
+    conf_general["retrieval"] = args.retrieval
+    conf_general["pair_file"] = args.pairs
+    conf_general["overlap"] = args.overlap
+    conf_general["upright"] = args.upright
+    conf_general["verbose"] = args.verbose
+    cfg = {
+        "general": conf_general,
+        "extractor": confs[args.config]["extractor"],
+        "matcher": confs[args.config]["matcher"],
+    }
+
+    return cfg
 
 
 def main():
     # Parse arguments
-    args = initialization()
-    imgs_dir = args.images
-    output_dir = args.outs
-    matching_strategy = args.strategy
-    retrieval_option = args.retrieval
-    pair_file = args.pairs
-    overlap = args.overlap
+    config = initialization()
+    imgs_dir = config["general"]["image_dir"]
+    output_dir = config["general"]["output_dir"]
+    matching_strategy = config["general"]["matching_strategy"]
+    retrieval_option = config["general"]["retrieval"]
+    pair_file = config["general"]["pair_file"]
+    overlap = config["general"]["overlap"]
+    upright = config["general"]["upright"]
+    extractor = config["extractor"]["name"]
+    matcher = config["matcher"]["name"]
 
-    # Load configuration
-    config = confs[args.config]
-    local_features = config["extractor"]["name"]
-    matching_method = config["matcher"]["name"]
-
-    # Update configuration dictionary
-    config["general"]["output_dir"] = output_dir
-
-    # Generate pairs and matching
+    # Initialize ImageMatching class
     img_matching = ImageMatching(
         imgs_dir=imgs_dir,
         output_dir=output_dir,
         matching_strategy=matching_strategy,
         retrieval_option=retrieval_option,
-        local_features=local_features,
-        matching_method=matching_method,
+        local_features=extractor,
+        matching_method=matcher,
         pair_file=pair_file,
         custom_config=config,
         overlap=overlap,
     )
+
+    # Generate pairs to be matched
     pair_path = img_matching.generate_pairs()
     timer.update("generate_pairs")
 
-    if args.upright:
-        # Try to rotate images so they will be all "upright", useful for deep-learning approaches that usually are not rotation invariant
+    # Try to rotate images so they will be all "upright", useful for deep-learning approaches that usually are not rotation invariant
+    if upright:
         img_matching.rotate_upright_images()
         timer.update("rotate_upright_images")
 
@@ -229,7 +237,7 @@ def main():
     timer.update("matching")
 
     # Features are extracted on "upright" images, this function report back images on their original orientation
-    if args.upright:
+    if upright:
         img_matching.rotate_back_features(feature_path)
         timer.update("rotate_back_features")
 
