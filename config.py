@@ -10,7 +10,7 @@ conf_general = {
     "geom_verification": GeometricVerification.PYDEGENSAC,
     "gv_threshold": 4,
     "gv_confidence": 0.9999,
-    "preselction_resize_max": 2000,
+    "preselection_size_max": 2000,
 }
 
 
