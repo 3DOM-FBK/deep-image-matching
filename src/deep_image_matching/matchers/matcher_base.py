@@ -66,7 +66,7 @@ class MatcherBase(metaclass=ABCMeta):
         min_matches (int): Minimum number of matches required.
         min_matches_per_tile (int): Minimum number of matches required per tile.
         max_feat_no_tiling (int): Maximum number of features without tiling.
-        preselction_resize_max (int): Maximum resize dimension for preselection.
+        preselection_size_max (int): Maximum resize dimension for preselection.
     """
 
     general_conf = {
@@ -83,7 +83,7 @@ class MatcherBase(metaclass=ABCMeta):
     min_matches = 20
     min_matches_per_tile = 5
     max_feat_no_tiling = 100000
-    preselction_resize_max = 1024
+    preselection_size_max = 1024
 
     def __init__(self, custom_config) -> None:
         """
@@ -116,9 +116,9 @@ class MatcherBase(metaclass=ABCMeta):
             self.min_matches = custom_config["general"]["min_matches"]
         if "min_matches_per_tile" in custom_config["general"]:
             self.min_matches_per_tile = custom_config["general"]["min_matches_per_tile"]
-        if "preselction_resize_max" in custom_config["general"]:
-            self.preselction_resize_max = custom_config["general"][
-                "preselction_resize_max"
+        if "preselection_size_max" in custom_config["general"]:
+            self.preselection_size_max = custom_config["general"][
+                "preselection_size_max"
             ]
 
         # Get main processing parameters and save them as class members
@@ -341,11 +341,15 @@ class MatcherBase(metaclass=ABCMeta):
         Returns:
             np.ndarray: Array containing the indices of matched keypoints.
         """
+
+        timer = Timer(log_level="debug", cumulate_by_key=True)
+
         # Initialize empty matches array
         matches_full = np.array([], dtype=np.int64).reshape(0, 2)
 
         # Select tile pairs to match
         tile_pairs = self._tile_selection(img0, img1, method)
+        timer.update("tile selection")
 
         # If no tile pairs are selected, return an empty array
         if len(tile_pairs) == 0:
@@ -375,6 +379,7 @@ class MatcherBase(metaclass=ABCMeta):
 
             # Match features
             correspondences = self._match_pairs(feats0_tile, feats1_tile)
+            timer.update("match tile")
 
             # Restore original ids of the matched keypoints
             matches_orig = np.zeros_like(correspondences)
@@ -408,6 +413,7 @@ class MatcherBase(metaclass=ABCMeta):
         #     )
 
         logger.debug("Matching by tile completed.")
+        timer.print(f"{__class__.__name__} match_by_tile")
 
         return matches_full
 
@@ -483,7 +489,7 @@ class MatcherBase(metaclass=ABCMeta):
             logger.debug("Matching tiles by downsampling preselection")
 
             # Downsampled images
-            max_len = self.preselction_resize_max
+            max_len = self.preselection_size_max
             size0 = i0.shape[:2][::-1]
             size1 = i1.shape[:2][::-1]
             scale0 = max_len / max(size0)

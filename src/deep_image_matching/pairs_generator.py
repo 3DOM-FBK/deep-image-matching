@@ -91,9 +91,9 @@ def MatchingLowres(
                 hw1=hw1,
                 hw2=hw2,  # Adalam also benefits from knowing image size
             )
+            timer.update("match pair")
 
         mkpts0, mkpts1 = get_matching_keypoints(lafs1, lafs2, idxs)
-        timer.update("match features")
 
         # _, inlMask = geometric_verification(
         #     kpts0=mkpts0,
