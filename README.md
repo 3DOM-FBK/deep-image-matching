@@ -150,8 +150,8 @@ Before running the CLI, check the options with `python ./main.py --help`.
 
 The minimal required options are:
 
-`--images`: the path to the folder containing the images
-`--config`: the name of the configuration to use (e.g., "superpoint+lightglue")
+- `--images`: the path to the folder containing the images
+- `--config`: the name of the configuration to use (e.g., "superpoint+lightglue")
 
 Other additional options are:
 
