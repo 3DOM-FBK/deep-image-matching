@@ -13,16 +13,15 @@ Multivew matcher for COLMAP. Support both deep-learning based and hand-crafted l
 
 Key features:
 
-[x] Multiview
-[x] Large format images
-[x] SOTA deep-learning and hand-crafted features
-[x] Full compatibility with COLMAP
-[x] Different matching techniques (bruteforce, sequential, low-resolution guided, image retrieval)
-[x] Support image retrieval with deep-learning local features
-[x] Support for image rotations
-[x] Compatibility with Agisoft Metashape (export in Bundler format)
+- [x] Multiview
+- [x] Large format images
+- [x] SOTA deep-learning and hand-crafted features
+- [x] Full compatibility with COLMAP
+- [x] Support for image rotations
+- [x] Compatibility with Agisoft Metashape (only on Linux and MacOS by using pycolmap)
+- [x] Support image retrieval with deep-learning local features
 
-| Supported Extractors               | Matchers                                                  |
+| Supported Extractors               | Supported Matchers                                        |
 | ---------------------------------- | --------------------------------------------------------- |
 | &check; SuperPoint                 | &check; Lightglue (with Superpoint, Disk, and ALIKED)     |
 | &check; DISK                       | &check; SuperGlue (with Superpoint)                       |
