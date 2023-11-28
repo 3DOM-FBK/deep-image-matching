@@ -196,18 +196,18 @@ To run the matching with different local features and/or matchers and marging to
 
 ## TODO:
 
-[x] Tile processing for high resolution images
-[x] Manage image rotations
-[ ] Add image retrieval with global descriptors
-[x] add GUI
-[x] Add pycolmap compatibility
-[x] Add exporting to Bundler format ready for importing into Metashape (only on linux with pycolmap)
-[ ] Add visualization for extracted features and matches
-[ ] Improve speed
-[ ] Autoselect tiling grid in order to fit images in GPU memory
-[ ] Add tests, documentation and examples
-[ ] Apply mask during feature extraction
-[ ] Check scripts
+- [x] Tile processing for high resolution images
+- [x] Manage image rotations
+- [ ] Add image retrieval with global descriptors
+- [x] add GUI
+- [x] Add pycolmap compatibility
+- [x] Add exporting to Bundler format ready for importing into Metashape (only on Linux and MacOS by using pycolmap)
+- [ ] Add visualization for extracted features and matches
+- [ ] Improve speed
+- [ ] Autoselect tiling grid in order to fit images in GPU memory
+- [ ] Add tests, documentation and examples
+- [ ] Apply mask during feature extraction
+- [ ] Check scripts
 
 ## References
 
@@ -237,4 +237,4 @@ If you find the repository useful for your work consider citing the papers:
 }
 ```
 
-Depending on the options used, consider citing the corresponding work of [KORNIA](https://github.com/kornia/kornia), [HLOC](https://github.com/cvg/Hierarchical-Localizationgithub), and local features.
+Depending on the options used, consider citing the corresponding work of [KORNIA](https://github.com/kornia/kornia), [HLOC](https://github.com/cvg/Hierarchical-Localization), and local features.
