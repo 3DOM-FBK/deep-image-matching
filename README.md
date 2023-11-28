@@ -34,7 +34,7 @@ Key features:
 
 ## Installation
 
-`Deep-image-matching` is tested on Ubuntu 22.04 and Windows 10 with `Python 3.9`. It is strongly reccomended to use have a NVIDIA GPU with at least 8GB of memory.
+`Deep-image-matching` is tested on Ubuntu 22.04 and Windows 10 with `Python 3.9`. It is strongly reccomended to have a NVIDIA GPU with at least 8GB of memory.
 
 Please, note that deep-image-matching relies on [pydegensac](https://github.com/ducha-aiki/pydegensac) for the geometric verification of matches, which is only available for `Python <=3.9` on Windows. If you are using Windows, please, install `Python 3.9` (on Linux, you can also use `Pythom 3.10`).
 
@@ -198,7 +198,7 @@ To run the matching with different local features and/or matchers and marging to
 
 - [x] Tile processing for high resolution images
 - [x] Manage image rotations
-- [ ] Add image retrieval with global descriptors
+- [x] Add image retrieval with global descriptors
 - [x] add GUI
 - [x] Add pycolmap compatibility
 - [x] Add exporting to Bundler format ready for importing into Metashape (only on Linux and MacOS by using pycolmap)
