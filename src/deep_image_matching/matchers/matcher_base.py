@@ -14,7 +14,6 @@ from ..hloc.extractors.superpoint import SuperPoint
 from ..io.h5 import get_features
 from ..thirdparty.LightGlue.lightglue import LightGlue
 from ..utils.consts import Quality, TileSelection
-from ..utils.geometric_verification import geometric_verification
 from ..utils.tiling import Tiler
 from ..visualization import viz_matches_cv2, viz_matches_mpl
 
@@ -66,7 +65,7 @@ class MatcherBase(metaclass=ABCMeta):
         min_matches (int): Minimum number of matches required.
         min_matches_per_tile (int): Minimum number of matches required per tile.
         max_feat_no_tiling (int): Maximum number of features without tiling.
-        preselction_resize_max (int): Maximum resize dimension for preselection.
+        preselection_size_max (int): Maximum resize dimension for preselection.
     """
 
     general_conf = {
@@ -83,7 +82,7 @@ class MatcherBase(metaclass=ABCMeta):
     min_matches = 20
     min_matches_per_tile = 5
     max_feat_no_tiling = 100000
-    preselction_resize_max = 1024
+    preselection_size_max = 1024
 
     def __init__(self, custom_config) -> None:
         """
@@ -116,9 +115,9 @@ class MatcherBase(metaclass=ABCMeta):
             self.min_matches = custom_config["general"]["min_matches"]
         if "min_matches_per_tile" in custom_config["general"]:
             self.min_matches_per_tile = custom_config["general"]["min_matches_per_tile"]
-        if "preselction_resize_max" in custom_config["general"]:
-            self.preselction_resize_max = custom_config["general"][
-                "preselction_resize_max"
+        if "preselection_size_max" in custom_config["general"]:
+            self.preselection_size_max = custom_config["general"][
+                "preselection_size_max"
             ]
 
         # Get main processing parameters and save them as class members
@@ -341,11 +340,28 @@ class MatcherBase(metaclass=ABCMeta):
         Returns:
             np.ndarray: Array containing the indices of matched keypoints.
         """
+
+        def get_features_by_tile(features: FeaturesDict, tile_idx: int):
+            if "tile_idx" not in features:
+                raise KeyError("tile_idx not found in features")
+            pts_in_tile = features["tile_idx"] == tile_idx
+            idx = np.where(pts_in_tile)[0]
+            feat_tile = {
+                "keypoints": features["keypoints"][pts_in_tile],
+                "descriptors": features["descriptors"][:, pts_in_tile],
+                "scores": features["scores"][pts_in_tile],
+                "image_size": features["image_size"],
+            }
+            return (feat_tile, idx)
+
+        timer = Timer(log_level="debug", cumulate_by_key=True)
+
         # Initialize empty matches array
         matches_full = np.array([], dtype=np.int64).reshape(0, 2)
 
         # Select tile pairs to match
         tile_pairs = self._tile_selection(img0, img1, method)
+        timer.update("tile selection")
 
         # If no tile pairs are selected, return an empty array
         if len(tile_pairs) == 0:
@@ -356,25 +372,13 @@ class MatcherBase(metaclass=ABCMeta):
         for tidx0, tidx1 in tile_pairs:
             logger.debug(f"  - Matching tile pair ({tidx0}, {tidx1})")
 
-            def get_features_by_tile(features: FeaturesDict, tile_idx: int):
-                if "tile_idx" not in features:
-                    raise KeyError("tile_idx not found in features")
-                pts_in_tile = features["tile_idx"] == tile_idx
-                idx = np.where(pts_in_tile)[0]
-                feat_tile = {
-                    "keypoints": features["keypoints"][pts_in_tile],
-                    "descriptors": features["descriptors"][:, pts_in_tile],
-                    "scores": features["scores"][pts_in_tile],
-                    "image_size": features["image_size"],
-                }
-                return (feat_tile, idx)
-
             # Get features in tile and their ids in original array
             feats0_tile, idx0 = get_features_by_tile(features0, tidx0)
             feats1_tile, idx1 = get_features_by_tile(features1, tidx1)
 
             # Match features
             correspondences = self._match_pairs(feats0_tile, feats1_tile)
+            timer.update("match tile")
 
             # Restore original ids of the matched keypoints
             matches_orig = np.zeros_like(correspondences)
@@ -408,6 +412,7 @@ class MatcherBase(metaclass=ABCMeta):
         #     )
 
         logger.debug("Matching by tile completed.")
+        timer.print(f"{__class__.__name__} match_by_tile")
 
         return matches_full
 
@@ -483,7 +488,7 @@ class MatcherBase(metaclass=ABCMeta):
             logger.debug("Matching tiles by downsampling preselection")
 
             # Downsampled images
-            max_len = self.preselction_resize_max
+            max_len = self.preselection_size_max
             size0 = i0.shape[:2][::-1]
             size1 = i1.shape[:2][::-1]
             scale0 = max_len / max(size0)
@@ -537,7 +542,10 @@ class MatcherBase(metaclass=ABCMeta):
             kp1 = kp1 / scale1
 
             # geometric verification
-            _, inlMask = geometric_verification(kpts0=kp0, kpts1=kp1, threshold=2)
+            _, inliers = cv2.findFundamentalMat(
+                kp0, kp1, cv2.USAC_MAGSAC, 2, 0.9999, 10000
+            )
+            inlMask = (inliers > 0).squeeze()
             kp0 = kp0[inlMask]
             kp1 = kp1[inlMask]
 

@@ -2,26 +2,14 @@ from pathlib import Path
 from typing import List, Tuple, Union
 
 import cv2
+import kornia as K
+import kornia.feature as KF
 import numpy as np
+import torch
 from tqdm import tqdm
 
-from . import GeometricVerification, logger
-from .extractors.keynetaffnethardnet import KeyNet
+from . import Timer, logger
 from .image_retrieval import ImageRetrieval
-from .matchers.kornia_matcher import KorniaMatcher
-from .utils.geometric_verification import geometric_verification
-
-MIN_N_MATCHES = 100
-
-KeyNetAffNetHardNetConfig = {
-    "general": {},
-    "extractor": {
-        "name": "keynetaffnethardnet",
-        "n_features": 8000,
-        "upright": False,
-    },
-    "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.95},
-}
 
 
 def SequentialPairs(img_list: List[Union[str, Path]], overlap: int) -> List[tuple]:
@@ -45,44 +33,86 @@ def BruteForce(img_list: List[Union[str, Path]]) -> List[tuple]:
     return pairs
 
 
-def MatchingLowres(brute_pairs: List[Tuple[Union[str, Path]]]):
+def MatchingLowres(
+    brute_pairs: List[Tuple[Union[str, Path]]],
+    resize_max: int = 500,
+    min_matches: int = 50,
+):
+    def read_tensor_image(
+        path: Path, resize_to: int = 500, device="cuda"
+    ) -> Tuple[np.ndarray, float]:
+        device = (
+            torch.device(device) if torch.cuda.is_available() else torch.device("cpu")
+        )
+        img = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
+        size = img.shape[:2][::-1]
+        scale = resize_to / max(size)
+        size_new = tuple(int(round(x * scale)) for x in size)
+        img = cv2.resize(img, size_new)
+        img = K.image_to_tensor(img, False).float() / 255.0
+        img = img.to(device)
+
+        return img, scale
+
+    def get_matching_keypoints(lafs1, lafs2, idxs):
+        mkpts1 = KF.get_laf_center(lafs1).squeeze()[idxs[:, 0]].detach().cpu().numpy()
+        mkpts2 = KF.get_laf_center(lafs2).squeeze()[idxs[:, 1]].detach().cpu().numpy()
+        return mkpts1, mkpts2
+
+    timer = Timer(log_level="debug")
+
     pairs = []
-    KNextractor = KeyNet(KeyNetAffNetHardNetConfig)
-    KorniaMatch = KorniaMatcher(KeyNetAffNetHardNetConfig)
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    KNextractor = KF.KeyNetAffNetHardNet(
+        num_features=4000,
+        upright=False,
+        device=device,
+    )
+
     for pair in tqdm(brute_pairs):
         im0_path = pair[0]
         im1_path = pair[1]
 
-        im0 = cv2.imread(str(im0_path))
-        H, W = im0.shape[:2]
-        new_width = 500
-        new_height = int(H * 500 / W)
-        im0 = cv2.resize(im0, (new_width, new_height))
-        im0 = cv2.cvtColor(im0, cv2.COLOR_BGR2GRAY)
+        im0, _ = read_tensor_image(im0_path, resize_max)
+        im1, _ = read_tensor_image(im1_path, resize_max)
+        hw1 = torch.tensor(im1.shape[2:])
+        hw2 = torch.tensor(im1.shape[2:])
+        adalam_config = {"device": device}
 
-        im1 = cv2.imread(str(im1_path))
-        H, W = im1.shape[:2]
-        new_width = 500
-        new_height = int(H * 500 / W)
-        im0 = cv2.resize(im0, (new_width, new_height))
-        im1 = cv2.cvtColor(im1, cv2.COLOR_BGR2GRAY)
+        with torch.inference_mode():
+            lafs1, resps1, descs1 = KNextractor(im0)
+            lafs2, resps2, descs2 = KNextractor(im1)
+            dists, idxs = KF.match_adalam(
+                descs1.squeeze(0),
+                descs2.squeeze(0),
+                lafs1,
+                lafs2,  # Adalam takes into account also geometric information
+                config=adalam_config,
+                hw1=hw1,
+                hw2=hw2,  # Adalam also benefits from knowing image size
+            )
+            timer.update("match pair")
 
-        features0 = KNextractor._extract(im0)
-        features1 = KNextractor._extract(im1)
-        matches01_idx = KorniaMatch._match_pairs(features0, features1)
-        mkpts0 = features0["keypoints"][matches01_idx[:, 0]]
-        mkpts1 = features1["keypoints"][matches01_idx[:, 1]]
-        _, inlMask = geometric_verification(
-            kpts0=mkpts0,
-            kpts1=mkpts1,
-            method=GeometricVerification.PYDEGENSAC,
-            threshold=4,
-            confidence=0.99,
-        )
-        count_true = np.count_nonzero(inlMask)
-        # print(im0_path.name, im1_path.name, count_true)
-        if count_true > MIN_N_MATCHES:
+        mkpts0, mkpts1 = get_matching_keypoints(lafs1, lafs2, idxs)
+
+        # _, inlMask = geometric_verification(
+        #     kpts0=mkpts0,
+        #     kpts1=mkpts1,
+        #     method=GeometricVerification.PYDEGENSAC,
+        #     threshold=4,
+        #     confidence=0.99,
+        # )
+        # count_true = np.count_nonzero(inlMask)
+        # timer.update("geometric verification")
+
+        # # print(im0_path.name, im1_path.name, count_true)
+        # if count_true > min_matches:
+        #     pairs.append(pair)
+        if len(mkpts0) > min_matches:
             pairs.append(pair)
+
+    timer.print("low-res pair generation")
+
     return pairs
 
 

@@ -20,10 +20,8 @@
         "--images",
         "assets/example_square",
         "--strategy",
-        "matching_lowres",
-        // "--retrieval",
-        // "netvlad",
-        "--upright",
+        "sequential",
+        // "--upright",
         "--force",
         "-V"
       ]
