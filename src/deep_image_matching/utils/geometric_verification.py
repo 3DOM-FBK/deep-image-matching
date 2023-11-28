@@ -87,7 +87,7 @@ def geometric_verification(
     if method == GeometricVerification.MAGSAC or fallback:
         try:
             F, inliers = cv2.findFundamentalMat(
-                kpts0, kpts1, cv2.USAC_MAGSAC, 0.5, 0.999, 100000
+                kpts0, kpts1, cv2.USAC_MAGSAC, threshold, confidence, max_iters
             )
             inlMask = (inliers > 0).squeeze()
             logger.info(

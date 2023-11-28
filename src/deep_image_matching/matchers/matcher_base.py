@@ -14,7 +14,6 @@ from ..hloc.extractors.superpoint import SuperPoint
 from ..io.h5 import get_features
 from ..thirdparty.LightGlue.lightglue import LightGlue
 from ..utils.consts import Quality, TileSelection
-from ..utils.geometric_verification import geometric_verification
 from ..utils.tiling import Tiler
 from ..visualization import viz_matches_cv2, viz_matches_mpl
 
@@ -342,6 +341,19 @@ class MatcherBase(metaclass=ABCMeta):
             np.ndarray: Array containing the indices of matched keypoints.
         """
 
+        def get_features_by_tile(features: FeaturesDict, tile_idx: int):
+            if "tile_idx" not in features:
+                raise KeyError("tile_idx not found in features")
+            pts_in_tile = features["tile_idx"] == tile_idx
+            idx = np.where(pts_in_tile)[0]
+            feat_tile = {
+                "keypoints": features["keypoints"][pts_in_tile],
+                "descriptors": features["descriptors"][:, pts_in_tile],
+                "scores": features["scores"][pts_in_tile],
+                "image_size": features["image_size"],
+            }
+            return (feat_tile, idx)
+
         timer = Timer(log_level="debug", cumulate_by_key=True)
 
         # Initialize empty matches array
@@ -359,19 +371,6 @@ class MatcherBase(metaclass=ABCMeta):
         # Match each tile pair
         for tidx0, tidx1 in tile_pairs:
             logger.debug(f"  - Matching tile pair ({tidx0}, {tidx1})")
-
-            def get_features_by_tile(features: FeaturesDict, tile_idx: int):
-                if "tile_idx" not in features:
-                    raise KeyError("tile_idx not found in features")
-                pts_in_tile = features["tile_idx"] == tile_idx
-                idx = np.where(pts_in_tile)[0]
-                feat_tile = {
-                    "keypoints": features["keypoints"][pts_in_tile],
-                    "descriptors": features["descriptors"][:, pts_in_tile],
-                    "scores": features["scores"][pts_in_tile],
-                    "image_size": features["image_size"],
-                }
-                return (feat_tile, idx)
 
             # Get features in tile and their ids in original array
             feats0_tile, idx0 = get_features_by_tile(features0, tidx0)
@@ -543,7 +542,10 @@ class MatcherBase(metaclass=ABCMeta):
             kp1 = kp1 / scale1
 
             # geometric verification
-            _, inlMask = geometric_verification(kpts0=kp0, kpts1=kp1, threshold=2)
+            _, inliers = cv2.findFundamentalMat(
+                kp0, kp1, cv2.USAC_MAGSAC, 2, 0.9999, 10000
+            )
+            inlMask = (inliers > 0).squeeze()
             kp0 = kp0[inlMask]
             kp1 = kp1[inlMask]
 
