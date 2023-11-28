@@ -1,4 +1,5 @@
-[![Static Badge](https://img.shields.io/badge/Matches_for-COLMAP-red)](https://github.com/colmap/colmap) [![Static Badge](https://img.shields.io/badge/Powered_by-Kornia-green)](https://github.com/kornia/kornia) [![Static Badge](https://img.shields.io/badge/Powered_by-hloc-blue)](https://github.com/kornia/kornia)
+[![Static Badge](https://img.shields.io/badge/Matches_for-COLMAP-red)](https://github.com/colmap/colmap)
+![Static Badge](https://img.shields.io/badge/Matches_for-Metashape-blue) [![Static Badge](https://img.shields.io/badge/Powered_by-Kornia-green)](https://github.com/kornia/kornia) [![Static Badge](https://img.shields.io/badge/Powered_by-hloc-blue)](https://github.com/kornia/kornia)
 
 ## DEEP-IMAGE-MATCHING
 
@@ -7,6 +8,8 @@
 | ![X1](assets/nadar_sift_matches.png) | ![X2](assets/nadar_disk_matches.png) | ![X3](assets/nadar_disk.png) |
 
 Multivew matcher for COLMAP. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI. Feel free to collaborate!
+
+**Please, note that `deep-image-matching` is under active development** and it is still in an experimental stage. If you find any bug, please open an issue.
 
 Key features:
 
@@ -18,62 +21,163 @@ Key features:
 - [x] Compatibility with Agisoft Metashape (only on Linux and MacOS by using pycolmap)
 - [x] Support image retrieval with deep-learning local features
 
-Supported extractors:
+| Supported Extractors               | Supported Matchers                                        |
+| ---------------------------------- | --------------------------------------------------------- |
+| &check; SuperPoint                 | &check; Lightglue (with Superpoint, Disk, and ALIKED)     |
+| &check; DISK                       | &check; SuperGlue (with Superpoint)                       |
+| &check; ALIKE                      | &check; LoFTR                                             |
+| &check; ALIKED                     | &check; Nearest neighbor (with KORNIA Descriptor Matcher) |
+| &#x2610; Superpoint free           | &#x2610; GlueStick                                        |
+| &check; KeyNet + OriNet + HardNet8 | &check; RoMa                                              |
+| &check; ORB (opencv)               |                                                           |
+| &check; SIFT (opencv)              |
 
-- [x] SuperPoint
-- [x] DISK
-- [x] ALIKE
-- [x] ALIKED
-- [ ] Superpoint free
-- [x] KeyNet + OriNet + HardNet8
-- [x] ORB (opencv)
-- [x] SIFT (opencv)
+## Installation
 
-Matchers:
+`Deep-image-matching` is tested on Ubuntu 22.04 and Windows 10 with `Python 3.9`. It is strongly reccomended to have a NVIDIA GPU with at least 8GB of memory.
 
-- [x] Lightglue (with Superpoint, Disk and ALIKED)
-- [x] SuperGlue (with Superpoint)
-- [x] LoFTR
-- [x] Nearest neighbor (with KORNIA Descriptor Matcher)
-- [ ] GlueStick
-- [x] RoMa
+Please, note that deep-image-matching relies on [pydegensac](https://github.com/ducha-aiki/pydegensac) for the geometric verification of matches, which is only available for `Python <=3.9` on Windows. If you are using Windows, please, install `Python 3.9` (on Linux, you can also use `Pythom 3.10`).
 
-## Install and run
+Additionally, deep-image-matching relies on [pycolmap](https://github.com/colmap/pycolmap), which is only available in [pypi](https://pypi.org/project/pycolmap/) for Linux and macOS. If you are using Windows, please, use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) (please refer to issue [#34](https://github.com/colmap/pycolmap/issues/34) in pycolmap repo).
 
-Install in a conda environment:
+Pycolmap is needed for running directly the 3D reconstruction (without the need to use COLMAP by GUI or CLI) and to export the reconstruction in Bundler format for importing into Metashape. Pycolmap is alse needed to create cameras from exif metadata in the COLMAP database.
+If pycolmap is not installed, deep-image-matching will still work and it will export the matches in a COLMAP SQlite databse, which can be opened by COLMAP GUI or CLI to run the 3D reconstruction.
+
+For installing `deep-image-matching`, first create a conda environment:
 
 ```bash
-conda create -n deep-image-matching python=3.10
+conda create -n deep-image-matching python=3.9
 conda activate deep-image-matching
+pip install --upgrade pip
 ```
 
-Install pytorch. See [https://pytorch.org/get-started/locally/#linux-pip](https://pytorch.org/get-started/locally/#linux-pip)
+Clone the repository and install `deep-image-matching` in editable mode:
 
 ```bash
-python -m pip install --upgrade pip
+git clone https://github.com/3DOM-FBK/deep-image-matching.git
+cd deep-image-matching
 pip install -e .
 ```
 
-Install hloc (https://github.com/cvg/Hierarchical-Localization/tree/master):
+If you run into any troubles installing Pytorch (and its related packages, such as Kornia), please check the official website ([https://pytorch.org/get-started/locally/](https://pytorch.org/get-started/locally/)) and follow the instructions for your system and CUDA architecture. Then, try to install again deep-image-matching.
 
-```
-git clone --recursive https://github.com/cvg/Hierarchical-Localization/
-cd Hierarchical-Localization/
-python -m pip install -e .
-git submodule update --init --recursive
-```
-
-## Example usage
-
-### Sequential matching with LighGlue
-
-Before running check options with `python ./main.py --help`, then:
+If you are on Linux or macOS, you can install pycolmap with:
 
 ```bash
-python ./main.py  --config superpoint+lightglue --images assets/example_images --outs assets/output --strategy sequential --overlap 1
+pip install pycolmap
+```
+
+## Usage instructions
+
+You can run deep-image-matching with the CLI or with the GUI.
+
+All the configurations (that are used both from the CLI and the GUI) are in `config.py`.
+There are two main configuration in `config.py`: `conf_general` and `confs`.
+
+- `conf_general` contains some general configuration that is valid for each combination of local features and matchers, including the option to run the matching by tiles, run it on full images or on downsampled images, and the options for the geometric verification.
+
+    <details>
+
+    <summary>Show dictionary</summary>
+
+  ```python
+    conf_general = {
+      "quality": Quality.HIGH,
+      "tile_selection": TileSelection.PRESELECTION,
+      "tiling_grid": [3, 3],
+      "tiling_overlap": 0,
+      "geom_verification": GeometricVerification.PYDEGENSAC,
+      "gv_threshold": 4,
+      "gv_confidence": 0.9999,
+      "preselection_size_max": 2000,
+    }
+  ```
+
+    </details>
+
+- `confs` is a dictionary that contains all the possibile combinations of local feature extrators and matchers that can be used in deep-image-matching and their configuration. Each configuration is defined by a name (e.g., "superpoint+lightglue") and it must be a dictionary containing two sub-dictionaries for the 'extractor' and the 'matcher'.
+
+  <details>
+
+  <summary>Show dictionary</summary>
+
+  ```python
+  confs = {
+      "superpoint+lightglue": {
+          "extractor": {
+              "name": "superpoint",
+              "keypoint_threshold": 0.0001,
+              "max_keypoints": 4096,
+          },
+          "matcher": {
+              "name": "lightglue",
+              "n_layers": 9,
+              "depth_confidence": -1,  # 0.95,  # early stopping, disable with -1
+              "width_confidence": -1,  # 0.99,  # point pruning, disable with -1
+              "filter_threshold": 0.5,  # match threshold
+          },
+      },
+      "aliked+lightglue": {
+          "extractor": {
+              "name": "aliked",
+              ...
+          },
+          "matcher": {
+              "name": "lightglue",
+              ...
+          },
+      },
+      "orb+kornia_matcher": {
+          "extractor": {
+              "name": "orb",
+              ...
+          },
+          "matcher": {
+              "name": "kornia_matcher",
+              ...
+          },
+      },
+    }
+  ```
+
+  </details>
+
+From both the CLI and GUI you can select a configuration by its name (e.g., "superpoint+lightglue") and the corresponding configuration will be used.
+
+### CLI
+
+Before running the CLI, check the options with `python ./main.py --help`.
+
+The minimal required options are:
+
+- `--images`: the path to the folder containing the images
+- `--config`: the name of the configuration to use (e.g., "superpoint+lightglue")
+
+Other additional options are:
+
+- `--outs`: the path to the folder where the matches will be saved (default: `./output`)
+- `--strategy`: the strategy to use for the matching (default: `sequential`)
+- `--overlap`: if `strategy` is set to `sequential`, set the number of images that are sequentially matched to each image in the sequence (default: `1`)
+- `--retrieval`: if `strategy` is set to `retrieval`, the global descriptor to use for image retrieval (default: `None`)
+- `--upright`: if passed, try to find the best image rotation before running the matching
+- `--force`: if the output folder already exists, overwrite it
+- `-V`: enable verbose output
+
+To run sequential matching with Superpoint+LighGlue, you can use the following command:
+
+```bash
+python ./main.py  --config superpoint+lightglue --images assets/example_cyprus --outs assets/output --strategy sequential --overlap 2
+```
+
+To run bruteforce matching with ALIKED+LightGlue and with image rotation, you can use the following command:
+
+```bash
+python ./main.py  --config aliked+lightglue --images assets/example_cyprus --strategy bruteforce --upright
 ```
 
 See other examples in run.bat. If you want to customize detector and descpritor options, change default options in config.py.
+
+### GUI
 
 To run with the GUI:
 
@@ -83,15 +187,18 @@ python ./main.py --gui
 
 ![X4](assets/gui.png)
 
+In the GUI, you can define the same parameters that are available in the CLI.
+The GUI loads the available configurations from `config.py` and it shows them in the dropdown menu `choose available matching configuration`.
+
 ### Merging databases with different local features
 
-See scripts in the `./scripts` dir
+To run the matching with different local features and/or matchers and marging together the results, you can use scripts in the `./scripts` directory for merging the COLMAP databases.
 
 ## TODO:
 
 - [x] Tile processing for high resolution images
 - [x] Manage image rotations
-- [ ] Add image retrieval with global descriptors
+- [x] Add image retrieval with global descriptors
 - [x] add GUI
 - [x] Add pycolmap compatibility
 - [x] Add exporting to Bundler format ready for importing into Metashape (only on Linux and MacOS by using pycolmap)

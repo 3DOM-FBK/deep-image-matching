@@ -45,6 +45,7 @@ class Timer:
         smoothing: float = 0.3,
         logger: logging.Logger = logger,
         log_level: str = "info",
+        cumulate_by_key: bool = False,
     ):
         """
         Initializes the Timer object.
@@ -58,6 +59,7 @@ class Timer:
         self.will_print = OrderedDict()
         self.logger = logger
         self.log_level = logging.getLevelName(log_level.upper())
+        self.cumulate = cumulate_by_key
 
         self.reset()
 
@@ -68,23 +70,31 @@ class Timer:
         now = time.time()
         self.start = now
         self.last_time = now
-        for name in self.will_print:
-            self.will_print[name] = False
+        self.times.clear()
+        self.will_print.clear()
 
     def update(self, name: str):
         """
-        Updates the timing information for a specific named section.
+        Updates the timing information for a specific named section. If the section does not exist, it is created, otherwise the timing information is updated. If cumulate_by_key was set to True, the timing information is accumulated for each key, otherwise the timing information is smoothed.
 
         Args:
             name (str): The name of the section.
         """
         now = time.time()
         dt = now - self.last_time
-        if name in self.times:
-            dt = self.smoothing * dt + (1 - self.smoothing) * self.times[name]
-        self.times[name] = dt
-        self.will_print[name] = True
         self.last_time = now
+
+        if name in self.times:
+            if self.cumulate:
+                self.times[name] += dt
+            else:
+                self.times[name] = (
+                    self.smoothing * dt + (1 - self.smoothing) * self.times[name]
+                )
+        else:
+            self.times[name] = dt
+
+        self.will_print[name] = True
 
     def print(self, text: str = "Timer", sep: str = ", "):
         """
@@ -100,8 +110,8 @@ class Timer:
             if self.will_print[key]:
                 msg = msg + f"{key}={val:.3f}{sep}"
                 total += val
-        msg = msg + f"Total={total:.3f}"
-        # self.logger.info(msg)
+        exec_time = time.time() - self.start
+        msg = msg + f"Total execution={exec_time:.3f}"
         self.logger.log(self.log_level, msg)
 
         self.reset()

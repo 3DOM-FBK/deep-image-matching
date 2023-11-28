@@ -4,11 +4,10 @@ from typing import Tuple
 import cv2
 import numpy as np
 
-from .. import logger, timeit
+from .. import logger
 from .consts import GeometricVerification
 
 
-@timeit
 def geometric_verification(
     kpts0: np.ndarray = None,
     kpts1: np.ndarray = None,
@@ -57,7 +56,7 @@ def geometric_verification(
         try:
             pydegensac = importlib.import_module("pydegensac")
         except:
-            logger.error(
+            logger.warning(
                 "Pydegensac not available. Using MAGSAC++ (OpenCV) for geometric verification."
             )
             fallback = True
@@ -80,7 +79,7 @@ def geometric_verification(
             )
         except Exception as err:
             # Fall back to MAGSAC++ if pydegensac fails
-            logger.error(
+            logger.warning(
                 f"{err}. Unable to perform geometric verification with Pydegensac. Trying using MAGSAC++ (OpenCV) instead."
             )
             fallback = True
@@ -88,7 +87,7 @@ def geometric_verification(
     if method == GeometricVerification.MAGSAC or fallback:
         try:
             F, inliers = cv2.findFundamentalMat(
-                kpts0, kpts1, cv2.USAC_MAGSAC, 0.5, 0.999, 100000
+                kpts0, kpts1, cv2.USAC_MAGSAC, threshold, confidence, max_iters
             )
             inlMask = (inliers > 0).squeeze()
             logger.info(
