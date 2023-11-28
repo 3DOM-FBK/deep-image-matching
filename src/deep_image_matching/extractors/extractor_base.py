@@ -186,7 +186,7 @@ class ExtractorBase(metaclass=ABCMeta):
                     del fd[im_name]
                 grp = fd.create_group(im_name)
                 for k, v in features.items():
-                    if k == 'im_path' or k == 'feature_path':
+                    if k == "im_path" or k == "feature_path":
                         grp.create_dataset(k, data=str(v))
                     if isinstance(v, np.ndarray):
                         grp.create_dataset(k, data=v)
@@ -202,21 +202,20 @@ class ExtractorBase(metaclass=ABCMeta):
 
         # Save also keypoints and descriptors separately
         # NOTE: for backward compatibility. To be removed if not needed anymore
-        if False:
-            with h5py.File(
-                str(output_dir / "keypoints.h5"), "a", libver="latest"
-            ) as fd:
-                if im_name in fd:
-                    del fd[im_name]
-                fd[im_name] = features["keypoints"]
+        # with h5py.File(
+        #     str(output_dir / "keypoints.h5"), "a", libver="latest"
+        # ) as fd:
+        #     if im_name in fd:
+        #         del fd[im_name]
+        #     fd[im_name] = features["keypoints"]
 
-            desc_dim = features["descriptors"].shape[0]
-            with h5py.File(
-                str(output_dir / "descriptors.h5"), "a", libver="latest"
-            ) as fd:
-                if im_name in fd:
-                    del fd[im_name]
-                fd[im_name] = features["descriptors"].reshape(-1, desc_dim)
+        # desc_dim = features["descriptors"].shape[0]
+        # with h5py.File(
+        #     str(output_dir / "descriptors.h5"), "a", libver="latest"
+        # ) as fd:
+        #     if im_name in fd:
+        #         del fd[im_name]
+        #     fd[im_name] = features["descriptors"].reshape(-1, desc_dim)
 
         return feature_path
 
