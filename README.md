@@ -38,7 +38,8 @@ Key features:
 
 Please, note that deep-image-matching relies on [pydegensac](https://github.com/ducha-aiki/pydegensac) for the geometric verification of matches, which is only available for `Python <=3.9` on Windows. If you are using Windows, please, install `Python 3.9` (on Linux, you can also use `Pythom 3.10`).
 
-Additionally, deep-image-matching relies on [pycolmap](https://github.com/colmap/pycolmap), which is only available in [pypi](https://pypi.org/project/pycolmap/) for Linux and macOS. If you are using Windows, please, use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) (please refer to issue [#34](https://github.com/colmap/pycolmap/issues/34) in pycolmap repo).
+For automatize 3D reconstruction, DEEP-IMAGE-MATCHING uses [pycolmap](https://github.com/colmap/pycolmap), which is only available in [pypi](https://pypi.org/project/pycolmap/) for Linux and macOS. 
+If you are using Windows, you can use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) for installing pycolmap (please refer to issue [#34](https://github.com/colmap/pycolmap/issues/34) in pycolmap repo).
 
 Pycolmap is needed for running directly the 3D reconstruction (without the need to use COLMAP by GUI or CLI) and to export the reconstruction in Bundler format for importing into Metashape. Pycolmap is alse needed to create cameras from exif metadata in the COLMAP database.
 If pycolmap is not installed, deep-image-matching will still work and it will export the matches in a COLMAP SQlite databse, which can be opened by COLMAP GUI or CLI to run the 3D reconstruction.
