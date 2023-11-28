@@ -72,73 +72,73 @@ pip install pycolmap
 You can run deep-image-matching with the CLI or with the GUI.
 
 All the configurations (that are used both from the CLI and the GUI) are in `config.py`.
-There are two main configuration in `config.py`:
+There are two main configuration in `config.py`: `conf_general` and `confs`.
 
-`conf_general` contains some general configuration that is valid for each combination of local features and matchers, including the option to run the matching by tiles, run it on full images or on downsampled images, and the options for the geometric verification.
+- `conf_general` contains some general configuration that is valid for each combination of local features and matchers, including the option to run the matching by tiles, run it on full images or on downsampled images, and the options for the geometric verification.
+
+    <details>
+
+    <summary>Show dictionary</summary>
+
+  ```python
+    conf_general = {
+      "quality": Quality.HIGH,
+      "tile_selection": TileSelection.PRESELECTION,
+      "tiling_grid": [3, 3],
+      "tiling_overlap": 0,
+      "geom_verification": GeometricVerification.PYDEGENSAC,
+      "gv_threshold": 4,
+      "gv_confidence": 0.9999,
+      "preselection_size_max": 2000,
+    }
+  ```
+
+    </details>
+
+- `confs` is a dictionary that contains all the possibile combinations of local feature extrators and matchers that can be used in deep-image-matching and their configuration. Each configuration is defined by a name (e.g., "superpoint+lightglue") and it must be a dictionary containing two sub-dictionaries for the 'extractor' and the 'matcher'.
 
   <details>
 
   <summary>Show dictionary</summary>
 
-```python
-  conf_general = {
-    "quality": Quality.HIGH,
-    "tile_selection": TileSelection.PRESELECTION,
-    "tiling_grid": [3, 3],
-    "tiling_overlap": 0,
-    "geom_verification": GeometricVerification.PYDEGENSAC,
-    "gv_threshold": 4,
-    "gv_confidence": 0.9999,
-    "preselection_size_max": 2000,
-  }
-```
-
-  </details>
-
-`confs` is a dictionary that contains all the possibile combinations of local feature extrators and matchers that can be used in deep-image-matching and their configuration. Each configuration is defined by a name (e.g., "superpoint+lightglue") and it must be a dictionary containing two sub-dictionaries for the 'extractor' and the 'matcher'.
-
-  <details>
-
-  <summary>Show dictionary</summary>
-
-```python
-confs = {
-    "superpoint+lightglue": {
-        "extractor": {
-            "name": "superpoint",
-            "keypoint_threshold": 0.0001,
-            "max_keypoints": 4096,
-        },
-        "matcher": {
-            "name": "lightglue",
-            "n_layers": 9,
-            "depth_confidence": -1,  # 0.95,  # early stopping, disable with -1
-            "width_confidence": -1,  # 0.99,  # point pruning, disable with -1
-            "filter_threshold": 0.5,  # match threshold
-        },
-    },
-    "aliked+lightglue": {
-        "extractor": {
-            "name": "aliked",
-            ...
-        },
-        "matcher": {
-            "name": "lightglue",
-            ...
-        },
-    },
-    "orb+kornia_matcher": {
-        "extractor": {
-            "name": "orb",
-            ...
-        },
-        "matcher": {
-            "name": "kornia_matcher",
-            ...
-        },
-    },
-  }
-```
+  ```python
+  confs = {
+      "superpoint+lightglue": {
+          "extractor": {
+              "name": "superpoint",
+              "keypoint_threshold": 0.0001,
+              "max_keypoints": 4096,
+          },
+          "matcher": {
+              "name": "lightglue",
+              "n_layers": 9,
+              "depth_confidence": -1,  # 0.95,  # early stopping, disable with -1
+              "width_confidence": -1,  # 0.99,  # point pruning, disable with -1
+              "filter_threshold": 0.5,  # match threshold
+          },
+      },
+      "aliked+lightglue": {
+          "extractor": {
+              "name": "aliked",
+              ...
+          },
+          "matcher": {
+              "name": "lightglue",
+              ...
+          },
+      },
+      "orb+kornia_matcher": {
+          "extractor": {
+              "name": "orb",
+              ...
+          },
+          "matcher": {
+              "name": "kornia_matcher",
+              ...
+          },
+      },
+    }
+  ```
 
   </details>
 
