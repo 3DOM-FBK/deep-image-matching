@@ -44,7 +44,7 @@ Matchers:
 
 ## Installation
 
-`Deep-image-matching` is tested on Ubuntu 22.04 and Windows 10 with `Python 3.9`.
+`Deep-image-matching` is tested on Ubuntu 22.04 and Windows 10 with `Python 3.9`. It is strongly reccomended to use have a NVIDIA GPU with at least 8GB of memory.
 
 Please, note that deep-image-matching relies on [pydegensac](https://github.com/ducha-aiki/pydegensac) for the geometric verification of matches, which is only available for `Python <=3.9` on Windows. If you are using Windows, please, install `Python 3.9` (on Linux, you can also use `Pythom 3.10`).
 
@@ -69,7 +69,7 @@ cd deep-image-matching
 pip install -e .
 ```
 
-If you run in any troubles install Pytorch (and its related packages, such as Kornia), please check the official website ([https://pytorch.org/get-started/locally/](https://pytorch.org/get-started/locally/)) and follow the instructure for your system and CUDA architecture. Try to install again deep-image-matching then.
+If you run into any troubles installing Pytorch (and its related packages, such as Kornia), please check the official website ([https://pytorch.org/get-started/locally/](https://pytorch.org/get-started/locally/)) and follow the instructions for your system and CUDA architecture. Then, try to install again deep-image-matching.
 
 If you are on Linux or macOS, you can install pycolmap with:
 
@@ -175,13 +175,13 @@ Other additional options are:
 To run sequential matching with Superpoint+LighGlue, you can use the following command:
 
 ```bash
-python ./main.py  --config superpoint+lightglue --images assets/example_images --outs assets/output --strategy sequential --overlap 1
+python ./main.py  --config superpoint+lightglue --images assets/example_cyprus --outs assets/output --strategy sequential --overlap 2
 ```
 
 To run bruteforce matching with ALIKED+LightGlue and with image rotation, you can use the following command:
 
 ```bash
-python ./main.py  --config aliked+lightglue --images assets/example_images --strategy bruteforce --upright
+python ./main.py  --config aliked+lightglue --images assets/example_cyprus --strategy bruteforce --upright
 ```
 
 See other examples in run.bat. If you want to customize detector and descpritor options, change default options in config.py.
