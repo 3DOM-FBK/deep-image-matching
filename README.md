@@ -155,13 +155,13 @@ The minimal required options are:
 
 Other additional options are:
 
-`--outs`: the path to the folder where the matches will be saved (default: `./output`)
-`--strategy`: the strategy to use for the matching (default: `sequential`)
-`--overlap`: if `strategy` is set to `sequential`, set the number of images that are sequentially matched to each image in the sequence (default: `1`)
-`--retrieval`: if `strategy` is set to `retrieval`, the global descriptor to use for image retrieval (default: `None`)
-`--upright`: if passed, try to find the best image rotation before running the matching
-`--force`: if the output folder already exists, overwrite it
-`-V`: enable verbose output
+- `--outs`: the path to the folder where the matches will be saved (default: `./output`)
+- `--strategy`: the strategy to use for the matching (default: `sequential`)
+- `--overlap`: if `strategy` is set to `sequential`, set the number of images that are sequentially matched to each image in the sequence (default: `1`)
+- `--retrieval`: if `strategy` is set to `retrieval`, the global descriptor to use for image retrieval (default: `None`)
+- `--upright`: if passed, try to find the best image rotation before running the matching
+- `--force`: if the output folder already exists, overwrite it
+- `-V`: enable verbose output
 
 To run sequential matching with Superpoint+LighGlue, you can use the following command:
 
