@@ -13,34 +13,25 @@ Multivew matcher for COLMAP. Support both deep-learning based and hand-crafted l
 
 Key features:
 
-- [x] Multiview
-- [x] Large format images
-- [x] SOTA deep-learning and hand-crafted features
-- [x] Full compatibility with COLMAP
-- [x] Different matching techniques (bruteforce, sequential, low-resolution guided, image retrieval)
-- [x] Support image retrieval with deep-learning local features
-- [x] Support for image rotations
-- [x] Compatibility with Agisoft Metashape (export in Bundler format)
+[x] Multiview
+[x] Large format images
+[x] SOTA deep-learning and hand-crafted features
+[x] Full compatibility with COLMAP
+[x] Different matching techniques (bruteforce, sequential, low-resolution guided, image retrieval)
+[x] Support image retrieval with deep-learning local features
+[x] Support for image rotations
+[x] Compatibility with Agisoft Metashape (export in Bundler format)
 
-Supported extractors:
-
-- [x] SuperPoint
-- [x] DISK
-- [x] ALIKE
-- [x] ALIKED
-- [ ] Superpoint free
-- [x] KeyNet + OriNet + HardNet8
-- [x] ORB (opencv)
-- [x] SIFT (opencv)
-
-Matchers:
-
-- [x] Lightglue (with Superpoint, Disk and ALIKED)
-- [x] SuperGlue (with Superpoint)
-- [x] LoFTR
-- [x] Nearest neighbor (with KORNIA Descriptor Matcher)
-- [ ] GlueStick
-- [x] RoMa
+| Supported Extractors               | Matchers                                                  |
+| ---------------------------------- | --------------------------------------------------------- |
+| &check; SuperPoint                 | &check; Lightglue (with Superpoint, Disk, and ALIKED)     |
+| &check; DISK                       | &check; SuperGlue (with Superpoint)                       |
+| &check; ALIKE                      | &check; LoFTR                                             |
+| &check; ALIKED                     | &check; Nearest neighbor (with KORNIA Descriptor Matcher) |
+| &#x2610; Superpoint free           | &#x2610; GlueStick                                        |
+| &check; KeyNet + OriNet + HardNet8 | &check; RoMa                                              |
+| &check; ORB (opencv)               |                                                           |
+| &check; SIFT (opencv)              |
 
 ## Installation
 
@@ -84,70 +75,71 @@ You can run deep-image-matching with the CLI or with the GUI.
 All the configurations (that are used both from the CLI and the GUI) are in `config.py`.
 There are two main configuration in `config.py`:
 
-- `conf_general` contains some general configuration that is valid for each combination of local features and matchers, including the option to run the matching by tiles, run it on full images or on downsampled images, and the options for the geometric verification.
+`conf_general` contains some general configuration that is valid for each combination of local features and matchers, including the option to run the matching by tiles, run it on full images or on downsampled images, and the options for the geometric verification.
+
   <details>
 
   <summary>Show dictionary</summary>
 
-  ```python
-    conf_general = {
-      "quality": Quality.HIGH,
-      "tile_selection": TileSelection.PRESELECTION,
-      "tiling_grid": [3, 3],
-      "tiling_overlap": 0,
-      "geom_verification": GeometricVerification.PYDEGENSAC,
-      "gv_threshold": 4,
-      "gv_confidence": 0.9999,
-      "preselection_size_max": 2000,
-    }
-  ```
+```python
+  conf_general = {
+    "quality": Quality.HIGH,
+    "tile_selection": TileSelection.PRESELECTION,
+    "tiling_grid": [3, 3],
+    "tiling_overlap": 0,
+    "geom_verification": GeometricVerification.PYDEGENSAC,
+    "gv_threshold": 4,
+    "gv_confidence": 0.9999,
+    "preselection_size_max": 2000,
+  }
+```
 
   </details>
 
-- `confs` is a dictionary that contains all the possibile combinations of local feature extrators and matchers that can be used in deep-image-matching and their configuration. Each configuration is defined by a name (e.g., "superpoint+lightglue") and it must be a dictionary containing two sub-dictionaries for the 'extractor' and the 'matcher'.
+`confs` is a dictionary that contains all the possibile combinations of local feature extrators and matchers that can be used in deep-image-matching and their configuration. Each configuration is defined by a name (e.g., "superpoint+lightglue") and it must be a dictionary containing two sub-dictionaries for the 'extractor' and the 'matcher'.
 
   <details>
 
   <summary>Show dictionary</summary>
 
-  ```python
-  confs = {
-      "superpoint+lightglue": {
-          "extractor": {
-              "name": "superpoint",
-              "keypoint_threshold": 0.0001,
-              "max_keypoints": 4096,
-          },
-          "matcher": {
-              "name": "lightglue",
-              "n_layers": 9,
-              "depth_confidence": -1,  # 0.95,  # early stopping, disable with -1
-              "width_confidence": -1,  # 0.99,  # point pruning, disable with -1
-              "filter_threshold": 0.5,  # match threshold
-          },
-      },
-      "aliked+lightglue": {
-          "extractor": {
-              "name": "aliked",
-              ...
-          },
-          "matcher": {
-              "name": "lightglue",
-              ...
-          },
-      },
-      "orb+kornia_matcher": {
-          "extractor": {
-              "name": "orb",
-              ...
-          },
-          "matcher": {
-              "name": "kornia_matcher",
-              ...
-          },
-      },
-    }
-  ```
+```python
+confs = {
+    "superpoint+lightglue": {
+        "extractor": {
+            "name": "superpoint",
+            "keypoint_threshold": 0.0001,
+            "max_keypoints": 4096,
+        },
+        "matcher": {
+            "name": "lightglue",
+            "n_layers": 9,
+            "depth_confidence": -1,  # 0.95,  # early stopping, disable with -1
+            "width_confidence": -1,  # 0.99,  # point pruning, disable with -1
+            "filter_threshold": 0.5,  # match threshold
+        },
+    },
+    "aliked+lightglue": {
+        "extractor": {
+            "name": "aliked",
+            ...
+        },
+        "matcher": {
+            "name": "lightglue",
+            ...
+        },
+    },
+    "orb+kornia_matcher": {
+        "extractor": {
+            "name": "orb",
+            ...
+        },
+        "matcher": {
+            "name": "kornia_matcher",
+            ...
+        },
+    },
+  }
+```
 
   </details>
 
@@ -159,18 +151,18 @@ Before running the CLI, check the options with `python ./main.py --help`.
 
 The minimal required options are:
 
-- `--images`: the path to the folder containing the images
-- `--config`: the name of the configuration to use (e.g., "superpoint+lightglue")
+`--images`: the path to the folder containing the images
+`--config`: the name of the configuration to use (e.g., "superpoint+lightglue")
 
 Other additional options are:
 
-- `--outs`: the path to the folder where the matches will be saved (default: `./output`)
-- `--strategy`: the strategy to use for the matching (default: `sequential`)
-- `--overlap`: if `strategy` is set to `sequential`, set the number of images that are sequentially matched to each image in the sequence (default: `1`)
-- `--retrieval`: if `strategy` is set to `retrieval`, the global descriptor to use for image retrieval (default: `None`)
-- `--upright`: if passed, try to find the best image rotation before running the matching
-- `--force`: if the output folder already exists, overwrite it
-- `-V`: enable verbose output
+`--outs`: the path to the folder where the matches will be saved (default: `./output`)
+`--strategy`: the strategy to use for the matching (default: `sequential`)
+`--overlap`: if `strategy` is set to `sequential`, set the number of images that are sequentially matched to each image in the sequence (default: `1`)
+`--retrieval`: if `strategy` is set to `retrieval`, the global descriptor to use for image retrieval (default: `None`)
+`--upright`: if passed, try to find the best image rotation before running the matching
+`--force`: if the output folder already exists, overwrite it
+`-V`: enable verbose output
 
 To run sequential matching with Superpoint+LighGlue, you can use the following command:
 
@@ -205,18 +197,18 @@ To run the matching with different local features and/or matchers and marging to
 
 ## TODO:
 
-- [x] Tile processing for high resolution images
-- [x] Manage image rotations
-- [ ] Add image retrieval with global descriptors
-- [x] add GUI
-- [x] Add pycolmap compatibility
-- [x] Add exporting to Bundler format ready for importing into Metashape (only on linux with pycolmap)
-- [ ] Add visualization for extracted features and matches
-- [ ] Improve speed
-- [ ] Autoselect tiling grid in order to fit images in GPU memory
-- [ ] Add tests, documentation and examples
-- [ ] Apply mask during feature extraction
-- [ ] Check scripts
+[x] Tile processing for high resolution images
+[x] Manage image rotations
+[ ] Add image retrieval with global descriptors
+[x] add GUI
+[x] Add pycolmap compatibility
+[x] Add exporting to Bundler format ready for importing into Metashape (only on linux with pycolmap)
+[ ] Add visualization for extracted features and matches
+[ ] Improve speed
+[ ] Autoselect tiling grid in order to fit images in GPU memory
+[ ] Add tests, documentation and examples
+[ ] Apply mask during feature extraction
+[ ] Check scripts
 
 ## References
 
