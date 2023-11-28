@@ -85,6 +85,9 @@ All the configurations (that are used both from the CLI and the GUI) are in `con
 There are two main configuration in `config.py`:
 
 - `conf_general` contains some general configuration that is valid for each combination of local features and matchers, including the option to run the matching by tiles, run it on full images or on downsampled images, and the options for the geometric verification.
+  <details>
+
+  <summary>Show dictionary</summary>
 
   ```python
     conf_general = {
@@ -99,7 +102,13 @@ There are two main configuration in `config.py`:
     }
   ```
 
+  </details>
+
 - `confs` is a dictionary that contains all the possibile combinations of local feature extrators and matchers that can be used in deep-image-matching and their configuration. Each configuration is defined by a name (e.g., "superpoint+lightglue") and it must be a dictionary containing two sub-dictionaries for the 'extractor' and the 'matcher'.
+
+  <details>
+
+  <summary>Show dictionary</summary>
 
   ```python
   confs = {
@@ -127,8 +136,20 @@ There are two main configuration in `config.py`:
               ...
           },
       },
+      "orb+kornia_matcher": {
+          "extractor": {
+              "name": "orb",
+              ...
+          },
+          "matcher": {
+              "name": "kornia_matcher",
+              ...
+          },
+      },
     }
   ```
+
+  </details>
 
 From both the CLI and GUI you can select a configuration by its name (e.g., "superpoint+lightglue") and the corresponding configuration will be used.
 
