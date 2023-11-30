@@ -66,7 +66,7 @@ def main():
     )
     timer.update("export_to_colmap")
 
-    # If --
+    # If --skip_reconstruction is not specified, run reconstruction
     if not config["general"]["skip_reconstruction"]:
         use_pycolmap = True
         try:
