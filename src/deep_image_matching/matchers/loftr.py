@@ -1,34 +1,34 @@
 from pathlib import Path
+from typing import Tuple
 
 import cv2
+import h5py
 import kornia as K
 import numpy as np
 import torch
 from kornia import feature as KF
-import h5py
 
 from .. import logger
+from ..io.h5 import get_features
 from ..utils.consts import Quality, TileSelection
 from ..utils.tiling import Tiler
 from .matcher_base import FeaturesDict, MatcherBase
-from typing import Tuple
-from ..io.h5 import get_features
+
 
 class LOFTRMatcher(MatcherBase):
+    default_conf = {"name": "loftr", "pretrained": "outdoor"}
+
     def __init__(self, config={}) -> None:
         """Initializes a LOFTRMatcher with Kornia object with the given options dictionary."""
 
         super().__init__(config)
 
         model = config["matcher"]["pretrained"]
-        self.matcher = (
-            KF.LoFTR(pretrained=model).to(self._device).eval()
-        )
+        self.matcher = KF.LoFTR(pretrained=model).to(self._device).eval()
 
         self.grayscale = True
         self.as_float = True
         self._quality = config["general"]["quality"]
-
 
     def _resize_image(self, quality: Quality, image: np.ndarray) -> Tuple[np.ndarray]:
         """
@@ -58,19 +58,23 @@ class LOFTRMatcher(MatcherBase):
         if image.shape[1] > 2:
             image = K.color.rgb_to_grayscale(image)
         return image
-    
-    def _update_features(self, feature_path, im0_name, im1_name, new_keypoints0, new_keypoints1, matches0) -> None:
-        for i, im_name, new_keypoints in zip([0, 1], [im0_name, im1_name], [new_keypoints0, new_keypoints1]):
+
+    def _update_features(
+        self, feature_path, im0_name, im1_name, new_keypoints0, new_keypoints1, matches0
+    ) -> None:
+        for i, im_name, new_keypoints in zip(
+            [0, 1], [im0_name, im1_name], [new_keypoints0, new_keypoints1]
+        ):
             features = get_features(feature_path, im_name)
             existing_keypoints = features["keypoints"]
-            
+
             if len(existing_keypoints.shape) == 1:
                 features["keypoints"] = new_keypoints
                 with h5py.File(feature_path, "r+", libver="latest") as fd:
                     del fd[im_name]
                     grp = fd.create_group(im_name)
                     for k, v in features.items():
-                        if k == 'im_path' or k == 'feature_path':
+                        if k == "im_path" or k == "feature_path":
                             grp.create_dataset(k, data=str(v))
                         if isinstance(v, np.ndarray):
                             grp.create_dataset(k, data=v)
@@ -78,12 +82,12 @@ class LOFTRMatcher(MatcherBase):
             else:
                 n_exisiting_keypoints = existing_keypoints.shape[0]
                 features["keypoints"] = np.vstack((existing_keypoints, new_keypoints))
-                matches0[:,i] = matches0[:,i] + n_exisiting_keypoints
+                matches0[:, i] = matches0[:, i] + n_exisiting_keypoints
                 with h5py.File(feature_path, "r+", libver="latest") as fd:
                     del fd[im_name]
                     grp = fd.create_group(im_name)
                     for k, v in features.items():
-                        if k == 'im_path' or k == 'feature_path':
+                        if k == "im_path" or k == "feature_path":
                             grp.create_dataset(k, data=str(v))
                         if isinstance(v, np.ndarray):
                             grp.create_dataset(k, data=v)
@@ -94,7 +98,6 @@ class LOFTRMatcher(MatcherBase):
         feats0: FeaturesDict,
         feats1: FeaturesDict,
     ):
-
         """Matches keypoints and descriptors in two given images
         (no matter if they are tiles or full-res images) using
         the LoFTR algorithm.
@@ -105,7 +108,7 @@ class LOFTRMatcher(MatcherBase):
 
         """
 
-        feature_path = feats0['feature_path']
+        feature_path = feats0["feature_path"]
 
         im_path0 = feats0["im_path"]
         im_path1 = feats1["im_path"]
@@ -114,17 +117,17 @@ class LOFTRMatcher(MatcherBase):
         image0 = cv2.imread(im_path0)
         image1 = cv2.imread(im_path1)
 
-        #if self.as_float:
+        # if self.as_float:
         #    image0 = image0.astype(np.float32)
         #    image1 = image1.astype(np.float32)
-#
-        #if self.grayscale:
+        #
+        # if self.grayscale:
         #    image0 = cv2.cvtColor(image0, cv2.COLOR_BGR2GRAY)
         #    image1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
-#
+        #
         ## Resize images if needed
-        #image0 = self._resize_image(self._quality, image0)
-        #image1 = self._resize_image(self._quality, image1)
+        # image0 = self._resize_image(self._quality, image0)
+        # image1 = self._resize_image(self._quality, image1)
 
         # Covert images to tensor
         timg0_ = self._frame2tensor(image0, self._device)
@@ -147,7 +150,14 @@ class LOFTRMatcher(MatcherBase):
         # Create a 1-to-1 matching array
         matches0 = np.arange(mkpts0.shape[0])
         matches = np.hstack((matches0.reshape((-1, 1)), matches0.reshape((-1, 1))))
-        self._update_features(feature_path, Path(im_path0).name, Path(im_path1).name, mkpts0, mkpts1, matches)
+        self._update_features(
+            feature_path,
+            Path(im_path0).name,
+            Path(im_path1).name,
+            mkpts0,
+            mkpts1,
+            matches,
+        )
 
         return matches
 
