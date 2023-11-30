@@ -1,4 +1,4 @@
-from src.deep_image_matching import GeometricVerification, Quality, TileSelection
+from . import GeometricVerification, Quality, TileSelection
 
 # General configuration for the matching process.
 # It defines the quality of the matching process, the tile selection strategy, the tiling grid, the overlap between tiles, the geometric verification method, and the geometric verification parameters.

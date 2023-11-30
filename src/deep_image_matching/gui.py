@@ -3,9 +3,8 @@ import tkinter as tk
 from pathlib import Path
 from pprint import pprint
 from tkinter import filedialog, messagebox, ttk
-from ttkthemes import ThemedTk
 
-from config import confs
+from .config import confs
 
 
 class MatcherApp:
@@ -13,7 +12,10 @@ class MatcherApp:
         self.master = master
         self.master.title("Deep Image Matcher")
 
-        additional_text_label = tk.Label(master, text="\nMultiview matching with deep-learning and hand-crafted local features\n")
+        additional_text_label = tk.Label(
+            master,
+            text="\nMultiview matching with deep-learning and hand-crafted local features\n",
+        )
         additional_text_label.pack()
 
         self.image_dir = self.create_folder_button("Images directory")
@@ -37,7 +39,10 @@ class MatcherApp:
             "If matching strategy == 'sequential', insert image overlap:"
         )
 
-        additional_text_label = tk.Label(master, text="\nTry to rotate upright images (useful for not rotation invariant local features). \n Features are extracted on upright images, but rotatated accordenly to be used with the original images")
+        additional_text_label = tk.Label(
+            master,
+            text="\nTry to rotate upright images (useful for not rotation invariant local features). \n Features are extracted on upright images, but rotatated accordenly to be used with the original images",
+        )
         additional_text_label.pack()
         self.use_custom = tk.BooleanVar()
         self.use_custom.set(False)
@@ -45,9 +50,9 @@ class MatcherApp:
             master,
             text="Upright",
             variable=self.use_custom,
-            #command=self.toggle_custom_pairs,
+            # command=self.toggle_custom_pairs,
         )
-        self.upright.pack()        
+        self.upright.pack()
 
         self.error_label = tk.Label(master, text="", fg="red")
         self.error_label.pack()
@@ -55,9 +60,9 @@ class MatcherApp:
         self.submit_button = tk.Button(master, text="Submit", command=self.on_submit)
         self.submit_button.pack()
 
-    #def toggle_custom_pairs(self):
+    # def toggle_custom_pairs(self):
     #    state = "normal" if self.use_custom.get() else "disabled"
-    #    self.pair_file["state"] = state 
+    #    self.pair_file["state"] = state
 
     def on_submit(self):
         args = {
@@ -117,11 +122,11 @@ class MatcherApp:
             else:
                 args["image_overlap"] = int(args["image_overlap"])
 
-        #if not args["max_features"]:
+        # if not args["max_features"]:
         #    self.error_label[
         #        "text"
         #    ] = "Invalid max number of local features per image. Using the default value."
-        #else:
+        # else:
         #    args["max_features"] = int(args["max_features"])
 
         return args
