@@ -14,11 +14,12 @@ conf_general = {
 }
 
 
-# The confiugration is defined by a desired name (e.g., "superpoint+lightglue") and it must be a dictionary with the following keys:
-# - 'extractor': extractor configuratio
+# The configuration for DeepImageMatching is defined as a dictionary with the following keys:
+# - 'general': general configuration (it is independent from the extractor/matcher and it is defined in the 'conf_general' variable)
+# - 'extractor': extractor configuration
 # - 'matcher': matcher configuration
 # The 'extractor' and 'matcher' values must contain a 'name' key with the name of the extractor/matcher to be used. Additionally, the other parameters of the extractor/matcher can be specified.
-# Each configration can be retrieved by calling the function get_config(name)
+# You can get your configuration by accessing the 'confs' dictionary with the name of the configuration (e.g., 'superpoint+lightglue').
 confs = {
     "superpoint+lightglue": {
         "extractor": {
