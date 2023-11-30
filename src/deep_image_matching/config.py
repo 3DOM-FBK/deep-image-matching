@@ -115,6 +115,33 @@ confs = {
     },
 }
 
+
+class Config:
+    config_general = conf_general
+    confs = confs
+    confs_names = list(confs.keys())
+
+    def __init__(self):
+        pass
+
+    @classmethod
+    def from_name(cls, name: str) -> dict:
+        cfg = cls.get_config(name)
+        cfg["general"] = conf_general
+        return cfg
+
+    @staticmethod
+    def get_config(name: str) -> dict:
+        try:
+            return confs[name]
+        except KeyError:
+            raise ValueError(f"Invalid configuration name: {name}")
+
+    @staticmethod
+    def get_config_names() -> list:
+        return list(confs.keys())
+
+
 opt_zoo = {
     "extractors": [
         "superpoint",
@@ -143,10 +170,3 @@ opt_zoo = {
         "matching_lowres",
     ],
 }
-
-
-def get_config(name: str):
-    try:
-        return confs[name]
-    except KeyError:
-        raise ValueError(f"Invalid configuration name: {name}")
