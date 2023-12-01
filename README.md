@@ -75,7 +75,7 @@ You can run deep-image-matching with the CLI or with the GUI.
 All the configurations (that are used both from the CLI and the GUI) are in `config.py`.
 There are two main configuration in `config.py`: `conf_general` and `confs`.
 
-- `conf_general` contains some general configuration that is valid for each combination of local features and matchers, including the option to run the matching by tiles, run it on full images or on downsampled images, and the options for the geometric verification.
+- `conf_general` contains some general configuration that is valid for all the combinations of local features and matchers, including the option to run the matching by tiles, run it on full images or on downsampled images, and the options for the geometric verification.
 
 
   ```python
