@@ -25,13 +25,7 @@
       //   "--force",
       //   "-V"
       // ]
-      "args": [
-        "--config",
-        "superpoint+lightglue",
-        "--images",
-        "data/easy_small",
-        "--force"
-      ]
+      "args": ["--config", "roma", "--images", "data/easy_small", "--force"]
       // "args": [
       //   "--config",
       //   "aliked+lightglue",

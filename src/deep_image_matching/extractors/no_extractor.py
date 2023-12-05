@@ -41,8 +41,8 @@ class NoExtractor(ExtractorBase):
 
         # Create dummy empty features
         features = {}
-        # features["feature_path"] = str(feature_path)
-        # features["im_path"] = str(im_path)
+        features["feature_path"] = str(feature_path)
+        features["im_path"] = str(im_path)
         features["keypoints"] = np.array([])
         features["descriptors"] = np.array([])
         features["scores"] = np.array([])
