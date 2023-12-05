@@ -110,14 +110,14 @@ def main():
             cameras = None
 
             # Optional - You can specify some reconstruction configuration
-            # options = (
+            # reconst_opts = (
             #     {
             #         "ba_refine_focal_length": False,
             #         "ba_refine_principal_point": False,
             #         "ba_refine_extra_params": False,
             #     },
             # )
-            options = {}
+            reconst_opts = {}
 
             # Run reconstruction
             model = reconstruction.main(
@@ -126,11 +126,11 @@ def main():
                 feature_path=feature_path,
                 match_path=match_path,
                 pair_path=pair_path,
-                output_dir=output_dir,
+                sfm_dir=output_dir,
                 camera_mode=camera_mode,
                 cameras=cameras,
                 skip_geometric_verification=True,
-                options=options,
+                reconst_opts=reconst_opts,
                 verbose=False,  # config["general"]["verbose"],
             )
 

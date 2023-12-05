@@ -25,41 +25,41 @@
       //   "--force",
       //   "-V"
       // ]
-      // "args": [
-      //   "--config",
-      //   "sift+kornia_matcher",
-      //   "--images",
-      //   "data/easy_small",
-      //   "--force"
-      // ]
-      // "args": [
-      //   "--config",
-      //   "aliked+lightglue",
-      //   "--images",
-      //   "data/arsenale4",
-      //   "--strategy",
-      //   "bruteforce",
-      //   "--force"
-      // ]
-      // "args": [
-      //   "--config",
-      //   "aliked+lightglue",
-      //   "--images",
-      //   "data/arsenale4",
-      //   "--strategy",
-      //   "bruteforce",
-      //   "--force"
-      // ]
       "args": [
         "--config",
         "superpoint+lightglue",
         "--images",
-        "data/belvedere_stereo",
-        "--strategy",
-        "bruteforce",
-        "--force",
-        "-V"
+        "data/easy_small",
+        "--force"
       ]
+      // "args": [
+      //   "--config",
+      //   "aliked+lightglue",
+      //   "--images",
+      //   "data/arsenale4",
+      //   "--strategy",
+      //   "bruteforce",
+      //   "--force"
+      // ]
+      // "args": [
+      //   "--config",
+      //   "aliked+lightglue",
+      //   "--images",
+      //   "data/arsenale4",
+      //   "--strategy",
+      //   "bruteforce",
+      //   "--force"
+      // ]
+      // "args": [
+      //   "--config",
+      //   "superpoint+lightglue",
+      //   "--images",
+      //   "data/belvedere_stereo",
+      //   "--strategy",
+      //   "bruteforce",
+      //   "--force",
+      //   "-V"
+      // ]
     },
     {
       "name": "Python GUI",
