@@ -102,7 +102,7 @@ class RomaMatcher(MatcherBase):
     ):
         """Matches keypoints and descriptors in two given images
         (no matter if they are tiles or full-res images) using
-        the LoFTR algorithm.
+        the RoMa algorithm.
 
         Args:
 

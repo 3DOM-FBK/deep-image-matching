@@ -131,6 +131,7 @@ def main(
     skip_geometric_verification: bool = False,
     export_text: bool = True,
     export_bundler: bool = True,
+    export_ply: bool = True,
     reconst_opts: Optional[Dict[str, Any]] = None,
     verbose: bool = True,
 ) -> pycolmap.Reconstruction:
@@ -175,6 +176,10 @@ def main(
         reconstruction_dir = sfm_dir / "reconstruction"
         reconstruction_dir.mkdir(exist_ok=True, parents=True)
         model.write(reconstruction_dir)
+
+        # Export ply
+        if export_ply:
+            model.export_PLY(reconstruction_dir / "rec.ply")
 
         # Export reconstruction in text format
         if export_text:
