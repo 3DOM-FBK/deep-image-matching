@@ -146,8 +146,8 @@ class ExtractorBase(metaclass=ABCMeta):
         if self._config["general"]["tile_selection"] == TileSelection.NONE:
             # Extract features from the whole image
             features = self._extract(image_)
-            features["feature_path"] = str(feature_path)
-            features["im_path"] = str(im_path)
+            # features["feature_path"] = str(feature_path)
+            # features["im_path"] = str(im_path)
             features["tile_idx"] = np.zeros(
                 features["keypoints"].shape[0], dtype=np.float32
             )
@@ -155,8 +155,8 @@ class ExtractorBase(metaclass=ABCMeta):
         else:
             # Extract features by tiles
             features = self._extract_by_tile(image_, select_unique=True)
-            features["feature_path"] = str(feature_path)
-            features["im_path"] = str(im_path)
+            # features["feature_path"] = str(feature_path)
+            # features["im_path"] = str(im_path)
         logger.debug(f"Extracted {len(features['keypoints'])} keypoints")
 
         # Retrieve original image coordinates if matching was performed on up/down-sampled images
@@ -199,23 +199,6 @@ class ExtractorBase(metaclass=ABCMeta):
                     )
                     del grp, fd[im_name]
                 raise error
-
-        # Save also keypoints and descriptors separately
-        # NOTE: for backward compatibility. To be removed if not needed anymore
-        # with h5py.File(
-        #     str(output_dir / "keypoints.h5"), "a", libver="latest"
-        # ) as fd:
-        #     if im_name in fd:
-        #         del fd[im_name]
-        #     fd[im_name] = features["keypoints"]
-
-        # desc_dim = features["descriptors"].shape[0]
-        # with h5py.File(
-        #     str(output_dir / "descriptors.h5"), "a", libver="latest"
-        # ) as fd:
-        #     if im_name in fd:
-        #         del fd[im_name]
-        #     fd[im_name] = features["descriptors"].reshape(-1, desc_dim)
 
         return feature_path
 

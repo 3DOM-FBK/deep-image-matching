@@ -52,7 +52,7 @@
       // ]
       "args": [
         "--config",
-        "loftr",
+        "superpoint+lightglue",
         "--images",
         "data/belvedere_stereo",
         "--strategy",
