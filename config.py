@@ -109,7 +109,7 @@ confs = {
         "extractor": {
             "name": "keynetaffnethardnet",
             "n_features": 2000,
-            "upright": True,
+            "upright": False,
         },
         "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.99},
     },
