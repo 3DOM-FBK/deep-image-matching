@@ -30,7 +30,6 @@ dependencies = [
     "tqdm",
     "easydict",
     "pytest",
-    "ttkthemes",
     "exifread",
 ]
 requires-python = ">=3.8"
