@@ -256,12 +256,13 @@ def main():
     # Try to run reconstruction with pycolmap
     try:
         import pycolmap
+        use_pycolmap = True
     except ImportError:
         logger.error("Pycomlap is not available, skipping reconstruction")
         use_pycolmap = False
 
     if use_pycolmap:
-        from deep_image_matching import reconstruction
+        from src.deep_image_matching import reconstruction
 
         # Define database path and camera mode
         database = output_dir / "database_pycolmap.db"
