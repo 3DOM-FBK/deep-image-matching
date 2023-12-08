@@ -205,7 +205,7 @@ To run the matching with different local features and/or matchers and marging to
 - [ ] Improve speed
 - [ ] Autoselect tiling grid in order to fit images in GPU memory
 - [ ] Add tests, documentation and examples
-- [ ] Apply mask during feature extraction
+- [ ] Apply masks during feature extraction
 - [ ] Check scripts
 - [ ] Integrate support for Pix4D [Open Photogrammetry Format](https://github.com/Pix4D/opf-spec)
 
