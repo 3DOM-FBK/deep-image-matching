@@ -3,7 +3,6 @@ import tkinter as tk
 from pathlib import Path
 from pprint import pprint
 from tkinter import filedialog, messagebox, ttk
-from ttkthemes import ThemedTk
 
 from config import confs
 
