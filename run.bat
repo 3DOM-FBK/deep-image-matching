@@ -15,4 +15,5 @@ REM python ./main.py  --config keynetaffnethardnet+kornia_matcher --images asset
 REM python ./main.py  --config keynetaffnethardnet+kornia_matcher --images assets/example_cyprus --outs assets/output --strategy bruteforce --force
 
 
-python ./main.py  --config loftr --images assets/example_sacre_coeur --outs assets/output --strategy bruteforce --force
+REM python ./main.py  --config se2loftr --images assets/example_sacre_coeur --outs assets/output --strategy bruteforce --force
+python ./main.py  --config se2loftr --images assets/example_sacre_coeur --outs assets/output --strategy bruteforce --force

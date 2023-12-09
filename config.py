@@ -101,6 +101,10 @@ confs = {
         "extractor": {"name": "no_extractor"},
         "matcher": {"name": "loftr", "pretrained": "outdoor"},
     },
+    "se2loftr": {
+        "extractor": {"name": "no_extractor"},
+        "matcher": {"name": "se2loftr", "pretrained": "outdoor"},
+    },
     "roma": {
         "extractor": {"name": "no_extractor"},
         "matcher": {"name": "roma", "pretrained": "outdoor"},
@@ -130,6 +134,7 @@ opt_zoo = {
         "superglue",
         "lightglue",
         "loftr",
+        "se2loftr",
         "adalam",
         "kornia_matcher",
         "roma",
