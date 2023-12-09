@@ -1,19 +1,13 @@
-import kornia as K
-import kornia.feature as KF
+import cv2
+import torch
 import numpy as np
-import torch
 
+from pathlib import Path
 from .extractor_base import ExtractorBase, FeaturesDict
-
-
-import torch
-import sys
 
 from ..thirdparty.DeDoDe.DeDoDe import dedode_detector_L, dedode_descriptor_G
 from ..thirdparty.DeDoDe.DeDoDe.utils import *
-from PIL import Image
-import cv2
-import numpy as np
+
 
 class DeDoDe(ExtractorBase):
     default_conf = {
@@ -31,6 +25,13 @@ class DeDoDe(ExtractorBase):
         cfg = self._config.get("extractor")
 
         # Load extractor
+        if not Path("./src/deep_image_matching/thirdparty/weights/dedode/dedode_detector_L.pth").is_file() \
+            or not Path("./src/deep_image_matching/thirdparty/weights/dedode/dedode_descriptor_G.pth").is_file():
+            print("DeDoDe weights not found:\n dedode_detector_L.pth and/or dedode_detector_L.pth missing.")
+            print("Please download them and put them in ./src/deep_image_matching/thirdparty/weights/dedode")
+            print("Exit")
+            quit()
+
         self.detector = dedode_detector_L(weights = torch.load("./src/deep_image_matching/thirdparty/weights/dedode/dedode_detector_L.pth", map_location = self._device))
         self.descriptor = dedode_descriptor_G(weights = torch.load("./src/deep_image_matching/thirdparty/weights/dedode/dedode_descriptor_G.pth", map_location = self._device))
 
