@@ -112,10 +112,18 @@ confs = {
     "keynetaffnethardnet+kornia_matcher": {
         "extractor": {
             "name": "keynetaffnethardnet",
-            "n_features": 2000,
+            "n_features": 4000,
             "upright": False,
         },
-        "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.99},
+        "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.95},
+    },
+    "dedode": {
+        "extractor": {
+            "name": "dedode",
+            "n_features": 4000,
+            "upright": False,
+        },
+        "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.95},
     },
 }
 
@@ -125,6 +133,7 @@ opt_zoo = {
         "alike",
         "aliked",
         "disk",
+        "dedode",
         "keynetaffnethardnet",
         "orb",
         "sift",
