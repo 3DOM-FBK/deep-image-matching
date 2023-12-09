@@ -120,7 +120,7 @@ confs = {
     "dedode": {
         "extractor": {
             "name": "dedode",
-            "n_features": 4000,
+            "n_features": 1000,
             "upright": False,
         },
         "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.95},
