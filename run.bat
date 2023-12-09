@@ -11,4 +11,8 @@ REM python ./main.py  --config disk+lightglue --images assets/example_cyprus --o
 REM python ./main.py  --config aliked+lightglue --images assets/example_cyprus --outs assets/output --strategy bruteforce --force
 REM python ./main.py  --config orb+kornia_matcher --images assets/example_cyprus --outs assets/output --strategy bruteforce --force
 REM python ./main.py  --config sift+kornia_matcher --images assets/example_cyprus --outs assets/output --strategy bruteforce --force
-python ./main.py  --config keynetaffnethardnet+kornia_matcher --images assets/example_cyprus --outs assets/output --strategy bruteforce --force
+REM python ./main.py  --config keynetaffnethardnet+kornia_matcher --images assets/example_cyprus --outs assets/output --strategy bruteforce --force
+REM python ./main.py  --config keynetaffnethardnet+kornia_matcher --images assets/example_cyprus --outs assets/output --strategy bruteforce --force
+
+
+python ./main.py  --config loftr --images assets/example_sacre_coeur --outs assets/output --strategy bruteforce --force
