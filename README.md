@@ -31,6 +31,7 @@ Key features:
 | &check; KeyNet + OriNet + HardNet8 | &check; RoMa                                              |
 | &check; ORB (opencv)               |                                                           |
 | &check; SIFT (opencv)              |
+| &check; DeDoDe                     |                                                           
 
 ## Installation
 
