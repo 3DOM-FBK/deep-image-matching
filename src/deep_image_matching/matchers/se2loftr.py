@@ -16,6 +16,9 @@ from typing import Tuple
 from ..io.h5 import get_features
 
 from ..thirdparty.se2loftr.src.loftr import LoFTR, default_cfg
+#from ..thirdparty.se2loftr.src.utils.misc import lower_config
+from yacs.config import CfgNode as CN
+from ..thirdparty.se2loftr.configs.loftr.outdoor import loftr_ds_e2_dense_8rot
 
 class SE2LOFTRMatcher(MatcherBase):
     def __init__(self, config={}) -> None:
@@ -23,18 +26,26 @@ class SE2LOFTRMatcher(MatcherBase):
 
         super().__init__(config)
 
-        _default_cfg = deepcopy(default_cfg)
-        _default_cfg['coarse']['temp_bug_fix'] = True  # set to False when using the old ckpt
+        #_default_cfg = deepcopy(default_cfg)
+        #_default_cfg['coarse']['temp_bug_fix'] = False  # set to False when using the old ckpt
+
+        _used_cfg = self._lower_config(loftr_ds_e2_dense_8rot.cfg)['loftr']
+        _used_cfg['coarse']['temp_bug_fix'] = True  # set to False when using the old ckpt
 
         #se2loftr_path = Path(__file__).parent.parent / "thirdparty" / "se2loftr" / "loftr_weights" / "outdoor_ds.ckpt" # Path to loftr weights
-        se2loftr_path = Path(__file__).parent.parent / "thirdparty" / "se2loftr" / "se2loftr_weights" / "baseline.ckpt" # Path to se2loftr weights
-        self.matcher = LoFTR(config=_default_cfg)
+        se2loftr_path = Path(__file__).parent.parent / "thirdparty" / "weights" / "se2loftr_weights" / "8rot.ckpt" # Path to se2loftr weights
+        self.matcher = LoFTR(config=_used_cfg)
         self.matcher.load_state_dict(torch.load(str(se2loftr_path))['state_dict'])
         self.matcher = self.matcher.eval().to(device=self._device)
 
         self.grayscale = True
         self.as_float = True
         self._quality = config["general"]["quality"]
+
+    def _lower_config(self, yacs_cfg):
+        if not isinstance(yacs_cfg, CN):
+            return yacs_cfg
+        return {k.lower(): self._lower_config(v) for k, v in yacs_cfg.items()}
 
     def _resize_image(self, quality: Quality, image: np.ndarray) -> Tuple[np.ndarray]:
         """
