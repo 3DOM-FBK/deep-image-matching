@@ -26,10 +26,10 @@ Key features:
 | &check; SuperPoint                 | &check; Lightglue (with Superpoint, Disk, and ALIKED)     |
 | &check; DISK                       | &check; SuperGlue (with Superpoint)                       |
 | &check; ALIKE                      | &check; LoFTR                                             |
-| &check; ALIKED                     | &check; Nearest neighbor (with KORNIA Descriptor Matcher) |
-| &#x2610; Superpoint free           | &#x2610; GlueStick                                        |
+| &check; ALIKED                     | &check; SE2-LoFTR                                         |
+| &#x2610; Superpoint free           | &check; Nearest neighbor (with KORNIA Descriptor Matcher) |
 | &check; KeyNet + OriNet + HardNet8 | &check; RoMa                                              |
-| &check; ORB (opencv)               |                                                           |
+| &check; ORB (opencv)               | &#x2610; GlueStick                                        |
 | &check; SIFT (opencv)              |
 | &check; DeDoDe                     |                                                           
 
