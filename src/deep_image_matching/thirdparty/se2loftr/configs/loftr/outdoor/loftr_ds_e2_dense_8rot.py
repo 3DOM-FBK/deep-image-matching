@@ -1,4 +1,4 @@
-from src.config.default import _CN as cfg
+from ....src.config.default import _CN as cfg
 
 cfg.LOFTR.BACKBONE_TYPE = 'E2ResNetFPN'
 cfg.LOFTR.RESNETFPN.NBR_ROTATIONS = 8
