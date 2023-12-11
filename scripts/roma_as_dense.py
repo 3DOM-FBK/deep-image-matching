@@ -2,6 +2,7 @@
 # 2. run reconstruction with pycolmap and export the reconstruction as text file
 # 3.
 
+import subprocess
 from pathlib import Path
 
 
@@ -20,9 +21,15 @@ def make_empty_image_file(source: Path, target: Path):
 
 sfm_dir = Path("output/easy_small_superpoint+lightglue_sequential/reconstruction")
 
-out_dir = Path("output/easy_small_superpoint+lightglue_sequential/cleaned")
+dense_dir = Path("output/easy_small_superpoint+lightglue_sequential/roma_dense")
 
 # Make empty images.txt
-make_empty_image_file(sfm_dir / "images.txt", out_dir / "images.txt")
+make_empty_image_file(sfm_dir / "images.txt", dense_dir / "images.txt")
 
-#
+# Run dense reconstruction with RoMa using the camera poses from descriptor-based reconstruction
+colmap_path = "colmap"
+database_path = dense_dir / "database.db"
+images_path = dense_dir.parent / "images"
+
+cmd = f"{colmap_path} point_triangulator --database_path {database_path} --image_path {images_path}"
+out = subprocess.run(cmd, shell=True, check=True, capture_output=True)
