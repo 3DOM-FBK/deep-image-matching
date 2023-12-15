@@ -258,7 +258,7 @@ def main():
         import pycolmap
         use_pycolmap = True
     except ImportError:
-        logger.error("Pycolmap is not available, skipping reconstruction")
+        logger.error("PyColmap is not available, skipping reconstruction")
         use_pycolmap = False
 
     if use_pycolmap:
