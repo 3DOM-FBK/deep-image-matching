@@ -5,7 +5,11 @@
 
 | SIFT                                 | DISK                                 | IMAGES ORIENTATION                   |
 | ------------------------------------ | ------------------------------------ | ------------------------------------ |
+<<<<<<< HEAD
 | https://github.com/3DOM-FBK/deep-image-matching/assets/93863149/179fdd5d-1234-49b3-a74a-93dbf74b5f5a | ![X2](assets/matches_joined.mp4)     | ![X3](assets/orientation_deep.mp4)   |
+=======
+| ![X1](assets/matches_sift.gif)       | ![X2](assets/matches_joined.mp4)     | ![X3](assets/orientation_deep.mp4)   |
+>>>>>>> 274d8bf (Updated readme)
 
 Multivew matcher for COLMAP. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI. Feel free to collaborate!
 
