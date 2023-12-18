@@ -253,9 +253,14 @@ def main():
     )
     timer.update("export_to_colmap")
 
+    # For debugging purposes, copy images to output folder
+    if config["general"]["verbose"]:
+        shutil.copytree(imgs_dir, output_dir / "images", dirs_exist_ok=True)
+
     # Try to run reconstruction with pycolmap
     try:
         import pycolmap
+
         use_pycolmap = True
     except ImportError:
         logger.error("PyColmap is not available, skipping reconstruction")
@@ -332,7 +337,7 @@ def main():
             cameras=cameras,
             skip_geometric_verification=True,
             options=options,
-            verbose=False,  # config["general"]["verbose"],
+            verbose=config["general"]["verbose"],
         )
         timer.update("pycolmap reconstruction")
 
