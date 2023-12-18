@@ -116,10 +116,14 @@ def run_reconstruction(
         f"Largest model is #{largest_index} " f"with {largest_num_images} images."
     )
 
+    rec_dir = sfm_dir / "reconstruction"
+    rec_dir.mkdir(exist_ok=True, parents=True)
     for filename in ["images.bin", "cameras.bin", "points3D.bin"]:
-        if (sfm_dir / filename).exists():
-            (sfm_dir / filename).unlink()
-        shutil.move(str(models_path / str(largest_index) / filename), str(sfm_dir))
+        if (rec_dir / filename).exists():
+            (rec_dir / filename).unlink()
+        shutil.move(str(models_path / str(largest_index) / filename), str(rec_dir))
+    shutil.rmtree(models_path)
+
     return reconstructions[largest_index]
 
 
@@ -154,9 +158,7 @@ def main(
 
     # Run geometric verification
     if not skip_geometric_verification:
-        estimation_and_geometric_verification(
-            database, pair_path, verbose=verbose
-        )
+        estimation_and_geometric_verification(database, pair_path, verbose=verbose)
 
     # Run reconstruction
     model = run_reconstruction(
@@ -187,52 +189,6 @@ def main(
     else:
         logger.error("Pycolmap reconstruction failed")
     return model
-
-
-def main_hloc(
-    sfm_dir: Path,
-    image_dir: Path,
-    pairs: Path,
-    features: Path,
-    matches: Path,
-    camera_mode: pycolmap.CameraMode = pycolmap.CameraMode.AUTO,
-    verbose: bool = False,
-    skip_geometric_verification: bool = False,
-    min_match_score: Optional[float] = None,
-    image_list: Optional[List[str]] = None,
-    image_options: Optional[Dict[str, Any]] = None,
-    mapper_options: Optional[Dict[str, Any]] = None,
-) -> pycolmap.Reconstruction:
-    assert features.exists(), features
-    assert pairs.exists(), pairs
-    assert matches.exists(), matches
-
-    sfm_dir.mkdir(parents=True, exist_ok=True)
-    database = sfm_dir / "database.db"
-
-    create_empty_db(database)
-    import_images(image_dir, database, camera_mode, image_list, image_options)
-    image_ids = get_image_ids(database)
-    import_features(image_ids, database, features)
-    import_matches(
-        image_ids,
-        database,
-        pairs,
-        matches,
-        min_match_score,
-        skip_geometric_verification,
-    )
-    if not skip_geometric_verification:
-        estimation_and_geometric_verification(database, pairs, verbose)
-    reconstruction = run_reconstruction(
-        sfm_dir, database, image_dir, verbose, mapper_options
-    )
-    if reconstruction is not None:
-        logger.info(
-            f"Reconstruction statistics:\n{reconstruction.summary()}"
-            + f"\n\tnum_input_images = {len(image_ids)}"
-        )
-    return reconstruction
 
 
 if __name__ == "__main__":

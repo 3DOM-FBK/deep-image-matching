@@ -256,6 +256,7 @@ def main():
     # Try to run reconstruction with pycolmap
     try:
         import pycolmap
+
         use_pycolmap = True
     except ImportError:
         logger.error("PyColmap is not available, skipping reconstruction")
