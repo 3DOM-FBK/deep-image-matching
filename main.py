@@ -328,7 +328,7 @@ def main():
             feature_path=feature_path,
             match_path=match_path,
             pair_path=pair_path,
-            output_dir=output_dir,
+            sfm_dir=output_dir,
             camera_mode=camera_mode,
             cameras=cameras,
             skip_geometric_verification=True,
