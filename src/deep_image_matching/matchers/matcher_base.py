@@ -186,7 +186,7 @@ class MatcherBase(metaclass=ABCMeta):
         feats1: dict,
     ) -> np.ndarray:
         """
-        Perform matching between two sets of features.
+        Perform matching between two sets of features. This method must be implemented by subclasses. It takes in two dictionaries containing the features of the two images and returns the matches between keypoints and descriptors in those images.
 
         Args:
             feats0 (dict): Features of the first image.

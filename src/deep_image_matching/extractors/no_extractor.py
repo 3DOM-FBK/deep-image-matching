@@ -53,18 +53,20 @@ class NoExtractor(ExtractorBase):
         if not im_path.exists():
             raise ValueError(f"Image {im_path} does not exist")
 
+        output_dir = Path(self._config["general"]["output_dir"])
+        feature_path = output_dir / "features.h5"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        im_name = im_path.name
+
         # Build fake features
         features = {}
         features["keypoints"] = np.array([])
         features["descriptors"] = np.array([])
         features["scores"] = np.array([])
-        img_size = Image(im_path).size
-        features["image_size"] = np.array(img_size)
-
-        output_dir = Path(self._config["general"]["output_dir"])
-        feature_path = output_dir / "features.h5"
-        output_dir.mkdir(parents=True, exist_ok=True)
-        im_name = im_path.name
+        features["image_size"] = np.array(Image(im_path).size)
+        features["tile_idx"] = np.array([])
+        features["im_path"] = im_path
+        features["feature_path"] = feature_path
 
         with h5py.File(str(feature_path), "a", libver="latest") as fd:
             try:

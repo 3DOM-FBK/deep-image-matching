@@ -9,10 +9,8 @@ import numpy as np
 import torch
 from PIL import Image
 
-from .. import logger
 from ..io.h5 import get_features
 from ..utils.consts import Quality, TileSelection
-from ..utils.tiling import Tiler
 from .matcher_base import FeaturesDict, MatcherBase
 
 roma_path = Path(__file__).parent.parent / "thirdparty/RoMa"
@@ -31,68 +29,6 @@ class RomaMatcher(MatcherBase):
         self.grayscale = True
         self.as_float = True
         self._quality = config["general"]["quality"]
-
-    def _resize_image(self, quality: Quality, image: np.ndarray) -> Tuple[np.ndarray]:
-        """
-        Resize images based on the specified quality.
-
-        Args:
-            quality (Quality): The quality level for resizing.
-            image (np.ndarray): The first image.
-
-        Returns:
-            Tuple[np.ndarray]: Resized images.
-
-        """
-        if quality == Quality.HIGHEST:
-            image_ = cv2.pyrUp(image)
-        elif quality == Quality.HIGH:
-            image_ = image
-        elif quality == Quality.MEDIUM:
-            image_ = cv2.pyrDown(image)
-        elif quality == Quality.LOW:
-            image_ = cv2.pyrDown(cv2.pyrDown(image))
-        return image_
-
-    def _frame2tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor:
-        image = K.image_to_tensor(np.array(image), False).float() / 255.0
-        image = K.color.bgr_to_rgb(image.to(device))
-        if image.shape[1] > 2:
-            image = K.color.rgb_to_grayscale(image)
-        return image
-
-    def _update_features(
-        self, feature_path, im0_name, im1_name, new_keypoints0, new_keypoints1, matches0
-    ) -> None:
-        for i, im_name, new_keypoints in zip(
-            [0, 1], [im0_name, im1_name], [new_keypoints0, new_keypoints1]
-        ):
-            features = get_features(feature_path, im_name)
-            existing_keypoints = features["keypoints"]
-
-            if len(existing_keypoints.shape) == 1:
-                features["keypoints"] = new_keypoints
-                with h5py.File(feature_path, "r+", libver="latest") as fd:
-                    del fd[im_name]
-                    grp = fd.create_group(im_name)
-                    for k, v in features.items():
-                        if k == "im_path" or k == "feature_path":
-                            grp.create_dataset(k, data=str(v))
-                        if isinstance(v, np.ndarray):
-                            grp.create_dataset(k, data=v)
-
-            else:
-                n_exisiting_keypoints = existing_keypoints.shape[0]
-                features["keypoints"] = np.vstack((existing_keypoints, new_keypoints))
-                matches0[:, i] = matches0[:, i] + n_exisiting_keypoints
-                with h5py.File(feature_path, "r+", libver="latest") as fd:
-                    del fd[im_name]
-                    grp = fd.create_group(im_name)
-                    for k, v in features.items():
-                        if k == "im_path" or k == "feature_path":
-                            grp.create_dataset(k, data=str(v))
-                        if isinstance(v, np.ndarray):
-                            grp.create_dataset(k, data=v)
 
     @torch.no_grad()
     def _match_pairs(
@@ -172,96 +108,163 @@ class RomaMatcher(MatcherBase):
             - mconf: NumPy array with confidence scores for the matches.
 
         """
-        # Get config
-        grid = config.get("grid", [1, 1])
-        overlap = config.get("overlap", 0)
-        origin = config.get("origin", [0, 0])
-        do_viz_tiles = config.get("do_viz_tiles", False)
 
-        # Compute tiles limits and origin
-        self._tiler = Tiler(grid=grid, overlap=overlap, origin=origin)
-        t0_lims, t0_origin = self._tiler.compute_limits_by_grid(image0)
-        t1_lims, t1_origin = self._tiler.compute_limits_by_grid(image1)
-
-        # Select tile pairs to match
-        tile_pairs = self._tile_selection(
-            image0, image1, t0_lims, t1_lims, tile_selection, config=config
+        raise NotImplementedError(
+            "Matching by tile is not implemented for Roma.yet. Please match full images (downscale images using a lower 'Quality' if you run out of memory)."
         )
 
-        # Initialize empty array for storing matched keypoints, descriptors and scores
-        mkpts0_full = np.array([], dtype=np.float32).reshape(0, 2)
-        mkpts1_full = np.array([], dtype=np.float32).reshape(0, 2)
-        conf_full = np.array([], dtype=np.float32)
+        # # Get config
+        # grid = config.get("grid", [1, 1])
+        # overlap = config.get("overlap", 0)
+        # origin = config.get("origin", [0, 0])
+        # do_viz_tiles = config.get("do_viz_tiles", False)
 
-        # Match each tile pair
-        for tidx0, tidx1 in tile_pairs:
-            logger.info(f" - Matching tile pair ({tidx0}, {tidx1})")
+        # # Compute tiles limits and origin
+        # self._tiler = Tiler(grid=grid, overlap=overlap, origin=origin)
+        # t0_lims, t0_origin = self._tiler.compute_limits_by_grid(image0)
+        # t1_lims, t1_origin = self._tiler.compute_limits_by_grid(image1)
 
-            lim0 = t0_lims[tidx0]
-            lim1 = t1_lims[tidx1]
-            tile0 = self._tiler.extract_patch(image0, lim0)
-            tile1 = self._tiler.extract_patch(image1, lim1)
+        # # Select tile pairs to match
+        # tile_pairs = self._tile_selection(
+        #     image0, image1, t0_lims, t1_lims, tile_selection, config=config
+        # )
 
-            # Covert patch to tensor
-            timg0_ = self._frame2tensor(tile0, self._device)
-            timg1_ = self._frame2tensor(tile1, self._device)
+        # # Initialize empty array for storing matched keypoints, descriptors and scores
+        # mkpts0_full = np.array([], dtype=np.float32).reshape(0, 2)
+        # mkpts1_full = np.array([], dtype=np.float32).reshape(0, 2)
+        # conf_full = np.array([], dtype=np.float32)
 
-            # Run inference
-            with torch.inference_mode():
-                input_dict = {"image0": timg0_, "image1": timg1_}
-                correspondences = self.matcher(input_dict)
+        # # Match each tile pair
+        # for tidx0, tidx1 in tile_pairs:
+        #     logger.info(f" - Matching tile pair ({tidx0}, {tidx1})")
 
-            # Get matches and build features
-            mkpts0 = correspondences["keypoints0"].cpu().numpy()
-            mkpts1 = correspondences["keypoints1"].cpu().numpy()
+        #     lim0 = t0_lims[tidx0]
+        #     lim1 = t1_lims[tidx1]
+        #     tile0 = self._tiler.extract_patch(image0, lim0)
+        #     tile1 = self._tiler.extract_patch(image1, lim1)
 
-            # Get match confidence
-            conf = correspondences["confidence"].cpu().numpy()
+        #     # Covert patch to tensor
+        #     timg0_ = self._frame2tensor(tile0, self._device)
+        #     timg1_ = self._frame2tensor(tile1, self._device)
 
-            # Append to full arrays
-            mkpts0_full = np.vstack(
-                (mkpts0_full, mkpts0 + np.array(lim0[0:2]).astype("float32"))
-            )
-            mkpts1_full = np.vstack(
-                (mkpts1_full, mkpts1 + np.array(lim1[0:2]).astype("float32"))
-            )
-            conf_full = np.concatenate((conf_full, conf))
+        #     # Run inference
+        #     with torch.inference_mode():
+        #         input_dict = {"image0": timg0_, "image1": timg1_}
+        #         correspondences = self.matcher(input_dict)
 
-            # Plot matches on tile
-            output_dir = config.get("output_dir", ".")
-            output_dir = Path(output_dir)
-            output_dir.mkdir(parents=True, exist_ok=True)
-            if do_viz_tiles is True:
-                self.viz_matches_mpl(
-                    tile0,
-                    tile1,
-                    mkpts0,
-                    mkpts1,
-                    output_dir / f"matches_tile_{tidx0}-{tidx1}.png",
-                )
+        #     # Get matches and build features
+        #     mkpts0 = correspondences["keypoints0"].cpu().numpy()
+        #     mkpts1 = correspondences["keypoints1"].cpu().numpy()
 
-        logger.info("Restoring full image coordinates of matches...")
+        #     # Get match confidence
+        #     conf = correspondences["confidence"].cpu().numpy()
 
-        # Restore original image coordinates (not cropped)
-        mkpts0_full = mkpts0_full + np.array(t0_origin).astype("float32")
-        mkpts1_full = mkpts1_full + np.array(t1_origin).astype("float32")
+        #     # Append to full arrays
+        #     mkpts0_full = np.vstack(
+        #         (mkpts0_full, mkpts0 + np.array(lim0[0:2]).astype("float32"))
+        #     )
+        #     mkpts1_full = np.vstack(
+        #         (mkpts1_full, mkpts1 + np.array(lim1[0:2]).astype("float32"))
+        #     )
+        #     conf_full = np.concatenate((conf_full, conf))
 
-        # Select uniue features on image 0, on rounded coordinates
-        decimals = 1
-        _, unique_idx = np.unique(
-            np.round(mkpts0_full, decimals), axis=0, return_index=True
-        )
-        mkpts0_full = mkpts0_full[unique_idx]
-        mkpts1_full = mkpts1_full[unique_idx]
-        conf_full = conf_full[unique_idx]
+        #     # Plot matches on tile
+        #     output_dir = config.get("output_dir", ".")
+        #     output_dir = Path(output_dir)
+        #     output_dir.mkdir(parents=True, exist_ok=True)
+        #     if do_viz_tiles is True:
+        #         self.viz_matches_mpl(
+        #             tile0,
+        #             tile1,
+        #             mkpts0,
+        #             mkpts1,
+        #             output_dir / f"matches_tile_{tidx0}-{tidx1}.png",
+        #         )
 
-        # Create features
-        features0 = FeaturesDict(keypoints=mkpts0_full)
-        features1 = FeaturesDict(keypoints=mkpts1_full)
+        # logger.info("Restoring full image coordinates of matches...")
 
-        # Create a 1-to-1 matching array
-        matches0 = np.arange(mkpts0_full.shape[0])
+        # # Restore original image coordinates (not cropped)
+        # mkpts0_full = mkpts0_full + np.array(t0_origin).astype("float32")
+        # mkpts1_full = mkpts1_full + np.array(t1_origin).astype("float32")
 
-        logger.info("Matching by tile completed.")
+        # # Select uniue features on image 0, on rounded coordinates
+        # decimals = 1
+        # _, unique_idx = np.unique(
+        #     np.round(mkpts0_full, decimals), axis=0, return_index=True
+        # )
+        # mkpts0_full = mkpts0_full[unique_idx]
+        # mkpts1_full = mkpts1_full[unique_idx]
+        # conf_full = conf_full[unique_idx]
 
-        return features0, features1, matches0, conf_full
+        # # Create features
+        # features0 = FeaturesDict(keypoints=mkpts0_full)
+        # features1 = FeaturesDict(keypoints=mkpts1_full)
+
+        # # Create a 1-to-1 matching array
+        # matches0 = np.arange(mkpts0_full.shape[0])
+
+        # logger.info("Matching by tile completed.")
+
+        # return features0, features1, matches0, conf_full
+
+    def _resize_image(self, quality: Quality, image: np.ndarray) -> Tuple[np.ndarray]:
+        """
+        Resize images based on the specified quality.
+
+        Args:
+            quality (Quality): The quality level for resizing.
+            image (np.ndarray): The first image.
+
+        Returns:
+            Tuple[np.ndarray]: Resized images.
+
+        """
+        if quality == Quality.HIGHEST:
+            image_ = cv2.pyrUp(image)
+        elif quality == Quality.HIGH:
+            image_ = image
+        elif quality == Quality.MEDIUM:
+            image_ = cv2.pyrDown(image)
+        elif quality == Quality.LOW:
+            image_ = cv2.pyrDown(cv2.pyrDown(image))
+        return image_
+
+    def _frame2tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor:
+        image = K.image_to_tensor(np.array(image), False).float() / 255.0
+        image = K.color.bgr_to_rgb(image.to(device))
+        if image.shape[1] > 2:
+            image = K.color.rgb_to_grayscale(image)
+        return image
+
+    def _update_features(
+        self, feature_path, im0_name, im1_name, new_keypoints0, new_keypoints1, matches0
+    ) -> None:
+        for i, im_name, new_keypoints in zip(
+            [0, 1], [im0_name, im1_name], [new_keypoints0, new_keypoints1]
+        ):
+            features = get_features(feature_path, im_name)
+            existing_keypoints = features["keypoints"]
+
+            if len(existing_keypoints.shape) == 1:
+                features["keypoints"] = new_keypoints
+                with h5py.File(feature_path, "r+", libver="latest") as fd:
+                    del fd[im_name]
+                    grp = fd.create_group(im_name)
+                    for k, v in features.items():
+                        if k == "im_path" or k == "feature_path":
+                            grp.create_dataset(k, data=str(v))
+                        if isinstance(v, np.ndarray):
+                            grp.create_dataset(k, data=v)
+
+            else:
+                n_exisiting_keypoints = existing_keypoints.shape[0]
+                features["keypoints"] = np.vstack((existing_keypoints, new_keypoints))
+                matches0[:, i] = matches0[:, i] + n_exisiting_keypoints
+                with h5py.File(feature_path, "r+", libver="latest") as fd:
+                    del fd[im_name]
+                    grp = fd.create_group(im_name)
+                    for k, v in features.items():
+                        if k == "im_path" or k == "feature_path":
+                            grp.create_dataset(k, data=str(v))
+                        if isinstance(v, np.ndarray):
+                            grp.create_dataset(k, data=v)
