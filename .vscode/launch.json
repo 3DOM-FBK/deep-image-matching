@@ -25,12 +25,11 @@
       //   "--force",
       //   "-V"
       // ]
-      "args": ["--config", "roma", "--images", "data/easy_small", "--force"]
       // "args": [
       //   "--config",
-      //   "aliked+lightglue",
+      //   "roma",
       //   "--images",
-      //   "data/arsenale4",
+      //   "data/easy_small",
       //   "--strategy",
       //   "bruteforce",
       //   "--force"
@@ -46,14 +45,33 @@
       // ]
       // "args": [
       //   "--config",
-      //   "superpoint+lightglue",
+      //   "aliked+lightglue",
       //   "--images",
-      //   "data/belvedere_stereo",
+      //   "data/arsenale4",
+      //   "--strategy",
+      //   "bruteforce",
+      //   "--force"
+      // ]
+      // "args": [
+      //   "--config",
+      //   "roma",
+      //   "--images",
+      //   "data/belv_lingua",
       //   "--strategy",
       //   "bruteforce",
       //   "--force",
       //   "-V"
       // ]
+      "args": [
+        "--config",
+        "superpoint+lightglue",
+        "--images",
+        "data/belv_lingua",
+        "--strategy",
+        "bruteforce",
+        "--force"
+        // "-V"
+      ]
     },
     {
       "name": "Python GUI",

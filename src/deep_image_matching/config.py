@@ -3,10 +3,10 @@ from . import GeometricVerification, Quality, TileSelection
 # General configuration for the matching process.
 # It defines the quality of the matching process, the tile selection strategy, the tiling grid, the overlap between tiles, the geometric verification method, and the geometric verification parameters.
 conf_general = {
-    "quality": Quality.MEDIUM,
+    "quality": Quality.LOW,
     "tile_selection": TileSelection.NONE,
-    "tiling_grid": [2, 2],
-    "tiling_overlap": 200,
+    "tiling_grid": [3, 3],
+    "tiling_overlap": 0,
     "geom_verification": GeometricVerification.PYDEGENSAC,
     "gv_threshold": 4,
     "gv_confidence": 0.9999,

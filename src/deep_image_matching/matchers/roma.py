@@ -21,6 +21,8 @@ from roma import roma_outdoor
 
 
 class RomaMatcher(MatcherBase):
+    max_feat_no_tiling = 200000
+
     def __init__(self, config={}) -> None:
         """Initializes a LOFTRMatcher with Kornia object with the given options dictionary."""
 
