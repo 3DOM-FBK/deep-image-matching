@@ -18,9 +18,9 @@
         "--config",
         "loftr",
         "--images",
-        "assets/easy_small",
+        "assets/example_easy_lowres",
         "--strategy",
-        "sequential",
+        "bruteforce",
         // "--upright",
         "--force",
         "-V"
