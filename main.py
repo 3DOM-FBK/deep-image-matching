@@ -205,6 +205,7 @@ def main():
     upright = config["general"]["upright"]
     extractor = config["extractor"]["name"]
     matcher = config["matcher"]["name"]
+    export_bundler_format = config["general"]["export_bundler_format"]
 
     # Initialize ImageMatching class
     img_matching = ImageMatching(
@@ -253,13 +254,14 @@ def main():
     )
     timer.update("export_to_colmap")
 
-    # Try to run reconstruction with pycolmap
-    try:
-        import pycolmap
-        use_pycolmap = True
-    except ImportError:
-        logger.error("PyColmap is not available, skipping reconstruction")
-        use_pycolmap = False
+    # Export in bundler format using pycolmap
+    use_pycolmap = False
+    if export_bundler_format == True:
+        try:
+            import pycolmap
+            use_pycolmap = True
+        except ImportError:
+            logger.error("PyColmap is not available, skipping reconstruction")
 
     if use_pycolmap:
         from src.deep_image_matching import reconstruction
