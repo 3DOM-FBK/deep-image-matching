@@ -1,6 +1,7 @@
 # 1. run matching with a feature-based approach (e.g., superpoint+lightglue)
 # 2. run reconstruction with pycolmap and export the reconstruction as text file
-# 3. run dense matching with a detector_free approach using the camera poses from the feature-based reconstruction
+# 3. run dense matching with a detector_free approach using the camera poses from the feature-based reconstruction (i.e., triangulate points with COLMAP trinaulator API)
+
 
 import shutil
 import subprocess
@@ -16,13 +17,16 @@ def empty_reconstruction_from_existing(
     reference_rec: Path, target_rec: Path, overwrite=False
 ):
     """
-    empty_reconstruction_from_existing _summary_
+    Create an empty COLMAP reconstruction from an existing one. This can be used to build a dense reconstruction starting from known camera poses.
 
     Args:
-        reference_rec (Path): _description_
-        target_rec (Path): _description_
-        overwrite (bool, optional): _description_. Defaults to False.
+        reference_rec (Path): Path to the source reconstruction directory.
+        target_rec (Path): Path to the target reconstruction directory.
+        overwrite (bool, optional): If True, overwrite the target directory if it exists. Defaults to False.
 
+    Raises:
+        FileNotFoundError: If the source file or required files within it do not exist.
+        OSError: If the target directory already exists and overwrite is set to False.
     """
     if not (reference_rec := Path(reference_rec)).exists():
         raise FileNotFoundError(f"Source file {reference_rec} does not exist.")
@@ -64,10 +68,10 @@ def empty_reconstruction_from_existing(
 
 def run_dense():
     """
-    run_dense _summary_
+    Run dense reconstruction using COLMAP's point_triangulator.
 
     Raises:
-        RuntimeError: _description_
+        RuntimeError: If the triangulation process fails.
     """
     # Make empty reconstruction for dense matching
     empty_reconstruction_from_existing(sfm_dir, dense_dir, overwrite=True)
