@@ -3,9 +3,9 @@
 
 ## DEEP-IMAGE-MATCHING
 
-| SIFT                                 | DISK                                 | IMAGES ORIENTATION                   | DENSE WITH ROMA                      |
-| ------------------------------------ | ------------------------------------ | ------------------------------------ | ------------------------------------ |
-| ![X1](assets/matches_sift.gif)       | ![X2](assets/matches_joined.gif)     | ![X3](assets/orientation_deep.gif)   | ![X3](assets/roma_dense.gif)         |
+| SIFT                                       | DISK                                         | IMAGES ORIENTATION                             | DENSE WITH ROMA                          |
+| ------------------------------------       | ------------------------------------         | ------------------------------------           | ------------------------------------     |
+| ![X1](assets/matches_sift.gif) width="300" | ![X2](assets/matches_joined.gif) width="300" | ![X3](assets/orientation_deep.gif) width="300" | ![X3](assets/roma_dense.gif) width="300" |
 
 Multivew matcher for COLMAP. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI. Feel free to collaborate!
 
