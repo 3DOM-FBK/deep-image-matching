@@ -66,11 +66,11 @@ def empty_reconstruction_from_existing(sfm_dir: Path, dense_dir: Path, overwrite
 
 
 def run_dense(
-    sfm_dir: Path,
     dense_dir: Path,
     dense_database: str = "database.db",
     colmap_bin: str = "colmap",
     use_two_view_tracks: bool = True,
+    options={},
 ):
     """
     Run dense reconstruction using COLMAP's point_triangulator.
@@ -78,18 +78,16 @@ def run_dense(
     Raises:
         RuntimeError: If the triangulation process fails.
     """
-    # Make empty reconstruction for dense matching
-    empty_reconstruction_from_existing(sfm_dir, dense_dir, overwrite=True)
-
     # Run dense reconstruction with detector_free matchers the camera poses from descriptor-based reconstruction
     images_path = dense_dir.parent / "images"
     dense_database = dense_dir / dense_database
 
     cmd = f"{colmap_bin} point_triangulator --database_path {dense_database} --image_path {images_path} --input_path {dense_dir} --output_path {dense_dir}"
     if use_two_view_tracks:
-        cmd += (
-            " --Mapper.tri_ignore_two_view_tracks=0 --Mapper.filter_min_tri_angle=0.5"
-        )
+        cmd += " --Mapper.tri_ignore_two_view_tracks=0"
+
+    for k, v in options.items():
+        cmd += f" --{k}={v}"
 
     out = subprocess.run(cmd, shell=True, capture_output=True)
 
@@ -100,33 +98,72 @@ def run_dense(
         print(out.stdout.decode("utf-8"))
 
 
-if __name__ == "__main__":
+def parse_args():
     parser = argparse.ArgumentParser(
         description="Run dense reconstruction using COLMAP."
     )
     parser.add_argument(
-        "--sfm-dir",
+        "--sfm_dir",
         dest="sfm_dir",
         required=True,
         help="Path to the source feature-based reconstruction directory.",
     )
     parser.add_argument(
-        "--dense-dir",
+        "--dense_dir",
         dest="dense_dir",
         required=True,
         help="Path to the target dense reconstruction directory.",
     )
     parser.add_argument(
-        "--colmap-bin",
+        "--database",
+        dest="database",
+        default="database.db",
+        help="Name of the COLMAP database with respect to the 'dense_dir' containing features for dense matching.",
+    )
+    parser.add_argument(
+        "--use-two-view-tracks",
+        dest="use_two_view_tracks",
+        action="store_true",
+        default=True,
+        help="Use two-view tracks for triangulation.",
+    )
+    parser.add_argument(
+        "--colmap_bin",
         dest="colmap_path",
         default="colmap",
         help="Path to the COLMAP executable. Defaults to 'colmap' (works under linux if COLMAP is installed gloablly, specify your executable path otherwise').",
     )
-
     args = parser.parse_args()
+
+    return args
+
+
+if __name__ == "__main__":
+    args = parse_args()
 
     sfm_dir = Path(args.sfm_dir)
     dense_dir = Path(args.dense_dir)
     colmap_path = args.colmap_path
+    dense_database = args.database
+    use_two_view_tracks = args.use_two_view_tracks
 
-    run_dense(sfm_dir, dense_dir, colmap_path)
+    options = {"Mapper.filter_min_tri_angle": 0.5}
+
+    # Create empty reconstruction for dense matching
+    dense_rec_dir = sfm_dir / "dense"
+
+    # Make empty reconstruction for dense matching
+    empty_reconstruction_from_existing(
+        sfm_dir=sfm_dir / "reconstruction", dense_dir=dense_rec_dir, overwrite=True
+    )
+    # Copy database with dense features to the empty reconstruction
+    shutil.copy(dense_dir / dense_database, dense_rec_dir / dense_database)
+
+    # Run dense matching
+    run_dense(
+        dense_dir=dense_rec_dir,
+        dense_database=dense_database,
+        colmap_bin=colmap_path,
+        use_two_view_tracks=use_two_view_tracks,
+        options=options,
+    )

@@ -65,6 +65,12 @@ def parse_args():
         default=False,
     )
     parser.add_argument(
+        "--skip_reconstruction",
+        action="store_true",
+        help="Skip reconstruction step carried out with pycolmap. This step is necessary to export the solution in Bundler format for Agisoft Metashape.",
+        default=False,
+    )
+    parser.add_argument(
         "-f",
         "--force",
         action="store_true",
