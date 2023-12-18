@@ -131,7 +131,7 @@ def main():
                 cameras=cameras,
                 skip_geometric_verification=True,
                 reconst_opts=reconst_opts,
-                verbose=False,  # config["general"]["verbose"],
+                verbose=config["general"]["verbose"],
             )
 
             timer.update("pycolmap reconstruction")
