@@ -5,7 +5,7 @@ import h5py
 import numpy as np
 import torch
 
-from .. import logger, timeit
+from .. import logger
 
 
 def names_to_pair(name0, name1, separator="/"):
@@ -50,10 +50,15 @@ def get_features(
     with h5py.File(str(path), "r", libver="latest") as fd:
         if name in fd:
             try:
-                feature_path = fd[name]["feature_path"][()].decode("utf-8")
-                im_path = fd[name]["im_path"][()].decode("utf-8")
                 kpts = np.array(fd[name]["keypoints"]).astype(np.float32)
                 descr = np.array(fd[name]["descriptors"]).astype(np.float32)
+
+            except KeyError:
+                raise ValueError(f"Cannot find keypoints and descriptors in {path}")
+
+            try:
+                feature_path = fd[name]["feature_path"][()].decode("utf-8")
+                im_path = fd[name]["im_path"][()].decode("utf-8")
                 feats = {
                     "feature_path": feature_path,
                     "im_path": im_path,
@@ -61,7 +66,11 @@ def get_features(
                     "descriptors": descr,
                 }
             except KeyError:
-                raise ValueError(f"Cannot find keypoints and descriptors in {path}")
+                logger.warning(
+                    "Cannot find feature_path and im_path in the hdf5 file. "
+                    "Returning only keypoints and descriptors. Matching with end-to-end matchers (loftr, roma) will not work."
+                )
+                feats = {"keypoints": kpts, "descriptors": descr}
 
             for k in ["tile_idx", "scores"]:
                 if k in fd[name]:

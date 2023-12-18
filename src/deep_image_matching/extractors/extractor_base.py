@@ -276,20 +276,21 @@ class ExtractorBase(metaclass=ABCMeta):
             feat_tile = self._extract(tile)
 
             # append features
-            kpts_full = np.vstack(
-                (kpts_full, feat_tile["keypoints"] + np.array(lim[0:2]))
-            )
-            descriptors_full = np.hstack((descriptors_full, feat_tile["descriptors"]))
-            tile_idx_full = np.concatenate(
-                (
-                    tile_idx_full,
-                    np.ones(feat_tile["keypoints"].shape[0], dtype=np.float32) * idx,
+            if len(feat_tile["keypoints"]) > 0:
+                kpts_full = np.vstack(
+                    (kpts_full, feat_tile["keypoints"] + np.array(lim[0:2]))
                 )
-            )
-            if "scores" in feat_tile:
-                scores_full = np.concatenate((scores_full, feat_tile["scores"]))
-            else:
-                scores_full = None
+                descriptors_full = np.hstack((descriptors_full, feat_tile["descriptors"]))
+                tile_idx_full = np.concatenate(
+                    (
+                        tile_idx_full,
+                        np.ones(feat_tile["keypoints"].shape[0], dtype=np.float32) * idx,
+                    )
+                )
+                if "scores" in feat_tile:
+                    scores_full = np.concatenate((scores_full, feat_tile["scores"]))
+                else:
+                    scores_full = None
 
         if scores_full is None:
             logger.warning("No scores found in features")
