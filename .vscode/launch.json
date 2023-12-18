@@ -16,7 +16,7 @@
       "console": "integratedTerminal",
       "args": [
         "--config",
-        "loftr",
+        "superpoint+lightglue",
         "--images",
         "assets/example_easy_lowres",
         "--strategy",
