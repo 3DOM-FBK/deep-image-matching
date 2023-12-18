@@ -18,10 +18,12 @@
         "--config",
         "superpoint+lightglue",
         "--images",
-        "assets/example_square",
+        "assets/example_cyprus",
         "--strategy",
         "sequential",
-        // "--upright",
+        "--overlap",
+        "3",
+        "--upright",
         "--force",
         "-V"
       ]
