@@ -38,7 +38,7 @@ class LOFTRMatcher(MatcherBase):
     grayscale = False
     as_float = True
     min_matches = 100
-    min_matches_per_tile = 5
+    min_matches_per_tile = 3
 
     def __init__(self, config={}) -> None:
         """
@@ -131,15 +131,15 @@ class LOFTRMatcher(MatcherBase):
         timer_match.print(f"{__class__.__name__} match")
 
         # For debugging
-        viz_dir = self._output_dir / "viz"
-        viz_dir.mkdir(parents=True, exist_ok=True)
-        self.viz_matches(
-            feature_path,
-            matches_path,
-            img0,
-            img1,
-            save_path=viz_dir / f"{img0_name}_{img1_name}.png",
-        )
+        # viz_dir = self._output_dir / "viz"
+        # viz_dir.mkdir(parents=True, exist_ok=True)
+        # self.viz_matches(
+        #     feature_path,
+        #     matches_path,
+        #     img0,
+        #     img1,
+        #     save_path=viz_dir / f"{img0_name}_{img1_name}.png",
+        # )
 
         logger.debug(f"Matching {img0_name}-{img1_name} done!")
 
@@ -487,7 +487,7 @@ class LOFTRMatcher(MatcherBase):
             if hide_matching_track:
                 line_thickness = -1
             else:
-                line_thickness = 1
+                line_thickness = 0.2
 
             viz_matches_cv2(
                 image0,
