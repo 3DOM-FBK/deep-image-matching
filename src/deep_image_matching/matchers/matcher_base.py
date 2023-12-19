@@ -75,7 +75,7 @@ class MatcherBase(metaclass=ABCMeta):
         "tiling_grid": [1, 1],
         "tiling_overlap": 0,
         "force_cpu": False,
-        "do_viz": False,
+        "do_viz": True,
     }
     default_conf = {}
     required_inputs = []
@@ -483,7 +483,7 @@ class MatcherBase(metaclass=ABCMeta):
             i1 = cv2.resize(i1, size1_new, interpolation=cv2.INTER_AREA)
 
             # Run SuperPoint on downsampled images
-            with torch.no_grad():
+            with torch.inference_mode():
                 feats0 = self._preselction_extractor(
                     {"image": frame2tensor(i0, self._device)}
                 )
@@ -499,8 +499,8 @@ class MatcherBase(metaclass=ABCMeta):
 
             # TODO: implement a better way to prune matching pair
             # If not enough matches, return None and quit the matching
-            if len(res["matches"]) < self.min_matches:
-                return []
+            # if len(res["matches"]) < self.min_matches:
+            #     return []
 
             # Get keypoints in original image
             kp0 = feats0["keypoints"].cpu().numpy()[0]
@@ -527,7 +527,7 @@ class MatcherBase(metaclass=ABCMeta):
 
             # geometric verification
             _, inliers = cv2.findFundamentalMat(
-                kp0, kp1, cv2.USAC_MAGSAC, 2, 0.9999, 10000
+                kp0, kp1, cv2.USAC_MAGSAC, 4, 0.999, 10000
             )
             inlMask = (inliers > 0).squeeze()
             kp0 = kp0[inlMask]
@@ -537,12 +537,10 @@ class MatcherBase(metaclass=ABCMeta):
             tile_pairs = []
             all_pairs = sorted(product(t0_lims.keys(), t1_lims.keys()))
             for tidx0, tidx1 in all_pairs:
-                lim0 = t0_lims[tidx0]
-                lim1 = t1_lims[tidx1]
-                ret0 = points_in_rect(kp0, lim0)
-                ret1 = points_in_rect(kp1, lim1)
-                ret = ret0 & ret1
-                if sum(ret) > self.min_matches_per_tile:
+                ret0 = points_in_rect(kp0, t0_lims[tidx0])
+                ret1 = points_in_rect(kp1, t1_lims[tidx1])
+                n_matches = sum(ret0 & ret1)
+                if n_matches > self.min_matches_per_tile:
                     tile_pairs.append((tidx0, tidx1))
 
             # For Debugging...
