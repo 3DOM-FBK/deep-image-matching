@@ -114,9 +114,7 @@ class LOFTRMatcher(MatcherBase):
         feats0: FeaturesDict,
         feats1: FeaturesDict,
     ):
-        """
-
-        """
+        """ """
 
         feature_path = feats0["feature_path"]
 
@@ -127,7 +125,7 @@ class LOFTRMatcher(MatcherBase):
         image0 = self._load_image_np(im_path0)
         image1 = self._load_image_np(im_path1)
 
-        # # Resize images if needed
+        # Resize images if needed
         image0_ = self._resize_image(self._quality, image0)
         image1_ = self._resize_image(self._quality, image1)
 
@@ -299,6 +297,8 @@ class LOFTRMatcher(MatcherBase):
             image_ = cv2.pyrDown(image)
         elif quality == Quality.LOW:
             image_ = cv2.pyrDown(cv2.pyrDown(image))
+        elif quality == Quality.LOWEST:
+            image_ = cv2.pyrDown(cv2.pyrDown(cv2.pyrDown(image)))
         return image_
 
     def _resize_features(
@@ -324,6 +324,8 @@ class LOFTRMatcher(MatcherBase):
             features["keypoints"] *= 2
         elif quality == Quality.LOW:
             features["keypoints"] *= 4
+        elif quality == Quality.LOWEST:
+            features["keypoints"] *= 8
 
         return features
 
