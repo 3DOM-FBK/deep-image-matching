@@ -193,6 +193,10 @@ The GUI loads the available configurations from `config.py` and it shows them in
 ### Merging databases with different local features
 
 To run the matching with different local features and/or matchers and marging together the results, you can use scripts in the `./scripts` directory for merging the COLMAP databases.
+```bash
+python ./join_databases.py --help
+python ./join_databases.py --input assets/to_be_joined --output assets/to_be_joined
+```
 
 ## TODO:
 
