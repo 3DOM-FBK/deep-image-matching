@@ -304,12 +304,14 @@ class MatcherBase(metaclass=ABCMeta):
         logger.debug(f"Matching {img0_name}-{img1_name} done!")
 
         # For debugging
+        # viz_dir = self._output_dir / "viz"
+        # viz_dir.mkdir(parents=True, exist_ok=True)
         # self.viz_matches(
         #     feature_path,
         #     matches_path,
         #     img0,
         #     img1,
-        #     save_path=f"sandbox/loftr_{img0_name}_{img1_name}.png",
+        #     save_path=viz_dir / f"{img0_name}_{img1_name}.png",
         # )
 
         return self._matches
@@ -392,21 +394,6 @@ class MatcherBase(metaclass=ABCMeta):
                 logger.warning(
                     f"Found {sum(counts>1)} duplicate matches in tile pair ({tidx0}, {tidx1})"
                 )
-
-        # # Visualize matches on tile
-        # if do_viz_tiles is True:
-        #     out_img_path = str(self._output_dir / f"matches_tile_{tidx0}-{tidx1}.jpg")
-        #     self.viz_matches(
-        #         tile0,
-        #         tile1,
-        #         mkpts0,
-        #         mkpts1,
-        #         out_img_path,
-        #         fast_viz=True,
-        #         hide_matching_track=True,
-        #         autoresize=True,
-        #         max_long_edge=1200,
-        #     )
 
         logger.debug("Matching by tile completed.")
         timer.print(f"{__class__.__name__} match_by_tile")
