@@ -94,6 +94,7 @@ class LOFTRMatcher(MatcherBase):
         timer_match.update("save to h5")
         timer_match.print(f"{__class__.__name__} match")
 
+        # For debugging
         image0 = self._load_image_np(img0)
         image1 = self._load_image_np(img1)
         features0 = get_features(self._feature_path, img0_name)
@@ -108,6 +109,8 @@ class LOFTRMatcher(MatcherBase):
 
         logger.debug(f"Matching {img0_name}-{img1_name} done!")
 
+        return matches
+
     @torch.no_grad()
     def _match_pairs(
         self,
@@ -119,7 +122,9 @@ class LOFTRMatcher(MatcherBase):
         feature_path = feats0["feature_path"]
 
         im_path0 = feats0["im_path"]
+        im_name0 = Path(im_path0).name
         im_path1 = feats1["im_path"]
+        im_name1 = Path(im_path1).name
 
         # Load images
         image0 = self._load_image_np(im_path0)
@@ -142,13 +147,9 @@ class LOFTRMatcher(MatcherBase):
         mkpts0 = correspondences["keypoints0"].cpu().numpy()
         mkpts1 = correspondences["keypoints1"].cpu().numpy()
 
-        # Create features dictionaries
-        features0 = FeaturesDict(keypoints=mkpts0)
-        features1 = FeaturesDict(keypoints=mkpts1)
-
-        # # Retrieve original image coordinates if matching was performed on up/down-sampled images
-        features0 = self._resize_features(self._quality, features0)
-        features1 = self._resize_features(self._quality, features1)
+        # Retrieve original image coordinates if matching was performed on up/down-sampled images
+        mkpts0 = self._resize_features(self._quality, mkpts0)
+        mkpts1 = self._resize_features(self._quality, mkpts1)
 
         # Get match confidence
         mconf = correspondences["confidence"].cpu().numpy()
@@ -156,16 +157,26 @@ class LOFTRMatcher(MatcherBase):
         # Create a 1-to-1 matching array
         matches0 = np.arange(mkpts0.shape[0])
         matches = np.hstack((matches0.reshape((-1, 1)), matches0.reshape((-1, 1))))
-        matches0 = self._update_features_h5(
+        matches = self._update_features_h5(
             feature_path,
-            Path(im_path0).name,
-            Path(im_path1).name,
-            features0["keypoints"],
-            features1["keypoints"],
+            im_name0,
+            im_name1,
+            mkpts0,
+            mkpts1,
             matches,
         )
 
-        return matches0
+        f0 = get_features(feature_path, Path(im_path0).name)
+        f1 = get_features(feature_path, Path(im_path1).name)
+        self.viz_matches(
+            image0=image0,
+            image1=image1,
+            kpts0=f0["keypoints"][matches[:, 0]],
+            kpts1=f1["keypoints"][matches[:, 1]],
+            save_path=f"sandbox/loftr_{Path(im_path0).name}_{Path(im_path1).name}.png",
+        )
+
+        return matches
 
     def _match_by_tile(
         self,
@@ -301,33 +312,30 @@ class LOFTRMatcher(MatcherBase):
             image_ = cv2.pyrDown(cv2.pyrDown(cv2.pyrDown(image)))
         return image_
 
-    def _resize_features(
-        self, quality: Quality, features: FeaturesDict
-    ) -> Tuple[FeaturesDict]:
+    def _resize_features(self, quality: Quality, keypoints: np.ndarray) -> np.ndarray:
         """
         Resize features based on the specified quality.
 
         Args:
             quality (Quality): The quality level for resizing.
-            features0 (FeaturesDict): The features of the first image.
-            features1 (FeaturesDict): The features of the second image.
+            features0 (np.ndarray): The array of keypoints.
 
         Returns:
-            Tuple[FeaturesDict]: Resized features.
+            np.ndarray: Resized keypoints.
 
         """
         if quality == Quality.HIGHEST:
-            features["keypoints"] /= 2
+            keypoints /= 2
         elif quality == Quality.HIGH:
             pass
         elif quality == Quality.MEDIUM:
-            features["keypoints"] *= 2
+            keypoints *= 2
         elif quality == Quality.LOW:
-            features["keypoints"] *= 4
+            keypoints *= 4
         elif quality == Quality.LOWEST:
-            features["keypoints"] *= 8
+            keypoints *= 8
 
-        return features
+        return keypoints
 
     def _update_features_h5(
         self, feature_path, im0_name, im1_name, new_keypoints0, new_keypoints1, matches0
