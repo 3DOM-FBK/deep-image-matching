@@ -35,9 +35,10 @@ class LOFTRMatcher(MatcherBase):
     """
 
     default_conf = {"pretrained": "outdoor"}
-    max_feat_no_tiling = 100000
     grayscale = False
     as_float = True
+    min_matches = 100
+    min_matches_per_tile = 5
 
     def __init__(self, config={}) -> None:
         """
@@ -55,10 +56,10 @@ class LOFTRMatcher(MatcherBase):
         self._quality = config["general"]["quality"]
         self._tiling = config["general"]["tile_selection"]
 
-        if self._tiling != TileSelection.NONE and self._quality != Quality.HIGH:
-            raise ValueError(
-                "Tiling is currentely only supported for full resolution images (HIGH quality)."
-            )
+        # if self._tiling != TileSelection.NONE and self._quality != Quality.HIGH:
+        #     raise ValueError(
+        #         "Tiling is currentely only supported for full resolution images (HIGH quality)."
+        #     )
 
     def match(
         self,
@@ -105,7 +106,15 @@ class LOFTRMatcher(MatcherBase):
             matches = self._match_pairs(features0, features1)
             timer_match.update("[match] try to match full images")
         else:
-            pass
+            matches = self._match_by_tile(
+                img0,
+                img1,
+                features0,
+                features1,
+                method=self._tiling,
+                select_unique=True,
+            )
+            timer_match.update("[match] try to match by tile")
 
         # Save to h5 file
         n_matches = len(matches)
@@ -122,15 +131,15 @@ class LOFTRMatcher(MatcherBase):
         timer_match.print(f"{__class__.__name__} match")
 
         # For debugging
-        # viz_dir = self._output_dir / "viz"
-        # viz_dir.mkdir(parents=True, exist_ok=True)
-        # self.viz_matches(
-        #     feature_path,
-        #     matches_path,
-        #     img0,
-        #     img1,
-        #     save_path=viz_dir / f"{img0_name}_{img1_name}.png",
-        # )
+        viz_dir = self._output_dir / "viz"
+        viz_dir.mkdir(parents=True, exist_ok=True)
+        self.viz_matches(
+            feature_path,
+            matches_path,
+            img0,
+            img1,
+            save_path=viz_dir / f"{img0_name}_{img1_name}.png",
+        )
 
         logger.debug(f"Matching {img0_name}-{img1_name} done!")
 
@@ -173,9 +182,15 @@ class LOFTRMatcher(MatcherBase):
         timg1_ = self._frame2tensor(image1_, self._device)
 
         # Run inference
-        with torch.inference_mode():
-            input_dict = {"image0": timg0_, "image1": timg1_}
-            correspondences = self.matcher(input_dict)
+        try:
+            with torch.inference_mode():
+                input_dict = {"image0": timg0_, "image1": timg1_}
+                correspondences = self.matcher(input_dict)
+        except torch.cuda.OutOfMemoryError as e:
+            logger.error(
+                f"Out of memory error while matching images {img0_name} and {img1_name}. Try using a lower quality level or use a tiling approach."
+            )
+            raise e
 
         # Get matches and build features
         mkpts0 = correspondences["keypoints0"].cpu().numpy()
@@ -226,23 +241,10 @@ class LOFTRMatcher(MatcherBase):
             np.ndarray: Array containing the indices of matched keypoints.
         """
 
-        def get_features_by_tile(features: FeaturesDict, tile_idx: int):
-            if "tile_idx" not in features:
-                raise KeyError("tile_idx not found in features")
-            pts_in_tile = features["tile_idx"] == tile_idx
-            idx = np.where(pts_in_tile)[0]
-            feat_tile = {
-                "keypoints": features["keypoints"][pts_in_tile],
-                "descriptors": features["descriptors"][:, pts_in_tile],
-                "scores": features["scores"][pts_in_tile],
-                "image_size": features["image_size"],
-            }
-            return (feat_tile, idx)
-
         timer = Timer(log_level="debug", cumulate_by_key=True)
 
-        # Initialize empty matches array
-        matches_full = np.array([], dtype=np.int64).reshape(0, 2)
+        # Get feature path
+        feature_path = features0["feature_path"]
 
         # Select tile pairs to match
         tile_pairs = self._tile_selection(img0, img1, method)
@@ -251,58 +253,43 @@ class LOFTRMatcher(MatcherBase):
         # If no tile pairs are selected, return an empty array
         if len(tile_pairs) == 0:
             logger.debug("No tile pairs selected.")
-            return matches_full
+            matches = np.array([], dtype=np.int32).reshape(0, 2)
+            return matches
+
+        # Load images
+        img0_name = img0.name
+        img1_name = img1.name
+        image0 = self._load_image_np(img0)
+        image1 = self._load_image_np(img1)
+
+        # Load images
+        image0 = self._load_image_np(img0)
+        image1 = self._load_image_np(img1)
+
+        # Resize images if needed
+        image0 = self._resize_image(self._quality, image0)
+        image1 = self._resize_image(self._quality, image1)
+
+        # Compute tiles limits
+        grid = self._config["general"]["tiling_grid"]
+        overlap = self._config["general"]["tiling_overlap"]
+        tiler = Tiler(grid=grid, overlap=overlap)
+        t0_lims, t0_origin = tiler.compute_limits_by_grid(image0)
+        t1_lims, t1_origin = tiler.compute_limits_by_grid(image1)
+
+        # Initialize empty arrays
+        mkpts0_full = np.array([], dtype=np.float32).reshape(0, 2)
+        mkpts1_full = np.array([], dtype=np.float32).reshape(0, 2)
 
         # Match each tile pair
         for tidx0, tidx1 in tile_pairs:
             logger.debug(f"  - Matching tile pair ({tidx0}, {tidx1})")
 
-            # Get features in tile and their ids in original array
-            feats0_tile, idx0 = get_features_by_tile(features0, tidx0)
-            feats1_tile, idx1 = get_features_by_tile(features1, tidx1)
+            # Extract features in tile
+            tile0 = tiler.extract_patch(image0, t0_lims[tidx0])
+            tile1 = tiler.extract_patch(image1, t1_lims[tidx1])
 
-            # Match features
-            correspondences = self._match_pairs(feats0_tile, feats1_tile)
-            timer.update("match tile")
-
-            # Restore original ids of the matched keypoints
-            matches_orig = np.zeros_like(correspondences)
-            matches_orig[:, 0] = idx0[correspondences[:, 0]]
-            matches_orig[:, 1] = idx1[correspondences[:, 1]]
-            matches_full = np.vstack((matches_full, matches_orig))
-
-        # -------- OLD ---------
-        # Get config
-        grid = self._config["general"]["tiling_grid"]
-        overlap = self._config["general"]["tiling_overlap"]
-
-        # Load image
-        image0 = cv2.imread(str(img0))
-        image1 = cv2.imread(str(img1))
-
-        # Compute tiles limits and origin
-        self._tiler = Tiler(grid=grid, overlap=overlap)
-        t0_lims, t0_origin = self._tiler.compute_limits_by_grid(image0)
-        t1_lims, t1_origin = self._tiler.compute_limits_by_grid(image1)
-
-        # Select tile pairs to match
-        tile_pairs = self._tile_selection(img0, img1, method)
-
-        # Initialize empty array for storing matched keypoints, descriptors and scores
-        mkpts0_full = np.array([], dtype=np.float32).reshape(0, 2)
-        mkpts1_full = np.array([], dtype=np.float32).reshape(0, 2)
-        conf_full = np.array([], dtype=np.float32)
-
-        # Match each tile pair
-        for tidx0, tidx1 in tile_pairs:
-            logger.debug(f" - Matching tile pair ({tidx0}, {tidx1})")
-
-            lim0 = t0_lims[tidx0]
-            lim1 = t1_lims[tidx1]
-            tile0 = self._tiler.extract_patch(image0, lim0)
-            tile1 = self._tiler.extract_patch(image1, lim1)
-
-            # Covert patch to tensor
+            # Covert tiles to tensor
             timg0_ = self._frame2tensor(tile0, self._device)
             timg1_ = self._frame2tensor(tile1, self._device)
 
@@ -317,25 +304,25 @@ class LOFTRMatcher(MatcherBase):
                 )
                 raise e
 
-            # Get matches and build features
+            # Get matches and restore original image coordinates
             mkpts0 = correspondences["keypoints0"].cpu().numpy()
             mkpts1 = correspondences["keypoints1"].cpu().numpy()
 
-            # Get match confidence
-            conf = correspondences["confidence"].cpu().numpy()
-
-            # Append to full arrays
             mkpts0_full = np.vstack(
-                (mkpts0_full, mkpts0 + np.array(lim0[0:2]).astype("float32"))
+                (mkpts0_full, mkpts0 + np.array(t0_lims[tidx0][0:2]))
             )
             mkpts1_full = np.vstack(
-                (mkpts1_full, mkpts1 + np.array(lim1[0:2]).astype("float32"))
+                (mkpts1_full, mkpts1 + np.array(t1_lims[tidx1][0:2]))
             )
-            conf_full = np.concatenate((conf_full, conf))
+            timer.update("match tile")
 
         # Restore original image coordinates (not cropped)
         mkpts0_full = mkpts0_full + np.array(t0_origin).astype("float32")
         mkpts1_full = mkpts1_full + np.array(t1_origin).astype("float32")
+
+        # Retrieve original image coordinates if matching was performed on up/down-sampled images
+        mkpts0_full = self._resize_features(self._quality, mkpts0_full)
+        mkpts1_full = self._resize_features(self._quality, mkpts1_full)
 
         # Select uniue features on image 0, on rounded coordinates
         if select_unique is True:
@@ -345,18 +332,20 @@ class LOFTRMatcher(MatcherBase):
             )
             mkpts0_full = mkpts0_full[unique_idx]
             mkpts1_full = mkpts1_full[unique_idx]
-            conf_full = conf_full[unique_idx]
-
-        # Create features
-        features0 = FeaturesDict(keypoints=mkpts0_full)
-        features1 = FeaturesDict(keypoints=mkpts1_full)
 
         # Create a 1-to-1 matching array
         matches0 = np.arange(mkpts0_full.shape[0])
+        matches = np.hstack((matches0.reshape((-1, 1)), matches0.reshape((-1, 1))))
+        matches = self._update_features_h5(
+            feature_path,
+            img0_name,
+            img1_name,
+            mkpts0_full,
+            mkpts1_full,
+            matches,
+        )
 
-        logger.info("Matching by tile completed.")
-
-        return features0, features1, matches0, conf_full
+        return matches
 
     def _load_image_np(self, img_path):
         image = cv2.imread(str(img_path))
