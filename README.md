@@ -9,7 +9,7 @@
 
 | SIFT                                             | SUPERGLUE                                            |            
 | ------------------------------------             | ------------------------------------                 |
-| <img src='assets/temple_rsift.gif' height="170"> | <img src='assets/temple_superglue.gif' height="170"> |
+| <img src='assets/temple_rsift.gif' height="167"> | <img src='assets/temple_superglue.gif' height="167"> |
 
 Multivew matcher for COLMAP. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI. Feel free to collaborate!
 
