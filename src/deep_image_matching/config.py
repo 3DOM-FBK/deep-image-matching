@@ -3,7 +3,7 @@ from src.deep_image_matching import GeometricVerification, Quality, TileSelectio
 # General configuration for the matching process.
 # It defines the quality of the matching process, the tile selection strategy, the tiling grid, the overlap between tiles, the geometric verification method, and the geometric verification parameters.
 conf_general = {
-    "quality": Quality.LOWEST,  # Quality.HIGHEST, Quality.HIGH, Quality.MEDIUM, Quality.LOW, Quality.LOWEST
+    "quality": Quality.HIGH,  # Quality.HIGHEST, Quality.HIGH, Quality.MEDIUM, Quality.LOW, Quality.LOWEST
     "tile_selection": TileSelection.NONE,  # [TileSelection.NONE, TileSelection.PRESELECTION, TileSelection.GRID]
     "tiling_grid": [3, 3],
     "tiling_overlap": 0,
@@ -127,6 +127,33 @@ confs = {
     },
 }
 
+
+class Config:
+    config_general = conf_general
+    confs = confs
+    confs_names = list(confs.keys())
+
+    def __init__(self):
+        pass
+
+    @classmethod
+    def from_name(cls, name: str) -> dict:
+        cfg = cls.get_config(name)
+        cfg["general"] = conf_general
+        return cfg
+
+    @staticmethod
+    def get_config(name: str) -> dict:
+        try:
+            return confs[name]
+        except KeyError:
+            raise ValueError(f"Invalid configuration name: {name}")
+
+    @staticmethod
+    def get_config_names() -> list:
+        return list(confs.keys())
+
+
 opt_zoo = {
     "extractors": [
         "superpoint",
@@ -157,10 +184,3 @@ opt_zoo = {
         "matching_lowres",
     ],
 }
-
-
-def get_config(name: str):
-    try:
-        return confs[name]
-    except KeyError:
-        raise ValueError(f"Invalid configuration name: {name}")

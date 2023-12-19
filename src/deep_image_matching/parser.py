@@ -2,7 +2,7 @@ import argparse
 import shutil
 from pathlib import Path
 
-from . import change_logger_level, logger
+from . import Quality, TileSelection, change_logger_level, logger
 from .config import conf_general, confs, opt_zoo
 from .gui import gui
 
@@ -197,8 +197,8 @@ def parse_config():
     cfg_general_user = {
         "image_dir": args.images,
         "output_dir": args.outs,
-        "quality": args.quality,
-        "tile_selection": args.tiling,
+        "quality": Quality[args.quality.upper()],
+        "tile_selection": TileSelection[args.tiling.upper()],
         "matching_strategy": args.strategy,
         "retrieval": args.retrieval,
         "pair_file": args.pairs,

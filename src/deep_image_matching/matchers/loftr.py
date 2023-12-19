@@ -55,6 +55,11 @@ class LOFTRMatcher(MatcherBase):
         self._quality = config["general"]["quality"]
         self._tiling = config["general"]["tile_selection"]
 
+        if self._tiling != TileSelection.NONE and self._quality != Quality.HIGH:
+            raise ValueError(
+                "Tiling is currentely only supported for full resolution images (HIGH quality)."
+            )
+
     def match(
         self,
         feature_path: Path,
@@ -205,7 +210,68 @@ class LOFTRMatcher(MatcherBase):
         features1: FeaturesDict,
         method: TileSelection = TileSelection.PRESELECTION,
         select_unique: bool = True,
-    ):
+    ) -> np.ndarray:
+        """
+        Match features between two images using a tiling approach.
+
+        Args:
+            img0 (Path): Path to the first image.
+            img1 (Path): Path to the second image.
+            features0 (FeaturesDict): Features of the first image.
+            features1 (FeaturesDict): Features of the second image.
+            method (TileSelection, optional): Tile selection method. Defaults to TileSelection.PRESELECTION.
+            select_unique (bool, optional): Flag to select unique matches. Defaults to True.
+
+        Returns:
+            np.ndarray: Array containing the indices of matched keypoints.
+        """
+
+        def get_features_by_tile(features: FeaturesDict, tile_idx: int):
+            if "tile_idx" not in features:
+                raise KeyError("tile_idx not found in features")
+            pts_in_tile = features["tile_idx"] == tile_idx
+            idx = np.where(pts_in_tile)[0]
+            feat_tile = {
+                "keypoints": features["keypoints"][pts_in_tile],
+                "descriptors": features["descriptors"][:, pts_in_tile],
+                "scores": features["scores"][pts_in_tile],
+                "image_size": features["image_size"],
+            }
+            return (feat_tile, idx)
+
+        timer = Timer(log_level="debug", cumulate_by_key=True)
+
+        # Initialize empty matches array
+        matches_full = np.array([], dtype=np.int64).reshape(0, 2)
+
+        # Select tile pairs to match
+        tile_pairs = self._tile_selection(img0, img1, method)
+        timer.update("tile selection")
+
+        # If no tile pairs are selected, return an empty array
+        if len(tile_pairs) == 0:
+            logger.debug("No tile pairs selected.")
+            return matches_full
+
+        # Match each tile pair
+        for tidx0, tidx1 in tile_pairs:
+            logger.debug(f"  - Matching tile pair ({tidx0}, {tidx1})")
+
+            # Get features in tile and their ids in original array
+            feats0_tile, idx0 = get_features_by_tile(features0, tidx0)
+            feats1_tile, idx1 = get_features_by_tile(features1, tidx1)
+
+            # Match features
+            correspondences = self._match_pairs(feats0_tile, feats1_tile)
+            timer.update("match tile")
+
+            # Restore original ids of the matched keypoints
+            matches_orig = np.zeros_like(correspondences)
+            matches_orig[:, 0] = idx0[correspondences[:, 0]]
+            matches_orig[:, 1] = idx1[correspondences[:, 1]]
+            matches_full = np.vstack((matches_full, matches_orig))
+
+        # -------- OLD ---------
         # Get config
         grid = self._config["general"]["tiling_grid"]
         overlap = self._config["general"]["tiling_overlap"]
