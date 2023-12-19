@@ -280,11 +280,14 @@ class ExtractorBase(metaclass=ABCMeta):
                 kpts_full = np.vstack(
                     (kpts_full, feat_tile["keypoints"] + np.array(lim[0:2]))
                 )
-                descriptors_full = np.hstack((descriptors_full, feat_tile["descriptors"]))
+                descriptors_full = np.hstack(
+                    (descriptors_full, feat_tile["descriptors"])
+                )
                 tile_idx_full = np.concatenate(
                     (
                         tile_idx_full,
-                        np.ones(feat_tile["keypoints"].shape[0], dtype=np.float32) * idx,
+                        np.ones(feat_tile["keypoints"].shape[0], dtype=np.float32)
+                        * idx,
                     )
                 )
                 if "scores" in feat_tile:
@@ -333,6 +336,8 @@ class ExtractorBase(metaclass=ABCMeta):
             image_ = cv2.pyrDown(image)
         elif quality == Quality.LOW:
             image_ = cv2.pyrDown(cv2.pyrDown(image))
+        elif quality == Quality.LOWEST:
+            image_ = cv2.pyrDown(cv2.pyrDown(cv2.pyrDown(image)))
         return image_
 
     def _resize_features(
@@ -358,5 +363,7 @@ class ExtractorBase(metaclass=ABCMeta):
             features["keypoints"] *= 2
         elif quality == Quality.LOW:
             features["keypoints"] *= 4
+        elif quality == Quality.LOWEST:
+            features["keypoints"] *= 8
 
         return features
