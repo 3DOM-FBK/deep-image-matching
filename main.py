@@ -1,5 +1,6 @@
 import argparse
 import shutil
+from importlib import import_module
 from pathlib import Path
 
 from config import conf_general, confs, opt_zoo
@@ -259,128 +260,83 @@ def main():
     )
     timer.update("export_to_colmap")
 
-    # For debugging purposes, copy images to output folder
-    if config["general"]["verbose"]:
-        shutil.copytree(imgs_dir, output_dir / "images", dirs_exist_ok=True)
-
-    # Try to run reconstruction with pycolmap
-    try:
-        import pycolmap
+    # If --skip_reconstruction is not specified, run reconstruction
+    if not config["general"]["skip_reconstruction"]:
+        # For debugging purposes, copy images to output folder
+        if config["general"]["verbose"]:
+            shutil.copytree(imgs_dir, output_dir / "images", dirs_exist_ok=True)
 
         use_pycolmap = True
-    except ImportError:
-        logger.error("PyColmap is not available, skipping reconstruction")
-        use_pycolmap = False
+        try:
+            pycolmap = import_module("pycolmap")
+        except ImportError:
+            logger.error("Pycomlap is not available.")
+            use_pycolmap = False
 
-    if use_pycolmap:
-        from src.deep_image_matching import reconstruction
+        if use_pycolmap:
+            # import reconstruction module
+            reconstruction = import_module("src.deep_image_matching.reconstruction")
 
-        # Define database path and camera mode
-        database = output_dir / "database_pycolmap.db"
-        camera_mode: pycolmap.CameraMode = pycolmap.CameraMode.AUTO
+            # Define database path and camera mode
+            database = output_dir / "database_pycolmap.db"
 
-        # Define cameras
-        # cam1 = pycolmap.Camera(
-        #     model="FULL_OPENCV",
-        #     width=6012,
-        #     height=4008,
-        #     params=[
-        #         9.26789262766209504e03,
-        #         9.26789262766209504e03,
-        #         3.05349107994520591e03,
-        #         1.94835654532114540e03,
-        #         -8.07042713029020586e-02,
-        #         9.46617629940955385e-02,
-        #         3.31782983128223608e-04,
-        #         -4.32106111976037410e-04,
-        #         0.0,
-        #         0.0,
-        #         0.0,
-        #         0.0,
-        #     ],
-        # )
-        # cam2 = pycolmap.Camera(
-        #     model="FULL_OPENCV",
-        #     width=6012,
-        #     height=4008,
-        #     params=[
-        #         6.62174345720628298e03,
-        #         6.62174345720628298e03,
-        #         3.01324420057086490e03,
-        #         1.94347461466223308e03,
-        #         -9.41830394356213407e-02,
-        #         8.55303528514532035e-02,
-        #         1.68948638308769863e-04,
-        #         -8.74637609310216697e-04,
-        #         0.0,
-        #         0.0,
-        #         0.0,
-        #         0.0,
-        #     ],
-        # )
-        # cameras = [cam1, cam2]
-        cameras = None
+            # Define how pycolmap create the cameras. Possible CameraMode are:
+            # CameraMode.AUTO: infer the camera model based on the image exif
+            # CameraMode.PER_FOLDER: create a camera for each folder in the image directory
+            # CameraMode.PER_IMAGE: create a camera for each image in the image directory
+            # CameraMode.SINGLE: create a single camera for all images
+            camera_mode = pycolmap.CameraMode.AUTO
 
-        # Define options
-        # options = (
-        #     {
-        #         "ba_refine_focal_length": False,
-        #         "ba_refine_principal_point": False,
-        #         "ba_refine_extra_params": False,
-        #     },
-        # )
-        options = {}
+            # Optional - You can manually define the cameras parameters (refer to https://github.com/colmap/colmap/blob/main/src/colmap/sensor/models.h).
+            # Note, that the cameras are first detected with the CameraMode specified and then overwitten with the custom model. Therefore, you MUST provide the SAME NUMBER of cameras and with the SAME ORDER in which the cameras appear in the COLMAP database.
+            # To see the camera number and order, you can run the reconstruction a first time with the AUTO camera mode (and without manually define the cameras) and see the list of cameras in the database with
+            #   print(list(model.cameras.values()))
+            # or opening the database with the COLMAP gui.
+            #
+            # cam1 = pycolmap.Camera(
+            #     model="SIMPLE_PINHOLE",
+            #     width=6012,
+            #     height=4008,
+            #     params=[9.267, 3.053, 1.948],
+            # )
+            # cam2 = pycolmap.Camera(
+            #     model="SIMPLE_PINHOLE",
+            #     width=6012,
+            #     height=4008,
+            #     params=[6.621, 3.013, 1.943],
+            # )
+            # cameras = [cam1, cam2]
+            cameras = None
 
-        # Run reconstruction
-        model = reconstruction.main(
-            database=database,
-            image_dir=imgs_dir,
-            feature_path=feature_path,
-            match_path=match_path,
-            pair_path=pair_path,
-            sfm_dir=output_dir,
-            camera_mode=camera_mode,
-            cameras=cameras,
-            skip_geometric_verification=True,
-            options=options,
-            verbose=config["general"]["verbose"],
-        )
-        timer.update("pycolmap reconstruction")
+            # Optional - You can specify some reconstruction configuration
+            # reconst_opts = (
+            #     {
+            #         "ba_refine_focal_length": False,
+            #         "ba_refine_principal_point": False,
+            #         "ba_refine_extra_params": False,
+            #     },
+            # )
+            reconst_opts = {}
 
-    # Export in Bundler format for Metashape using colmap CLI
-    # if not use_pycolmap:
+            # Run reconstruction
+            model = reconstruction.main(
+                database=database,
+                image_dir=imgs_dir,
+                feature_path=feature_path,
+                match_path=match_path,
+                pair_path=pair_path,
+                sfm_dir=output_dir,
+                camera_mode=camera_mode,
+                cameras=cameras,
+                skip_geometric_verification=True,
+                reconst_opts=reconst_opts,
+                verbose=config["general"]["verbose"],
+            )
 
-    #     def export_to_bundler(
-    #         database: Path, image_dir: Path, output_dir: Path, out_name: str = "bundler"
-    #     ) -> bool:
-    #         import subprocess
-    #         from pprint import pprint
+            timer.update("pycolmap reconstruction")
 
-    #         colamp_path = "colmap"
-
-    #         cmd = [
-    #             colamp_path,
-    #             "model_converter",
-    #             "--input_path",
-    #             str(database.parent.resolve()),
-    #             "--output_path",
-    #             str(database.parent.resolve() / out_name),
-    #             "--output_type",
-    #             "Bundler",
-    #         ]
-    #         ret = subprocess.run(cmd, capture_output=True)
-    #         if ret.returncode != 0:
-    #             logger.error("Unable to export to Bundler format")
-    #             pprint(ret.stdout.decode("utf-8"))
-    #             return False
-
-    #         shutil.copytree(image_dir, output_dir / "images", dirs_exist_ok=True)
-    #         logger.info("Export to Bundler format completed successfully")
-
-    #         return True
-
-    #     out_name = "bundler"
-    #     export_to_bundler(database, imgs_dir, output_dir, out_name)
+        else:
+            logger.warning("Reconstruction with COLMAP CLI is not yet implemented")
 
     timer.print("Deep Image Matching")
 

@@ -13,13 +13,13 @@ SKIP_SFM=true
 
 INPUT_DIR=$DATA_DIR/$DATASET
 
-# Run SfM with superpoint+superglue
+# Run SfM
 if [ "$SKIP_SFM" = false ] ; then
     python ./main.py --config $SFM_CONFIG --images $INPUT_DIR --strategy $STRATEGY --force -V
 fi
 
-# # Run RoMa for extracting dense correspondences
-python ./main.py --config $DENSE_CONFIG --images $INPUT_DIR --strategy $STRATEGY --force -V
+# Run dense matching 
+python ./main.py --config $DENSE_CONFIG --images $INPUT_DIR --strategy $STRATEGY --force -V --skip
 
 # Triangulate dense correspondences with COLMAP
 python ./scripts/dense_matching.py --sfm_dir "output/${DATASET}_${SFM_CONFIG}_${STRATEGY}" --dense_dir "output/${DATASET}_${DENSE_CONFIG}_${STRATEGY}"
