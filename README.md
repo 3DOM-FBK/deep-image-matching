@@ -7,6 +7,10 @@
 | ------------------------------------             | ------------------------------------               | ------------------------------------                 | ------------------------------------           |
 | <img src='assets/matches_sift.gif' height="100"> | <img src='assets/matches_joined.gif' height="100"> | <img src='assets/orientation_deep.gif' height="100"> | <img src='assets/roma_dense.gif' height="100"> |
 
+| SIFT                                             | SUPERGLUE                                          |            
+| ------------------------------------             | ------------------------------------               |
+| <img src='assets/matches_sift.gif' height="100"> | <img src='assets/matches_joined.gif' height="100"> |
+
 Multivew matcher for COLMAP. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI. Feel free to collaborate!
 
 **Please, note that `deep-image-matching` is under active development** and it is still in an experimental stage. If you find any bug, please open an issue.
