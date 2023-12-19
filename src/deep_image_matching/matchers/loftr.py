@@ -9,7 +9,7 @@ import torch
 from kornia import feature as KF
 
 from .. import Timer, logger
-from ..io.h5 import get_features
+from ..io.h5 import get_features, get_matches
 from ..utils.consts import Quality, TileSelection
 from ..utils.tiling import Tiler
 from ..visualization import viz_matches_cv2, viz_matches_mpl
@@ -17,13 +17,35 @@ from .matcher_base import FeaturesDict, MatcherBase
 
 
 class LOFTRMatcher(MatcherBase):
+    """
+    LOFTRMatcher class for feature matching using the LOFTR method.
+
+    Attributes:
+        default_conf (dict): Default configuration options.
+        max_feat_no_tiling (int): Maximum number of features when tiling is not used.
+        grayscale (bool): Flag indicating whether images are processed in grayscale.
+        as_float (bool): Flag indicating whether to use float for image pixel values.
+
+    Methods:
+        __init__(self, config={}): Initializes a LOFTRMatcher with Kornia object with the given options dictionary.
+        match(self, feature_path: Path, matches_path: Path, img0: Path, img1: Path, try_full_image: bool = False) -> np.ndarray:
+            Match features between two images.
+        _match_pairs(self, feats0: FeaturesDict, feats1: FeaturesDict) -> np.ndarray:
+            Perform matching between feature pairs.
+    """
+
     default_conf = {"pretrained": "outdoor"}
     max_feat_no_tiling = 100000
     grayscale = False
     as_float = True
 
     def __init__(self, config={}) -> None:
-        """Initializes a LOFTRMatcher with Kornia object with the given options dictionary."""
+        """
+        Initializes a LOFTRMatcher with Kornia object with the given options dictionary.
+
+        Args:
+            config (dict, optional): Configuration options. Defaults to an empty dictionary.
+        """
 
         super().__init__(config)
 
@@ -95,17 +117,13 @@ class LOFTRMatcher(MatcherBase):
         timer_match.print(f"{__class__.__name__} match")
 
         # For debugging
-        image0 = self._load_image_np(img0)
-        image1 = self._load_image_np(img1)
-        features0 = get_features(self._feature_path, img0_name)
-        features1 = get_features(self._feature_path, img1_name)
-        self.viz_matches(
-            image0=image0,
-            image1=image1,
-            kpts0=features0["keypoints"][matches[:, 0]],
-            kpts1=features1["keypoints"][matches[:, 1]],
-            save_path="sandbox/test.png",
-        )
+        # self.viz_matches(
+        #     feature_path,
+        #     matches_path,
+        #     img0,
+        #     img1,
+        #     save_path=f"sandbox/loftr_{img0_name}_{img1_name}.png",
+        # )
 
         logger.debug(f"Matching {img0_name}-{img1_name} done!")
 
@@ -117,18 +135,27 @@ class LOFTRMatcher(MatcherBase):
         feats0: FeaturesDict,
         feats1: FeaturesDict,
     ):
-        """ """
+        """
+        Perform matching between feature pairs.
+
+        Args:
+            feats0 (FeaturesDict): Features dictionary for the first image.
+            feats1 (FeaturesDict): Features dictionary for the second image.
+
+        Returns:
+            np.ndarray: Array containing the indices of matched keypoints.
+        """
 
         feature_path = feats0["feature_path"]
 
-        im_path0 = feats0["im_path"]
-        im_name0 = Path(im_path0).name
-        im_path1 = feats1["im_path"]
-        im_name1 = Path(im_path1).name
+        img0_path = feats0["im_path"]
+        img0_name = Path(img0_path).name
+        img1_path = feats1["im_path"]
+        img1_name = Path(img1_path).name
 
         # Load images
-        image0 = self._load_image_np(im_path0)
-        image1 = self._load_image_np(im_path1)
+        image0 = self._load_image_np(img0_path)
+        image1 = self._load_image_np(img1_path)
 
         # Resize images if needed
         image0_ = self._resize_image(self._quality, image0)
@@ -159,21 +186,11 @@ class LOFTRMatcher(MatcherBase):
         matches = np.hstack((matches0.reshape((-1, 1)), matches0.reshape((-1, 1))))
         matches = self._update_features_h5(
             feature_path,
-            im_name0,
-            im_name1,
+            img0_name,
+            img1_name,
             mkpts0,
             mkpts1,
             matches,
-        )
-
-        f0 = get_features(feature_path, Path(im_path0).name)
-        f1 = get_features(feature_path, Path(im_path1).name)
-        self.viz_matches(
-            image0=image0,
-            image1=image1,
-            kpts0=f0["keypoints"][matches[:, 0]],
-            kpts1=f1["keypoints"][matches[:, 1]],
-            save_path=f"sandbox/loftr_{Path(im_path0).name}_{Path(im_path1).name}.png",
         )
 
         return matches
@@ -366,27 +383,42 @@ class LOFTRMatcher(MatcherBase):
 
     def viz_matches(
         self,
-        image0: np.ndarray,
-        image1: np.ndarray,
-        kpts0: np.ndarray,
-        kpts1: np.ndarray,
+        feature_path: Path,
+        matchings_path: Path,
+        img0: Path,
+        img1: Path,
         save_path: str = None,
         fast_viz: bool = True,
         interactive_viz: bool = False,
         **config,
     ) -> None:
+        # Check input parameters
         if not interactive_viz:
             assert (
                 save_path is not None
             ), "output_dir must be specified if interactive_viz is False"
-
-        # Check input parameters
         if fast_viz:
             if interactive_viz:
                 logger.warning("interactive_viz is ignored if fast_viz is True")
             assert (
                 save_path is not None
             ), "output_dir must be specified if fast_viz is True"
+
+        img0 = Path(img0)
+        img1 = Path(img1)
+        img0_name = img0.name
+        img1_name = img1.name
+
+        # Load images
+        image0 = self._load_image_np(img0)
+        image1 = self._load_image_np(img1)
+
+        # Load features and matches
+        features0 = get_features(feature_path, img0_name)
+        features1 = get_features(feature_path, img1_name)
+        matches = get_matches(matchings_path, img0_name, img1_name)
+        kpts0 = features0["keypoints"][matches[:, 0]]
+        kpts1 = features1["keypoints"][matches[:, 1]]
 
         # Make visualization with OpenCV or Matplotlib
         if fast_viz:

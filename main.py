@@ -141,6 +141,6 @@ if not config["general"]["skip_reconstruction"]:
         timer.update("pycolmap reconstruction")
 
     else:
-        logger.warning("Reconstruction with COLMAP CLI is not yet implemented")
+        logger.warning("Reconstruction with COLMAP CLI is not implemented yet.")
 
 timer.print("Deep Image Matching")

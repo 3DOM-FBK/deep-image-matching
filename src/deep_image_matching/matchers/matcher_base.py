@@ -11,7 +11,7 @@ import torch
 
 from .. import Timer, logger
 from ..hloc.extractors.superpoint import SuperPoint
-from ..io.h5 import get_features
+from ..io.h5 import get_features, get_matches
 from ..thirdparty.LightGlue.lightglue import LightGlue
 from ..utils.consts import Quality, TileSelection
 from ..utils.tiling import Tiler
@@ -303,17 +303,14 @@ class MatcherBase(metaclass=ABCMeta):
 
         logger.debug(f"Matching {img0_name}-{img1_name} done!")
 
-        # Visualize matches (temporarily disabled)
-        # if self._config["general"]["do_viz"] is True:
-        #     self.viz_matches(
-        #         image0,
-        #         image1,
-        #         self._mkpts0,
-        #         self._mkpts1,
-        #         str(self._output_dir / "matches.jpg"),
-        #         fast_viz=self._config["general"]["fast_viz"],
-        #         hide_matching_track=self._config["general"]["hide_matching_track"],
-        #     )
+        # For debugging
+        # self.viz_matches(
+        #     feature_path,
+        #     matches_path,
+        #     img0,
+        #     img1,
+        #     save_path=f"sandbox/loftr_{img0_name}_{img1_name}.png",
+        # )
 
         return self._matches
 
@@ -591,27 +588,42 @@ class MatcherBase(metaclass=ABCMeta):
 
     def viz_matches(
         self,
-        image0: np.ndarray,
-        image1: np.ndarray,
-        kpts0: np.ndarray,
-        kpts1: np.ndarray,
+        feature_path: Path,
+        matchings_path: Path,
+        img0: Path,
+        img1: Path,
         save_path: str = None,
         fast_viz: bool = True,
         interactive_viz: bool = False,
         **config,
     ) -> None:
+        # Check input parameters
         if not interactive_viz:
             assert (
                 save_path is not None
             ), "output_dir must be specified if interactive_viz is False"
-
-        # Check input parameters
         if fast_viz:
             if interactive_viz:
                 logger.warning("interactive_viz is ignored if fast_viz is True")
             assert (
                 save_path is not None
             ), "output_dir must be specified if fast_viz is True"
+
+        img0 = Path(img0)
+        img1 = Path(img1)
+        img0_name = img0.name
+        img1_name = img1.name
+
+        # Load images
+        image0 = self._load_image_np(img0)
+        image1 = self._load_image_np(img1)
+
+        # Load features and matches
+        features0 = get_features(feature_path, img0_name)
+        features1 = get_features(feature_path, img1_name)
+        matches = get_matches(matchings_path, img0_name, img1_name)
+        kpts0 = features0["keypoints"][matches[:, 0]]
+        kpts1 = features1["keypoints"][matches[:, 1]]
 
         # Make visualization with OpenCV or Matplotlib
         if fast_viz:
