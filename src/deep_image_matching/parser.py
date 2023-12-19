@@ -2,8 +2,8 @@ import argparse
 import shutil
 from pathlib import Path
 
-from . import change_logger_level, logger
 from .config import conf_general, confs, opt_zoo
+from . import change_logger_level, logger
 from .gui import gui
 
 
