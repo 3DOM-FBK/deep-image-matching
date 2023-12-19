@@ -324,7 +324,7 @@ class MatcherBase(metaclass=ABCMeta):
         features1: FeaturesDict,
         method: TileSelection = TileSelection.PRESELECTION,
         select_unique: bool = True,
-    ):
+    ) -> np.ndarray:
         """
         Match features between two images using a tiling approach.
 
