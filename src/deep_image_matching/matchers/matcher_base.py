@@ -497,11 +497,6 @@ class MatcherBase(metaclass=ABCMeta):
                 res = self._preselction_matcher({"image0": feats0, "image1": feats1})
                 res = rbd2np(res)
 
-            # TODO: implement a better way to prune matching pair
-            # If not enough matches, return None and quit the matching
-            # if len(res["matches"]) < self.min_matches:
-            #     return []
-
             # Get keypoints in original image
             kp0 = feats0["keypoints"].cpu().numpy()[0]
             kp0 = kp0[res["matches"][:, 0], :]
@@ -620,7 +615,7 @@ class MatcherBase(metaclass=ABCMeta):
             if hide_matching_track:
                 line_thickness = -1
             else:
-                line_thickness = 1
+                line_thickness = 0.5
 
             viz_matches_cv2(
                 image0,
