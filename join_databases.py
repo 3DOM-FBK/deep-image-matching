@@ -24,14 +24,14 @@ def parse_args():
 
     return args
 
-def MergeColmapDatabases(db0_path, db1_path, out_db):
-    db_path1 = r"/media/luca/T7/2022-06-30/joined1.db"
+def MergeColmapDatabases(db_path1: Path, db_path2: Path, db_joined: Path) -> None:
+    print(f"\nMerging {db_path1.name} and {db_path2.name} into {db_joined.name}")
+
     db1 = COLMAPDatabase.connect(db_path1)
-    db_path2 = r"/media/luca/T7/2022-06-30/superglue/sglue.db"
     db2 = COLMAPDatabase.connect(db_path2)
-    db_path3 = r"/media/luca/T7/2022-06-30/joined2.db"
-    db3 = COLMAPDatabase.connect(db_path3)
+    db3 = COLMAPDatabase.connect(db_joined)
     db3.create_tables()
+
     # Load cameras in merged database
     rows = db2.execute("SELECT * FROM cameras")
     for row in rows:
@@ -41,16 +41,10 @@ def MergeColmapDatabases(db0_path, db1_path, out_db):
 
     # Read existing kpts from database 2
     keypoints2 = dict(
-        (image_id, blob_to_array(data, np.float32, (-1, 6)))
+        (image_id, blob_to_array(data, np.float32, (-1, 2)))
         for image_id, data in db2.execute("SELECT image_id, data FROM keypoints")
     )
 
-    # Read existing matches from database 2
-    # matches2 = dict(
-    #    (pair_id_to_image_ids(pair_id),
-    #     blob_to_array(data, np.uint32, (-1, 2)))
-    #    for pair_id, data in db2.execute("SELECT pair_id, data FROM matches")
-    # )
     matches2 = {}
     for pair_id, r, c, data in db2.execute("SELECT pair_id, rows, cols, data FROM matches"):
         if data is not None:
@@ -88,10 +82,11 @@ def MergeColmapDatabases(db0_path, db1_path, out_db):
         (image_id, blob_to_array(data, np.float32, (-1, 2)))  # (-1, 6)
         for image_id, data in db1.execute("SELECT image_id, data FROM keypoints")
     )
-    print("keypoints2 shape", np.shape(keypoints2[img_list[0]]))
-    print(keypoints2[img_list[0]][:5, :])
-    print("keypoints1 shape", np.shape(keypoints1[img_list[0]]))
+
+    print("keypoints1 shape", np.shape(keypoints1[img_list[0]]), "First 5 rows:")
     print(keypoints1[img_list[0]][:5, :])
+    print("keypoints2 shape", np.shape(keypoints2[img_list[0]]), "First 5 rows:")
+    print(keypoints2[img_list[0]][:5, :])
 
     # Read existing matches from database 1
     matches1 = {}
@@ -177,23 +172,34 @@ def MergeColmapDatabases(db0_path, db1_path, out_db):
 def main():
     args = parse_args()
     databases_dir = Path(args.input)
+    db_out = Path(args.output) / "joined.db"
+    db_temp = db_out.parent / "temp.db"
+    if db_out.exists():
+        os.remove(db_out)
+    if db_temp.exists():
+        os.remove(db_temp)
     db_files = glob.glob(f"{databases_dir}/*.db")
-    db_out = Path(args.output)
+
+    print("\nMERGING DATABASES ..")
     print(f"Found {len(db_files)} COLMAP databases in {databases_dir}.")
+    print("db_out - joined database", db_out)
+    print("db_temp - temporary file", db_temp)
+    print("\n")
 
-    if not db_out.exists():
-        db0 = Path(db_files[0])
-        db1 = Path(db_files[1])
-        MergeColmapDatabases(db0, db1, db_out)
-    else:
-        print('Output database exists. Delete it and run again the script.')
-        quit()
-
-    for db_file in tqdm(db_files[2:], total=len(db_files), mininterval=0):
-        db1 = Path(db_file)
-        print(db0, db1)
-        #MergeColmapDatabases(db0, db1, db_out)
-        db0 = deepcopy(db1)
+    for db_file in tqdm(db_files[1:], total=len(db_files), mininterval=0):
+        if not db_temp.exists():
+            db0 = Path(db_files[0])
+            db1 = Path(db_files[1])
+            MergeColmapDatabases(db0, db1, db_temp)
+        else:
+            db0 = deepcopy(db_temp)
+            db1 = Path(db_file)
+            print(db0, db1)
+            MergeColmapDatabases(db0, db1, db_out)
+            os.remove(db_temp)
+            os.rename(db_out, db_temp)
+    
+    os.rename(db_temp, db_out)
 
 
 if __name__ == "__main__":
