@@ -13,14 +13,14 @@ SKIP_SFM=true
 
 INPUT_DIR=$DATA_DIR/$DATASET
 
-# Run SfM
+# Run SfM to find camera poses to use for dense reconstruction
 if [ "$SKIP_SFM" = false ] ; then
     python ./main.py --config $SFM_CONFIG --images $INPUT_DIR --strategy $STRATEGY --force -V
 fi
 
-# Run dense matching 
-python ./main.py --config $DENSE_CONFIG --images $INPUT_DIR --strategy $STRATEGY --force -V --skip
+# Run dense matching (skip reconstruction with dense correspondences)
+python ./main.py --config $DENSE_CONFIG --images $INPUT_DIR --strategy $STRATEGY --skip_reconstruction --force -V
 
-# Triangulate dense correspondences with COLMAP
+# Triangulate dense correspondences with COLMAP to build a dense point cloud
 python ./scripts/dense_matching.py --sfm_dir "output/${DATASET}_${SFM_CONFIG}_${STRATEGY}" --dense_dir "output/${DATASET}_${DENSE_CONFIG}_${STRATEGY}"
 
