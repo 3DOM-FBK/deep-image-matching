@@ -1,4 +1,5 @@
 import sys
+from abc import ABCMeta, abstractmethod
 from pathlib import Path
 from typing import Tuple
 
@@ -9,6 +10,7 @@ import numpy as np
 import torch
 from PIL import Image
 
+from .. import Timer, logger
 from ..io.h5 import get_features
 from ..utils.consts import Quality, TileSelection
 from .matcher_base import FeaturesDict, MatcherBase
@@ -18,10 +20,31 @@ sys.path.append(str(roma_path))
 from roma import roma_outdoor
 
 
-class RomaMatcher(MatcherBase):
-    def __init__(self, config={}) -> None:
-        """Initializes a LOFTRMatcher with Kornia object with the given options dictionary."""
+class DetectorFreeMatcherBase(metaclass=ABCMeta):
+    def __init__(self) -> None:
+        pass
 
+    @abstractmethod
+    def _match_pairs(self):
+        pass
+
+
+class RomaMatcher(MatcherBase):
+    """
+    RomaMatcher class for feature matching using RoMa.
+
+    Attributes:
+        default_conf (dict): Default configuration options.
+        max_feat_no_tiling (int): Maximum number of features when tiling is not used.
+        grayscale (bool): Flag indicating whether images are processed in grayscale.
+        as_float (bool): Flag indicating whether to use float for image pixel values.
+
+    Methods:
+        __init__: Constructor.
+        match(self, feature_path: Path, matches_path: Path, img0: Path, img1: Path, try_full_image: bool = False) -> np.ndarray: Match features between two images.
+    """
+
+    def __init__(self, config={}) -> None:
         super().__init__(config)
 
         self.matcher = roma_outdoor(device=self._device)
@@ -30,36 +53,119 @@ class RomaMatcher(MatcherBase):
         self.as_float = True
         self._quality = config["general"]["quality"]
 
+    def match(
+        self,
+        feature_path: Path,
+        matches_path: Path,
+        img0: Path,
+        img1: Path,
+        try_full_image: bool = False,
+    ):
+        """
+        Match features between two images.
+
+        Args:
+            feature_path (Path): Path to the feature file.
+            matches_path (Path): Path to save the matches.
+            img0 (Path): Path to the first image.
+            img1 (Path): Path to the second image.
+            try_full_image (bool, optional): Flag to attempt matching on full images. Defaults to False.
+
+        Raises:
+            RuntimeError: If there are too many features to match on full images.
+
+        Returns:
+            np.ndarray: Array containing the indices of matched keypoints.
+        """
+        timer_match = Timer(log_level="debug")
+
+        # Check that feature_path exists
+        if not Path(feature_path).exists():
+            raise FileNotFoundError(f"Feature file {feature_path} does not exist.")
+        else:
+            self._feature_path = Path(feature_path)
+
+        # Get features from h5 file
+        img0_name = img0.name
+        img1_name = img1.name
+        features0 = get_features(self._feature_path, img0_name)
+        features1 = get_features(self._feature_path, img1_name)
+        timer_match.update("load h5 features")
+
+        # Perform matching
+        if self._tiling == TileSelection.NONE:
+            matches = self._match_pairs(features0, features1)
+            timer_match.update("[match] try to match full images")
+        else:
+            matches = self._match_by_tile(
+                img0,
+                img1,
+                features0,
+                features1,
+                method=self._tiling,
+                select_unique=True,
+            )
+            timer_match.update("[match] try to match by tile")
+
+        # Save to h5 file
+        n_matches = len(matches)
+        with h5py.File(str(matches_path), "a", libver="latest") as fd:
+            group = fd.require_group(img0_name)
+            if n_matches >= self.min_matches:
+                group.create_dataset(img1_name, data=matches)
+            else:
+                logger.debug(
+                    f"Too few matches found. Skipping image pair {img0.name}-{img1.name}"
+                )
+                return None
+        timer_match.update("save to h5")
+        timer_match.print(f"{__class__.__name__} match")
+
     @torch.no_grad()
     def _match_pairs(
         self,
         feats0: FeaturesDict,
         feats1: FeaturesDict,
     ):
-        """Matches keypoints and descriptors in two given images
-        (no matter if they are tiles or full-res images) using
-        the LoFTR algorithm.
+        """
+        Perform matching between feature pairs.
 
         Args:
+            feats0 (FeaturesDict): Features dictionary for the first image.
+            feats1 (FeaturesDict): Features dictionary for the second image.
 
         Returns:
-
+            np.ndarray: Array containing the indices of matched keypoints.
         """
 
         feature_path = feats0["feature_path"]
 
-        im_path0 = feats0["im_path"]
-        im_path1 = feats1["im_path"]
+        img0_path = feats0["im_path"]
+        img0_name = Path(img0_path).name
+        img1_path = feats1["im_path"]
+        img1_name = Path(img1_path).name
+
+        # Load images
+        image0 = self._load_image_np(img0_path)
+        image1 = self._load_image_np(img1_path)
+
+        # Resize images if needed
+        image0_ = self._resize_image(self._quality, image0)
+        image1_ = self._resize_image(self._quality, image1)
+
+        # Covert images to tensor
+        timg0_ = self._frame2tensor(image0_, self._device)
+        timg1_ = self._frame2tensor(image1_, self._device)
 
         # Run inference
         with torch.inference_mode():
             # /home/luca/Desktop/gitprojects/github_3dom/deep-image-matching/src/deep_image_matching/thirdparty/RoMa/roma/models/matcher.py
             # in class RegressionMatcher(nn.Module) def __init__ hardcoded self.upsample_res = (int(864/4), int(864/4))
-            W_A, H_A = Image.open(im_path0).size
-            W_B, H_B = Image.open(im_path1).size
+            W_A, H_A = Image.open(image0).size
+            W_B, H_B = Image.open(image1).size
 
             warp, certainty = self.matcher.match(
-                str(im_path0), str(im_path1), device=self._device, batched=False
+                str(img0), str(img1), device=self._device, batched=False
             )
             matches, certainty = self.matcher.sample(warp, certainty)
             kptsA, kptsB = self.matcher.to_pixel_coordinates(
@@ -75,8 +181,8 @@ class RomaMatcher(MatcherBase):
         matches = np.hstack((matches0.reshape((-1, 1)), matches0.reshape((-1, 1))))
         self._update_features(
             feature_path,
-            Path(im_path0).name,
-            Path(im_path1).name,
+            img0_name,
+            img1_name,
             kptsA,
             kptsB,
             matches,
@@ -227,7 +333,34 @@ class RomaMatcher(MatcherBase):
             image_ = cv2.pyrDown(image)
         elif quality == Quality.LOW:
             image_ = cv2.pyrDown(cv2.pyrDown(image))
+        elif quality == Quality.LOWEST:
+            image_ = cv2.pyrDown(cv2.pyrDown(cv2.pyrDown(image)))
         return image_
+
+    def _resize_features(self, quality: Quality, keypoints: np.ndarray) -> np.ndarray:
+        """
+        Resize features based on the specified quality.
+
+        Args:
+            quality (Quality): The quality level for resizing.
+            features0 (np.ndarray): The array of keypoints.
+
+        Returns:
+            np.ndarray: Resized keypoints.
+
+        """
+        if quality == Quality.HIGHEST:
+            keypoints /= 2
+        elif quality == Quality.HIGH:
+            pass
+        elif quality == Quality.MEDIUM:
+            keypoints *= 2
+        elif quality == Quality.LOW:
+            keypoints *= 4
+        elif quality == Quality.LOWEST:
+            keypoints *= 8
+
+        return keypoints
 
     def _frame2tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor:
         image = K.image_to_tensor(np.array(image), False).float() / 255.0
@@ -236,9 +369,9 @@ class RomaMatcher(MatcherBase):
             image = K.color.rgb_to_grayscale(image)
         return image
 
-    def _update_features(
+    def _update_features_h5(
         self, feature_path, im0_name, im1_name, new_keypoints0, new_keypoints1, matches0
-    ) -> None:
+    ) -> np.ndarray:
         for i, im_name, new_keypoints in zip(
             [0, 1], [im0_name, im1_name], [new_keypoints0, new_keypoints1]
         ):
@@ -247,24 +380,18 @@ class RomaMatcher(MatcherBase):
 
             if len(existing_keypoints.shape) == 1:
                 features["keypoints"] = new_keypoints
-                with h5py.File(feature_path, "r+", libver="latest") as fd:
-                    del fd[im_name]
-                    grp = fd.create_group(im_name)
-                    for k, v in features.items():
-                        if k == "im_path" or k == "feature_path":
-                            grp.create_dataset(k, data=str(v))
-                        if isinstance(v, np.ndarray):
-                            grp.create_dataset(k, data=v)
-
             else:
                 n_exisiting_keypoints = existing_keypoints.shape[0]
                 features["keypoints"] = np.vstack((existing_keypoints, new_keypoints))
                 matches0[:, i] = matches0[:, i] + n_exisiting_keypoints
-                with h5py.File(feature_path, "r+", libver="latest") as fd:
-                    del fd[im_name]
-                    grp = fd.create_group(im_name)
-                    for k, v in features.items():
-                        if k == "im_path" or k == "feature_path":
-                            grp.create_dataset(k, data=str(v))
-                        if isinstance(v, np.ndarray):
-                            grp.create_dataset(k, data=v)
+
+            with h5py.File(feature_path, "r+", libver="latest") as fd:
+                del fd[im_name]
+                grp = fd.create_group(im_name)
+                for k, v in features.items():
+                    if k == "im_path" or k == "feature_path":
+                        grp.create_dataset(k, data=str(v))
+                    if isinstance(v, np.ndarray):
+                        grp.create_dataset(k, data=v)
+
+        return matches0

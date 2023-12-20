@@ -28,10 +28,15 @@ class LOFTRMatcher(MatcherBase):
 
     Methods:
         __init__(self, config={}): Initializes a LOFTRMatcher with Kornia object with the given options dictionary.
-        match(self, feature_path: Path, matches_path: Path, img0: Path, img1: Path, try_full_image: bool = False) -> np.ndarray:
-            Match features between two images.
-        _match_pairs(self, feats0: FeaturesDict, feats1: FeaturesDict) -> np.ndarray:
-            Perform matching between feature pairs.
+        match(self, feature_path: Path, matches_path: Path, img0: Path, img1: Path, try_full_image: bool = False) -> np.ndarray: Match features between two images.
+        _match_pairs(self, feats0: FeaturesDict, feats1: FeaturesDict) -> np.ndarray: Perform matching between feature pairs.
+        _match_by_tile(self, img0: Path, img1: Path, features0: FeaturesDict, features1: FeaturesDict, method: TileSelection = TileSelection.PRESELECTION, select_unique: bool = True) -> np.ndarray: Match features between two images using a tiling approach.
+        _load_image_np(self, img_path): Load image as numpy array.
+        _frame2tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor: Convert image to tensor.
+        _resize_image(self, quality: Quality, image: np.ndarray) -> Tuple[np.ndarray]: Resize images based on the specified quality.
+        _resize_features(self, quality: Quality, keypoints: np.ndarray) -> np.ndarray: Resize features based on the specified quality.
+        _update_features_h5(self, feature_path, im0_name, im1_name, new_keypoints0, new_keypoints1, matches0) -> np.ndarray: Update features in h5 file.
+        viz_matches(self, feature_path: Path, matchings_path: Path, img0: Path, img1: Path, save_path: str = None, fast_viz: bool = True, interactive_viz: bool = False, **config) -> None: Visualize matches.
     """
 
     default_conf = {"pretrained": "outdoor"}
@@ -55,11 +60,6 @@ class LOFTRMatcher(MatcherBase):
 
         self._quality = config["general"]["quality"]
         self._tiling = config["general"]["tile_selection"]
-
-        # if self._tiling != TileSelection.NONE and self._quality != Quality.HIGH:
-        #     raise ValueError(
-        #         "Tiling is currentely only supported for full resolution images (HIGH quality)."
-        #     )
 
     def match(
         self,
