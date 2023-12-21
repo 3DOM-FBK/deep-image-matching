@@ -1,10 +1,130 @@
-from typing import Dict, List
+from enum import Enum
+from typing import Dict, List, Tuple, Union
 
+import kornia as K
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
+
+
+class TilingMode(Enum):
+    AUTO = 0
+    SIZE = 1
+    GRID = 2
 
 
 class Tiler:
+    """
+    Class for dividing an image into tiles.
+    """
+
+    def __init__(
+        self,
+        tiling_mode=TilingMode.SIZE,
+    ) -> None:
+        """
+        Initialize class.
+
+        Parameters:
+        - tiling_mode (TilingMode or str, default=TilingMode.SIZE): The tiling mode to use. Can be a TilingMode enum or a string with the name of the enum.
+
+        Returns:
+        None
+        """
+        if isinstance(tiling_mode, str):
+            tiling_mode = TilingMode[tiling_mode.upper()]
+        elif not isinstance(tiling_mode, TilingMode):
+            raise TypeError(
+                "tiling_mode must be a TilingMode enum or a string with the name of the enum"
+            )
+        self._tiling_mode = tiling_mode
+
+    def compute_tiles_by_size(
+        self,
+        input: Union[np.ndarray, torch.Tensor],
+        window_size: Union[int, Tuple[int, int]],  # (H - vertical, W - horizontal)
+        overlap: Union[int, Tuple[int, int]] = 0,  # (H, W)
+    ) -> Tuple[Dict[int, np.ndarray], Dict[int, Tuple[int, int]]]:
+        """
+        Compute tiles by specifying the window size and overlap.
+
+        Parameters:
+        - input (np.ndarray or torch.Tensor): The input image.
+        - window_size (int or Tuple[int, int]): The size of each tile. If int, the same size is used for both height and width. If Tuple[int, int], the first element represents the height and the second element represents the width.
+        - overlap (int or Tuple[int, int], default=0): The overlap between adjacent tiles. If int, the same overlap is used for both height and width. If Tuple[int, int], the first element represents the overlap in the vertical direction and the second element represents the overlap in the horizontal direction.
+
+        Returns:
+        Tuple[Dict[int, np.ndarray], Dict[int, Tuple[int, int]]]: A tuple containing two dictionaries. The first dictionary contains the extracted tiles, where the key is the index of the tile and the value is the tile itself. The second dictionary contains the x, y coordinates of the top-left corner of each tile in the original image (before padding), where the key is the index of the tile and the value is a tuple of two integers representing the x and y coordinates.
+
+        Raises:
+        - TypeError: If the input is not a numpy array or a torch tensor.
+        - TypeError: If the window_size is not an integer or a tuple of integers.
+        - TypeError: If the overlap is not an integer or a tuple of integers.
+
+        Note:
+        - If the input is a numpy array, it is assumed to be in the format (H, W, C). If C > 1, it is converted to (C, H, W).
+        - The output tiles are in the format (H, W, C).
+        - The output origins are expressed in x, y coordinates, where x is the horizontal axis and y is the vertical axis (pointing up, as in OpenCV).
+        """
+        if isinstance(window_size, int):
+            window_size = (window_size, window_size)
+        elif not isinstance(window_size, tuple):
+            raise TypeError("window_size must be an integer or a tuple of integers")
+        window_size = window_size
+
+        if isinstance(overlap, int):
+            overlap = (overlap, overlap)
+        elif not isinstance(overlap, tuple):
+            raise TypeError("overlap must be an integer or a tuple of integers")
+        overlap = overlap
+
+        if isinstance(input, np.ndarray):
+            input = torch.from_numpy(input)
+            # If input is a numpy array, it is assumed to be in the format (H, W, C). If C>1, it is converted to (C, H, W)
+            if input.dim() > 1:
+                input = input.permute(2, 0, 1)
+
+        # Add dimensions to the tensor to be (B, C, H, W)
+        if input.dim() == 2:
+            input = input.unsqueeze(0).unsqueeze(0)
+        if input.dim() == 3:
+            input = input.unsqueeze(0)
+
+        H, W = input.shape[2:]
+
+        # Compute padding to make the image divisible by the window size
+        # This returns a tuple of 4 int (top, bottom, left, right)
+        padding = K.contrib.compute_padding((H, W), window_size)
+
+        # Overwrite origin if a padding was added to the image
+        # Origin is expressed in x,y coordinates, where x is the horizontal axis and y is the vertical axis (poining up, as in opencv)
+        origin = [-padding[2], -padding[0]]
+
+        stride = [w - o for w, o in zip(window_size, overlap)]
+        patches = K.contrib.extract_tensor_patches(
+            input, window_size, stride=stride, padding=padding
+        )
+
+        # Remove batch dimension
+        patches = patches.squeeze(0)
+
+        # compute x,y coordinates of the top-left corner of each tile in the original image (before padding)
+        origins = {}
+        for i in range(patches.shape[0]):
+            x = origin[0] + i * stride[1]
+            y = origin[1] + i * stride[0]
+            origins[i] = (x, y)
+
+        # Convert patches to numpy array (H, W, C)
+        patches = patches.permute(0, 2, 3, 1).numpy()
+
+        # arrange patches in a dictionary with the index of the patch as key
+        patches = {i: patches[i] for i in range(patches.shape[0])}
+
+        return patches, origins
+
+
+class Tiler_old:
     """
     Class for dividing an image into tiles.
     """
@@ -20,10 +140,10 @@ class Tiler:
         Initialize class.
 
         Parameters:
-        - image (Image): The input image.
         - grid (List[int], default=[1, 1]): List containing the number of rows and number of columns in which to divide the image ([nrows, ncols]).
         - overlap (int, default=0): Number of pixels of overlap between adjacent tiles.
         - origin (List[int], default=[0, 0]): List of coordinates [x, y] of the pixel from which the tiling starts (top-left corner of the first tile).
+        - max_length (int, default=2000): The maximum length of each tile.
 
         Returns:
         None
@@ -90,15 +210,21 @@ class Tiler:
         self._nrow = int(np.ceil(self._h / (max_length - self._overlap)))
         self._ncol = int(np.ceil(self._w / (max_length - self._overlap)))
 
-    def compute_limits_by_grid(self, image: np.ndarray) -> List[int]:
+    def compute_limits_by_grid(
+        self, image: np.ndarray
+    ) -> Tuple[Dict[int, tuple], Tuple[int, int]]:
         """
         Compute the limits of each tile (i.e., xmin, ymin, xmax, ymax) given the number of rows and columns in the tile grid.
 
-        Returns:
-        List[int]: A list containing the bounding box coordinates of each tile as: [xmin, ymin, xmax, ymax]
-        List[int]: The coordinates [x, y] of the pixel from which the tiling starts (top-left corner of the first tile).
-        """
+        Parameters:
+        - image (np.ndarray): The input image.
 
+        Returns:
+        Tuple[Dict[int, tuple], Tuple[int, int]]: A tuple containing two elements. The first element is a dictionary containing the index of each tile and its bounding box coordinates. The second element is a tuple containing the x, y coordinates of the pixel from which the tiling starts (top-left corner of the first tile).
+
+        Note:
+        - The input image should have shape (H, W, C).
+        """
         self._image = image
         self._w = image.shape[1]
         self._h = image.shape[0]
@@ -121,12 +247,15 @@ class Tiler:
         return self._limits, self._origin
 
     def extract_patch(self, image: np.ndarray, limits: List[int]) -> np.ndarray:
-        """Extract image patch
-        Parameters
-        __________
-        - limits (List[int]): List containing the bounding box coordinates as: [xmin, ymin, xmax, ymax]
-        __________
-        Return: patch (np.ndarray)
+        """
+        Extract an image patch given the bounding box coordinates.
+
+        Parameters:
+        - image (np.ndarray): The input image.
+        - limits (List[int]): The bounding box coordinates as [xmin, ymin, xmax, ymax].
+
+        Returns:
+        np.ndarray: The extracted image patch.
         """
         patch = image[
             limits[1] : limits[3],
@@ -185,3 +314,19 @@ class Tiler:
             plt.subplot(self.grid[0], self.grid[1], idx + 1)
             plt.imshow(tile)
         plt.show()
+
+
+if __name__ == "__main__":
+    c, h, w = 3, 10, 8
+    img = torch.arange(0, h * w).reshape(1, h, w).float()
+    img = img.repeat(1, c, 1, 1)
+
+    tile_size = (4, 4)
+    overlap = 2
+
+    tiler = Tiler()
+    tiles, limits = tiler.compute_tiles_by_size(
+        input=img, window_size=tile_size, overlap=overlap
+    )
+
+    print("done")

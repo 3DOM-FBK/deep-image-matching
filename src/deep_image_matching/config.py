@@ -4,7 +4,7 @@ from src.deep_image_matching import GeometricVerification, Quality, TileSelectio
 # It defines the quality of the matching process, the tile selection strategy, the tiling grid, the overlap between tiles, the geometric verification method, and the geometric verification parameters.
 conf_general = {
     "quality": Quality.HIGH,  # Quality.HIGHEST, Quality.HIGH, Quality.MEDIUM, Quality.LOW, Quality.LOWEST
-    "tile_selection": TileSelection.NONE,  # [TileSelection.NONE, TileSelection.PRESELECTION, TileSelection.GRID]
+    "tile_selection": TileSelection.PRESELECTION,  # [TileSelection.NONE, TileSelection.PRESELECTION, TileSelection.GRID]
     "tiling_grid": [3, 4],
     "tiling_overlap": 50,
     "geom_verification": GeometricVerification.PYDEGENSAC,

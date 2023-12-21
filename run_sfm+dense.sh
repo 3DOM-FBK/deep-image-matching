@@ -23,7 +23,7 @@ if [ "$SKIP_SFM" = false ] ; then
 fi
 
 # Run dense matching (skip reconstruction with dense correspondences)
-python ./main.py --config $DENSE_CONFIG --images $INPUT_DIR --quality medium --tiling preselection --strategy $STRATEGY --skip_reconstruction --force $db_key
+python ./main.py --config $DENSE_CONFIG --images $INPUT_DIR --quality high --tiling none --strategy $STRATEGY --skip_reconstruction --force $db_key
 
 # Triangulate dense correspondences with COLMAP to build a dense point cloud
 python ./scripts/dense_matching.py --sfm_dir "output/${DATASET}_${SFM_CONFIG}_${STRATEGY}" --dense_dir "output/${DATASET}_${DENSE_CONFIG}_${STRATEGY}"

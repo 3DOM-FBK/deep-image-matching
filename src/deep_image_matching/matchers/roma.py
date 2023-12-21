@@ -1,5 +1,3 @@
-import sys
-from abc import ABCMeta, abstractmethod
 from pathlib import Path
 from typing import Tuple
 
@@ -12,24 +10,12 @@ from PIL import Image
 
 from .. import Timer, logger
 from ..io.h5 import get_features
+from ..thirdparty.RoMa.roma import roma_outdoor
 from ..utils.consts import Quality, TileSelection
-from .matcher_base import FeaturesDict, MatcherBase
-
-roma_path = Path(__file__).parent.parent / "thirdparty/RoMa"
-sys.path.append(str(roma_path))
-from roma import roma_outdoor
+from .matcher_base import DetectorFreeMatcherBase, FeaturesDict
 
 
-class DetectorFreeMatcherBase(metaclass=ABCMeta):
-    def __init__(self) -> None:
-        pass
-
-    @abstractmethod
-    def _match_pairs(self):
-        pass
-
-
-class RomaMatcher(MatcherBase):
+class RomaMatcher(DetectorFreeMatcherBase):
     """
     RomaMatcher class for feature matching using RoMa.
 
@@ -44,14 +30,20 @@ class RomaMatcher(MatcherBase):
         match(self, feature_path: Path, matches_path: Path, img0: Path, img1: Path, try_full_image: bool = False) -> np.ndarray: Match features between two images.
     """
 
+    grayscale = True
+    as_float = True
+    max_tile_size = 448
+
     def __init__(self, config={}) -> None:
         super().__init__(config)
 
         self.matcher = roma_outdoor(device=self._device)
 
-        self.grayscale = True
-        self.as_float = True
         self._quality = config["general"]["quality"]
+
+        # If tiling is used, extract tiles with proper size for RoMa matching and save them to disk
+        if self._tiling != TileSelection.NONE:
+            pass
 
     def match(
         self,
@@ -145,27 +137,15 @@ class RomaMatcher(MatcherBase):
         img1_path = feats1["im_path"]
         img1_name = Path(img1_path).name
 
-        # Load images
-        image0 = self._load_image_np(img0_path)
-        image1 = self._load_image_np(img1_path)
-
-        # Resize images if needed
-        image0_ = self._resize_image(self._quality, image0)
-        image1_ = self._resize_image(self._quality, image1)
-
-        # Covert images to tensor
-        timg0_ = self._frame2tensor(image0_, self._device)
-        timg1_ = self._frame2tensor(image1_, self._device)
-
         # Run inference
         with torch.inference_mode():
             # /home/luca/Desktop/gitprojects/github_3dom/deep-image-matching/src/deep_image_matching/thirdparty/RoMa/roma/models/matcher.py
             # in class RegressionMatcher(nn.Module) def __init__ hardcoded self.upsample_res = (int(864/4), int(864/4))
-            W_A, H_A = Image.open(image0).size
-            W_B, H_B = Image.open(image1).size
+            W_A, H_A = Image.open(img0_path).size
+            W_B, H_B = Image.open(img1_path).size
 
             warp, certainty = self.matcher.match(
-                str(img0), str(img1), device=self._device, batched=False
+                str(img0_path), str(img1_path), device=self._device, batched=False
             )
             matches, certainty = self.matcher.sample(warp, certainty)
             kptsA, kptsB = self.matcher.to_pixel_coordinates(
@@ -173,13 +153,10 @@ class RomaMatcher(MatcherBase):
             )
             kptsA, kptsB = kptsA.cpu().numpy(), kptsB.cpu().numpy()
 
-        features0 = FeaturesDict(keypoints=kptsA)
-        features1 = FeaturesDict(keypoints=kptsB)
-
         # Create a 1-to-1 matching array
         matches0 = np.arange(kptsA.shape[0])
         matches = np.hstack((matches0.reshape((-1, 1)), matches0.reshape((-1, 1))))
-        self._update_features(
+        self._update_features_h5(
             feature_path,
             img0_name,
             img1_name,
