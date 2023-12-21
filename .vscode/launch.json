@@ -17,7 +17,7 @@
       "args": [
         "--config",
         // "superpoint+lightglue",
-        "roma",
+        "loftr",
         "--images",
         "data/belv_lingua_easy",
         "--quality",
@@ -27,6 +27,7 @@
         "--strategy",
         "bruteforce",
         // "--upright",
+        "--skip_reconstruction",
         "--force",
         "-V"
       ]

@@ -164,7 +164,7 @@ class ImageMatching:
     def img_names(self):
         return self.image_list.img_names
 
-    def generate_pairs(self):
+    def generate_pairs(self) -> Path:
         if self.pair_file is not None and self.matching_strategy == "custom_pairs":
             if not self.pair_file.exists():
                 raise FileExistsError(f"File {self.pair_file} does not exist")
@@ -189,7 +189,7 @@ class ImageMatching:
         return self.pair_file
 
     def rotate_upright_images(self):
-        logger.info("Rotating upright images...")
+        logger.info("Rotating images upright...")
         path_to_upright_dir = self.output_dir / "upright_images"
         os.makedirs(path_to_upright_dir, exist_ok=False)
         images = os.listdir(self.image_dir)
@@ -206,9 +206,24 @@ class ImageMatching:
             cv2.ROTATE_90_COUNTERCLOCKWISE,
         ]
         self.rotated_images = []
-        SPextractor = SuperPointExtractor({"general": {}})
+        SPextractor = SuperPointExtractor(
+            config={
+                "general": {},
+                "extractor": {
+                    "keypoint_threshold": 0.005,
+                    "max_keypoints": 1024,
+                },
+            }
+        )
         LGmatcher = LightGlueMatcher(
-            local_features="superpoint", config={"general": {}}
+            config={
+                "general": {},
+                "matcher": {
+                    "depth_confidence": 0.95,  # early stopping, disable with -1
+                    "width_confidence": 0.99,  # point pruning, disable with -1
+                    "filter_threshold": 0.1,  # match threshold
+                },
+            },
         )
         features = {
             "feat0": None,

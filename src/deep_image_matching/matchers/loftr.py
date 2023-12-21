@@ -1,22 +1,20 @@
 from pathlib import Path
-from typing import Tuple
+from typing import Dict, List
 
-import cv2
-import h5py
 import kornia as K
 import numpy as np
 import torch
 from kornia import feature as KF
+from matplotlib import pyplot as plt
 
 from .. import Timer, logger
-from ..io.h5 import get_features, get_matches
-from ..utils.consts import Quality, TileSelection
+from ..utils.consts import TileSelection
 from ..utils.tiling import Tiler
-from ..visualization import viz_matches_cv2, viz_matches_mpl
-from .matcher_base import FeaturesDict, MatcherBase
+from .matcher_base import DetectorFreeMatcherBase
 
 
-class LOFTRMatcher(MatcherBase):
+
+class LOFTRMatcher(DetectorFreeMatcherBase):
     """
     LOFTRMatcher class for feature matching using the LOFTR method.
 
@@ -58,116 +56,30 @@ class LOFTRMatcher(MatcherBase):
         model = config["matcher"]["pretrained"]
         self.matcher = KF.LoFTR(pretrained=model).to(self._device).eval()
 
-        self._quality = config["general"]["quality"]
-        self._tiling = config["general"]["tile_selection"]
-
-    def match(
-        self,
-        feature_path: Path,
-        matches_path: Path,
-        img0: Path,
-        img1: Path,
-        try_full_image: bool = False,
-    ) -> np.ndarray:
-        """
-        Match features between two images.
-
-        Args:
-            feature_path (Path): Path to the feature file.
-            matches_path (Path): Path to save the matches.
-            img0 (Path): Path to the first image.
-            img1 (Path): Path to the second image.
-            try_full_image (bool, optional): Flag to attempt matching on full images. Defaults to False.
-
-        Raises:
-            RuntimeError: If there are too many features to match on full images.
-
-        Returns:
-            np.ndarray: Array containing the indices of matched keypoints.
-        """
-
-        timer_match = Timer(log_level="debug")
-
-        # Check that feature_path exists
-        if not Path(feature_path).exists():
-            raise FileNotFoundError(f"Feature file {feature_path} does not exist.")
-        else:
-            self._feature_path = Path(feature_path)
-
-        # Get features from h5 file
-        img0_name = img0.name
-        img1_name = img1.name
-        features0 = get_features(self._feature_path, img0_name)
-        features1 = get_features(self._feature_path, img1_name)
-        timer_match.update("load h5 features")
-
-        # Perform matching
-        if self._tiling == TileSelection.NONE:
-            matches = self._match_pairs(features0, features1)
-            timer_match.update("[match] try to match full images")
-        else:
-            matches = self._match_by_tile(
-                img0,
-                img1,
-                features0,
-                features1,
-                method=self._tiling,
-                select_unique=True,
-            )
-            timer_match.update("[match] try to match by tile")
-
-        # Save to h5 file
-        n_matches = len(matches)
-        with h5py.File(str(matches_path), "a", libver="latest") as fd:
-            group = fd.require_group(img0_name)
-            if n_matches >= self.min_matches:
-                group.create_dataset(img1_name, data=matches)
-            else:
-                logger.debug(
-                    f"Too few matches found. Skipping image pair {img0.name}-{img1.name}"
-                )
-                return None
-        timer_match.update("save to h5")
-        timer_match.print(f"{__class__.__name__} match")
-
-        # For debugging
-        # viz_dir = self._output_dir / "viz"
-        # viz_dir.mkdir(parents=True, exist_ok=True)
-        # self.viz_matches(
-        #     feature_path,
-        #     matches_path,
-        #     img0,
-        #     img1,
-        #     save_path=viz_dir / f"{img0_name}_{img1_name}.png",
-        # )
-
-        logger.debug(f"Matching {img0_name}-{img1_name} done!")
-
-        return matches
-
     @torch.no_grad()
     def _match_pairs(
         self,
-        feats0: FeaturesDict,
-        feats1: FeaturesDict,
+        feature_path: Path,
+        img0_path: Path,
+        img1_path: Path,
     ):
         """
-        Perform matching between feature pairs.
+        Perform matching between two images using a detector-free matcher. It takes in two images as Numpy arrays, and returns the matches between keypoints and descriptors in those images. It also saves the updated features to the specified h5 file.
 
         Args:
-            feats0 (FeaturesDict): Features dictionary for the first image.
-            feats1 (FeaturesDict): Features dictionary for the second image.
+            feature_path (Path): Path to the h5 feature file where to save the updated features.
+            img0_path (Path): Path to the first image.
+            img1_path (Path): Path to the second image.
 
         Returns:
             np.ndarray: Array containing the indices of matched keypoints.
+
+        Raises:
+            torch.cuda.OutOfMemoryError: If an out-of-memory error occurs while matching images.
         """
 
-        feature_path = feats0["feature_path"]
-
-        img0_path = feats0["im_path"]
-        img0_name = Path(img0_path).name
-        img1_path = feats1["im_path"]
-        img1_name = Path(img1_path).name
+        img0_name = img0_path.name
+        img1_name = img1_path.name
 
         # Load images
         image0 = self._load_image_np(img0_path)
@@ -219,10 +131,9 @@ class LOFTRMatcher(MatcherBase):
 
     def _match_by_tile(
         self,
+        feature_path: Path,
         img0: Path,
         img1: Path,
-        features0: FeaturesDict,
-        features1: FeaturesDict,
         method: TileSelection = TileSelection.PRESELECTION,
         select_unique: bool = True,
     ) -> np.ndarray:
@@ -242,9 +153,6 @@ class LOFTRMatcher(MatcherBase):
         """
 
         timer = Timer(log_level="debug", cumulate_by_key=True)
-
-        # Get feature path
-        feature_path = features0["feature_path"]
 
         # Select tile pairs to match
         tile_pairs = self._tile_selection(img0, img1, method)
@@ -347,179 +255,9 @@ class LOFTRMatcher(MatcherBase):
 
         return matches
 
-    def _load_image_np(self, img_path):
-        image = cv2.imread(str(img_path))
-        if self.as_float:
-            image = image.astype(np.float32)
-        if self.grayscale:
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        return image
-
     def _frame2tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor:
         image = K.image_to_tensor(np.array(image), False).float() / 255.0
         image = K.color.bgr_to_rgb(image.to(device))
         if image.shape[1] > 2:
             image = K.color.rgb_to_grayscale(image)
         return image
-
-    def _resize_image(self, quality: Quality, image: np.ndarray) -> Tuple[np.ndarray]:
-        """
-        Resize images based on the specified quality.
-
-        Args:
-            quality (Quality): The quality level for resizing.
-            image (np.ndarray): The first image.
-
-        Returns:
-            Tuple[np.ndarray]: Resized images.
-
-        """
-        if quality == Quality.HIGHEST:
-            image_ = cv2.pyrUp(image)
-        elif quality == Quality.HIGH:
-            image_ = image
-        elif quality == Quality.MEDIUM:
-            image_ = cv2.pyrDown(image)
-        elif quality == Quality.LOW:
-            image_ = cv2.pyrDown(cv2.pyrDown(image))
-        elif quality == Quality.LOWEST:
-            image_ = cv2.pyrDown(cv2.pyrDown(cv2.pyrDown(image)))
-        return image_
-
-    def _resize_features(self, quality: Quality, keypoints: np.ndarray) -> np.ndarray:
-        """
-        Resize features based on the specified quality.
-
-        Args:
-            quality (Quality): The quality level for resizing.
-            features0 (np.ndarray): The array of keypoints.
-
-        Returns:
-            np.ndarray: Resized keypoints.
-
-        """
-        if quality == Quality.HIGHEST:
-            keypoints /= 2
-        elif quality == Quality.HIGH:
-            pass
-        elif quality == Quality.MEDIUM:
-            keypoints *= 2
-        elif quality == Quality.LOW:
-            keypoints *= 4
-        elif quality == Quality.LOWEST:
-            keypoints *= 8
-
-        return keypoints
-
-    def _update_features_h5(
-        self, feature_path, im0_name, im1_name, new_keypoints0, new_keypoints1, matches0
-    ) -> np.ndarray:
-        for i, im_name, new_keypoints in zip(
-            [0, 1], [im0_name, im1_name], [new_keypoints0, new_keypoints1]
-        ):
-            features = get_features(feature_path, im_name)
-            existing_keypoints = features["keypoints"]
-
-            if len(existing_keypoints.shape) == 1:
-                features["keypoints"] = new_keypoints
-            else:
-                n_exisiting_keypoints = existing_keypoints.shape[0]
-                features["keypoints"] = np.vstack((existing_keypoints, new_keypoints))
-                matches0[:, i] = matches0[:, i] + n_exisiting_keypoints
-
-            with h5py.File(feature_path, "r+", libver="latest") as fd:
-                del fd[im_name]
-                grp = fd.create_group(im_name)
-                for k, v in features.items():
-                    if k == "im_path" or k == "feature_path":
-                        grp.create_dataset(k, data=str(v))
-                    if isinstance(v, np.ndarray):
-                        grp.create_dataset(k, data=v)
-
-        return matches0
-
-    def viz_matches(
-        self,
-        feature_path: Path,
-        matchings_path: Path,
-        img0: Path,
-        img1: Path,
-        save_path: str = None,
-        fast_viz: bool = True,
-        interactive_viz: bool = False,
-        **config,
-    ) -> None:
-        # Check input parameters
-        if not interactive_viz:
-            assert (
-                save_path is not None
-            ), "output_dir must be specified if interactive_viz is False"
-        if fast_viz:
-            if interactive_viz:
-                logger.warning("interactive_viz is ignored if fast_viz is True")
-            assert (
-                save_path is not None
-            ), "output_dir must be specified if fast_viz is True"
-
-        img0 = Path(img0)
-        img1 = Path(img1)
-        img0_name = img0.name
-        img1_name = img1.name
-
-        # Load images
-        image0 = self._load_image_np(img0)
-        image1 = self._load_image_np(img1)
-
-        # Load features and matches
-        features0 = get_features(feature_path, img0_name)
-        features1 = get_features(feature_path, img1_name)
-        matches = get_matches(matchings_path, img0_name, img1_name)
-        kpts0 = features0["keypoints"][matches[:, 0]]
-        kpts1 = features1["keypoints"][matches[:, 1]]
-
-        # Make visualization with OpenCV or Matplotlib
-        if fast_viz:
-            # Get config for OpenCV visualization
-            autoresize = config.get("autoresize", True)
-            max_long_edge = config.get("max_long_edge", 1200)
-            jpg_quality = config.get("jpg_quality", 80)
-            hide_matching_track = config.get("hide_matching_track", False)
-            if hide_matching_track:
-                line_thickness = -1
-            else:
-                line_thickness = 0.2
-
-            viz_matches_cv2(
-                image0,
-                image1,
-                kpts0,
-                kpts1,
-                str(save_path),
-                line_thickness=line_thickness,
-                autoresize=autoresize,
-                max_long_edge=max_long_edge,
-                jpg_quality=jpg_quality,
-            )
-        else:
-            interactive_viz = config.get("interactive_viz", False)
-            hide_fig = not interactive_viz
-            if interactive_viz:
-                viz_matches_mpl(
-                    image0,
-                    image1,
-                    kpts0,
-                    kpts1,
-                    hide_fig=hide_fig,
-                    config=config,
-                )
-            else:
-                viz_matches_mpl(
-                    image0,
-                    image1,
-                    kpts0,
-                    kpts1,
-                    save_path,
-                    hide_fig=hide_fig,
-                    point_size=5,
-                    config=config,
-                )
