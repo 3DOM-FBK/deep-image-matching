@@ -6,6 +6,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
+# TODO: add possibility to specify the number of rows and columns in the grid
+# TODO: add auto tiling mode
+# TODO: add possibility to export tensors directly
+
 
 class TilingMode(Enum):
     AUTO = 0
@@ -42,16 +46,18 @@ class Tiler:
     def compute_tiles_by_size(
         self,
         input: Union[np.ndarray, torch.Tensor],
-        window_size: Union[int, Tuple[int, int]],  # (H - vertical, W - horizontal)
-        overlap: Union[int, Tuple[int, int]] = 0,  # (H, W)
-    ) -> Tuple[Dict[int, np.ndarray], Dict[int, Tuple[int, int]]]:
+        window_size: Union[int, Tuple[int, int]],
+        overlap: Union[int, Tuple[int, int]] = 0,
+    ) -> Tuple[
+        Dict[int, np.ndarray], Dict[int, Tuple[int, int]], Tuple[int, int, int, int]
+    ]:
         """
         Compute tiles by specifying the window size and overlap.
 
         Parameters:
         - input (np.ndarray or torch.Tensor): The input image.
-        - window_size (int or Tuple[int, int]): The size of each tile. If int, the same size is used for both height and width. If Tuple[int, int], the first element represents the height and the second element represents the width.
-        - overlap (int or Tuple[int, int], default=0): The overlap between adjacent tiles. If int, the same overlap is used for both height and width. If Tuple[int, int], the first element represents the overlap in the vertical direction and the second element represents the overlap in the horizontal direction.
+        - window_size (int or Tuple[int, int]): The size of each tile. If int, the same size is used for both height and width. If Tuple[int, int], the first element represents the x coordinate (horizontal) and the second element represents the y coordinate (vertical).
+        - overlap (int or Tuple[int, int], default=0): The overlap between adjacent tiles. If int, the same overlap is used for both height and width. If Tuple[int, int], the first element represents the overlap in the horizontal direction and the second element represents the overlap in the vertical direction.
 
         Returns:
         Tuple[Dict[int, np.ndarray], Dict[int, Tuple[int, int]]]: A tuple containing two dictionaries. The first dictionary contains the extracted tiles, where the key is the index of the tile and the value is the tile itself. The second dictionary contains the x, y coordinates of the top-left corner of each tile in the original image (before padding), where the key is the index of the tile and the value is a tuple of two integers representing the x and y coordinates.
@@ -64,24 +70,26 @@ class Tiler:
         Note:
         - If the input is a numpy array, it is assumed to be in the format (H, W, C). If C > 1, it is converted to (C, H, W).
         - The output tiles are in the format (H, W, C).
-        - The output origins are expressed in x, y coordinates, where x is the horizontal axis and y is the vertical axis (pointing up, as in OpenCV).
+        - The output origins are expressed in x, y coordinates, where x is the horizontal axis and y is the vertical axis (pointing down, as in OpenCV).
         """
         if isinstance(window_size, int):
             window_size = (window_size, window_size)
-        elif not isinstance(window_size, tuple):
+        elif isinstance(window_size, tuple) or isinstance(window_size, List):
+            # transpose to be (H, W)
+            window_size = (window_size[1], window_size[0])
+        else:
             raise TypeError("window_size must be an integer or a tuple of integers")
-        window_size = window_size
 
         if isinstance(overlap, int):
             overlap = (overlap, overlap)
-        elif not isinstance(overlap, tuple):
+        elif not isinstance(overlap, tuple) or isinstance(window_size, List):
             raise TypeError("overlap must be an integer or a tuple of integers")
         overlap = overlap
 
         if isinstance(input, np.ndarray):
             input = torch.from_numpy(input)
             # If input is a numpy array, it is assumed to be in the format (H, W, C). If C>1, it is converted to (C, H, W)
-            if input.dim() > 1:
+            if input.dim() > 2:
                 input = input.permute(2, 0, 1)
 
         # Add dimensions to the tensor to be (B, C, H, W)
@@ -96,10 +104,6 @@ class Tiler:
         # This returns a tuple of 4 int (top, bottom, left, right)
         padding = K.contrib.compute_padding((H, W), window_size)
 
-        # Overwrite origin if a padding was added to the image
-        # Origin is expressed in x,y coordinates, where x is the horizontal axis and y is the vertical axis (poining up, as in opencv)
-        origin = [-padding[2], -padding[0]]
-
         stride = [w - o for w, o in zip(window_size, overlap)]
         patches = K.contrib.extract_tensor_patches(
             input, window_size, stride=stride, padding=padding
@@ -110,10 +114,14 @@ class Tiler:
 
         # compute x,y coordinates of the top-left corner of each tile in the original image (before padding)
         origins = {}
-        for i in range(patches.shape[0]):
-            x = origin[0] + i * stride[1]
-            y = origin[1] + i * stride[0]
-            origins[i] = (x, y)
+        n_rows = (H + padding[0] + padding[1] - window_size[0]) // stride[0] + 1
+        n_cols = (W + padding[2] + padding[3] - window_size[1]) // stride[1] + 1
+        for row in range(n_rows):
+            for col in range(n_cols):
+                tile_idx = np.ravel_multi_index((row, col), (n_rows, n_cols), order="C")
+                x = -padding[2] + col * stride[1]
+                y = -padding[0] + row * stride[0]
+                origins[tile_idx] = (x, y)
 
         # Convert patches to numpy array (H, W, C)
         patches = patches.permute(0, 2, 3, 1).numpy()
@@ -121,7 +129,7 @@ class Tiler:
         # arrange patches in a dictionary with the index of the patch as key
         patches = {i: patches[i] for i in range(patches.shape[0])}
 
-        return patches, origins
+        return patches, origins, padding
 
 
 class Tiler_old:
@@ -317,15 +325,30 @@ class Tiler_old:
 
 
 if __name__ == "__main__":
-    c, h, w = 3, 10, 8
+    from pathlib import Path
+
+    import cv2
+
+    c, w, h = 1, 10, 8
     img = torch.arange(0, h * w).reshape(1, h, w).float()
     img = img.repeat(1, c, 1, 1)
 
-    tile_size = (4, 4)
+    tile_size = (4, 5)
     overlap = 2
 
     tiler = Tiler()
-    tiles, limits = tiler.compute_tiles_by_size(
+    tiles, origins, padding = tiler.compute_tiles_by_size(
+        input=img, window_size=tile_size, overlap=overlap
+    )
+    print(origins)
+
+    img_path = Path("data/belv_lingua_easy/DJI_20220728115852_0003.JPG")
+    img = cv2.imread(str(img_path))
+
+    tile_size = (2048, 2730)
+    overlap = 50
+    tiler = Tiler()
+    tiles, origins, padding = tiler.compute_tiles_by_size(
         input=img, window_size=tile_size, overlap=overlap
     )
 

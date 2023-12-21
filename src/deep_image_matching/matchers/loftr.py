@@ -1,17 +1,14 @@
 from pathlib import Path
-from typing import Dict, List
 
 import kornia as K
 import numpy as np
 import torch
 from kornia import feature as KF
-from matplotlib import pyplot as plt
 
 from .. import Timer, logger
 from ..utils.consts import TileSelection
 from ..utils.tiling import Tiler
-from .matcher_base import DetectorFreeMatcherBase
-
+from .matcher_base import DetectorFreeMatcherBase, tile_selection
 
 
 class LOFTRMatcher(DetectorFreeMatcherBase):
@@ -154,8 +151,22 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
 
         timer = Timer(log_level="debug", cumulate_by_key=True)
 
+        tile_size = self._config["general"]["tile_size"]
+        overlap = self._config["general"]["tile_overlap"]
+
         # Select tile pairs to match
-        tile_pairs = self._tile_selection(img0, img1, method)
+        tile_pairs = tile_selection(
+            img0,
+            img1,
+            method=method,
+            preselction_extractor=self._preselction_extractor,
+            preselction_matcher=self._preselction_matcher,
+            tile_size=tile_size,
+            tile_overlap=overlap,
+            preselection_size_max=self.preselection_size_max,
+            min_matches_per_tile=self.min_matches_per_tile,
+            device=self._device,
+        )
         timer.update("tile selection")
 
         # If no tile pairs are selected, return an empty array
@@ -178,12 +189,18 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
         image0 = self._resize_image(self._quality, image0)
         image1 = self._resize_image(self._quality, image1)
 
-        # Compute tiles limits
-        grid = self._config["general"]["tiling_grid"]
-        overlap = self._config["general"]["tiling_overlap"]
-        tiler = Tiler(grid=grid, overlap=overlap)
-        t0_lims, t0_origin = tiler.compute_limits_by_grid(image0)
-        t1_lims, t1_origin = tiler.compute_limits_by_grid(image1)
+        # Extract tiles
+        # tiler = Tiler(grid=grid, overlap=overlap)
+        # t0_lims, t0_origin = tiler.compute_limits_by_grid(image0)
+        # t1_lims, t1_origin = tiler.compute_limits_by_grid(image1)
+        # overlap = self._config["general"]["tile_overlap"]
+        tiler = Tiler(tiling_mode="size")
+        tiles0, t_origins0, t_padding0 = tiler.compute_tiles_by_size(
+            input=image0, window_size=tile_size, overlap=overlap
+        )
+        tiles1, t_origins1, t_padding1 = tiler.compute_tiles_by_size(
+            input=image1, window_size=tile_size, overlap=overlap
+        )
 
         # Initialize empty arrays
         mkpts0_full = np.array([], dtype=np.float32).reshape(0, 2)
@@ -193,13 +210,9 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
         for tidx0, tidx1 in tile_pairs:
             logger.debug(f"  - Matching tile pair ({tidx0}, {tidx1})")
 
-            # Extract features in tile
-            tile0 = tiler.extract_patch(image0, t0_lims[tidx0])
-            tile1 = tiler.extract_patch(image1, t1_lims[tidx1])
-
-            # Covert tiles to tensor
-            timg0_ = self._frame2tensor(tile0, self._device)
-            timg1_ = self._frame2tensor(tile1, self._device)
+            # Get tiles and covert to tensor
+            timg0_ = self._frame2tensor(tiles0[tidx0], self._device)
+            timg1_ = self._frame2tensor(tiles1[tidx1], self._device)
 
             # Run inference
             try:
@@ -216,17 +229,14 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
             mkpts0 = correspondences["keypoints0"].cpu().numpy()
             mkpts1 = correspondences["keypoints1"].cpu().numpy()
 
-            mkpts0_full = np.vstack(
-                (mkpts0_full, mkpts0 + np.array(t0_lims[tidx0][0:2]))
-            )
-            mkpts1_full = np.vstack(
-                (mkpts1_full, mkpts1 + np.array(t1_lims[tidx1][0:2]))
-            )
+            mkpts0_full = np.vstack((mkpts0_full, mkpts0 + np.array(t_origins0[tidx0])))
+            mkpts1_full = np.vstack((mkpts1_full, mkpts1 + np.array(t_origins1[tidx1])))
             timer.update("match tile")
 
-        # Restore original image coordinates (not cropped)
-        mkpts0_full = mkpts0_full + np.array(t0_origin).astype("float32")
-        mkpts1_full = mkpts1_full + np.array(t1_origin).astype("float32")
+        # Check if any matched keypoints has negative coordinates (due to padding of the original image) and remove them
+        mask = np.all(mkpts0_full > 0, axis=1) & np.all(mkpts1_full > 0, axis=1)
+        mkpts0_full = mkpts0_full[mask]
+        mkpts1_full = mkpts1_full[mask]
 
         # Retrieve original image coordinates if matching was performed on up/down-sampled images
         mkpts0_full = self._resize_features(self._quality, mkpts0_full)

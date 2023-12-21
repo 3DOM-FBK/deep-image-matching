@@ -16,18 +16,18 @@
       "console": "integratedTerminal",
       "args": [
         "--config",
-        // "superpoint+lightglue",
-        "loftr",
+        "superpoint+lightglue",
+        // "loftr",
         "--images",
         "data/belv_lingua_easy",
         "--quality",
-        "low",
+        "high",
         "--tiling",
-        "none",
+        "preselection",
         "--strategy",
         "bruteforce",
         // "--upright",
-        "--skip_reconstruction",
+        // "--skip_reconstruction",
         "--force",
         "-V"
       ]
