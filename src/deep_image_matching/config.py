@@ -5,8 +5,8 @@ from src.deep_image_matching import GeometricVerification, Quality, TileSelectio
 conf_general = {
     "quality": Quality.HIGH,  # Quality.HIGHEST, Quality.HIGH, Quality.MEDIUM, Quality.LOW, Quality.LOWEST
     "tile_selection": TileSelection.PRESELECTION,  # [TileSelection.NONE, TileSelection.PRESELECTION, TileSelection.GRID]
-    "tiling_grid": [3, 4],
-    "tiling_overlap": 50,
+    "tile_size": (2000, 1200),  # (x, y) or (width, height)
+    "tile_overlap": 50,  # in pixels
     "geom_verification": GeometricVerification.PYDEGENSAC,
     "gv_threshold": 4,
     "gv_confidence": 0.9999,

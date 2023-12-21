@@ -9,11 +9,14 @@ import h5py
 import numpy as np
 import torch
 
+from deep_image_matching.extractors.extractor_base import ExtractorBase
+
 from .. import Timer, logger
 from ..hloc.extractors.superpoint import SuperPoint
 from ..io.h5 import get_features, get_matches
 from ..thirdparty.LightGlue.lightglue import LightGlue
 from ..utils.consts import Quality, TileSelection
+from ..utils.geometric_verification import geometric_verification
 from ..utils.tiling import Tiler
 from ..visualization import viz_matches_cv2, viz_matches_mpl
 
@@ -77,8 +80,8 @@ class MatcherBase(metaclass=ABCMeta):
         "output_dir": None,
         "quality": Quality.LOW,
         "tile_selection": TileSelection.NONE,
-        "tiling_grid": [1, 1],
-        "tiling_overlap": 0,
+        "tile_size": [2048, 1365],
+        "tile_overlap": 0,
         "force_cpu": False,
         "do_viz": False,
     }
@@ -364,7 +367,18 @@ class MatcherBase(metaclass=ABCMeta):
         matches_full = np.array([], dtype=np.int64).reshape(0, 2)
 
         # Select tile pairs to match
-        tile_pairs = self._tile_selection(img0, img1, method)
+        tile_pairs = tile_selection(
+            img0,
+            img1,
+            method=method,
+            preselction_extractor=self._preselction_extractor,
+            preselction_matcher=self._preselction_matcher,
+            tile_size=self._config["general"]["tile_size"],
+            tile_overlap=self._config["general"]["tile_overlap"],
+            preselection_size_max=self.preselection_size_max,
+            min_matches_per_tile=self.min_matches_per_tile,
+            device=self._device,
+        )
         timer.update("tile selection")
 
         # If no tile pairs are selected, return an empty array
@@ -422,155 +436,6 @@ class MatcherBase(metaclass=ABCMeta):
         Returns:
             List[Tuple[int, int]]: The selected tile pairs.
         """
-
-        def frame2tensor(image: np.ndarray, device: str = "cpu"):
-            if len(image.shape) == 2:
-                image = image[None][None]
-            elif len(image.shape) == 3:
-                image = image.transpose(2, 0, 1)[None]
-            return torch.tensor(image / 255.0, dtype=torch.float).to(device)
-
-        def points_in_rect(points: np.ndarray, rect: np.ndarray) -> np.ndarray:
-            logic = np.all(points > rect[:2], axis=1) & np.all(
-                points < rect[2:], axis=1
-            )
-            return logic
-
-        def sp2lg(feats: dict) -> dict:
-            feats = {
-                k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()
-            }
-            if feats["descriptors"].shape[-1] != 256:
-                feats["descriptors"] = feats["descriptors"].T
-            feats = {k: v[None] for k, v in feats.items()}
-            return feats
-
-        def rbd2np(data: dict) -> dict:
-            """Remove batch dimension from elements in data"""
-            return {
-                k: v[0].cpu().numpy()
-                if isinstance(v, (torch.Tensor, np.ndarray, list))
-                else v
-                for k, v in data.items()
-            }
-
-        # Compute tiles limits and origin
-        grid = self._config["general"]["tiling_grid"]
-        overlap = self._config["general"]["tiling_overlap"]
-        tiler = Tiler(grid=grid, overlap=overlap)
-        i0 = cv2.imread(str(img0), cv2.IMREAD_GRAYSCALE).astype(np.float32)
-        i1 = cv2.imread(str(img1), cv2.IMREAD_GRAYSCALE).astype(np.float32)
-        t0_lims, _ = tiler.compute_limits_by_grid(i0)
-        t1_lims, _ = tiler.compute_limits_by_grid(i1)
-
-        # Select tile selection method
-        if method == TileSelection.EXHAUSTIVE:
-            # Match all the tiles with all the tiles
-            logger.debug("Matching tiles exaustively")
-            tile_pairs = sorted(product(t0_lims.keys(), t1_lims.keys()))
-        elif method == TileSelection.GRID:
-            # Match tiles by regular grid
-            logger.debug("Matching tiles by regular grid")
-            tile_pairs = sorted(zip(t0_lims.keys(), t1_lims.keys()))
-        elif method == TileSelection.PRESELECTION:
-            # Match tiles by preselection running matching on downsampled images
-            logger.debug("Matching tiles by downsampling preselection")
-
-            # Downsampled images
-            max_len = self.preselection_size_max
-            size0 = i0.shape[:2][::-1]
-            size1 = i1.shape[:2][::-1]
-            scale0 = max_len / max(size0)
-            scale1 = max_len / max(size1)
-            size0_new = tuple(int(round(x * scale0)) for x in size0)
-            size1_new = tuple(int(round(x * scale1)) for x in size1)
-            i0 = cv2.resize(i0, size0_new, interpolation=cv2.INTER_AREA)
-            i1 = cv2.resize(i1, size1_new, interpolation=cv2.INTER_AREA)
-
-            # Run SuperPoint on downsampled images
-            with torch.inference_mode():
-                feats0 = self._preselction_extractor(
-                    {"image": frame2tensor(i0, self._device)}
-                )
-                feats1 = self._preselction_extractor(
-                    {"image": frame2tensor(i1, self._device)}
-                )
-
-                # Match features with LightGlue
-                feats0 = sp2lg(feats0)
-                feats1 = sp2lg(feats1)
-                res = self._preselction_matcher({"image0": feats0, "image1": feats1})
-                res = rbd2np(res)
-
-            # Get keypoints in original image
-            kp0 = feats0["keypoints"].cpu().numpy()[0]
-            kp0 = kp0[res["matches"][:, 0], :]
-            kp1 = feats1["keypoints"].cpu().numpy()[0]
-            kp1 = kp1[res["matches"][:, 1], :]
-
-            # OLD code
-            # if self._config["general"]["do_viz"] is True:
-            #     self.viz_matches(
-            #         i0,
-            #         i1,
-            #         kp0,
-            #         kp1,
-            #         str(self._output_dir / "tile_preselection.jpg"),
-            #         fast_viz=True,
-            #         hide_matching_track=True,
-            #         autoresize=True,
-            #         max_long_edge=1200,
-            #     )
-
-            # Scale up keypoints
-            kp0 = kp0 / scale0
-            kp1 = kp1 / scale1
-
-            # geometric verification
-            _, inliers = cv2.findFundamentalMat(
-                kp0, kp1, cv2.USAC_MAGSAC, 4, 0.999, 10000
-            )
-            inlMask = (inliers > 0).squeeze()
-            kp0 = kp0[inlMask]
-            kp1 = kp1[inlMask]
-
-            # Select tile pairs where there are enough matches
-            tile_pairs = []
-            all_pairs = sorted(product(t0_lims.keys(), t1_lims.keys()))
-            for tidx0, tidx1 in all_pairs:
-                ret0 = points_in_rect(kp0, t0_lims[tidx0])
-                ret1 = points_in_rect(kp1, t1_lims[tidx1])
-                n_matches = sum(ret0 & ret1)
-                if n_matches > self.min_matches_per_tile:
-                    tile_pairs.append((tidx0, tidx1))
-
-            # For Debugging...
-            # if False:
-            #     from matplotlib import pyplot as plt
-
-            #     out_dir = Path("sandbox/preselection")
-            #     out_dir.mkdir(parents=True, exist_ok=True)
-            #     image0 = cv2.imread(str(img0), cv2.IMREAD_GRAYSCALE)
-            #     image1 = cv2.imread(str(img1), cv2.IMREAD_GRAYSCALE)
-            #     c = "r"
-            #     s = 5
-            #     fig, axes = plt.subplots(1, 2)
-            #     for ax, img, kp in zip(axes, [image0, image1], [kp0, kp1]):
-            #         ax.imshow(cv2.cvtColor(img, cv2.COLOR_BAYER_BG2BGR))
-            #         ax.scatter(kp[:, 0], kp[:, 1], s=s, c=c)
-            #         ax.axis("off")
-            #     for lim0, lim1 in zip(t0_lims.values(), t1_lims.values()):
-            #         axes[0].axvline(lim0[0])
-            #         axes[0].axhline(lim0[1])
-            #         axes[1].axvline(lim1[0])
-            #         axes[1].axhline(lim1[1])
-            #     # axes[1].get_yaxis().set_visible(False)
-            #     fig.tight_layout()
-            #     plt.show()
-            #     fig.savefig(out_dir / f"{img0.name}-{img1.name}.jpg")
-            #     plt.close()
-
-        return tile_pairs
 
     def viz_matches(
         self,
@@ -679,8 +544,8 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         "output_dir": None,
         "quality": Quality.LOW,
         "tile_selection": TileSelection.NONE,
-        "tiling_grid": [1, 1],
-        "tiling_overlap": 0,
+        "tile_size": [1024, 1024],
+        "tile_overlap": 0,
         "force_cpu": False,
         "do_viz": False,
     }
@@ -901,159 +766,6 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
             image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         return image
 
-    def _tile_selection(
-        self,
-        img0: Path,
-        img1: Path,
-        method: TileSelection = TileSelection.PRESELECTION,
-    ):
-        """
-        Selects tile pairs for matching based on the specified method.
-
-        Args:
-            img0 (Path): Path to the first image.
-            img1 (Path): Path to the second image.
-            method (TileSelection, optional): Tile selection method. Defaults to TileSelection.PRESELECTION.
-
-        Returns:
-            List[Tuple[int, int]]: The selected tile pairs.
-        """
-
-        def frame2tensor(image: np.ndarray, device: str = "cpu"):
-            if len(image.shape) == 2:
-                image = image[None][None]
-            elif len(image.shape) == 3:
-                image = image.transpose(2, 0, 1)[None]
-            return torch.tensor(image / 255.0, dtype=torch.float).to(device)
-
-        def points_in_rect(points: np.ndarray, rect: np.ndarray) -> np.ndarray:
-            logic = np.all(points > rect[:2], axis=1) & np.all(
-                points < rect[2:], axis=1
-            )
-            return logic
-
-        def sp2lg(feats: dict) -> dict:
-            feats = {
-                k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()
-            }
-            if feats["descriptors"].shape[-1] != 256:
-                feats["descriptors"] = feats["descriptors"].T
-            feats = {k: v[None] for k, v in feats.items()}
-            return feats
-
-        def rbd2np(data: dict) -> dict:
-            """Remove batch dimension from elements in data"""
-            return {
-                k: v[0].cpu().numpy()
-                if isinstance(v, (torch.Tensor, np.ndarray, list))
-                else v
-                for k, v in data.items()
-            }
-
-        # Compute tiles limits and origin
-        grid = self._config["general"]["tiling_grid"]
-        overlap = self._config["general"]["tiling_overlap"]
-        tiler = Tiler(grid=grid, overlap=overlap)
-        i0 = cv2.imread(str(img0), cv2.IMREAD_GRAYSCALE).astype(np.float32)
-        i1 = cv2.imread(str(img1), cv2.IMREAD_GRAYSCALE).astype(np.float32)
-        t0_lims, _ = tiler.compute_limits_by_grid(i0)
-        t1_lims, _ = tiler.compute_limits_by_grid(i1)
-
-        # Select tile selection method
-        if method == TileSelection.EXHAUSTIVE:
-            # Match all the tiles with all the tiles
-            logger.debug("Matching tiles exaustively")
-            tile_pairs = sorted(product(t0_lims.keys(), t1_lims.keys()))
-        elif method == TileSelection.GRID:
-            # Match tiles by regular grid
-            logger.debug("Matching tiles by regular grid")
-            tile_pairs = sorted(zip(t0_lims.keys(), t1_lims.keys()))
-        elif method == TileSelection.PRESELECTION:
-            # Match tiles by preselection running matching on downsampled images
-            logger.debug("Matching tiles by downsampling preselection")
-
-            # Downsampled images
-            max_len = self.preselection_size_max
-            size0 = i0.shape[:2][::-1]
-            size1 = i1.shape[:2][::-1]
-            scale0 = max_len / max(size0)
-            scale1 = max_len / max(size1)
-            size0_new = tuple(int(round(x * scale0)) for x in size0)
-            size1_new = tuple(int(round(x * scale1)) for x in size1)
-            i0 = cv2.resize(i0, size0_new, interpolation=cv2.INTER_AREA)
-            i1 = cv2.resize(i1, size1_new, interpolation=cv2.INTER_AREA)
-
-            # Run SuperPoint on downsampled images
-            with torch.inference_mode():
-                feats0 = self._preselction_extractor(
-                    {"image": frame2tensor(i0, self._device)}
-                )
-                feats1 = self._preselction_extractor(
-                    {"image": frame2tensor(i1, self._device)}
-                )
-
-                # Match features with LightGlue
-                feats0 = sp2lg(feats0)
-                feats1 = sp2lg(feats1)
-                res = self._preselction_matcher({"image0": feats0, "image1": feats1})
-                res = rbd2np(res)
-
-            # Get keypoints in original image
-            kp0 = feats0["keypoints"].cpu().numpy()[0]
-            kp0 = kp0[res["matches"][:, 0], :]
-            kp1 = feats1["keypoints"].cpu().numpy()[0]
-            kp1 = kp1[res["matches"][:, 1], :]
-
-            # Scale up keypoints
-            kp0 = kp0 / scale0
-            kp1 = kp1 / scale1
-
-            # geometric verification
-            _, inliers = cv2.findFundamentalMat(
-                kp0, kp1, cv2.USAC_MAGSAC, 4, 0.999, 10000
-            )
-            inlMask = (inliers > 0).squeeze()
-            kp0 = kp0[inlMask]
-            kp1 = kp1[inlMask]
-
-            # Select tile pairs where there are enough matches
-            tile_pairs = []
-            all_pairs = sorted(product(t0_lims.keys(), t1_lims.keys()))
-            for tidx0, tidx1 in all_pairs:
-                ret0 = points_in_rect(kp0, t0_lims[tidx0])
-                ret1 = points_in_rect(kp1, t1_lims[tidx1])
-                n_matches = sum(ret0 & ret1)
-                if n_matches > self.min_matches_per_tile:
-                    tile_pairs.append((tidx0, tidx1))
-
-            # For Debugging...
-            # if False:
-            #     from matplotlib import pyplot as plt
-
-            #     out_dir = Path("sandbox/preselection")
-            #     out_dir.mkdir(parents=True, exist_ok=True)
-            #     image0 = cv2.imread(str(img0), cv2.IMREAD_GRAYSCALE)
-            #     image1 = cv2.imread(str(img1), cv2.IMREAD_GRAYSCALE)
-            #     c = "r"
-            #     s = 5
-            #     fig, axes = plt.subplots(1, 2)
-            #     for ax, img, kp in zip(axes, [image0, image1], [kp0, kp1]):
-            #         ax.imshow(cv2.cvtColor(img, cv2.COLOR_BAYER_BG2BGR))
-            #         ax.scatter(kp[:, 0], kp[:, 1], s=s, c=c)
-            #         ax.axis("off")
-            #     for lim0, lim1 in zip(t0_lims.values(), t1_lims.values()):
-            #         axes[0].axvline(lim0[0])
-            #         axes[0].axhline(lim0[1])
-            #         axes[1].axvline(lim1[0])
-            #         axes[1].axhline(lim1[1])
-            #     # axes[1].get_yaxis().set_visible(False)
-            #     fig.tight_layout()
-            #     plt.show()
-            #     fig.savefig(out_dir / f"{img0.name}-{img1.name}.jpg")
-            #     plt.close()
-
-        return tile_pairs
-
     def _resize_image(self, quality: Quality, image: np.ndarray) -> Tuple[np.ndarray]:
         """
         Resize images based on the specified quality.
@@ -1215,3 +927,168 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
                     point_size=5,
                     config=config,
                 )
+
+
+def tile_selection(
+    img0: Path,
+    img1: Path,
+    method: TileSelection,
+    preselction_extractor: ExtractorBase,
+    preselction_matcher: MatcherBase,
+    tile_size: Tuple[int, int],
+    tile_overlap,
+    preselection_size_max: int = 1024,
+    min_matches_per_tile: int = 5,
+    device: str = "cpu",
+):
+    """
+    Selects tile pairs for matching based on the specified method.
+
+    Args:
+        img0 (Path): Path to the first image.
+        img1 (Path): Path to the second image.
+        method (TileSelection, optional): Tile selection method. Defaults to TileSelection.PRESELECTION.
+
+    Returns:
+        List[Tuple[int, int]]: The selected tile pairs.
+    """
+
+    def frame2tensor(image: np.ndarray, device: str = "cpu"):
+        if len(image.shape) == 2:
+            image = image[None][None]
+        elif len(image.shape) == 3:
+            image = image.transpose(2, 0, 1)[None]
+        return torch.tensor(image / 255.0, dtype=torch.float).to(device)
+
+    def get_tile_bounding_box(bottom_left, tile_size):
+        return [
+            bottom_left[0],
+            bottom_left[1],
+            bottom_left[0] + tile_size[0],
+            bottom_left[1] + tile_size[1],
+        ]
+
+    def points_in_rect(points: np.ndarray, rect: np.ndarray) -> np.ndarray:
+        logic = np.all(points > rect[:2], axis=1) & np.all(points < rect[2:], axis=1)
+        return logic
+
+    def sp2lg(feats: dict) -> dict:
+        feats = {
+            k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()
+        }
+        if feats["descriptors"].shape[-1] != 256:
+            feats["descriptors"] = feats["descriptors"].T
+        feats = {k: v[None] for k, v in feats.items()}
+        return feats
+
+    def rbd2np(data: dict) -> dict:
+        """Remove batch dimension from elements in data"""
+        return {
+            k: v[0].cpu().numpy()
+            if isinstance(v, (torch.Tensor, np.ndarray, list))
+            else v
+            for k, v in data.items()
+        }
+
+    # Compute tiles limits and origin
+    tiler = Tiler(tiling_mode="size")
+    i0 = cv2.imread(str(img0), cv2.IMREAD_GRAYSCALE).astype(np.float32)
+    i1 = cv2.imread(str(img1), cv2.IMREAD_GRAYSCALE).astype(np.float32)
+    tiles0, t_orig0, t_padding0 = tiler.compute_tiles_by_size(
+        input=i0, window_size=tile_size, overlap=tile_overlap
+    )
+    tiles1, t_orig1, t_padding1 = tiler.compute_tiles_by_size(
+        input=i1, window_size=tile_size, overlap=tile_overlap
+    )
+
+    # Select tile selection method
+    if method == TileSelection.EXHAUSTIVE:
+        # Match all the tiles with all the tiles
+        logger.debug("Matching tiles exaustively")
+        tile_pairs = sorted(product(tiles0.keys(), tiles1.keys()))
+    elif method == TileSelection.GRID:
+        # Match tiles by regular grid
+        logger.debug("Matching tiles by regular grid")
+        tile_pairs = sorted(zip(tiles0.keys(), tiles1.keys()))
+    elif method == TileSelection.PRESELECTION:
+        # Match tiles by preselection running matching on downsampled images
+        logger.debug("Matching tiles by downsampling preselection")
+
+        # Downsampled images
+        size0 = i0.shape[:2][::-1]
+        size1 = i1.shape[:2][::-1]
+        scale0 = preselection_size_max / max(size0)
+        scale1 = preselection_size_max / max(size1)
+        size0_new = tuple(int(round(x * scale0)) for x in size0)
+        size1_new = tuple(int(round(x * scale1)) for x in size1)
+        i0 = cv2.resize(i0, size0_new, interpolation=cv2.INTER_AREA)
+        i1 = cv2.resize(i1, size1_new, interpolation=cv2.INTER_AREA)
+
+        # Run SuperPoint on downsampled images
+        with torch.inference_mode():
+            feats0 = preselction_extractor({"image": frame2tensor(i0, device)})
+            feats1 = preselction_extractor({"image": frame2tensor(i1, device)})
+
+            # Match features with LightGlue
+            feats0 = sp2lg(feats0)
+            feats1 = sp2lg(feats1)
+            res = preselction_matcher({"image0": feats0, "image1": feats1})
+            res = rbd2np(res)
+
+        # Get keypoints in original image
+        kp0 = feats0["keypoints"].cpu().numpy()[0]
+        kp0 = kp0[res["matches"][:, 0], :]
+        kp1 = feats1["keypoints"].cpu().numpy()[0]
+        kp1 = kp1[res["matches"][:, 1], :]
+
+        # Scale up keypoints
+        kp0 = kp0 / scale0
+        kp1 = kp1 / scale1
+
+        # geometric verification
+        _, inlMask = geometric_verification(
+            kpts0=kp0,
+            kpts1=kp1,
+            threshold=4,
+            confidence=0.999,
+        )
+        kp0 = kp0[inlMask]
+        kp1 = kp1[inlMask]
+
+        # Select tile pairs where there are enough matches
+        tile_pairs = []
+        all_pairs = sorted(product(tiles0.keys(), tiles1.keys()))
+        for tidx0, tidx1 in all_pairs:
+            ret0 = points_in_rect(kp0, get_tile_bounding_box(t_orig0[tidx0], tile_size))
+            ret1 = points_in_rect(kp1, get_tile_bounding_box(t_orig1[tidx1], tile_size))
+            n_matches = sum(ret0 & ret1)
+            if n_matches > min_matches_per_tile:
+                tile_pairs.append((tidx0, tidx1))
+
+        # For Debugging...
+        # if False:
+        #     from matplotlib import pyplot as plt
+
+        #     out_dir = Path("sandbox/preselection")
+        #     out_dir.mkdir(parents=True, exist_ok=True)
+        #     image0 = cv2.imread(str(img0), cv2.IMREAD_GRAYSCALE)
+        #     image1 = cv2.imread(str(img1), cv2.IMREAD_GRAYSCALE)
+        #     c = "r"
+        #     s = 5
+        #     fig, axes = plt.subplots(1, 2)
+        #     for ax, img, kp in zip(axes, [image0, image1], [kp0, kp1]):
+        #         ax.imshow(cv2.cvtColor(img, cv2.COLOR_BAYER_BG2BGR))
+        #         ax.scatter(kp[:, 0], kp[:, 1], s=s, c=c)
+        #         ax.axis("off")
+        #     for lim0, lim1 in zip(t0_lims.values(), t1_lims.values()):
+        #         axes[0].axvline(lim0[0])
+        #         axes[0].axhline(lim0[1])
+        #         axes[1].axvline(lim1[0])
+        #         axes[1].axhline(lim1[1])
+        #     # axes[1].get_yaxis().set_visible(False)
+        #     fig.tight_layout()
+        #     plt.show()
+        #     fig.savefig(out_dir / f"{img0.name}-{img1.name}.jpg")
+        #     plt.close()
+
+    return tile_pairs
