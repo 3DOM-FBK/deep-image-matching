@@ -11,6 +11,7 @@ conf_general = {
     "gv_threshold": 4,
     "gv_confidence": 0.9999,
     "preselection_size_max": 2000,
+    "export_bundler_format" : True,
 }
 
 
