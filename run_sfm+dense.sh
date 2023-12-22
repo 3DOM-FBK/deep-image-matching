@@ -7,7 +7,7 @@ DATASET=belv_lingua_easy
 # Set the config and strategy
 SFM_CONFIG=superpoint+lightglue
 STRATEGY=bruteforce
-DENSE_CONFIG=loftr
+DENSE_CONFIG=roma
 
 SKIP_SFM=true
 DEBUG=true
