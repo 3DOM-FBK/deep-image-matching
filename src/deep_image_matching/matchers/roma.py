@@ -1,18 +1,15 @@
 import shutil
 from pathlib import Path
-from typing import Tuple
 
 import cv2
 import h5py
-import kornia as K
 import numpy as np
 import torch
 from PIL import Image
 
 from .. import Timer, logger
-from ..io.h5 import get_features
 from ..thirdparty.RoMa.roma import roma_outdoor
-from ..utils.consts import Quality, TileSelection
+from ..utils.consts import TileSelection
 from ..utils.tiling import Tiler
 from .matcher_base import DetectorFreeMatcherBase, tile_selection
 
@@ -338,86 +335,3 @@ class RomaMatcher(DetectorFreeMatcherBase):
         )
 
         return matches
-
-    def _resize_image(self, quality: Quality, image: np.ndarray) -> Tuple[np.ndarray]:
-        """
-        Resize images based on the specified quality.
-
-        Args:
-            quality (Quality): The quality level for resizing.
-            image (np.ndarray): The first image.
-
-        Returns:
-            Tuple[np.ndarray]: Resized images.
-
-        """
-        if quality == Quality.HIGHEST:
-            image_ = cv2.pyrUp(image)
-        elif quality == Quality.HIGH:
-            image_ = image
-        elif quality == Quality.MEDIUM:
-            image_ = cv2.pyrDown(image)
-        elif quality == Quality.LOW:
-            image_ = cv2.pyrDown(cv2.pyrDown(image))
-        elif quality == Quality.LOWEST:
-            image_ = cv2.pyrDown(cv2.pyrDown(cv2.pyrDown(image)))
-        return image_
-
-    def _resize_features(self, quality: Quality, keypoints: np.ndarray) -> np.ndarray:
-        """
-        Resize features based on the specified quality.
-
-        Args:
-            quality (Quality): The quality level for resizing.
-            features0 (np.ndarray): The array of keypoints.
-
-        Returns:
-            np.ndarray: Resized keypoints.
-
-        """
-        if quality == Quality.HIGHEST:
-            keypoints /= 2
-        elif quality == Quality.HIGH:
-            pass
-        elif quality == Quality.MEDIUM:
-            keypoints *= 2
-        elif quality == Quality.LOW:
-            keypoints *= 4
-        elif quality == Quality.LOWEST:
-            keypoints *= 8
-
-        return keypoints
-
-    def _frame2tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor:
-        image = K.image_to_tensor(np.array(image), False).float() / 255.0
-        image = K.color.bgr_to_rgb(image.to(device))
-        if image.shape[1] > 2:
-            image = K.color.rgb_to_grayscale(image)
-        return image
-
-    def _update_features_h5(
-        self, feature_path, im0_name, im1_name, new_keypoints0, new_keypoints1, matches0
-    ) -> np.ndarray:
-        for i, im_name, new_keypoints in zip(
-            [0, 1], [im0_name, im1_name], [new_keypoints0, new_keypoints1]
-        ):
-            features = get_features(feature_path, im_name)
-            existing_keypoints = features["keypoints"]
-
-            if len(existing_keypoints.shape) == 1:
-                features["keypoints"] = new_keypoints
-            else:
-                n_exisiting_keypoints = existing_keypoints.shape[0]
-                features["keypoints"] = np.vstack((existing_keypoints, new_keypoints))
-                matches0[:, i] = matches0[:, i] + n_exisiting_keypoints
-
-            with h5py.File(feature_path, "r+", libver="latest") as fd:
-                del fd[im_name]
-                grp = fd.create_group(im_name)
-                for k, v in features.items():
-                    if k == "im_path" or k == "feature_path":
-                        grp.create_dataset(k, data=str(v))
-                    if isinstance(v, np.ndarray):
-                        grp.create_dataset(k, data=v)
-
-        return matches0
