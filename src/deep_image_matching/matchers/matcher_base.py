@@ -893,7 +893,7 @@ def tile_selection(
     preselction_extractor: ExtractorBase,
     preselction_matcher: MatcherBase,
     tile_size: Tuple[int, int],
-    tile_overlap,
+    tile_overlap: int,
     preselection_size_max: int = 1024,
     min_matches_per_tile: int = 5,
     device: str = "cpu",
@@ -915,7 +915,7 @@ def tile_selection(
     i0 = cv2.imread(str(img0), cv2.IMREAD_GRAYSCALE).astype(np.float32)
     i1 = cv2.imread(str(img1), cv2.IMREAD_GRAYSCALE).astype(np.float32)
 
-    # Resize images
+    # Resize images to the specified quality to reproduce the same tiling
     i0 = resize_image(quality, i0)
     i1 = resize_image(quality, i1)
 
