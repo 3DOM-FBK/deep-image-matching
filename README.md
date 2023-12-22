@@ -7,6 +7,10 @@
 | ------------------------------------------------ | -------------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------- |
 | <img src='assets/matches_sift.gif' height="100"> | <img src='assets/matches_joined.gif' height="100"> | <img src='assets/orientation_deep.gif' height="100"> | <img src='assets/roma_dense.gif' height="100"> |
 
+| SIFT                                             | SUPERGLUE                                            |            
+| ------------------------------------             | ------------------------------------                 |
+| <img src='assets/temple_rsift.gif' height="165"> | <img src='assets/temple_superglue.gif' height="165"> |
+
 Multivew matcher for COLMAP. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI. Feel free to collaborate!
 
 **Please, note that `deep-image-matching` is under active development** and it is still in an experimental stage. If you find any bug, please open an issue.
@@ -191,6 +195,10 @@ The GUI loads the available configurations from `config.py` and it shows them in
 ### Merging databases with different local features
 
 To run the matching with different local features and/or matchers and marging together the results, you can use scripts in the `./scripts` directory for merging the COLMAP databases.
+```bash
+python ./join_databases.py --help
+python ./join_databases.py --input assets/to_be_joined --output assets/to_be_joined
+```
 
 ## TODO:
 
