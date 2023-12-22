@@ -29,7 +29,7 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
         _load_image_np(self, img_path): Load image as numpy array.
         _frame2tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor: Convert image to tensor.
         _resize_image(self, quality: Quality, image: np.ndarray) -> Tuple[np.ndarray]: Resize images based on the specified quality.
-        _resize_features(self, quality: Quality, keypoints: np.ndarray) -> np.ndarray: Resize features based on the specified quality.
+        _resize_keypoints(self, quality: Quality, keypoints: np.ndarray) -> np.ndarray: Resize features based on the specified quality.
         _update_features_h5(self, feature_path, im0_name, im1_name, new_keypoints0, new_keypoints1, matches0) -> np.ndarray: Update features in h5 file.
         viz_matches(self, feature_path: Path, matchings_path: Path, img0: Path, img1: Path, save_path: str = None, fast_viz: bool = True, interactive_viz: bool = False, **config) -> None: Visualize matches.
     """
@@ -39,6 +39,7 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
     as_float = True
     min_matches = 100
     min_matches_per_tile = 3
+    max_tile_size = 1200
 
     def __init__(self, config={}) -> None:
         """
@@ -52,6 +53,21 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
 
         model = config["matcher"]["pretrained"]
         self.matcher = KF.LoFTR(pretrained=model).to(self._device).eval()
+
+        tile_size = self._config["general"]["tile_size"]
+        if max(tile_size) > self.max_tile_size:
+            logger.warning(
+                f"The tile size is too large large ({tile_size}) for running LOFTR. Using a maximum tile size of {self.max_tile_size} px (this may take some time...)."
+            )
+            ratio = max(tile_size) / self.max_tile_size
+            self._config["general"]["tile_size"] = (
+                int(tile_size[0] / ratio),
+                int(tile_size[1] / ratio),
+            )
+        elif max(tile_size) > 1000:
+            logger.warning(
+                "The tile size is large, this may cause out-of-memory error during matching. You should consider using a smaller tile size or a lower image resolution."
+            )
 
     @torch.no_grad()
     def _match_pairs(
@@ -106,8 +122,8 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
         mkpts1 = correspondences["keypoints1"].cpu().numpy()
 
         # Retrieve original image coordinates if matching was performed on up/down-sampled images
-        mkpts0 = self._resize_features(self._quality, mkpts0)
-        mkpts1 = self._resize_features(self._quality, mkpts1)
+        mkpts0 = self._resize_keypoints(self._quality, mkpts0)
+        mkpts1 = self._resize_keypoints(self._quality, mkpts1)
 
         # Get match confidence
         mconf = correspondences["confidence"].cpu().numpy()
@@ -159,6 +175,7 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
             img0,
             img1,
             method=method,
+            quality=self._quality,
             preselction_extractor=self._preselction_extractor,
             preselction_matcher=self._preselction_matcher,
             tile_size=tile_size,
@@ -181,19 +198,11 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
         image0 = self._load_image_np(img0)
         image1 = self._load_image_np(img1)
 
-        # Load images
-        image0 = self._load_image_np(img0)
-        image1 = self._load_image_np(img1)
-
         # Resize images if needed
         image0 = self._resize_image(self._quality, image0)
         image1 = self._resize_image(self._quality, image1)
 
         # Extract tiles
-        # tiler = Tiler(grid=grid, overlap=overlap)
-        # t0_lims, t0_origin = tiler.compute_limits_by_grid(image0)
-        # t1_lims, t1_origin = tiler.compute_limits_by_grid(image1)
-        # overlap = self._config["general"]["tile_overlap"]
         tiler = Tiler(tiling_mode="size")
         tiles0, t_origins0, t_padding0 = tiler.compute_tiles_by_size(
             input=image0, window_size=tile_size, overlap=overlap
@@ -239,8 +248,8 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
         mkpts1_full = mkpts1_full[mask]
 
         # Retrieve original image coordinates if matching was performed on up/down-sampled images
-        mkpts0_full = self._resize_features(self._quality, mkpts0_full)
-        mkpts1_full = self._resize_features(self._quality, mkpts1_full)
+        mkpts0_full = self._resize_keypoints(self._quality, mkpts0_full)
+        mkpts1_full = self._resize_keypoints(self._quality, mkpts1_full)
 
         # Select uniue features on image 0, on rounded coordinates
         if select_unique is True:

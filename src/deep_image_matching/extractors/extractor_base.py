@@ -286,7 +286,7 @@ class ExtractorBase(metaclass=ABCMeta):
             # get keypoints in original image coordinates
             kp_tile += np.array(tiles_origins[idx])
 
-            # Check if any keypoints are outside the original image or too close to the border
+            # Check if any keypoints are outside the original image (non-padded) or too close to the border
             border_thr = 2  # Adjust this threshold as needed
             mask = (
                 (kp_tile[:, 0] >= border_thr)
@@ -299,21 +299,21 @@ class ExtractorBase(metaclass=ABCMeta):
             if scor_tile is not None:
                 scor_tile = scor_tile[mask]
 
-            # debug: visualize keypoints and save to disk
-            tile = np.uint8(tile)
-            out = cv2.drawKeypoints(
-                tile,
-                [
-                    cv2.KeyPoint(
-                        x - tiles_origins[idx][0], y - tiles_origins[idx][1], 1
-                    )
-                    for x, y in kp_tile
-                ],
-                0,
-                (0, 255, 0),
-                flags=cv2.DRAW_MATCHES_FLAGS_DEFAULT,
-            )
-            cv2.imwrite(f"sandbox/tile_{idx}.png", out)
+            # For debug: visualize keypoints and save to disk
+            # tile = np.uint8(tile)
+            # out = cv2.drawKeypoints(
+            #     tile,
+            #     [
+            #         cv2.KeyPoint(
+            #             x - tiles_origins[idx][0], y - tiles_origins[idx][1], 1
+            #         )
+            #         for x, y in kp_tile
+            #     ],
+            #     0,
+            #     (0, 255, 0),
+            #     flags=cv2.DRAW_MATCHES_FLAGS_DEFAULT,
+            # )
+            # cv2.imwrite(f"sandbox/tile_{idx}.png", out)
 
             if len(kp_tile) > 0:
                 kpts_full = np.vstack((kpts_full, kp_tile))
