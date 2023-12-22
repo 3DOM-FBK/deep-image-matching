@@ -638,7 +638,7 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         # Perform matching
         if self._tiling == TileSelection.NONE:
             matches = self._match_pairs(self._feature_path, img0, img1)
-            timer_match.update("[match] try to match full images")
+            timer_match.update("[match] Match full images")
         else:
             matches = self._match_by_tile(
                 feature_path,
@@ -647,7 +647,7 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
                 method=self._tiling,
                 select_unique=True,
             )
-            timer_match.update("[match] try to match by tile")
+            timer_match.update("[match] Match by tile")
 
         # Save to h5 file
         n_matches = len(matches)

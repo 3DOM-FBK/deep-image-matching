@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 from typing import Tuple
 
@@ -12,7 +13,8 @@ from .. import Timer, logger
 from ..io.h5 import get_features
 from ..thirdparty.RoMa.roma import roma_outdoor
 from ..utils.consts import Quality, TileSelection
-from .matcher_base import DetectorFreeMatcherBase, FeaturesDict
+from ..utils.tiling import Tiler
+from .matcher_base import DetectorFreeMatcherBase, tile_selection
 
 
 class RomaMatcher(DetectorFreeMatcherBase):
@@ -30,20 +32,20 @@ class RomaMatcher(DetectorFreeMatcherBase):
         match(self, feature_path: Path, matches_path: Path, img0: Path, img1: Path, try_full_image: bool = False) -> np.ndarray: Match features between two images.
     """
 
-    grayscale = True
+    grayscale = False
     as_float = True
-    max_tile_size = 448
+    max_tile_size = 600  # 448
+    max_tile_pairs = 50
 
     def __init__(self, config={}) -> None:
         super().__init__(config)
 
         self.matcher = roma_outdoor(device=self._device)
 
-        self._quality = config["general"]["quality"]
-
-        # If tiling is used, extract tiles with proper size for RoMa matching and save them to disk
-        if self._tiling != TileSelection.NONE:
-            pass
+        logger.warning(
+            "RoMa uses a fixed tile size of 448x448 pixels. This can result in an enormous amount of tiles with high resolution images. If this is your case, try to downscale images using a lower 'Quality' value."
+        )
+        self._config["general"]["tile_size"] = (self.max_tile_size, self.max_tile_size)
 
     def match(
         self,
@@ -78,26 +80,24 @@ class RomaMatcher(DetectorFreeMatcherBase):
             self._feature_path = Path(feature_path)
 
         # Get features from h5 file
+        img0 = Path(img0)
+        img1 = Path(img1)
         img0_name = img0.name
         img1_name = img1.name
-        features0 = get_features(self._feature_path, img0_name)
-        features1 = get_features(self._feature_path, img1_name)
-        timer_match.update("load h5 features")
 
         # Perform matching
         if self._tiling == TileSelection.NONE:
-            matches = self._match_pairs(features0, features1)
-            timer_match.update("[match] try to match full images")
+            matches = self._match_pairs(self._feature_path, img0, img1)
+            timer_match.update("[match] Match full images")
         else:
             matches = self._match_by_tile(
+                feature_path,
                 img0,
                 img1,
-                features0,
-                features1,
                 method=self._tiling,
                 select_unique=True,
             )
-            timer_match.update("[match] try to match by tile")
+            timer_match.update("[match] Match by tile")
 
         # Save to h5 file
         n_matches = len(matches)
@@ -111,31 +111,30 @@ class RomaMatcher(DetectorFreeMatcherBase):
                 )
                 return None
         timer_match.update("save to h5")
+
         timer_match.print(f"{__class__.__name__} match")
 
     @torch.no_grad()
     def _match_pairs(
         self,
-        feats0: FeaturesDict,
-        feats1: FeaturesDict,
+        feature_path: Path,
+        img0_path: Path,
+        img1_path: Path,
     ):
         """
         Perform matching between feature pairs.
 
         Args:
-            feats0 (FeaturesDict): Features dictionary for the first image.
-            feats1 (FeaturesDict): Features dictionary for the second image.
+            feature_path (Path): Path to the feature file.
+            img0_path (Path): Path to the first image.
+            img1_path (Path): Path to the second image.
 
         Returns:
             np.ndarray: Array containing the indices of matched keypoints.
         """
 
-        feature_path = feats0["feature_path"]
-
-        img0_path = feats0["im_path"]
-        img0_name = Path(img0_path).name
-        img1_path = feats1["im_path"]
-        img1_name = Path(img1_path).name
+        img0_name = img0_path.name
+        img1_name = img1_path.name
 
         # Run inference
         with torch.inference_mode():
@@ -169,126 +168,176 @@ class RomaMatcher(DetectorFreeMatcherBase):
 
     def _match_by_tile(
         self,
-        image0: np.ndarray,
-        image1: np.ndarray,
-        tile_selection: TileSelection = TileSelection.PRESELECTION,
-        **config,
-    ):
+        feature_path: Path,
+        img0: Path,
+        img1: Path,
+        method: TileSelection = TileSelection.PRESELECTION,
+        select_unique: bool = True,
+    ) -> np.ndarray:
         """
-        Matches tiles in two images and returns the features, matches, and confidence.
+        Perform matching by tile.
 
         Args:
-            image0: The first input image as a NumPy array.
-            image1: The second input image as a NumPy array.
-            tile_selection: The method for selecting tile pairs to match (default: TileSelection.PRESELECTION).
-            **config: Additional keyword arguments for customization.
+            feature_path (Path): Path to the feature file.
+            img0 (Path): Path to the first image.
+            img1 (Path): Path to the second image.
+            method (TileSelection, optional): Tile selection method. Defaults to TileSelection.PRESELECTION.
+            select_unique (bool, optional): Flag to select unique features. Defaults to True.
 
         Returns:
-            A tuple containing:
-            - features0: FeaturesBase object representing keypoints, descriptors, and scores of image0.
-            - features1: FeaturesBase object representing keypoints, descriptors, and scores of image1.
-            - matches0: NumPy array with indices of matched keypoints in image0.
-            - mconf: NumPy array with confidence scores for the matches.
-
+            np.ndarray: Array containing the indices of matched keypoints.
         """
 
-        raise NotImplementedError(
-            "Matching by tile is not implemented for Roma.yet. Please match full images (downscale images using a lower 'Quality' if you run out of memory)."
+        def write_tiles_disk(output_dir: Path, tiles: dict):
+            output_dir = Path(output_dir)
+            if output_dir.exists():
+                shutil.rmtree(output_dir)
+            output_dir.mkdir(parents=True)
+            for i, tile in tiles.items():
+                name = str(output_dir / f"tile_{i}.png")
+                cv2.imwrite(name, tile)
+
+        timer = Timer(log_level="debug", cumulate_by_key=True)
+
+        tile_size = self._config["general"]["tile_size"]
+        overlap = self._config["general"]["tile_overlap"]
+        img0_name = img0.name
+        img1_name = img1.name
+
+        # Select tile pairs to match
+        tile_pairs = tile_selection(
+            img0,
+            img1,
+            method=method,
+            quality=self._quality,
+            preselction_extractor=self._preselction_extractor,
+            preselction_matcher=self._preselction_matcher,
+            tile_size=tile_size,
+            tile_overlap=overlap,
+            preselection_size_max=self.preselection_size_max,
+            min_matches_per_tile=self.min_matches_per_tile,
+            device=self._device,
+        )
+        if len(tile_pairs) > self.max_tile_pairs:
+            raise RuntimeError(
+                f"Too many tile pairs ({len(tile_pairs)}) to match, the matching process will be too slow and it may be inaccurate. Try to reduce the image resolution using a lower 'Quality' value (or change the 'max_tile_pairs' class attribute, if you know what you are doing)."
+            )
+
+        timer.update("tile selection")
+
+        # Read images and resize them if needed
+        image0 = cv2.imread(str(img0))
+        image1 = cv2.imread(str(img1))
+        image0_orig_shape = image0.shape[:2]
+        image1_orig_shape = image1.shape[:2]
+        image0 = self._resize_image(self._quality, image0)
+        image1 = self._resize_image(self._quality, image1)
+
+        # If tiling is used, extract tiles with proper size for RoMa matching and save them to disk
+        tiler = Tiler(tiling_mode="size")
+        tiles0, t_origins0, t_padding0 = tiler.compute_tiles_by_size(
+            input=image0, window_size=tile_size, overlap=overlap
+        )
+        tiles1, t_origins1, t_padding1 = tiler.compute_tiles_by_size(
+            input=image1, window_size=tile_size, overlap=overlap
+        )
+        out_dir = Path(self._config["general"]["output_dir"]) / "tiles"
+        write_tiles_disk(out_dir / img0.name, tiles0)
+        write_tiles_disk(out_dir / img1.name, tiles1)
+        logger.debug(f"Tiles saved to {out_dir}")
+
+        # Match each tile pair
+        mkpts0_full = np.array([], dtype=np.float32).reshape(0, 2)
+        mkpts1_full = np.array([], dtype=np.float32).reshape(0, 2)
+        conf_full = np.array([], dtype=np.float32)
+
+        for tidx0, tidx1 in tile_pairs:
+            logger.debug(f"  - Matching tile pair ({tidx0}, {tidx1})")
+
+            tile_path0 = out_dir / img0.name / f"tile_{tidx0}.png"
+            tile_path1 = out_dir / img1.name / f"tile_{tidx1}.png"
+
+            W_A, H_A = tiles0[tidx0].shape[1], tiles0[tidx0].shape[0]
+            W_B, H_B = tiles1[tidx1].shape[1], tiles1[tidx1].shape[0]
+
+            # Run inference
+            with torch.inference_mode():
+                warp, certainty = self.matcher.match(
+                    str(tile_path0), str(tile_path1), device=self._device, batched=False
+                )
+                matches, certainty = self.matcher.sample(warp, certainty)
+                kptsA, kptsB = self.matcher.to_pixel_coordinates(
+                    matches, H_A, W_A, H_B, W_B
+                )
+                kptsA, kptsB = kptsA.cpu().numpy(), kptsB.cpu().numpy()
+
+                # Get match confidence
+                conf = certainty.cpu().numpy()
+
+            # For debugging
+            # from ..visualization import viz_matches_cv2
+
+            # viz_matches_cv2(
+            #     tiles0[tidx0],
+            #     tiles1[tidx1],
+            #     kptsA,
+            #     kptsB,
+            #     f"sandbox/tile_{tidx0}-{tidx1}.png",
+            #     line_thickness=-1,
+            #     autoresize=False,
+            #     jpg_quality=80,
+            # )
+
+            # Restore original image coordinates (not cropped)
+            kptsA = kptsA + np.array(t_origins0[tidx0]).astype("float32")
+            kptsB = kptsB + np.array(t_origins1[tidx1]).astype("float32")
+
+            # Check if any keypoints are outside the original image (non-padded) or too close to the border
+            def kps_in_image(kp, img_size, border_thr=2):
+                return (
+                    (kp[:, 0] >= border_thr)
+                    & (kp[:, 0] < img_size[1] - border_thr)
+                    & (kp[:, 1] >= border_thr)
+                    & (kp[:, 1] < img_size[0] - border_thr)
+                )
+
+            maskA = kps_in_image(kptsA, image0.shape[:2])
+            maskB = kps_in_image(kptsB, image1.shape[:2])
+            msk = maskA & maskB
+            kptsA = kptsA[msk]
+            kptsB = kptsB[msk]
+
+            # Append to full arrays
+            mkpts0_full = np.vstack((mkpts0_full, kptsA))
+            mkpts1_full = np.vstack((mkpts1_full, kptsB))
+            conf_full = np.concatenate((conf_full, conf))
+
+        # Rescale keypoints to original image size
+        mkpts0_full = self._resize_keypoints(self._quality, mkpts0_full)
+        mkpts1_full = self._resize_keypoints(self._quality, mkpts1_full)
+
+        # Select uniue features on image 0, on rounded coordinates
+        if select_unique is True:
+            decimals = 1
+            _, unique_idx = np.unique(
+                np.round(mkpts0_full, decimals), axis=0, return_index=True
+            )
+            mkpts0_full = mkpts0_full[unique_idx]
+            mkpts1_full = mkpts1_full[unique_idx]
+
+        # Create a 1-to-1 matching array
+        matches0 = np.arange(mkpts0_full.shape[0])
+        matches = np.hstack((matches0.reshape((-1, 1)), matches0.reshape((-1, 1))))
+        matches = self._update_features_h5(
+            feature_path,
+            img0_name,
+            img1_name,
+            mkpts0_full,
+            mkpts1_full,
+            matches,
         )
 
-        # # Get config
-        # grid = config.get("grid", [1, 1])
-        # overlap = config.get("overlap", 0)
-        # origin = config.get("origin", [0, 0])
-        # do_viz_tiles = config.get("do_viz_tiles", False)
-
-        # # Compute tiles limits and origin
-        # self._tiler = Tiler(grid=grid, overlap=overlap, origin=origin)
-        # t0_lims, t0_origin = self._tiler.compute_limits_by_grid(image0)
-        # t1_lims, t1_origin = self._tiler.compute_limits_by_grid(image1)
-
-        # # Select tile pairs to match
-        # tile_pairs = self._tile_selection(
-        #     image0, image1, t0_lims, t1_lims, tile_selection, config=config
-        # )
-
-        # # Initialize empty array for storing matched keypoints, descriptors and scores
-        # mkpts0_full = np.array([], dtype=np.float32).reshape(0, 2)
-        # mkpts1_full = np.array([], dtype=np.float32).reshape(0, 2)
-        # conf_full = np.array([], dtype=np.float32)
-
-        # # Match each tile pair
-        # for tidx0, tidx1 in tile_pairs:
-        #     logger.info(f" - Matching tile pair ({tidx0}, {tidx1})")
-
-        #     lim0 = t0_lims[tidx0]
-        #     lim1 = t1_lims[tidx1]
-        #     tile0 = self._tiler.extract_patch(image0, lim0)
-        #     tile1 = self._tiler.extract_patch(image1, lim1)
-
-        #     # Covert patch to tensor
-        #     timg0_ = self._frame2tensor(tile0, self._device)
-        #     timg1_ = self._frame2tensor(tile1, self._device)
-
-        #     # Run inference
-        #     with torch.inference_mode():
-        #         input_dict = {"image0": timg0_, "image1": timg1_}
-        #         correspondences = self.matcher(input_dict)
-
-        #     # Get matches and build features
-        #     mkpts0 = correspondences["keypoints0"].cpu().numpy()
-        #     mkpts1 = correspondences["keypoints1"].cpu().numpy()
-
-        #     # Get match confidence
-        #     conf = correspondences["confidence"].cpu().numpy()
-
-        #     # Append to full arrays
-        #     mkpts0_full = np.vstack(
-        #         (mkpts0_full, mkpts0 + np.array(lim0[0:2]).astype("float32"))
-        #     )
-        #     mkpts1_full = np.vstack(
-        #         (mkpts1_full, mkpts1 + np.array(lim1[0:2]).astype("float32"))
-        #     )
-        #     conf_full = np.concatenate((conf_full, conf))
-
-        #     # Plot matches on tile
-        #     output_dir = config.get("output_dir", ".")
-        #     output_dir = Path(output_dir)
-        #     output_dir.mkdir(parents=True, exist_ok=True)
-        #     if do_viz_tiles is True:
-        #         self.viz_matches_mpl(
-        #             tile0,
-        #             tile1,
-        #             mkpts0,
-        #             mkpts1,
-        #             output_dir / f"matches_tile_{tidx0}-{tidx1}.png",
-        #         )
-
-        # logger.info("Restoring full image coordinates of matches...")
-
-        # # Restore original image coordinates (not cropped)
-        # mkpts0_full = mkpts0_full + np.array(t0_origin).astype("float32")
-        # mkpts1_full = mkpts1_full + np.array(t1_origin).astype("float32")
-
-        # # Select uniue features on image 0, on rounded coordinates
-        # decimals = 1
-        # _, unique_idx = np.unique(
-        #     np.round(mkpts0_full, decimals), axis=0, return_index=True
-        # )
-        # mkpts0_full = mkpts0_full[unique_idx]
-        # mkpts1_full = mkpts1_full[unique_idx]
-        # conf_full = conf_full[unique_idx]
-
-        # # Create features
-        # features0 = FeaturesDict(keypoints=mkpts0_full)
-        # features1 = FeaturesDict(keypoints=mkpts1_full)
-
-        # # Create a 1-to-1 matching array
-        # matches0 = np.arange(mkpts0_full.shape[0])
-
-        # logger.info("Matching by tile completed.")
-
-        # return features0, features1, matches0, conf_full
+        return matches
 
     def _resize_image(self, quality: Quality, image: np.ndarray) -> Tuple[np.ndarray]:
         """

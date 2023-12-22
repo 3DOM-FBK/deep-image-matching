@@ -17,17 +17,17 @@
       "args": [
         "--config",
         // "superpoint+lightglue",
-        "loftr",
+        "roma",
         "--images",
         "data/belv_lingua_easy",
         "--quality",
-        "medium",
+        "low",
         "--tiling",
         "preselection",
         "--strategy",
         "bruteforce",
         // "--upright",
-        // "--skip_reconstruction",
+        "--skip_reconstruction",
         "--force",
         "-V"
       ]
