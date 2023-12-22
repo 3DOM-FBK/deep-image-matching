@@ -348,19 +348,6 @@ class MatcherBase(metaclass=ABCMeta):
             np.ndarray: Array containing the indices of matched keypoints.
         """
 
-        def get_features_by_tile(features: FeaturesDict, tile_idx: int):
-            if "tile_idx" not in features:
-                raise KeyError("tile_idx not found in features")
-            pts_in_tile = features["tile_idx"] == tile_idx
-            idx = np.where(pts_in_tile)[0]
-            feat_tile = {
-                "keypoints": features["keypoints"][pts_in_tile],
-                "descriptors": features["descriptors"][:, pts_in_tile],
-                "scores": features["scores"][pts_in_tile],
-                "image_size": features["image_size"],
-            }
-            return (feat_tile, idx)
-
         timer = Timer(log_level="debug", cumulate_by_key=True)
 
         # Initialize empty matches array
@@ -371,6 +358,7 @@ class MatcherBase(metaclass=ABCMeta):
             img0,
             img1,
             method=method,
+            quality=self._config["general"]["quality"],
             preselction_extractor=self._preselction_extractor,
             preselction_matcher=self._preselction_matcher,
             tile_size=self._config["general"]["tile_size"],
@@ -419,24 +407,6 @@ class MatcherBase(metaclass=ABCMeta):
 
         return matches_full
 
-    def _tile_selection(
-        self,
-        img0: Path,
-        img1: Path,
-        method: TileSelection = TileSelection.PRESELECTION,
-    ):
-        """
-        Selects tile pairs for matching based on the specified method.
-
-        Args:
-            img0 (Path): Path to the first image.
-            img1 (Path): Path to the second image.
-            method (TileSelection, optional): Tile selection method. Defaults to TileSelection.PRESELECTION.
-
-        Returns:
-            List[Tuple[int, int]]: The selected tile pairs.
-        """
-
     def viz_matches(
         self,
         feature_path: Path,
@@ -466,8 +436,8 @@ class MatcherBase(metaclass=ABCMeta):
         img1_name = img1.name
 
         # Load images
-        image0 = self._load_image_np(img0)
-        image1 = self._load_image_np(img1)
+        image0 = load_image_np(img0, self.as_float, self.grayscale)
+        image1 = load_image_np(img1, self.as_float, self.grayscale)
 
         # Load features and matches
         features0 = get_features(feature_path, img0_name)
@@ -670,7 +640,7 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
             matches = self._match_pairs(self._feature_path, img0, img1)
             timer_match.update("[match] try to match full images")
         else:
-            matches = self._matc_by_tile(
+            matches = self._match_by_tile(
                 feature_path,
                 img0,
                 img1,
@@ -758,63 +728,6 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         """
         raise NotImplementedError("Subclasses must implement _match_by_tile() method.")
 
-    def _load_image_np(self, img_path):
-        image = cv2.imread(str(img_path))
-        if self.as_float:
-            image = image.astype(np.float32)
-        if self.grayscale:
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        return image
-
-    def _resize_image(self, quality: Quality, image: np.ndarray) -> Tuple[np.ndarray]:
-        """
-        Resize images based on the specified quality.
-
-        Args:
-            quality (Quality): The quality level for resizing.
-            image (np.ndarray): The first image.
-
-        Returns:
-            Tuple[np.ndarray]: Resized images.
-
-        """
-        if quality == Quality.HIGHEST:
-            image_ = cv2.pyrUp(image)
-        elif quality == Quality.HIGH:
-            image_ = image
-        elif quality == Quality.MEDIUM:
-            image_ = cv2.pyrDown(image)
-        elif quality == Quality.LOW:
-            image_ = cv2.pyrDown(cv2.pyrDown(image))
-        elif quality == Quality.LOWEST:
-            image_ = cv2.pyrDown(cv2.pyrDown(cv2.pyrDown(image)))
-        return image_
-
-    def _resize_features(self, quality: Quality, keypoints: np.ndarray) -> np.ndarray:
-        """
-        Resize features based on the specified quality.
-
-        Args:
-            quality (Quality): The quality level for resizing.
-            features0 (np.ndarray): The array of keypoints.
-
-        Returns:
-            np.ndarray: Resized keypoints.
-
-        """
-        if quality == Quality.HIGHEST:
-            keypoints /= 2
-        elif quality == Quality.HIGH:
-            pass
-        elif quality == Quality.MEDIUM:
-            keypoints *= 2
-        elif quality == Quality.LOW:
-            keypoints *= 4
-        elif quality == Quality.LOWEST:
-            keypoints *= 8
-
-        return keypoints
-
     def _update_features_h5(
         self, feature_path, im0_name, im1_name, new_keypoints0, new_keypoints1, matches0
     ) -> np.ndarray:
@@ -841,6 +754,46 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
                         grp.create_dataset(k, data=v)
 
         return matches0
+
+    def _resize_image(self, quality: Quality, image: np.ndarray) -> Tuple[np.ndarray]:
+        """
+        Resize images based on the specified quality.
+
+        Args:
+            quality (Quality): The quality level for resizing.
+            image (np.ndarray): The first image.
+
+        Returns:
+            Tuple[np.ndarray]: Resized images.
+
+        """
+        return resize_image(quality, image)
+
+    def _resize_keypoints(self, quality: Quality, keypoints: np.ndarray) -> np.ndarray:
+        """
+        Resize features based on the specified quality.
+
+        Args:
+            quality (Quality): The quality level for resizing.
+            features0 (np.ndarray): The array of keypoints.
+
+        Returns:
+            np.ndarray: Resized keypoints.
+
+        """
+        return resize_keypoints(quality, keypoints)
+
+    def _load_image_np(self, img_path: Path) -> np.ndarray:
+        """
+        Load image as numpy array.
+
+        Args:
+            img_path (Path): Path to the image.
+
+        Returns:
+            np.ndarray: The image as numpy array.
+        """
+        return load_image_np(img_path, self.as_float, self.grayscale)
 
     def viz_matches(
         self,
@@ -871,8 +824,8 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         img1_name = img1.name
 
         # Load images
-        image0 = self._load_image_np(img0)
-        image1 = self._load_image_np(img1)
+        image0 = load_image_np(img0, self.as_float, self.grayscale)
+        image1 = load_image_np(img1, self.as_float, self.grayscale)
 
         # Load features and matches
         features0 = get_features(feature_path, img0_name)
@@ -929,10 +882,14 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
                 )
 
 
+# Various util functions
+
+
 def tile_selection(
     img0: Path,
     img1: Path,
     method: TileSelection,
+    quality: Quality,
     preselction_extractor: ExtractorBase,
     preselction_matcher: MatcherBase,
     tile_size: Tuple[int, int],
@@ -953,47 +910,16 @@ def tile_selection(
         List[Tuple[int, int]]: The selected tile pairs.
     """
 
-    def frame2tensor(image: np.ndarray, device: str = "cpu"):
-        if len(image.shape) == 2:
-            image = image[None][None]
-        elif len(image.shape) == 3:
-            image = image.transpose(2, 0, 1)[None]
-        return torch.tensor(image / 255.0, dtype=torch.float).to(device)
-
-    def get_tile_bounding_box(bottom_left, tile_size):
-        return [
-            bottom_left[0],
-            bottom_left[1],
-            bottom_left[0] + tile_size[0],
-            bottom_left[1] + tile_size[1],
-        ]
-
-    def points_in_rect(points: np.ndarray, rect: np.ndarray) -> np.ndarray:
-        logic = np.all(points > rect[:2], axis=1) & np.all(points < rect[2:], axis=1)
-        return logic
-
-    def sp2lg(feats: dict) -> dict:
-        feats = {
-            k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()
-        }
-        if feats["descriptors"].shape[-1] != 256:
-            feats["descriptors"] = feats["descriptors"].T
-        feats = {k: v[None] for k, v in feats.items()}
-        return feats
-
-    def rbd2np(data: dict) -> dict:
-        """Remove batch dimension from elements in data"""
-        return {
-            k: v[0].cpu().numpy()
-            if isinstance(v, (torch.Tensor, np.ndarray, list))
-            else v
-            for k, v in data.items()
-        }
-
     # Compute tiles limits and origin
     tiler = Tiler(tiling_mode="size")
     i0 = cv2.imread(str(img0), cv2.IMREAD_GRAYSCALE).astype(np.float32)
     i1 = cv2.imread(str(img1), cv2.IMREAD_GRAYSCALE).astype(np.float32)
+
+    # Resize images
+    i0 = resize_image(quality, i0)
+    i1 = resize_image(quality, i1)
+
+    # Compute tiles
     tiles0, t_orig0, t_padding0 = tiler.compute_tiles_by_size(
         input=i0, window_size=tile_size, overlap=tile_overlap
     )
@@ -1092,3 +1018,115 @@ def tile_selection(
         #     plt.close()
 
     return tile_pairs
+
+
+def load_image_np(img_path: Path, as_float: bool = True, grayscale: bool = False):
+    image = cv2.imread(str(img_path))
+    if as_float:
+        image = image.astype(np.float32)
+    if grayscale:
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    return image
+
+
+def resize_image(quality: Quality, image: np.ndarray) -> Tuple[np.ndarray]:
+    """
+    Resize images based on the specified quality.
+
+    Args:
+        quality (Quality): The quality level for resizing.
+        image (np.ndarray): The first image.
+
+    Returns:
+        Tuple[np.ndarray]: Resized images.
+
+    """
+    if quality == Quality.HIGH:
+        return image
+    if quality == Quality.HIGHEST:
+        image = cv2.pyrUp(image)
+    elif quality == Quality.MEDIUM:
+        image = cv2.pyrDown(image)
+    elif quality == Quality.LOW:
+        image = cv2.pyrDown(cv2.pyrDown(image))
+    elif quality == Quality.LOWEST:
+        image = cv2.pyrDown(cv2.pyrDown(cv2.pyrDown(image)))
+    return image
+
+
+def resize_keypoints(quality: Quality, keypoints: np.ndarray) -> np.ndarray:
+    """
+    Resize keypoints based on the specified quality.
+
+    Args:
+        quality (Quality): The quality level for resizing.
+        eypoints (np.ndarray): The array (nx2) of keypoints.
+
+    Returns:
+        np.ndarray: Resized keypoints.
+
+    """
+    if quality == Quality.HIGH:
+        return keypoints
+    if quality == Quality.HIGHEST:
+        keypoints /= 2
+    elif quality == Quality.MEDIUM:
+        keypoints *= 2
+    elif quality == Quality.LOW:
+        keypoints *= 4
+    elif quality == Quality.LOWEST:
+        keypoints *= 8
+
+    return keypoints
+
+
+def get_features_by_tile(features: FeaturesDict, tile_idx: int):
+    if "tile_idx" not in features:
+        raise KeyError("tile_idx not found in features")
+    pts_in_tile = features["tile_idx"] == tile_idx
+    idx = np.where(pts_in_tile)[0]
+    feat_tile = {
+        "keypoints": features["keypoints"][pts_in_tile],
+        "descriptors": features["descriptors"][:, pts_in_tile],
+        "scores": features["scores"][pts_in_tile],
+        "image_size": features["image_size"],
+    }
+    return (feat_tile, idx)
+
+
+def frame2tensor(image: np.ndarray, device: str = "cpu"):
+    if len(image.shape) == 2:
+        image = image[None][None]
+    elif len(image.shape) == 3:
+        image = image.transpose(2, 0, 1)[None]
+    return torch.tensor(image / 255.0, dtype=torch.float).to(device)
+
+
+def get_tile_bounding_box(bottom_left, tile_size):
+    return [
+        bottom_left[0],
+        bottom_left[1],
+        bottom_left[0] + tile_size[0],
+        bottom_left[1] + tile_size[1],
+    ]
+
+
+def points_in_rect(points: np.ndarray, rect: np.ndarray) -> np.ndarray:
+    logic = np.all(points > rect[:2], axis=1) & np.all(points < rect[2:], axis=1)
+    return logic
+
+
+def sp2lg(feats: dict) -> dict:
+    feats = {k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()}
+    if feats["descriptors"].shape[-1] != 256:
+        feats["descriptors"] = feats["descriptors"].T
+    feats = {k: v[None] for k, v in feats.items()}
+    return feats
+
+
+def rbd2np(data: dict) -> dict:
+    """Remove batch dimension from elements in data"""
+    return {
+        k: v[0].cpu().numpy() if isinstance(v, (torch.Tensor, np.ndarray, list)) else v
+        for k, v in data.items()
+    }

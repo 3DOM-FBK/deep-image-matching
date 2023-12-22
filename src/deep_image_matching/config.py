@@ -5,7 +5,7 @@ from src.deep_image_matching import GeometricVerification, Quality, TileSelectio
 conf_general = {
     "quality": Quality.HIGH,  # Quality.HIGHEST, Quality.HIGH, Quality.MEDIUM, Quality.LOW, Quality.LOWEST
     "tile_selection": TileSelection.PRESELECTION,  # [TileSelection.NONE, TileSelection.PRESELECTION, TileSelection.GRID]
-    "tile_size": (2000, 1200),  # (x, y) or (width, height)
+    "tile_size": (2400, 2000),  # (x, y) or (width, height)
     "tile_overlap": 50,  # in pixels
     "geom_verification": GeometricVerification.PYDEGENSAC,
     "gv_threshold": 4,
@@ -23,8 +23,8 @@ confs = {
     "superpoint+lightglue": {
         "extractor": {
             "name": "superpoint",
-            "keypoint_threshold": 0.0001,
-            "max_keypoints": 4096,
+            "keypoint_threshold": 0.001,
+            "max_keypoints": 2048,
         },
         "matcher": {
             "name": "lightglue",
