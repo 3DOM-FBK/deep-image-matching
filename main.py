@@ -268,9 +268,20 @@ def main():
 
         # Define database path and camera mode
         database = output_dir / "database_pycolmap.db"
-        camera_mode: pycolmap.CameraMode = pycolmap.CameraMode.AUTO
+        camera_mode: pycolmap.CameraMode = pycolmap.CameraMode.AUTO # pycolmap.CameraMode.AUTO, pycolmap.CameraMode.SINGLE
 
         # Define cameras
+        #cam0 = pycolmap.Camera(
+        #    model="PINHOLE",
+        #    width=1500,
+        #    height=1000,
+        #    params=[
+        #        1500,
+        #        1500,
+        #        750,
+        #        500,
+        #    ],
+        #)
         # cam1 = pycolmap.Camera(
         #     model="FULL_OPENCV",
         #     width=6012,
@@ -309,7 +320,7 @@ def main():
         #         0.0,
         #     ],
         # )
-        # cameras = [cam1, cam2]
+        #cameras = [cam0] # cameras = [cam1, cam2]
         cameras = None
 
         # Define options
