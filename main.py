@@ -270,6 +270,19 @@ def main():
         database = output_dir / "database_pycolmap.db"
         camera_mode: pycolmap.CameraMode = pycolmap.CameraMode.AUTO # pycolmap.CameraMode.AUTO, pycolmap.CameraMode.SINGLE
 
+        # OPENCV camera models and number of parameters to be used
+        #    SIMPLE_PINHOLE: f, cx, cy
+        #    PINHOLE: fx, fy, cx, cy
+        #    SIMPLE_RADIAL: f, cx, cy, k
+        #    RADIAL: f, cx, cy, k1, k2
+        #    OPENCV: fx, fy, cx, cy, k1, k2, p1, p2
+        #    OPENCV_FISHEYE: fx, fy, cx, cy, k1, k2, k3, k4
+        #    FULL_OPENCV: fx, fy, cx, cy, k1, k2, p1, p2, k3, k4, k5, k6
+        #    FOV: fx, fy, cx, cy, omega
+        #    SIMPLE_RADIAL_FISHEYE: f, cx, cy, k
+        #    RADIAL_FISHEYE: f, cx, cy, k1, k2
+        #    THIN_PRISM_FISHEYE: fx, fy, cx, cy, k1, k2, p1, p2, k3, k4, sx1, sy1
+
         # Define cameras
         #cam0 = pycolmap.Camera(
         #    model="PINHOLE",
