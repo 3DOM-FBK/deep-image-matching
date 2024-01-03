@@ -1,8 +1,6 @@
 import math
 import os
-import sys
 import warnings
-from pathlib import Path
 from warnings import warn
 
 import numpy as np
@@ -12,12 +10,10 @@ import torch.nn.functional as F
 from einops import rearrange
 from PIL import Image
 
-roma_path = Path(__file__).parent.parent / "thirdparty/RoMa"
-sys.path.append(str(roma_path))
-from roma.utils import get_tuple_transform_ops
-from roma.utils.kde import kde
-from roma.utils.local_correlation import local_correlation
-from roma.utils.utils import cls_to_flow_refine
+from ..utils import get_tuple_transform_ops
+from ..utils.kde import kde
+from ..utils.local_correlation import local_correlation
+from ..utils.utils import cls_to_flow_refine
 
 
 class ConvRefiner(nn.Module):
@@ -505,8 +501,10 @@ class RegressionMatcher(nn.Module):
         self,
         encoder,
         decoder,
-        h=448,
-        w=448,
+        h=600,
+        w=600,
+        # h=448,
+        # w=448,
         sample_mode="threshold",
         upsample_preds=False,
         symmetric=False,

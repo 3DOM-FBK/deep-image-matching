@@ -21,6 +21,7 @@ class GeometricVerification(Enum):
 class Quality(Enum):
     """Enumeration for matching quality."""
 
+    LOWEST = 0
     LOW = 1
     MEDIUM = 2
     HIGH = 3

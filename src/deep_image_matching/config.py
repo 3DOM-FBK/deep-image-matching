@@ -3,10 +3,10 @@ from src.deep_image_matching import GeometricVerification, Quality, TileSelectio
 # General configuration for the matching process.
 # It defines the quality of the matching process, the tile selection strategy, the tiling grid, the overlap between tiles, the geometric verification method, and the geometric verification parameters.
 conf_general = {
-    "quality": Quality.HIGH, # Quality.HIGHEST, Quality.HIGH, Quality.MEDIUM, Quality.LOW
-    "tile_selection": TileSelection.PRESELECTION, # [TileSelection.NONE, TileSelection.PRESELECTION, TileSelection.GRID]
-    "tiling_grid": [3, 3],
-    "tiling_overlap": 0,
+    "quality": Quality.HIGH,  # Quality.HIGHEST, Quality.HIGH, Quality.MEDIUM, Quality.LOW, Quality.LOWEST
+    "tile_selection": TileSelection.PRESELECTION,  # [TileSelection.NONE, TileSelection.PRESELECTION, TileSelection.GRID]
+    "tile_size": (2400, 2000),  # (x, y) or (width, height)
+    "tile_overlap": 50,  # in pixels
     "geom_verification": GeometricVerification.PYDEGENSAC,
     "gv_threshold": 4,
     "gv_confidence": 0.9999,
@@ -24,8 +24,8 @@ confs = {
     "superpoint+lightglue": {
         "extractor": {
             "name": "superpoint",
-            "keypoint_threshold": 0.0001,
-            "max_keypoints": 4096,
+            "keypoint_threshold": 0.001,
+            "max_keypoints": 2048,
         },
         "matcher": {
             "name": "lightglue",
@@ -108,7 +108,7 @@ confs = {
     },
     "roma": {
         "extractor": {"name": "no_extractor"},
-        "matcher": {"name": "roma", "pretrained": "outdoor"},
+        "matcher": {"name": "roma"},  # "pretrained": "outdoor"},
     },
     "keynetaffnethardnet+kornia_matcher": {
         "extractor": {
@@ -127,6 +127,33 @@ confs = {
         "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.99},
     },
 }
+
+
+class Config:
+    config_general = conf_general
+    confs = confs
+    confs_names = list(confs.keys())
+
+    def __init__(self):
+        pass
+
+    @classmethod
+    def from_name(cls, name: str) -> dict:
+        cfg = cls.get_config(name)
+        cfg["general"] = conf_general
+        return cfg
+
+    @staticmethod
+    def get_config(name: str) -> dict:
+        try:
+            return confs[name]
+        except KeyError:
+            raise ValueError(f"Invalid configuration name: {name}")
+
+    @staticmethod
+    def get_config_names() -> list:
+        return list(confs.keys())
+
 
 opt_zoo = {
     "extractors": [
@@ -158,10 +185,3 @@ opt_zoo = {
         "matching_lowres",
     ],
 }
-
-
-def get_config(name: str):
-    try:
-        return confs[name]
-    except KeyError:
-        raise ValueError(f"Invalid configuration name: {name}")
