@@ -133,7 +133,7 @@ def main(
     export_bundler: bool = True,
     export_ply: bool = True,
     copy_images: bool = True,
-    options: Optional[Dict[str, Any]] = None,
+    reconst_opts: Optional[Dict[str, Any]] = None,
     verbose: bool = True,
 ) -> pycolmap.Reconstruction:
     # Create empty database
@@ -164,7 +164,7 @@ def main(
         database_path=database,
         image_dir=image_dir,
         verbose=verbose,
-        options=options,
+        options=reconst_opts,
     )
     if model is not None:
         logger.info(

@@ -3,8 +3,8 @@
 
 ## DEEP-IMAGE-MATCHING
 
-| SIFT                                             | DISK                                               | IMAGES ORIENTATION                                   | DENSE WITH ROMA                                |            
-| ------------------------------------             | ------------------------------------               | ------------------------------------                 | ------------------------------------           |
+| SIFT                                             | DISK                                               | IMAGES ORIENTATION                                   | DENSE WITH ROMA                                |
+| ------------------------------------------------ | -------------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------- |
 | <img src='assets/matches_sift.gif' height="100"> | <img src='assets/matches_joined.gif' height="100"> | <img src='assets/orientation_deep.gif' height="100"> | <img src='assets/roma_dense.gif' height="100"> |
 
 | SIFT                                             | SUPERGLUE                                            |            
@@ -35,7 +35,7 @@ Key features:
 | &check; KeyNet + OriNet + HardNet8 | &check; RoMa                                              |
 | &check; ORB (opencv)               | &#x2610; GlueStick                                        |
 | &check; SIFT (opencv)              |
-| &check; DeDoDe                     |                                                           
+| &check; DeDoDe                     |
 
 ## Installation
 
@@ -61,11 +61,11 @@ pip install -e .
 
 If you run into any troubles installing Pytorch (and its related packages, such as Kornia), please check the official website ([https://pytorch.org/get-started/locally/](https://pytorch.org/get-started/locally/)) and follow the instructions for your system and CUDA architecture. Then, try to install again deep-image-matching.
 
-For automatize 3D reconstruction, DEEP-IMAGE-MATCHING uses [pycolmap](https://github.com/colmap/pycolmap), which is only available in [pypi](https://pypi.org/project/pycolmap/) for Linux and macOS. 
+For automatize 3D reconstruction, DEEP-IMAGE-MATCHING uses [pycolmap](https://github.com/colmap/pycolmap), which is only available in [pypi](https://pypi.org/project/pycolmap/) for Linux and macOS.
 If you are using Windows, you can use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) for installing pycolmap (please refer to issue [#34](https://github.com/colmap/pycolmap/issues/34) in pycolmap repo).
 
 Pycolmap is needed for running directly the 3D reconstruction (without the need to use COLMAP by GUI or CLI) and to export the reconstruction in Bundler format for importing into Metashape. Pycolmap is alse needed to create cameras from exif metadata in the COLMAP database.
-If pycolmap is not installed, deep-image-matching will still work and it will export the matches in a COLMAP SQlite databse, which can be opened by COLMAP GUI or CLI to run the 3D reconstruction. 
+If pycolmap is not installed, deep-image-matching will still work and it will export the matches in a COLMAP SQlite databse, which can be opened by COLMAP GUI or CLI to run the 3D reconstruction.
 
 If you are on Linux or macOS, you can install pycolmap with:
 
@@ -82,13 +82,12 @@ There are two main configuration in `config.py`: `conf_general` and `confs`.
 
 - `conf_general` contains some general configuration that is valid for all the combinations of local features and matchers, including the option to run the matching by tiles, run it on full images or on downsampled images, and the options for the geometric verification.
 
-
   ```python
     conf_general = {
       "quality": Quality.HIGH, -> `Control the resolution of the images, where HIGH = full-res; MEDIUM = half res; LOW = 1/4 res; HIGHEST = 2x res`
       "tile_selection": TileSelection.PRESELECTION, -> `Control the tiling approach. Options are NONE: disable tiling; PRESELECTION: divide the images into regular tiles and select the tiles to be matched by a low-resolution preselection (suggested for large images); GRID: divide images into regular tiles and match only tiles at the same location in the grid (e.g., 1-1, 2-2 etc); EXHAUSTIVE: match all the tiles with all the tiles. (slow)`
-      "tiling_grid": [3, 3], -> `Define the tile grid as [number of rows, number of columns] of the grid.`
-      "tiling_overlap": 0, -> `Optionally, overlap tiles by a certain amount of pixels`
+      "tile_size": [3, 3], -> `Define the tile grid as [number of rows, number of columns] of the grid.`
+      "tile_overlap": 0, -> `Optionally, overlap tiles by a certain amount of pixels`
       "geom_verification": GeometricVerification.PYDEGENSAC, -> `Enable or disable Geometric Verification. Options are: NONE: disabled; PYDEGENSAC: use pydegensac; MAGSAC: use OpenCV geometric verification with MAGSAC.`
       "gv_threshold": 4, -> `Threshold [px] for the geometric verification`
       "gv_confidence": 0.9999, -> `Confidence value for the geometric verification`
@@ -96,9 +95,8 @@ There are two main configuration in `config.py`: `conf_general` and `confs`.
     }
   ```
 
-
 - `confs` is a dictionary that contains all the possibile combinations of local feature extrators and matchers that can be used in deep-image-matching and their configuration. Each configuration is defined by a name (e.g., "superpoint+lightglue") and it must be a dictionary containing two sub-dictionaries for the 'extractor' and the 'matcher'.
-  
+
   Each subdictionary contains the name of the extractor or the matcher and then a series of optional parameters to to be passed to the extractor or matcher. Please refer to the specific implementation of the Extractor or Matcher (located in the folders `src/deep_image_matching/extractors` or `src/deep_image_matching/matchers` for a list of all the possible options.
 
   <details>
