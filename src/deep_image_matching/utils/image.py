@@ -69,6 +69,7 @@ class Image:
     DATE_FMT = "%Y-%m-%d"
     TIME_FMT = "%H:%M:%S"
     DATETIME_FMT = "%Y:%m:%d %H:%M:%S"
+    DATE_FORMATS = [DATETIME_FMT, DATE_FMT, TIME_FMT]
 
     def __init__(
         self, path: Union[str, Path], id: int = None, skip_exif: bool = False
@@ -251,7 +252,13 @@ class Image:
             logger.warning(f"Date not available in exif for {self.name}")
             date_str = None
         if date_str is not None:
-            self._date_time = datetime.strptime(date_str, self.DATETIME_FMT)
+            for format in self.DATE_FORMATS:
+                try:
+                    self._date_time = datetime.strptime(date_str, format)
+                    break
+                except ValueError:
+                    continue
+
 
         # Get Focal Length
         if "EXIF FocalLength" in exif.keys():
