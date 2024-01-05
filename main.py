@@ -1,3 +1,4 @@
+import shutil
 from importlib import import_module
 
 from src.deep_image_matching import logger, timer
@@ -66,6 +67,10 @@ timer.update("export_to_colmap")
 
 # If --skip_reconstruction is not specified, run reconstruction
 if not config["general"]["skip_reconstruction"]:
+    # For debugging purposes, copy images to output folder
+    if config["general"]["verbose"]:
+        shutil.copytree(imgs_dir, output_dir / "images", dirs_exist_ok=True)
+
     use_pycolmap = True
     try:
         pycolmap = import_module("pycolmap")
@@ -93,6 +98,25 @@ if not config["general"]["skip_reconstruction"]:
         #   print(list(model.cameras.values()))
         # or opening the database with the COLMAP gui.
         #
+        # OPENCV camera models and number of parameters to be used
+        #    SIMPLE_PINHOLE: f, cx, cy
+        #    PINHOLE: fx, fy, cx, cy
+        #    SIMPLE_RADIAL: f, cx, cy, k
+        #    RADIAL: f, cx, cy, k1, k2
+        #    OPENCV: fx, fy, cx, cy, k1, k2, p1, p2
+        #    OPENCV_FISHEYE: fx, fy, cx, cy, k1, k2, k3, k4
+        #    FULL_OPENCV: fx, fy, cx, cy, k1, k2, p1, p2, k3, k4, k5, k6
+        #    FOV: fx, fy, cx, cy, omega
+        #    SIMPLE_RADIAL_FISHEYE: f, cx, cy, k
+        #    RADIAL_FISHEYE: f, cx, cy, k1, k2
+        #    THIN_PRISM_FISHEYE: fx, fy, cx, cy, k1, k2, p1, p2, k3, k4, sx1, sy1
+        #
+        # cam0 = pycolmap.Camera(
+        #    model="PINHOLE",
+        #    width=1500,
+        #    height=1000,
+        #    params=[1500, 1500, 750, 500],
+        # )
         # cam1 = pycolmap.Camera(
         #     model="SIMPLE_PINHOLE",
         #     width=6012,
@@ -105,7 +129,7 @@ if not config["general"]["skip_reconstruction"]:
         #     height=4008,
         #     params=[6.621, 3.013, 1.943],
         # )
-        # cameras = [cam1, cam2]
+        # cameras = [cam0] # or cameras = [cam1, cam2]
         cameras = None
 
         # Optional - You can specify some reconstruction configuration
@@ -136,6 +160,6 @@ if not config["general"]["skip_reconstruction"]:
         timer.update("pycolmap reconstruction")
 
     else:
-        logger.warning("Reconstruction with COLMAP CLI is not yet implemented")
+        logger.warning("Reconstruction with COLMAP CLI is not implemented yet.")
 
 timer.print("Deep Image Matching")

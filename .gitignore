@@ -4,6 +4,7 @@ res/
 output/
 sandbox/
 assets/outs
+src/deep_image_matching/thirdparty/weights
 
 # VScode
 .vscode/

@@ -47,8 +47,8 @@ class ExtractorBase(metaclass=ABCMeta):
         "output_dir": None,
         "quality": Quality.HIGH,
         "tile_selection": TileSelection.NONE,
-        "tiling_grid": [1, 1],
-        "tiling_overlap": 0,
+        "tile_size": (1024, 1024),  # (x, y) or (width, height)
+        "tile_overlap": 0,  # in pixels
         "force_cpu": False,
         "do_viz": False,
     }
@@ -135,10 +135,10 @@ class ExtractorBase(metaclass=ABCMeta):
 
         # Load image
         image = cv2.imread(str(im_path))
-        if self.as_float:
-            image = image.astype(np.float32)
         if self.grayscale:
             image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        if self.as_float:
+            image = image.astype(np.float32)
 
         # Resize images if needed
         image_ = self._resize_image(self._quality, image)
@@ -237,10 +237,13 @@ class ExtractorBase(metaclass=ABCMeta):
             select_unique: If True the unique values of keypoints are selected
         """
         # Compute tiles limits
-        grid = self._config["general"]["tiling_grid"]
-        overlap = self._config["general"]["tiling_overlap"]
-        tiler = Tiler(grid=grid, overlap=overlap)
-        t_lims, t_origin = tiler.compute_limits_by_grid(image)
+        tile_size = self._config["general"]["tile_size"]
+        # grid = self._config["general"]["tile_grid"]
+        overlap = self._config["general"]["tile_overlap"]
+        tiler = Tiler(tiling_mode="size")
+        tiles, tiles_origins, padding = tiler.compute_tiles_by_size(
+            input=image, window_size=tile_size, overlap=overlap
+        )
 
         # Initialize empty arrays
         kpts_full = np.array([], dtype=np.float32).reshape(0, 2)
@@ -251,28 +254,59 @@ class ExtractorBase(metaclass=ABCMeta):
         tile_idx_full = np.array([], dtype=np.float32)
 
         # Extract features from each tile
-        for idx, lim in t_lims.items():
+        for idx, tile in tiles.items():
             logger.debug(f"  - Extracting features from tile: {idx}")
 
             # Extract features in tile
-            tile = tiler.extract_patch(image, lim)
             feat_tile = self._extract(tile)
-
-            # append features
-            kpts_full = np.vstack(
-                (kpts_full, feat_tile["keypoints"] + np.array(lim[0:2]))
-            )
-            descriptors_full = np.hstack((descriptors_full, feat_tile["descriptors"]))
-            tile_idx_full = np.concatenate(
-                (
-                    tile_idx_full,
-                    np.ones(feat_tile["keypoints"].shape[0], dtype=np.float32) * idx,
-                )
-            )
+            kp_tile = feat_tile["keypoints"]
+            des_tile = feat_tile["descriptors"]
             if "scores" in feat_tile:
-                scores_full = np.concatenate((scores_full, feat_tile["scores"]))
+                scor_tile = feat_tile["scores"]
             else:
-                scores_full = None
+                scor_tile = None
+
+            # get keypoints in original image coordinates
+            kp_tile += np.array(tiles_origins[idx])
+
+            # Check if any keypoints are outside the original image (non-padded) or too close to the border
+            border_thr = 2  # Adjust this threshold as needed
+            mask = (
+                (kp_tile[:, 0] >= border_thr)
+                & (kp_tile[:, 0] < image.shape[1] - border_thr)
+                & (kp_tile[:, 1] >= border_thr)
+                & (kp_tile[:, 1] < image.shape[0] - border_thr)
+            )
+            kp_tile = kp_tile[mask]
+            des_tile = des_tile[:, mask]
+            if scor_tile is not None:
+                scor_tile = scor_tile[mask]
+
+            # For debug: visualize keypoints and save to disk
+            # tile = np.uint8(tile)
+            # out = cv2.drawKeypoints(
+            #     tile,
+            #     [
+            #         cv2.KeyPoint(
+            #             x - tiles_origins[idx][0], y - tiles_origins[idx][1], 1
+            #         )
+            #         for x, y in kp_tile
+            #     ],
+            #     0,
+            #     (0, 255, 0),
+            #     flags=cv2.DRAW_MATCHES_FLAGS_DEFAULT,
+            # )
+            # cv2.imwrite(f"sandbox/tile_{idx}.png", out)
+
+            if len(kp_tile) > 0:
+                kpts_full = np.vstack((kpts_full, kp_tile))
+                descriptors_full = np.hstack((descriptors_full, des_tile))
+                tile_idx = np.full(len(kp_tile), idx, dtype=np.float32)
+                tile_idx_full = np.concatenate((tile_idx_full, tile_idx))
+                if scor_tile is not None:
+                    scores_full = np.concatenate((scores_full, scor_tile))
+                else:
+                    scores_full = None
 
         if scores_full is None:
             logger.warning("No scores found in features")
@@ -315,6 +349,8 @@ class ExtractorBase(metaclass=ABCMeta):
             image_ = cv2.pyrDown(image)
         elif quality == Quality.LOW:
             image_ = cv2.pyrDown(cv2.pyrDown(image))
+        elif quality == Quality.LOWEST:
+            image_ = cv2.pyrDown(cv2.pyrDown(cv2.pyrDown(image)))
         return image_
 
     def _resize_features(
@@ -340,5 +376,7 @@ class ExtractorBase(metaclass=ABCMeta):
             features["keypoints"] *= 2
         elif quality == Quality.LOW:
             features["keypoints"] *= 4
+        elif quality == Quality.LOWEST:
+            features["keypoints"] *= 8
 
         return features
