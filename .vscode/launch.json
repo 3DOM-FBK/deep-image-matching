@@ -14,63 +14,22 @@
       "request": "launch",
       "program": "${file}",
       "console": "integratedTerminal",
-      // "args": [
-      //   "--config",
-      //   "superpoint+lightglue",
-      //   "--images",
-      //   "assets/example_square",
-      //   "--strategy",
-      //   "sequential",
-      //   // "--upright",
-      //   "--force",
-      //   "-V"
-      // ]
-      // "args": [
-      //   "--config",
-      //   "roma",
-      //   "--images",
-      //   "data/easy_small",
-      //   "--strategy",
-      //   "bruteforce",
-      //   "--force"
-      // ]
-      // "args": [
-      //   "--config",
-      //   "aliked+lightglue",
-      //   "--images",
-      //   "data/arsenale4",
-      //   "--strategy",
-      //   "bruteforce",
-      //   "--force"
-      // ]
-      // "args": [
-      //   "--config",
-      //   "aliked+lightglue",
-      //   "--images",
-      //   "data/arsenale4",
-      //   "--strategy",
-      //   "bruteforce",
-      //   "--force"
-      // ]
-      // "args": [
-      //   "--config",
-      //   "roma",
-      //   "--images",
-      //   "data/belv_lingua",
-      //   "--strategy",
-      //   "bruteforce",
-      //   "--force",
-      //   "-V"
-      // ]
       "args": [
         "--config",
-        "superpoint+lightglue",
+        // "superpoint+lightglue",
+        "roma",
         "--images",
-        "data/belv_lingua",
+        "data/belv_lingua_easy",
+        "--quality",
+        "low",
+        "--tiling",
+        "preselection",
         "--strategy",
-        "bruteforce",
-        "--force"
-        // "-V"
+        "low",
+        // "--upright",
+        "--skip_reconstruction",
+        "--force",
+        "-V"
       ]
     },
     {

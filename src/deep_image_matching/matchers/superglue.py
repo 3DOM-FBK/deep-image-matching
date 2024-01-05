@@ -12,6 +12,14 @@ def features_2_sg(
     data = {}
     data = {**data, **{k + "0": v for k, v in feats0.items()}}
     data = {**data, **{k + "1": v for k, v in feats1.items()}}
+    if 'feature_path0' in data.keys(): del data['feature_path0']
+    if 'feature_path1' in data.keys(): del data['feature_path1']
+    if 'im_path0' in data.keys(): del data['im_path0']
+    if 'im_path1' in data.keys(): del data['im_path1']
+    data['image0'] = np.empty(data['image_size0'])
+    data['image1'] = np.empty(data['image_size1'])
+    data['image0'] = data['image0'][None]
+    data['image1'] = data['image1'][None]
 
     # Add batch dimension
     data = {k: v[None] for k, v in data.items()}

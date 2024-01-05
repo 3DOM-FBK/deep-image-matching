@@ -3,9 +3,13 @@
 
 ## DEEP-IMAGE-MATCHING
 
-| SIFT                                 | DISK                                 | DISK                         |
-| ------------------------------------ | ------------------------------------ | ---------------------------- |
-| ![X1](assets/nadar_sift_matches.png) | ![X2](assets/nadar_disk_matches.png) | ![X3](assets/nadar_disk.png) |
+| SIFT                                             | DISK                                               | IMAGES ORIENTATION                                   | DENSE WITH ROMA                                |
+| ------------------------------------------------ | -------------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------- |
+| <img src='assets/matches_sift.gif' height="100"> | <img src='assets/matches_joined.gif' height="100"> | <img src='assets/orientation_deep.gif' height="100"> | <img src='assets/roma_dense.gif' height="100"> |
+
+| SIFT                                             | SUPERGLUE                                            |            
+| ------------------------------------             | ------------------------------------                 |
+| <img src='assets/temple_rsift.gif' height="165"> | <img src='assets/temple_superglue.gif' height="165"> |
 
 Multivew matcher for COLMAP. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI. Feel free to collaborate!
 
@@ -26,22 +30,21 @@ Key features:
 | &check; SuperPoint                 | &check; Lightglue (with Superpoint, Disk, and ALIKED)     |
 | &check; DISK                       | &check; SuperGlue (with Superpoint)                       |
 | &check; ALIKE                      | &check; LoFTR                                             |
-| &check; ALIKED                     | &check; Nearest neighbor (with KORNIA Descriptor Matcher) |
-| &#x2610; Superpoint free           | &#x2610; GlueStick                                        |
+| &check; ALIKED                     | &check; SE2-LoFTR                                         |
+| &#x2610; Superpoint free           | &check; Nearest neighbor (with KORNIA Descriptor Matcher) |
 | &check; KeyNet + OriNet + HardNet8 | &check; RoMa                                              |
-| &check; ORB (opencv)               |                                                           |
+| &check; ORB (opencv)               | &#x2610; GlueStick                                        |
 | &check; SIFT (opencv)              |
+| &check; DeDoDe                     |
+
+## Colab demo  ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1gwdyLSiBIsq6e9_6g4X3VqucO0LBLuww?usp=sharing)
+Want to run on a sample dataset? Try the Colab demo. Working to extend to other examples and visulize results..
 
 ## Installation
 
-`Deep-image-matching` is tested on Ubuntu 22.04 and Windows 10 with `Python 3.9`. It is strongly reccomended to have a NVIDIA GPU with at least 8GB of memory.
+`Deep-image-matching` is tested on Ubuntu 22.04 and Windows 10 with `Python 3.9`. It is strongly recommended to have a NVIDIA GPU with at least 8GB of memory.
 
 Please, note that deep-image-matching relies on [pydegensac](https://github.com/ducha-aiki/pydegensac) for the geometric verification of matches, which is only available for `Python <=3.9` on Windows. If you are using Windows, please, install `Python 3.9` (on Linux, you can also use `Pythom 3.10`).
-
-Additionally, deep-image-matching relies on [pycolmap](https://github.com/colmap/pycolmap), which is only available in [pypi](https://pypi.org/project/pycolmap/) for Linux and macOS. If you are using Windows, please, use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) (please refer to issue [#34](https://github.com/colmap/pycolmap/issues/34) in pycolmap repo).
-
-Pycolmap is needed for running directly the 3D reconstruction (without the need to use COLMAP by GUI or CLI) and to export the reconstruction in Bundler format for importing into Metashape. Pycolmap is alse needed to create cameras from exif metadata in the COLMAP database.
-If pycolmap is not installed, deep-image-matching will still work and it will export the matches in a COLMAP SQlite databse, which can be opened by COLMAP GUI or CLI to run the 3D reconstruction.
 
 For installing `deep-image-matching`, first create a conda environment:
 
@@ -61,6 +64,12 @@ pip install -e .
 
 If you run into any troubles installing Pytorch (and its related packages, such as Kornia), please check the official website ([https://pytorch.org/get-started/locally/](https://pytorch.org/get-started/locally/)) and follow the instructions for your system and CUDA architecture. Then, try to install again deep-image-matching.
 
+For automatize 3D reconstruction, DEEP-IMAGE-MATCHING uses [pycolmap](https://github.com/colmap/pycolmap), which is only available in [pypi](https://pypi.org/project/pycolmap/) for Linux and macOS.
+If you are using Windows, you can use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) for installing pycolmap (please refer to issue [#34](https://github.com/colmap/pycolmap/issues/34) in pycolmap repo).
+
+Pycolmap is needed for running directly the 3D reconstruction (without the need to use COLMAP by GUI or CLI) and to export the reconstruction in Bundler format for importing into Metashape. Pycolmap is alse needed to create cameras from exif metadata in the COLMAP database.
+If pycolmap is not installed, deep-image-matching will still work and it will export the matches in a COLMAP SQlite databse, which can be opened by COLMAP GUI or CLI to run the 3D reconstruction.
+
 If you are on Linux or macOS, you can install pycolmap with:
 
 ```bash
@@ -74,28 +83,24 @@ You can run deep-image-matching with the CLI or with the GUI.
 All the configurations (that are used both from the CLI and the GUI) are in `config.py`.
 There are two main configuration in `config.py`: `conf_general` and `confs`.
 
-- `conf_general` contains some general configuration that is valid for each combination of local features and matchers, including the option to run the matching by tiles, run it on full images or on downsampled images, and the options for the geometric verification.
-
-    <details>
-
-    <summary>Show dictionary</summary>
+- `conf_general` contains some general configuration that is valid for all the combinations of local features and matchers, including the option to run the matching by tiles, run it on full images or on downsampled images, and the options for the geometric verification.
 
   ```python
     conf_general = {
-      "quality": Quality.HIGH,
-      "tile_selection": TileSelection.PRESELECTION,
-      "tiling_grid": [3, 3],
-      "tiling_overlap": 0,
-      "geom_verification": GeometricVerification.PYDEGENSAC,
-      "gv_threshold": 4,
-      "gv_confidence": 0.9999,
-      "preselection_size_max": 2000,
+      "quality": Quality.HIGH, -> `Control the resolution of the images, where HIGH = full-res; MEDIUM = half res; LOW = 1/4 res; HIGHEST = 2x res`
+      "tile_selection": TileSelection.PRESELECTION, -> `Control the tiling approach. Options are NONE: disable tiling; PRESELECTION: divide the images into regular tiles and select the tiles to be matched by a low-resolution preselection (suggested for large images); GRID: divide images into regular tiles and match only tiles at the same location in the grid (e.g., 1-1, 2-2 etc); EXHAUSTIVE: match all the tiles with all the tiles. (slow)`
+      "tile_size": [3, 3], -> `Define the tile grid as [number of rows, number of columns] of the grid.`
+      "tile_overlap": 0, -> `Optionally, overlap tiles by a certain amount of pixels`
+      "geom_verification": GeometricVerification.PYDEGENSAC, -> `Enable or disable Geometric Verification. Options are: NONE: disabled; PYDEGENSAC: use pydegensac; MAGSAC: use OpenCV geometric verification with MAGSAC.`
+      "gv_threshold": 4, -> `Threshold [px] for the geometric verification`
+      "gv_confidence": 0.9999, -> `Confidence value for the geometric verification`
+      "preselection_size_max": 2000, -> `if tile_selection == TileSelection.PRESELECTION, define the resolution at which the images are downsampled to run the low-resolution tile preselection.`
     }
   ```
 
-    </details>
-
 - `confs` is a dictionary that contains all the possibile combinations of local feature extrators and matchers that can be used in deep-image-matching and their configuration. Each configuration is defined by a name (e.g., "superpoint+lightglue") and it must be a dictionary containing two sub-dictionaries for the 'extractor' and the 'matcher'.
+
+  Each subdictionary contains the name of the extractor or the matcher and then a series of optional parameters to to be passed to the extractor or matcher. Please refer to the specific implementation of the Extractor or Matcher (located in the folders `src/deep_image_matching/extractors` or `src/deep_image_matching/matchers` for a list of all the possible options.
 
   <details>
 
@@ -193,6 +198,10 @@ The GUI loads the available configurations from `config.py` and it shows them in
 ### Merging databases with different local features
 
 To run the matching with different local features and/or matchers and marging together the results, you can use scripts in the `./scripts` directory for merging the COLMAP databases.
+```bash
+python ./join_databases.py --help
+python ./join_databases.py --input assets/to_be_joined --output assets/to_be_joined
+```
 
 ## TODO:
 
@@ -205,9 +214,10 @@ To run the matching with different local features and/or matchers and marging to
 - [ ] Add visualization for extracted features and matches
 - [ ] Improve speed
 - [ ] Autoselect tiling grid in order to fit images in GPU memory
-- [ ] Add tests, documentation and examples
-- [ ] Apply mask during feature extraction
+- [ ] Add tests, documentation and examples (e.g. colab, ..)
+- [ ] Apply masks during feature extraction
 - [ ] Check scripts
+- [ ] Integrate support for Pix4D [Open Photogrammetry Format](https://github.com/Pix4D/opf-spec)
 
 ## References
 

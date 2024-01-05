@@ -52,6 +52,13 @@ def get_features(
             try:
                 kpts = np.array(fd[name]["keypoints"]).astype(np.float32)
                 descr = np.array(fd[name]["descriptors"]).astype(np.float32)
+
+            except KeyError:
+                raise ValueError(f"Cannot find keypoints and descriptors in {path}")
+
+            try:
+                feature_path = fd[name]["feature_path"][()].decode("utf-8")
+                im_path = fd[name]["im_path"][()].decode("utf-8")
                 feats = {
                     "keypoints": kpts,
                     "descriptors": descr,
@@ -61,7 +68,11 @@ def get_features(
                 if "im_path" in fd[name]:
                     feats["im_path"] = fd[name]["im_path"][()].decode("utf-8")
             except KeyError:
-                raise ValueError(f"Cannot find keypoints and descriptors in {path}")
+                logger.warning(
+                    "Cannot find feature_path and im_path in the hdf5 file. "
+                    "Returning only keypoints and descriptors. Matching with end-to-end matchers (loftr, roma) will not work."
+                )
+                feats = {"keypoints": kpts, "descriptors": descr}
 
             for k in ["tile_idx", "scores"]:
                 if k in fd[name]:

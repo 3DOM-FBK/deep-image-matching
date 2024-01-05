@@ -132,9 +132,14 @@ def main(
     export_text: bool = True,
     export_bundler: bool = True,
     export_ply: bool = True,
+<<<<<<< HEAD
+=======
+    copy_images: bool = True,
+>>>>>>> master
     reconst_opts: Optional[Dict[str, Any]] = None,
     verbose: bool = True,
 ) -> pycolmap.Reconstruction:
+    # Create empty database
     create_empty_db(database)
     import_images(image_dir, database, camera_mode)
 
@@ -142,6 +147,7 @@ def main(
     if cameras is not None:
         update_cameras(database, cameras)
 
+    # Import features and matches
     image_ids = get_image_ids(database)
     import_features(image_ids, database, feature_path)
     import_matches(
@@ -156,7 +162,11 @@ def main(
         estimation_and_geometric_verification(database, pair_path, verbose=verbose)
 
     # Run reconstruction
+<<<<<<< HEAD
     model = pycolmap_reconstruction(
+=======
+    model = run_reconstruction(
+>>>>>>> master
         sfm_dir=sfm_dir,
         database_path=database,
         image_dir=image_dir,
@@ -170,11 +180,14 @@ def main(
         )
 
         # Copy images to sfm_dir
-        shutil.copytree(image_dir, sfm_dir / "images", dirs_exist_ok=True)
+        if copy_images:
+            shutil.copytree(image_dir, sfm_dir / "images", dirs_exist_ok=True)
 
-        # Export reconstruction in Colmap format
+        # Create reconstruction directory
         reconstruction_dir = sfm_dir / "reconstruction"
         reconstruction_dir.mkdir(exist_ok=True, parents=True)
+
+        # Export reconstruction in Colmap format
         model.write(reconstruction_dir)
 
         # Export ply

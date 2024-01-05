@@ -69,6 +69,7 @@ class Image:
     DATE_FMT = "%Y-%m-%d"
     TIME_FMT = "%H:%M:%S"
     DATETIME_FMT = "%Y:%m:%d %H:%M:%S"
+    DATE_FORMATS = [DATETIME_FMT, DATE_FMT, TIME_FMT]
 
     def __init__(
         self, path: Union[str, Path], id: int = None, skip_exif: bool = False
@@ -91,11 +92,8 @@ class Image:
         self._date_time = None
         self._focal_length = None
 
-        #try:
-        #    if not skip_exif:
-        #        self.read_exif()
-        #except:
-        #    raise RuntimeError("Unable to read exif data.")
+        if not skip_exif:
+            self.read_exif()
 
     def __repr__(self) -> str:
         """Returns a string representation of the image"""
@@ -154,6 +152,14 @@ class Image:
         return int(self._width)
 
     @property
+    def size(self) -> tuple:
+        """Returns the size of the image in pixels as a tuple (width, height)"""
+        if self._width is None or self._height is None:
+            logger.error(f"Image size not available for {self.name}.")
+            return None
+        return (int(self._width), int(self._height))
+
+    @property
     def exif(self) -> dict:
         """exif Returns the exif of the image"""
         if self._exif_data is None:
@@ -209,55 +215,61 @@ class Image:
         """Read image exif with exifread and store them in a dictionary"""
         try:
             with open(self._path, "rb") as f:
-                self._exif_data = exifread.process_file(f, details=False, debug=False)
+                exif = exifread.process_file(f, details=False, debug=False)
         except OSError:
-            logger.warning(f"No exif data available for {self.name}.")
+            logger.error(f"Unable to read exif data for image {self.name}.")
+            return None
 
         # Get image size
-        if (
-            "Image ImageWidth" in self._exif_data.keys()
-            and "Image ImageLength" in self._exif_data.keys()
-        ):
-            self._width = self._exif_data["Image ImageWidth"].printable
-            self._height = self._exif_data["Image ImageLength"].printable
+        if "Image ImageWidth" in exif.keys() and "Image ImageLength" in exif.keys():
+            self._width = exif["Image ImageWidth"].printable
+            self._height = exif["Image ImageLength"].printable
         elif (
-            "EXIF ExifImageWidth" in self._exif_data.keys()
-            and "EXIF ExifImageLength" in self._exif_data.keys()
+            "EXIF ExifImageWidth" in exif.keys()
+            and "EXIF ExifImageLength" in exif.keys()
         ):
-            self._width = self._exif_data["EXIF ExifImageWidth"].printable
-            self._height = self._exif_data["EXIF ExifImageLength"].printable
+            self._width = exif["EXIF ExifImageWidth"].printable
+            self._height = exif["EXIF ExifImageLength"].printable
         else:
-            logger.warning(
-                "Image width and height found in exif. Try to load the image and get image size from numpy array"
+            logger.debug(
+                "Image width and height found in exif. Try to load the image and get image size with PIL"
             )
             try:
-                img = Image(self.path)
-                self.height, self.width = img.height, img.width
+                from PIL import Image
 
-            except OSError:
+                img = Image.open(self.path)
+                self._height, self._width = img.size
+
+            except:
                 raise RuntimeError("Unable to get image dimensions.")
 
         # Get Image Date and Time
-        if "Image DateTime" in self._exif_data.keys():
-            date_str = self._exif_data["Image DateTime"].printable
-        elif "EXIF DateTimeOriginal" in self._exif_data.keys():
-            date_str = self._exif_data["EXIF DateTimeOriginal"].printable
+        if "Image DateTime" in exif.keys():
+            date_str = exif["Image DateTime"].printable
+        elif "EXIF DateTimeOriginal" in exif.keys():
+            date_str = exif["EXIF DateTimeOriginal"].printable
         else:
             logger.warning(f"Date not available in exif for {self.name}")
             date_str = None
         if date_str is not None:
-            self._date_time = datetime.strptime(date_str, self.DATETIME_FMT)
+            for format in self.DATE_FORMATS:
+                try:
+                    self._date_time = datetime.strptime(date_str, format)
+                    break
+                except ValueError:
+                    continue
+
 
         # Get Focal Length
-        if "EXIF FocalLength" in self._exif_data.keys():
+        if "EXIF FocalLength" in exif.keys():
             try:
-                self._focal_length = float(
-                    self._exif_data["EXIF FocalLength"].printable
-                )
+                self._focal_length = float(exif["EXIF FocalLength"].printable)
             except:
                 logger.warning(
                     f"Unable to convert focal length to float for {self.name}"
                 )
+
+        exif = exif
 
         # TODO: Get GPS coordinates from exif
 
@@ -314,7 +326,7 @@ class Image:
 
 
 class ImageList:
-    image_ext = [".jpg", ".JPG", ".png"]
+    image_ext = [".jpg", ".JPG", ".png", ".PNG", ".tif", "TIF"]
 
     def __init__(self, img_dir: Path):
         self.images = []

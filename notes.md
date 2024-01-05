@@ -1,3 +1,3 @@
-- [ ] repo works per pairs - avoid extract again keypoints on already processed images
-- [ ] self.max_feat_numb: To be checked that works on all detectors and matchers (probably no). See image_matching.py. For alike do not work
-- [ ] per ora loftr estrae come local features ALIKE, mettere un estrazione fake invece
+- [ ] add steerers with DeDoDe
+- [ ] pass roma, loftr and se2loftr working on multi res
+- [ ] togliere export_bundler_format da config.py

@@ -19,7 +19,19 @@ class NoExtractor(ExtractorBase):
         super().__init__(config)
 
     def extract(self, img: Union[Image, Path, str]) -> np.ndarray:
+<<<<<<< HEAD
         """ovrewrite the base class method to always return an empty dict"""
+=======
+        """
+        Extract features from an image. This is the main method of the feature extractor.
+
+        Args:
+                img: Image to extract features from. It can be either a path to an image or an Image object
+
+        Returns:
+                List of features extracted from the image. Each feature is a 2D NumPy array
+        """
+>>>>>>> master
 
         if isinstance(img, str):
             im_path = Path(img)
@@ -39,6 +51,7 @@ class NoExtractor(ExtractorBase):
         output_dir.mkdir(parents=True, exist_ok=True)
         im_name = im_path.name
 
+<<<<<<< HEAD
         # Create dummy empty features
         features = {}
         features["feature_path"] = str(feature_path)
@@ -46,6 +59,17 @@ class NoExtractor(ExtractorBase):
         features["keypoints"] = np.array([])
         features["descriptors"] = np.array([])
         features["scores"] = np.array([])
+=======
+        # Build fake features
+        features = {}
+        features["keypoints"] = np.array([])
+        features["descriptors"] = np.array([])
+        features["scores"] = np.array([])
+        features["image_size"] = np.array(Image(im_path).size)
+        features["tile_idx"] = np.array([])
+        features["im_path"] = im_path
+        features["feature_path"] = feature_path
+>>>>>>> master
 
         with h5py.File(str(feature_path), "a", libver="latest") as fd:
             try:
@@ -57,6 +81,10 @@ class NoExtractor(ExtractorBase):
                         grp.create_dataset(k, data=str(v))
                     if isinstance(v, np.ndarray):
                         grp.create_dataset(k, data=v)
+<<<<<<< HEAD
+=======
+
+>>>>>>> master
             except OSError as error:
                 if "No space left on device" in error.args[0]:
                     logger.error(

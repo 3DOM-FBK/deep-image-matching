@@ -3,10 +3,10 @@ from . import GeometricVerification, Quality, TileSelection
 # General configuration for the matching process.
 # It defines the quality of the matching process, the tile selection strategy, the tiling grid, the overlap between tiles, the geometric verification method, and the geometric verification parameters.
 conf_general = {
-    "quality": Quality.LOW,
-    "tile_selection": TileSelection.NONE,
-    "tiling_grid": [3, 3],
-    "tiling_overlap": 0,
+    "quality": Quality.HIGH,  # Quality.HIGHEST, Quality.HIGH, Quality.MEDIUM, Quality.LOW, Quality.LOWEST
+    "tile_selection": TileSelection.PRESELECTION,  # [TileSelection.NONE, TileSelection.PRESELECTION, TileSelection.GRID]
+    "tile_size": (2400, 2000),  # (x, y) or (width, height)
+    "tile_overlap": 50,  # in pixels
     "geom_verification": GeometricVerification.PYDEGENSAC,
     "gv_threshold": 4,
     "gv_confidence": 0.9999,
@@ -25,7 +25,11 @@ confs = {
         "extractor": {
             "name": "superpoint",
             "keypoint_threshold": 0.001,
+<<<<<<< HEAD
             "max_keypoints": 4096,
+=======
+            "max_keypoints": 2048,
+>>>>>>> master
         },
         "matcher": {
             "name": "lightglue",
@@ -102,15 +106,27 @@ confs = {
         "extractor": {"name": "no_extractor"},
         "matcher": {"name": "loftr", "pretrained": "outdoor"},
     },
+    "se2loftr": {
+        "extractor": {"name": "no_extractor"},
+        "matcher": {"name": "se2loftr", "pretrained": "outdoor"},
+    },
     "roma": {
         "extractor": {"name": "no_extractor"},
-        "matcher": {"name": "roma", "pretrained": "outdoor"},
+        "matcher": {"name": "roma"},  # "pretrained": "outdoor"},
     },
     "keynetaffnethardnet+kornia_matcher": {
         "extractor": {
             "name": "keynetaffnethardnet",
-            "n_features": 2000,
-            "upright": True,
+            "n_features": 4000,
+            "upright": False,
+        },
+        "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.95},
+    },
+    "dedode": {
+        "extractor": {
+            "name": "dedode",
+            "n_features": 1000,
+            "upright": False,
         },
         "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.99},
     },
@@ -149,6 +165,7 @@ opt_zoo = {
         "alike",
         "aliked",
         "disk",
+        "dedode",
         "keynetaffnethardnet",
         "orb",
         "sift",
@@ -158,6 +175,7 @@ opt_zoo = {
         "superglue",
         "lightglue",
         "loftr",
+        "se2loftr",
         "adalam",
         "kornia_matcher",
         "roma",

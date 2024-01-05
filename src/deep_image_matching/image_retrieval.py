@@ -14,7 +14,15 @@ def ImageRetrieval(imgs_dir, outs_dir, retrieval_option, sfm_pairs):
     number_imgs = len(os.listdir(imgs_dir))
     retrieval_conf = extract_features.confs[retrieval_option]
     retrieval_path = extract_features.main(retrieval_conf, imgs_dir, outs_dir)
-    pairs_from_retrieval.main(retrieval_path, sfm_pairs, num_matched=number_imgs)
+
+    try:
+        pairs_from_retrieval.main(retrieval_path, sfm_pairs, num_matched=number_imgs)
+    except Exception as e:
+        print('retrieval_path', retrieval_path)
+        print('sfm_pairs', sfm_pairs)
+        print('number_imgs', number_imgs)
+        print(f"Error: {e}")
+        quit()
     
     img_pairs = []
     with open(outs_dir / 'retrieval_pairs.txt', 'r') as pairs:

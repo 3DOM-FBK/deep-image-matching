@@ -13,7 +13,7 @@ class KeyNet(ExtractorBase):
     }
     required_inputs = ["image"]
     grayscale = True
-    descriptor_size = 256
+    descriptor_size = 128
     detection_noise = 2.0
 
     def __init__(self, config: dict):
