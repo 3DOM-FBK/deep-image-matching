@@ -98,7 +98,7 @@ def run_dense(
         print(out.stdout.decode("utf-8"))
 
 
-def parse_args():
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Run dense reconstruction using COLMAP."
     )
@@ -134,12 +134,6 @@ def parse_args():
         help="Path to the COLMAP executable. Defaults to 'colmap' (works under linux if COLMAP is installed gloablly, specify your executable path otherwise').",
     )
     args = parser.parse_args()
-
-    return args
-
-
-if __name__ == "__main__":
-    args = parse_args()
 
     sfm_dir = Path(args.sfm_dir)
     dense_dir = Path(args.dense_dir)
