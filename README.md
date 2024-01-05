@@ -37,6 +37,11 @@ Key features:
 | &check; SIFT (opencv)              |
 | &check; DeDoDe                     |
 
+## Colab demo
+Want to run on a sample dataset? Try the Colab demo:
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://drive.google.com/drive/u/0/folders/1SGUlv8XVUpK7_DaQqSV7n1TMJOMFvRYE)
+Working to extend to other examples and visulize results..
+
 ## Installation
 
 `Deep-image-matching` is tested on Ubuntu 22.04 and Windows 10 with `Python 3.9`. It is strongly recommended to have a NVIDIA GPU with at least 8GB of memory.
