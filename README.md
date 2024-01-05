@@ -211,7 +211,7 @@ python ./join_databases.py --input assets/to_be_joined --output assets/to_be_joi
 - [ ] Add visualization for extracted features and matches
 - [ ] Improve speed
 - [ ] Autoselect tiling grid in order to fit images in GPU memory
-- [ ] Add tests, documentation and examples
+- [ ] Add tests, documentation and examples (e.g. colab, ..)
 - [ ] Apply masks during feature extraction
 - [ ] Check scripts
 - [ ] Integrate support for Pix4D [Open Photogrammetry Format](https://github.com/Pix4D/opf-spec)
