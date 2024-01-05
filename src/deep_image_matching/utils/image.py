@@ -326,7 +326,7 @@ class Image:
 
 
 class ImageList:
-    image_ext = [".jpg", ".JPG", ".png"]
+    image_ext = [".jpg", ".JPG", ".png", ".PNG", ".tif", "TIF"]
 
     def __init__(self, img_dir: Path):
         self.images = []
