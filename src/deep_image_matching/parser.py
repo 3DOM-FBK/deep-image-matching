@@ -25,8 +25,6 @@ def parse_cli():
         default="superpoint+lightglue",
     )
     parser.add_argument(
-<<<<<<< HEAD
-=======
         "-Q",
         "--quality",
         type=str,
@@ -43,7 +41,6 @@ def parse_cli():
         help="Set the tiling strategy for the matching. Default is none.",
     )
     parser.add_argument(
->>>>>>> master
         "-m",
         "--strategy",
         choices=[
@@ -200,11 +197,8 @@ def parse_config():
     cfg_general_user = {
         "image_dir": args.images,
         "output_dir": args.outs,
-<<<<<<< HEAD
-=======
         "quality": Quality[args.quality.upper()],
         "tile_selection": TileSelection[args.tiling.upper()],
->>>>>>> master
         "matching_strategy": args.strategy,
         "retrieval": args.retrieval,
         "pair_file": args.pairs,
