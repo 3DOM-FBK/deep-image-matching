@@ -1,2 +1,3 @@
 - [ ] add steerers with DeDoDe
 - [ ] pass roma, loftr and se2loftr working on multi res
+- [ ] togliere export_bundler_format da config.py
