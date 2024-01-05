@@ -25,11 +25,7 @@ confs = {
         "extractor": {
             "name": "superpoint",
             "keypoint_threshold": 0.001,
-<<<<<<< HEAD
-            "max_keypoints": 4096,
-=======
             "max_keypoints": 2048,
->>>>>>> master
         },
         "matcher": {
             "name": "lightglue",
