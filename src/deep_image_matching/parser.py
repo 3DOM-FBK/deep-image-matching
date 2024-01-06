@@ -60,6 +60,7 @@ def parse_cli() -> dict:
             "sequential",
             "retrieval",
             "custom_pairs",
+            "covisibility",
         ],
         default="matching_lowres",
         help="Matching strategy",

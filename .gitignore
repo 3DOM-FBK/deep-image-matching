@@ -1,9 +1,10 @@
 # Specific
 data/
-res/
+datasets/
+*results_*/
+assets/output/
 output/
 sandbox/
-assets/outs
 src/deep_image_matching/thirdparty/weights
 
 # VScode

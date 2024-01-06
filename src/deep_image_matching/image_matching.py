@@ -1,4 +1,3 @@
-from math import log
 import os
 import shutil
 from pathlib import Path
@@ -82,6 +81,7 @@ class ImageMatching:
         pair_file: Path = None,
         custom_config: dict = {},
         overlap: int = 1,
+        existing_colmap_model: Path = None,
     ):
         self.image_dir = Path(imgs_dir)
         self.output_dir = Path(output_dir)
@@ -91,6 +91,7 @@ class ImageMatching:
         self.matching_method = matching_method
         self.pair_file = Path(pair_file) if pair_file is not None else None
         self.overlap = overlap
+        self.existing_colmap_model = existing_colmap_model
 
         # Merge default and custom config
         self.custom_config = custom_config
@@ -113,6 +114,16 @@ class ImageMatching:
             else:
                 if not self.pair_file.exists():
                     raise ValueError(f"File {self.pair_file} does not exist")
+        elif retrieval_option == "covisibility":
+            if self.existing_colmap_model is None:
+                raise ValueError(
+                    "'existing_colmap_model' option is required when 'strategy' is set to covisibility"
+                )
+            else:
+                if not self.existing_colmap_model.exists():
+                    raise ValueError(
+                        f"File {self.existing_colmap_model} does not exist"
+                    )
 
         # Initialize ImageList class
         self.image_list = ImageList(imgs_dir)
@@ -157,7 +168,9 @@ class ImageMatching:
         logger.info(f"  Number of images: {len(self.image_list)}")
         logger.info(f"  Matching strategy: {self.matching_strategy}")
         logger.info(f"  Image quality: {self.custom_config['general']['quality']}")
-        logger.info(f"  Tile selection: {self.custom_config['general']['tile_selection']}")
+        logger.info(
+            f"  Tile selection: {self.custom_config['general']['tile_selection']}"
+        )
         logger.info(f"  Retrieval option: {self.retrieval_option}")
         logger.info(f"  Overlap: {self.overlap}")
         logger.info(f"  Feature extraction method: {self.local_features}")
@@ -186,6 +199,7 @@ class ImageMatching:
                 self.overlap,
                 self.image_dir,
                 self.output_dir,
+                self.existing_colmap_model,
             )
             self.pairs = pairs_generator.run()
 

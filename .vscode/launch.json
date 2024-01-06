@@ -16,7 +16,7 @@
       "console": "integratedTerminal",
       "args": [
         "--dir",
-        "/home/francesco/casalbagliano/subset_B",
+        "/home/francesco/casalbagliano/subset_A",
         "--config",
         "superpoint+lightglue",
         "--quality",
@@ -24,7 +24,7 @@
         "--tiling",
         "preselection",
         "--strategy",
-        "matching_lowres",
+        "covisibility",
         // "--skip_reconstruction",
         "--force",
         "-V"

@@ -183,5 +183,6 @@ opt_zoo = {
         "retrieval",
         "custom_pairs",
         "matching_lowres",
+        "covisibility",
     ],
 }
