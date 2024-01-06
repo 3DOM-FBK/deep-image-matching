@@ -1,18 +1,18 @@
 #!/bin/bash
 
 # Set the data directory
-PRJ_DIR=/home/francesco/casalbagliano/subset_A/deep_image_matching
+PRJ_DIR=/home/francesco/casalbagliano/subset_B
 
 # Set the config and strategy
 SFM_CONFIG=superpoint+lightglue
 SFM_STRATEGY=bruteforce
-SFM_QUALITY=high
-SFM_TILING=preselection
+SFM_QUALITY=low
+SFM_TILING=none
 
 DENSE_CONFIG=roma
 DENSE_QUALITY=low
-DENSE_TILING=none
-DENSE_STRATEGY=sequential
+DENSE_TILING=preselection
+DENSE_STRATEGY=matching_lowres
 
 SKIP_SFM=true
 DEBUG=true
