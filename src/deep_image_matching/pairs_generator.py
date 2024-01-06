@@ -38,7 +38,7 @@ def pairs_from_bruteforce(img_list: List[Union[str, Path]]) -> List[tuple]:
 
 
 def pairs_from_lowres(
-    brute_pairs: List[Tuple[Union[str, Path]]],
+    img_list: List[Union[str, Path]],
     resize_max: int = 500,
     min_matches: int = 20,
     max_keypoints: int = 1024,
@@ -65,6 +65,8 @@ def pairs_from_lowres(
         return mkpts1, mkpts2
 
     timer = Timer(log_level="debug")
+
+    brute_pairs = pairs_from_bruteforce(img_list)
 
     pairs = []
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -210,8 +212,7 @@ class PairsGenerator:
 
     def matching_lowres(self):
         logger.info("Low resolution matching, generating pairs ..")
-        brute_pairs = pairs_from_bruteforce(self.img_paths)
-        pairs = pairs_from_lowres(brute_pairs)
+        pairs = pairs_from_lowres(self.img_paths)
         return pairs
 
     def run(self):
