@@ -9,10 +9,10 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from . import Timer, logger
-from .image_retrieval import ImageRetrieval
-from .io.colmap_read_write_model import read_model
-from .utils.geometric_verification import geometric_verification
+from deep_image_matching import Timer, logger
+from deep_image_matching.image_retrieval import ImageRetrieval
+from deep_image_matching.io.colmap_read_write_model import read_model
+from deep_image_matching.utils.geometric_verification import geometric_verification
 
 
 def pairs_from_sequential(
@@ -43,7 +43,7 @@ def pairs_from_lowres(
     resize_max: int = 800,
     min_matches: int = 30,
     max_keypoints: int = 1024,
-):
+) -> List[tuple]:
     def read_tensor_image(
         path: Path, resize_to: int = 500, device="cuda"
     ) -> Tuple[np.ndarray, float]:
@@ -139,7 +139,7 @@ def pairs_from_lowres(
 
         # print(im0_path.name, im1_path.name, count_true)
         if count_true > min_matches:
-            pairs.append(pair)
+            pairs.append((pair))
         # if len(mkpts0) > min_matches:
         #     pairs.append(pair)
 
@@ -153,7 +153,18 @@ def pairs_from_lowres(
     return pairs
 
 
-def pairs_from_covisibility(model, output, num_matched):
+def pairs_from_covisibility(
+    model: str | Path,
+    num_matched: int = 10,
+) -> List[tuple]:
+    """
+    Generate image pairs based on covisibility information.
+
+    Args:
+        model (str | Path): The path to the COLMAP model file.
+        output (str | Path): The path to the output file where the pairs will be written.
+        num_matched (int, optional): The number of matched images to consider for each image. Defaults to 10.
+    """
     logger.info("Reading the COLMAP model...")
     cameras, images, points3D = read_model(model)
 
@@ -191,8 +202,8 @@ def pairs_from_covisibility(model, output, num_matched):
             pairs.append(pair)
 
     logger.info(f"Found {len(pairs)} pairs.")
-    with open(output, "w") as f:
-        f.write("\n".join(" ".join([i, j]) for i, j in pairs))
+
+    return pairs
 
 
 class PairsGenerator:
@@ -203,8 +214,9 @@ class PairsGenerator:
         strategy: str,
         retrieval_option: Union[str, None] = None,
         overlap: int = 1,
-        image_dir: str = "",
-        output_dir: str = "",
+        image_dir: str | Path = "",
+        output_dir: str | Path = "",
+        existing_colmap_model: str | Path = "",
     ) -> None:
         self.img_paths = img_paths
         self.pair_file = pair_file
@@ -213,6 +225,7 @@ class PairsGenerator:
         self.overlap = overlap
         self.image_dir = image_dir
         self.output_dir = output_dir
+        self.existing_colmap_model = existing_colmap_model
 
     def bruteforce(self):
         logger.debug("Bruteforce matching, generating pairs ..")
@@ -245,13 +258,29 @@ class PairsGenerator:
         pairs = pairs_from_lowres(self.img_paths)
         return pairs
 
+    def covisibility(self):
+        logger.info("Covisibility matching, generating pairs ..")
+        pairs = pairs_from_covisibility(
+            model=self.existing_colmap_model,
+            num_matched=10,
+        )
+        return pairs
+
     def run(self):
         generate_pairs = getattr(self, self.strategy)
         pairs = generate_pairs()
         logger.info(f"Found {len(pairs)} pairs.")
 
         with open(self.pair_file, "w") as txt_file:
-            for pair in pairs:
-                txt_file.write(f"{pair[0].name} {pair[1].name}\n")
+            for p1, p2 in pairs:
+                if isinstance(p1, Path):
+                    p1 = p1.name
+                if isinstance(p2, Path):
+                    p2 = p2.name
+                txt_file.write(f"{p1} {p2}\n")
 
         return pairs
+
+
+if __name__ == "__main__":
+    pass

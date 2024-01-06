@@ -17,6 +17,9 @@ upright = config["general"]["upright"]
 extractor = config["extractor"]["name"]
 matcher = config["matcher"]["name"]
 
+# TEMP! TO PUT IN PARSER
+existing_colmap_model = "datasets/casalbagliano/results_superpoint+lightglue_bruteforce_quality_high/reconstruction"
+
 # Initialize ImageMatching class
 img_matching = ImageMatching(
     imgs_dir=imgs_dir,
@@ -28,6 +31,7 @@ img_matching = ImageMatching(
     pair_file=pair_file,
     custom_config=config,
     overlap=overlap,
+    existing_colmap_model=existing_colmap_model,
 )
 
 # Generate pairs to be matched
