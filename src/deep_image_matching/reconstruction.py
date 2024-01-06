@@ -1,5 +1,4 @@
 import multiprocessing
-import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -132,10 +131,7 @@ def main(
     export_text: bool = True,
     export_bundler: bool = True,
     export_ply: bool = True,
-<<<<<<< HEAD
-=======
     copy_images: bool = True,
->>>>>>> master
     reconst_opts: Optional[Dict[str, Any]] = None,
     verbose: bool = True,
 ) -> pycolmap.Reconstruction:
@@ -162,11 +158,7 @@ def main(
         estimation_and_geometric_verification(database, pair_path, verbose=verbose)
 
     # Run reconstruction
-<<<<<<< HEAD
     model = pycolmap_reconstruction(
-=======
-    model = run_reconstruction(
->>>>>>> master
         sfm_dir=sfm_dir,
         database_path=database,
         image_dir=image_dir,
@@ -179,9 +171,9 @@ def main(
             + f"\n\tnum_input_images = {len(image_ids)}"
         )
 
-        # Copy images to sfm_dir
-        if copy_images:
-            shutil.copytree(image_dir, sfm_dir / "images", dirs_exist_ok=True)
+        # # Copy images to sfm_dir
+        # if copy_images:
+        #     shutil.copytree(image_dir, sfm_dir / "images", dirs_exist_ok=True)
 
         # Create reconstruction directory
         reconstruction_dir = sfm_dir / "reconstruction"
