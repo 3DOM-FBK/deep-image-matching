@@ -55,13 +55,13 @@ def parse_cli() -> dict:
         "-m",
         "--strategy",
         choices=[
+            "matching_lowres",
             "bruteforce",
             "sequential",
             "retrieval",
             "custom_pairs",
-            "matching_lowres",
         ],
-        default="sequential",
+        default="matching_lowres",
         help="Matching strategy",
     )
     parser.add_argument(

@@ -18,7 +18,7 @@
         "--config",
         "superpoint+lightglue",
         "--dir",
-        "/home/francesco/casalbagliano/subset_A/deep_image_matching",
+        "/home/francesco/casalbagliano/subset_B",
         "--quality",
         "high",
         "--tiling",
