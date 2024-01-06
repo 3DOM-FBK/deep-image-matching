@@ -10,7 +10,7 @@ SFM_QUALITY=high
 SFM_TILING=preselection
 
 DENSE_CONFIG=roma
-DENSE_QUALITY=low
+DENSE_QUALITY=lowest
 DENSE_TILING=preselection
 DENSE_STRATEGY=sequential
 
