@@ -25,7 +25,7 @@
         "preselection",
         "--strategy",
         "matching_lowres",
-        "--skip_reconstruction",
+        // "--skip_reconstruction",
         "--force",
         "-V"
       ]

@@ -41,7 +41,7 @@ def pairs_from_bruteforce(img_list: List[Union[str, Path]]) -> List[tuple]:
 def pairs_from_lowres(
     img_list: List[Union[str, Path]],
     resize_max: int = 500,
-    min_matches: int = 50,
+    min_matches: int = 30,
     max_keypoints: int = 1024,
 ):
     def read_tensor_image(
@@ -129,6 +129,7 @@ def pairs_from_lowres(
             kpts1=mkpts1,
             threshold=4,
             confidence=0.99,
+            quiet=True,
         )
         count_true = np.count_nonzero(inlMask)
         timer.update("geometric verification")
