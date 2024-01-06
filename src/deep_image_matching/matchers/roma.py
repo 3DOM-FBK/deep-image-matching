@@ -186,10 +186,10 @@ class RomaMatcher(DetectorFreeMatcherBase):
             np.ndarray: Array containing the indices of matched keypoints.
         """
 
-        def write_tiles_disk(output_dir: Path, tiles: dict):
+        def write_tiles_disk(output_dir: Path, tiles: dict) -> None:
             output_dir = Path(output_dir)
             if output_dir.exists():
-                shutil.rmtree(output_dir)
+                return None
             output_dir.mkdir(parents=True)
             for i, tile in tiles.items():
                 name = str(output_dir / f"tile_{i}.png")
