@@ -1,28 +1,11 @@
 from pathlib import Path
 from typing import Tuple
 
-<<<<<<< HEAD
-import cv2
-import h5py
-=======
->>>>>>> master
 import kornia as K
 import numpy as np
 import torch
 from kornia import feature as KF
 
-<<<<<<< HEAD
-from .. import logger
-from ..io.h5 import get_features
-from ..utils.consts import Quality, TileSelection
-from ..utils.tiling import Tiler
-from .matcher_base import FeaturesDict, MatcherBase
-
-
-class LOFTRMatcher(MatcherBase):
-    default_conf = {"name": "loftr", "pretrained": "outdoor"}
-
-=======
 from .. import Timer, logger
 from ..utils.consts import TileSelection
 from ..utils.tiling import Tiler
@@ -59,7 +42,6 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
     min_matches_per_tile = 3
     max_tile_size = 1200
 
->>>>>>> master
     def __init__(self, config={}) -> None:
         """
         Initializes a LOFTRMatcher with Kornia object with the given options dictionary.
@@ -73,73 +55,6 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
         model = config["matcher"]["pretrained"]
         self.matcher = KF.LoFTR(pretrained=model).to(self._device).eval()
 
-<<<<<<< HEAD
-        self.grayscale = True
-        self.as_float = True
-        self._quality = config["general"]["quality"]
-
-    def _resize_image(self, quality: Quality, image: np.ndarray) -> Tuple[np.ndarray]:
-        """
-        Resize images based on the specified quality.
-
-        Args:
-            quality (Quality): The quality level for resizing.
-            image (np.ndarray): The first image.
-
-        Returns:
-            Tuple[np.ndarray]: Resized images.
-
-        """
-        if quality == Quality.HIGHEST:
-            image_ = cv2.pyrUp(image)
-        elif quality == Quality.HIGH:
-            image_ = image
-        elif quality == Quality.MEDIUM:
-            image_ = cv2.pyrDown(image)
-        elif quality == Quality.LOW:
-            image_ = cv2.pyrDown(cv2.pyrDown(image))
-        return image_
-
-    def _frame2tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor:
-        image = K.image_to_tensor(np.array(image), False).float() / 255.0
-        image = K.color.bgr_to_rgb(image.to(device))
-        if image.shape[1] > 2:
-            image = K.color.rgb_to_grayscale(image)
-        return image
-
-    def _update_features(
-        self, feature_path, im0_name, im1_name, new_keypoints0, new_keypoints1, matches0
-    ) -> None:
-        for i, im_name, new_keypoints in zip(
-            [0, 1], [im0_name, im1_name], [new_keypoints0, new_keypoints1]
-        ):
-            features = get_features(feature_path, im_name)
-            existing_keypoints = features["keypoints"]
-
-            if len(existing_keypoints.shape) == 1:
-                features["keypoints"] = new_keypoints
-                with h5py.File(feature_path, "r+", libver="latest") as fd:
-                    del fd[im_name]
-                    grp = fd.create_group(im_name)
-                    for k, v in features.items():
-                        if k == "im_path" or k == "feature_path":
-                            grp.create_dataset(k, data=str(v))
-                        if isinstance(v, np.ndarray):
-                            grp.create_dataset(k, data=v)
-
-            else:
-                n_exisiting_keypoints = existing_keypoints.shape[0]
-                features["keypoints"] = np.vstack((existing_keypoints, new_keypoints))
-                matches0[:, i] = matches0[:, i] + n_exisiting_keypoints
-                with h5py.File(feature_path, "r+", libver="latest") as fd:
-                    del fd[im_name]
-                    grp = fd.create_group(im_name)
-                    for k, v in features.items():
-                        if k == "im_path" or k == "feature_path":
-                            grp.create_dataset(k, data=str(v))
-                        if isinstance(v, np.ndarray):
-                            grp.create_dataset(k, data=v)
-=======
         tile_size = self._config["general"]["tile_size"]
         if max(tile_size) > self.max_tile_size:
             logger.warning(
@@ -154,7 +69,6 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
             logger.warning(
                 "The tile size is large, this may cause out-of-memory error during matching. You should consider using a smaller tile size or a lower image resolution."
             )
->>>>>>> master
 
     @torch.no_grad()
     def _match_pairs(
@@ -163,14 +77,8 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
         img0_path: Path,
         img1_path: Path,
     ):
-<<<<<<< HEAD
-        """Matches keypoints and descriptors in two given images
-        (no matter if they are tiles or full-res images) using
-        the LoFTR algorithm.
-=======
         """
         Perform matching between two images using a detector-free matcher. It takes in two images as Numpy arrays, and returns the matches between keypoints and descriptors in those images. It also saves the updated features to the specified h5 file.
->>>>>>> master
 
         Args:
             feature_path (Path): Path to the h5 feature file where to save the updated features.
@@ -184,38 +92,16 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
             torch.cuda.OutOfMemoryError: If an out-of-memory error occurs while matching images.
         """
 
-<<<<<<< HEAD
-        feature_path = feats0["feature_path"]
-=======
         img0_name = img0_path.name
         img1_name = img1_path.name
->>>>>>> master
 
         # Load images
         image0 = self._load_image_np(img0_path)
         image1 = self._load_image_np(img1_path)
 
-<<<<<<< HEAD
-        # Load image
-        image0 = cv2.imread(im_path0)
-        image1 = cv2.imread(im_path1)
-
-        # if self.as_float:
-        #    image0 = image0.astype(np.float32)
-        #    image1 = image1.astype(np.float32)
-        #
-        # if self.grayscale:
-        #    image0 = cv2.cvtColor(image0, cv2.COLOR_BGR2GRAY)
-        #    image1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
-        #
-        ## Resize images if needed
-        # image0 = self._resize_image(self._quality, image0)
-        # image1 = self._resize_image(self._quality, image1)
-=======
         # Resize images if needed
         image0_ = self._resize_image(self._quality, image0)
         image1_ = self._resize_image(self._quality, image1)
->>>>>>> master
 
         # Covert images to tensor
         timg0_ = self._frame2tensor(image0_, self._device)
@@ -246,17 +132,10 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
         # Create a 1-to-1 matching array
         matches0 = np.arange(mkpts0.shape[0])
         matches = np.hstack((matches0.reshape((-1, 1)), matches0.reshape((-1, 1))))
-<<<<<<< HEAD
-        self._update_features(
-            feature_path,
-            Path(im_path0).name,
-            Path(im_path1).name,
-=======
         matches = self._update_features_h5(
             feature_path,
             img0_name,
             img1_name,
->>>>>>> master
             mkpts0,
             mkpts1,
             matches,
