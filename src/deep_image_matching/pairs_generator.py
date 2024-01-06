@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from pathlib import Path
 from typing import List, Tuple, Union
 
@@ -76,19 +76,41 @@ def pairs_from_lowres(
         device=device,
     )
 
+    # Extract features
+    features = namedtuple("features", ["lafs", "resps", "descs", "hw"])
+
+    features_dict = {}
+    logger.info("Extracting features from downsampled images...")
+    for img in tqdm(img_list):
+        with torch.inference_mode():
+            im0, _ = read_tensor_image(img, resize_max)
+            lafs1, resps1, descs1 = KNextractor(im0)
+            features_dict[img.name] = features(
+                lafs1.cpu(), resps1.cpu(), descs1.cpu(), im0.shape[2:]
+            )
+            del im0, lafs1, resps1, descs1
+            torch.cuda.empty_cache()
+        timer.update("extraction")
+
     for pair in tqdm(brute_pairs):
         im0_path = pair[0]
         im1_path = pair[1]
 
-        im0, _ = read_tensor_image(im0_path, resize_max)
-        im1, _ = read_tensor_image(im1_path, resize_max)
-        hw1 = torch.tensor(im1.shape[2:])
-        hw2 = torch.tensor(im1.shape[2:])
         adalam_config = {"device": device}
 
+        lafs1, resps1, descs1, hw1 = (
+            features_dict[im0_path.name].lafs.cuda(),
+            features_dict[im0_path.name].resps.cuda(),
+            features_dict[im0_path.name].descs.cuda(),
+            features_dict[im0_path.name].hw,
+        )
+        lafs2, resps2, descs2, hw2 = (
+            features_dict[im1_path.name].lafs.cuda(),
+            features_dict[im1_path.name].resps.cuda(),
+            features_dict[im1_path.name].descs.cuda(),
+            features_dict[im1_path.name].hw,
+        )
         with torch.inference_mode():
-            lafs1, resps1, descs1 = KNextractor(im0)
-            lafs2, resps2, descs2 = KNextractor(im1)
             dists, idxs = KF.match_adalam(
                 descs1.squeeze(0),
                 descs2.squeeze(0),
@@ -98,7 +120,6 @@ def pairs_from_lowres(
                 hw1=hw1,
                 hw2=hw2,  # Adalam also benefits from knowing image size
             )
-            timer.update("match pair")
 
         mkpts0, mkpts1 = get_matching_keypoints(lafs1, lafs2, idxs)
 
@@ -117,6 +138,11 @@ def pairs_from_lowres(
         #     pairs.append(pair)
         if len(mkpts0) > min_matches:
             pairs.append(pair)
+
+        del lafs1, resps1, descs1, hw1, lafs2, resps2, descs2, hw2
+        torch.cuda.empty_cache()
+
+        timer.update("matching")
 
     timer.print("low-res pair generation")
 

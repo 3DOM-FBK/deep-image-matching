@@ -24,7 +24,7 @@
         "--tiling",
         "preselection",
         "--strategy",
-        "bruteforce",
+        "matching_lowres",
         "--skip_reconstruction",
         "--force",
         "-V"
