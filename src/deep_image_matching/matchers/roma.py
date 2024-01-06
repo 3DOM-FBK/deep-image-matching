@@ -33,6 +33,7 @@ class RomaMatcher(DetectorFreeMatcherBase):
     as_float = True
     max_tile_size = 600  # 448
     max_tile_pairs = 50
+    keep_tiles = False
 
     def __init__(self, config={}) -> None:
         super().__init__(config)
@@ -238,10 +239,10 @@ class RomaMatcher(DetectorFreeMatcherBase):
         tiles1, t_origins1, t_padding1 = tiler.compute_tiles_by_size(
             input=image1, window_size=tile_size, overlap=overlap
         )
-        out_dir = Path(self._config["general"]["output_dir"]) / "tiles"
-        write_tiles_disk(out_dir / img0.name, tiles0)
-        write_tiles_disk(out_dir / img1.name, tiles1)
-        logger.debug(f"Tiles saved to {out_dir}")
+        tiles_dir = Path(self._config["general"]["output_dir"]) / "tiles"
+        write_tiles_disk(tiles_dir / img0.name, tiles0)
+        write_tiles_disk(tiles_dir / img1.name, tiles1)
+        logger.debug(f"Tiles saved to {tiles_dir}")
 
         # Match each tile pair
         mkpts0_full = np.array([], dtype=np.float32).reshape(0, 2)
@@ -251,8 +252,8 @@ class RomaMatcher(DetectorFreeMatcherBase):
         for tidx0, tidx1 in tile_pairs:
             logger.debug(f"  - Matching tile pair ({tidx0}, {tidx1})")
 
-            tile_path0 = out_dir / img0.name / f"tile_{tidx0}.png"
-            tile_path1 = out_dir / img1.name / f"tile_{tidx1}.png"
+            tile_path0 = tiles_dir / img0.name / f"tile_{tidx0}.png"
+            tile_path1 = tiles_dir / img1.name / f"tile_{tidx1}.png"
 
             W_A, H_A = tiles0[tidx0].shape[1], tiles0[tidx0].shape[0]
             W_B, H_B = tiles1[tidx1].shape[1], tiles1[tidx1].shape[0]
@@ -333,5 +334,9 @@ class RomaMatcher(DetectorFreeMatcherBase):
             mkpts1_full,
             matches,
         )
+
+        # Remove tiles from disk
+        if not self.keep_tiles:
+            shutil.rmtree(tiles_dir)
 
         return matches
