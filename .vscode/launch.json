@@ -16,7 +16,6 @@
       "console": "integratedTerminal",
       "args": [
         "--config",
-        // "superpoint+lightglue",
         "roma",
         "--images",
         "data/belv_lingua_easy",
@@ -25,8 +24,7 @@
         "--tiling",
         "preselection",
         "--strategy",
-        "low",
-        // "--upright",
+        "brute_force",
         "--skip_reconstruction",
         "--force",
         "-V"
