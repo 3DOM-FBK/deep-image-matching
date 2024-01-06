@@ -1,4 +1,3 @@
-import shutil
 from importlib import import_module
 
 from src.deep_image_matching import logger, timer
@@ -67,10 +66,6 @@ timer.update("export_to_colmap")
 
 # If --skip_reconstruction is not specified, run reconstruction
 if not config["general"]["skip_reconstruction"]:
-    # For debugging purposes, copy images to output folder
-    if config["general"]["verbose"]:
-        shutil.copytree(imgs_dir, output_dir / "images", dirs_exist_ok=True)
-
     use_pycolmap = True
     try:
         pycolmap = import_module("pycolmap")

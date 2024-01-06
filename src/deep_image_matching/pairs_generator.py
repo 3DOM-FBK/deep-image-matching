@@ -40,7 +40,7 @@ def pairs_from_bruteforce(img_list: List[Union[str, Path]]) -> List[tuple]:
 
 def pairs_from_lowres(
     img_list: List[Union[str, Path]],
-    resize_max: int = 500,
+    resize_max: int = 800,
     min_matches: int = 30,
     max_keypoints: int = 1024,
 ):
@@ -87,7 +87,10 @@ def pairs_from_lowres(
             im0, _ = read_tensor_image(img, resize_max)
             lafs1, resps1, descs1 = KNextractor(im0)
             features_dict[img.name] = features(
-                lafs1.cpu(), resps1.cpu(), descs1.cpu(), im0.shape[2:]
+                lafs1.detach().cpu(),
+                resps1.detach().cpu(),
+                descs1.detach().cpu(),
+                im0.shape[2:],
             )
             del im0, lafs1, resps1, descs1
             torch.cuda.empty_cache()

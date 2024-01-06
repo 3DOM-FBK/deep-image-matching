@@ -1,3 +1,4 @@
+from math import log
 import os
 import shutil
 from pathlib import Path
@@ -155,6 +156,8 @@ class ImageMatching:
         logger.info(f"  Output folder: {self.output_dir}")
         logger.info(f"  Number of images: {len(self.image_list)}")
         logger.info(f"  Matching strategy: {self.matching_strategy}")
+        logger.info(f"  Image quality: {self.custom_config['general']['quality']}")
+        logger.info(f"  Tile selection: {self.custom_config['general']['tile_selection']}")
         logger.info(f"  Retrieval option: {self.retrieval_option}")
         logger.info(f"  Overlap: {self.overlap}")
         logger.info(f"  Feature extraction method: {self.local_features}")

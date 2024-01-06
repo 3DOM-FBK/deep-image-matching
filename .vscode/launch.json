@@ -15,10 +15,10 @@
       "program": "${file}",
       "console": "integratedTerminal",
       "args": [
-        "--config",
-        "superpoint+lightglue",
         "--dir",
         "/home/francesco/casalbagliano/subset_B",
+        "--config",
+        "superpoint+lightglue",
         "--quality",
         "high",
         "--tiling",
