@@ -10,11 +10,11 @@ SFM_QUALITY=high
 SFM_TILING=preselection
 
 DENSE_CONFIG=roma
-DENSE_QUALITY=lowest
-DENSE_TILING=preselection
+DENSE_QUALITY=low
+DENSE_TILING=none
 DENSE_STRATEGY=sequential
 
-SKIP_SFM=false
+SKIP_SFM=true
 DEBUG=true
 
 if [ "$DEBUG" = true ] ; then
@@ -27,7 +27,7 @@ if [ "$SKIP_SFM" = false ] ; then
 fi
 
 # Run dense matching (skip reconstruction with dense correspondences)
-python ./main.py --dir $PRJ_DIR --config $DENSE_CONFIG --quality $DENSE_QUALITY --tiling $DENSE_TILING --strategy $DENSE_STRATEGY --overlap 2 --skip_reconstruction --force $VERBOSE
+python ./main.py --dir $PRJ_DIR --config $DENSE_CONFIG --quality $DENSE_QUALITY --tiling $DENSE_TILING --strategy $DENSE_STRATEGY --overlap 3 --skip_reconstruction --force $VERBOSE
 
 # Triangulate dense correspondences with COLMAP to build a dense point cloud
 SFM_DIR="$PRJ_DIR/results_${SFM_CONFIG}_${SFM_STRATEGY}_quality_${SFM_QUALITY}"
