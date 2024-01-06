@@ -14,10 +14,6 @@ from ..utils.tiling import Tiler
 from .matcher_base import DetectorFreeMatcherBase, tile_selection
 
 
-<<<<<<< HEAD
-class RomaMatcher(MatcherBase):
-    max_feat_no_tiling = 200000
-=======
 class RomaMatcher(DetectorFreeMatcherBase):
     """
     RomaMatcher class for feature matching using RoMa.
@@ -37,7 +33,6 @@ class RomaMatcher(DetectorFreeMatcherBase):
     as_float = True
     max_tile_size = 600  # 448
     max_tile_pairs = 50
->>>>>>> master
 
     def __init__(self, config={}) -> None:
         super().__init__(config)
@@ -123,14 +118,8 @@ class RomaMatcher(DetectorFreeMatcherBase):
         img0_path: Path,
         img1_path: Path,
     ):
-<<<<<<< HEAD
-        """Matches keypoints and descriptors in two given images
-        (no matter if they are tiles or full-res images) using
-        the RoMa algorithm.
-=======
         """
         Perform matching between feature pairs.
->>>>>>> master
 
         Args:
             feature_path (Path): Path to the feature file.
@@ -236,8 +225,8 @@ class RomaMatcher(DetectorFreeMatcherBase):
         # Read images and resize them if needed
         image0 = cv2.imread(str(img0))
         image1 = cv2.imread(str(img1))
-        image0_orig_shape = image0.shape[:2]
-        image1_orig_shape = image1.shape[:2]
+        image0.shape[:2]
+        image1.shape[:2]
         image0 = self._resize_image(self._quality, image0)
         image1 = self._resize_image(self._quality, image1)
 
