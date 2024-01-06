@@ -1,3 +1,4 @@
+from collections import defaultdict
 from pathlib import Path
 from typing import List, Tuple, Union
 
@@ -10,9 +11,12 @@ from tqdm import tqdm
 
 from . import Timer, logger
 from .image_retrieval import ImageRetrieval
+from .io.colmap_read_write_model import read_model
 
 
-def SequentialPairs(img_list: List[Union[str, Path]], overlap: int) -> List[tuple]:
+def pairs_from_sequential(
+    img_list: List[Union[str, Path]], overlap: int
+) -> List[tuple]:
     pairs = []
     for i in range(len(img_list) - overlap):
         for k in range(overlap):
@@ -23,7 +27,7 @@ def SequentialPairs(img_list: List[Union[str, Path]], overlap: int) -> List[tupl
     return pairs
 
 
-def BruteForce(img_list: List[Union[str, Path]]) -> List[tuple]:
+def pairs_from_bruteforce(img_list: List[Union[str, Path]]) -> List[tuple]:
     pairs = []
     for i in range(len(img_list) - 1):
         for j in range(i + 1, len(img_list)):
@@ -33,7 +37,7 @@ def BruteForce(img_list: List[Union[str, Path]]) -> List[tuple]:
     return pairs
 
 
-def MatchingLowres(
+def pairs_from_lowres(
     brute_pairs: List[Tuple[Union[str, Path]]],
     resize_max: int = 500,
     min_matches: int = 50,
@@ -116,6 +120,48 @@ def MatchingLowres(
     return pairs
 
 
+def pairs_from_covisibility(model, output, num_matched):
+    logger.info("Reading the COLMAP model...")
+    cameras, images, points3D = read_model(model)
+
+    logger.info("Extracting image pairs from covisibility info...")
+    pairs = []
+    for image_id, image in tqdm(images.items()):
+        matched = image.point3D_ids != -1
+        points3D_covis = image.point3D_ids[matched]
+
+        covis = defaultdict(int)
+        for point_id in points3D_covis:
+            for image_covis_id in points3D[point_id].image_ids:
+                if image_covis_id != image_id:
+                    covis[image_covis_id] += 1
+
+        if len(covis) == 0:
+            logger.info(f"Image {image_id} does not have any covisibility.")
+            continue
+
+        covis_ids = np.array(list(covis.keys()))
+        covis_num = np.array([covis[i] for i in covis_ids])
+
+        if len(covis_ids) <= num_matched:
+            top_covis_ids = covis_ids[np.argsort(-covis_num)]
+        else:
+            # get covisible image ids with top k number of common matches
+            ind_top = np.argpartition(covis_num, -num_matched)
+            ind_top = ind_top[-num_matched:]  # unsorted top k
+            ind_top = ind_top[np.argsort(-covis_num[ind_top])]
+            top_covis_ids = [covis_ids[i] for i in ind_top]
+            assert covis_num[ind_top[0]] == np.max(covis_num)
+
+        for i in top_covis_ids:
+            pair = (image.name, images[i].name)
+            pairs.append(pair)
+
+    logger.info(f"Found {len(pairs)} pairs.")
+    with open(output, "w") as f:
+        f.write("\n".join(" ".join([i, j]) for i, j in pairs))
+
+
 class PairsGenerator:
     def __init__(
         self,
@@ -137,19 +183,19 @@ class PairsGenerator:
 
     def bruteforce(self):
         logger.debug("Bruteforce matching, generating pairs ..")
-        pairs = BruteForce(self.img_paths)
+        pairs = pairs_from_bruteforce(self.img_paths)
         logger.info(f"Number of pairs: {len(pairs)}")
         return pairs
 
     def sequential(self):
         logger.debug("Sequential matching, generating pairs ..")
-        pairs = SequentialPairs(self.img_paths, self.overlap)
+        pairs = pairs_from_sequential(self.img_paths, self.overlap)
         logger.info(f"  Number of pairs: {len(pairs)}")
         return pairs
 
     def retrieval(self):
         logger.info("Retrieval matching, generating pairs ..")
-        brute_pairs = BruteForce(self.img_paths)
+        brute_pairs = pairs_from_bruteforce(self.img_paths)
         with open(self.output_dir / "retrieval_pairs.txt", "w") as txt_file:
             for pair in brute_pairs:
                 txt_file.write(f"{pair[0]} {pair[1]}\n")
@@ -163,8 +209,8 @@ class PairsGenerator:
 
     def matching_lowres(self):
         logger.info("Low resolution matching, generating pairs ..")
-        brute_pairs = BruteForce(self.img_paths)
-        pairs = MatchingLowres(brute_pairs)
+        brute_pairs = pairs_from_bruteforce(self.img_paths)
+        pairs = pairs_from_lowres(brute_pairs)
         return pairs
 
     def run(self):
