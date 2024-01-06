@@ -108,7 +108,7 @@ confs = {
     },
     "roma": {
         "extractor": {"name": "no_extractor"},
-        "matcher": {"name": "roma"},  # "pretrained": "outdoor"},
+        "matcher": {"name": "roma", "pretrained": "outdoor"},
     },
     "keynetaffnethardnet+kornia_matcher": {
         "extractor": {

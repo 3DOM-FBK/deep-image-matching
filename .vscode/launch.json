@@ -17,14 +17,14 @@
       "args": [
         "--config",
         "roma",
-        "--images",
-        "data/belv_lingua_easy",
+        "--dir",
+        "/home/francesco/casalbagliano/subset_A",
         "--quality",
         "low",
         "--tiling",
         "preselection",
         "--strategy",
-        "brute_force",
+        "bruteforce",
         "--skip_reconstruction",
         "--force",
         "-V"
