@@ -151,7 +151,7 @@ def parse_config():
 
     args["outs"] = (
         args["dir"]
-        / f"results/{args['config']}_{args['strategy']}_quality_{args['quality']}"
+        / f"results_{args['config']}_{args['strategy']}_quality_{args['quality']}"
     )
     if args["outs"].exists():
         if args["force"]:
