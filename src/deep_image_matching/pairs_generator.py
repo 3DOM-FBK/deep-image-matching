@@ -40,7 +40,8 @@ def pairs_from_bruteforce(img_list: List[Union[str, Path]]) -> List[tuple]:
 def pairs_from_lowres(
     brute_pairs: List[Tuple[Union[str, Path]]],
     resize_max: int = 500,
-    min_matches: int = 50,
+    min_matches: int = 20,
+    max_keypoints: int = 1024,
 ):
     def read_tensor_image(
         path: Path, resize_to: int = 500, device="cuda"
@@ -68,7 +69,7 @@ def pairs_from_lowres(
     pairs = []
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     KNextractor = KF.KeyNetAffNetHardNet(
-        num_features=4000,
+        num_features=max_keypoints,
         upright=False,
         device=device,
     )
