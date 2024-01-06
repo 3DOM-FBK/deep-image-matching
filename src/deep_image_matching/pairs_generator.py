@@ -12,6 +12,7 @@ from tqdm import tqdm
 from . import Timer, logger
 from .image_retrieval import ImageRetrieval
 from .io.colmap_read_write_model import read_model
+from .utils.geometric_verification import geometric_verification
 
 
 def pairs_from_sequential(
@@ -40,7 +41,7 @@ def pairs_from_bruteforce(img_list: List[Union[str, Path]]) -> List[tuple]:
 def pairs_from_lowres(
     img_list: List[Union[str, Path]],
     resize_max: int = 500,
-    min_matches: int = 20,
+    min_matches: int = 50,
     max_keypoints: int = 1024,
 ):
     def read_tensor_image(
@@ -123,21 +124,20 @@ def pairs_from_lowres(
 
         mkpts0, mkpts1 = get_matching_keypoints(lafs1, lafs2, idxs)
 
-        # _, inlMask = geometric_verification(
-        #     kpts0=mkpts0,
-        #     kpts1=mkpts1,
-        #     method=GeometricVerification.PYDEGENSAC,
-        #     threshold=4,
-        #     confidence=0.99,
-        # )
-        # count_true = np.count_nonzero(inlMask)
-        # timer.update("geometric verification")
+        _, inlMask = geometric_verification(
+            kpts0=mkpts0,
+            kpts1=mkpts1,
+            threshold=4,
+            confidence=0.99,
+        )
+        count_true = np.count_nonzero(inlMask)
+        timer.update("geometric verification")
 
-        # # print(im0_path.name, im1_path.name, count_true)
-        # if count_true > min_matches:
-        #     pairs.append(pair)
-        if len(mkpts0) > min_matches:
+        # print(im0_path.name, im1_path.name, count_true)
+        if count_true > min_matches:
             pairs.append(pair)
+        # if len(mkpts0) > min_matches:
+        #     pairs.append(pair)
 
         del lafs1, resps1, descs1, hw1, lafs2, resps2, descs2, hw2
         torch.cuda.empty_cache()
@@ -244,6 +244,7 @@ class PairsGenerator:
     def run(self):
         generate_pairs = getattr(self, self.strategy)
         pairs = generate_pairs()
+        logger.info(f"Found {len(pairs)} pairs.")
 
         with open(self.pair_file, "w") as txt_file:
             for pair in pairs:
