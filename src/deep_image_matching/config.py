@@ -227,6 +227,22 @@ class Config:
         return list(confs.keys())
 
     @staticmethod
+    def get_extractor_names() -> list:
+        return opt_zoo["extractors"]
+
+    @staticmethod
+    def get_matcher_names() -> list:
+        return opt_zoo["matchers"]
+
+    @staticmethod
+    def get_retrieval_names() -> list:
+        return opt_zoo["retrieval"]
+
+    @staticmethod
+    def get_matching_strategy_names() -> list:
+        return opt_zoo["matching_strategy"]
+
+    @staticmethod
     def parse_config(input_args: dict):
         """Do checks on the input arguments and return the configuration dictionary with the following keys: general, extractor, matcher"""
 
