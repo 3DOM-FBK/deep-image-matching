@@ -25,8 +25,12 @@ def parse_cli() -> dict:
         default=None,
     )
     parser.add_argument(
-        "-o", "--outs", type=str, help="Output folder", default=None
-    )  # TODO: This options should be removed and the output folder should be created inside the project folder
+        "-o",
+        "--outs",
+        type=str,
+        help="Output folder. If None, the output folder will be created inside the project folder.",
+        default=None,
+    )
     parser.add_argument(
         "-c",
         "--config",

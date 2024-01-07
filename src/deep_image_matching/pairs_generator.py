@@ -96,6 +96,7 @@ def pairs_from_lowres(
             torch.cuda.empty_cache()
         timer.update("extraction")
 
+    logger.info("Matching downsampled images...")
     for pair in tqdm(brute_pairs):
         im0_path = pair[0]
         im1_path = pair[1]
