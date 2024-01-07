@@ -75,6 +75,10 @@ class ImageMatching:
         "hide_matching_track": True,
         "do_viz_tiles": False,
     }
+    # pair_file=pair_file,
+    # retrieval_option=retrieval_option,
+    # overlap=overlap,
+    # existing_colmap_model=existing_colmap_model,
 
     def __init__(
         # TODO: add default values for not necessary parameters
@@ -82,13 +86,13 @@ class ImageMatching:
         imgs_dir: Path,
         output_dir: Path,
         matching_strategy: str,
-        retrieval_option: str,
         local_features: str,
         matching_method: str,
+        retrieval_option: str = None,
         pair_file: Path = None,
-        custom_config: dict = {},
-        overlap: int = 1,
+        overlap: int = None,
         existing_colmap_model: Path = None,
+        custom_config: dict = {},
     ):
         self.image_dir = Path(imgs_dir)
         self.output_dir = Path(output_dir)
@@ -96,7 +100,7 @@ class ImageMatching:
         self.retrieval_option = retrieval_option
         self.local_features = local_features
         self.matching_method = matching_method
-        self.pair_file = Path(pair_file) if pair_file is not None else None
+        self.pair_file = Path(pair_file) if pair_file else None
         self.overlap = overlap
         self.existing_colmap_model = existing_colmap_model
 

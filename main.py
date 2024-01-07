@@ -158,13 +158,13 @@ if __name__ == "__main__":
         imgs_dir=imgs_dir,
         output_dir=output_dir,
         matching_strategy=matching_strategy,
-        retrieval_option=retrieval_option,
         local_features=extractor,
         matching_method=matcher,
         pair_file=pair_file,
-        custom_config=config.as_dict(),
+        retrieval_option=retrieval_option,
         overlap=overlap,
         existing_colmap_model=existing_colmap_model,
+        custom_config=config.as_dict(),
     )
 
     # Generate pairs to be matched
