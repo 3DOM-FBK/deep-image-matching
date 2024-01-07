@@ -24,7 +24,7 @@
         "--tiling",
         "preselection",
         "--strategy",
-        "covisibility",
+        "matching_lowres",
         // "--skip_reconstruction",
         "--force",
         "-V"
