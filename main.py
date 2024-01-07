@@ -78,7 +78,7 @@ def parse_cli() -> dict:
         "--overlap",
         type=int,
         help="Image overlap, if using sequential overlap strategy",
-        default=1,
+        default=None,
     )
     parser.add_argument(
         "-r",
@@ -86,6 +86,12 @@ def parse_cli() -> dict:
         choices=Config.get_retrieval_names(),
         default=None,
         help="Specify image retrieval method",
+    )
+    parser.add_argument(
+        "--db_path",
+        type=str,
+        default=None,
+        help="Path to the COLMAP database to be use for covisibility pair selection.",
     )
     parser.add_argument(
         "--upright",
@@ -142,12 +148,10 @@ if __name__ == "__main__":
     retrieval_option = config.general["retrieval"]
     pair_file = config.general["pair_file"]
     overlap = config.general["overlap"]
+    existing_colmap_model = config.general["db_path"]
     upright = config.general["upright"]
     extractor = config.extractor["name"]
     matcher = config.matcher["name"]
-
-    # TEMP! TO PUT IN PARSER
-    existing_colmap_model = "datasets/casalbagliano/results_superpoint+lightglue_bruteforce_quality_high/reconstruction"
 
     # Initialize ImageMatching class
     img_matching = ImageMatching(
