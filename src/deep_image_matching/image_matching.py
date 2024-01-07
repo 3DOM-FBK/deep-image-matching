@@ -36,21 +36,6 @@ def make_correspondence_matrix(matches: np.ndarray) -> np.ndarray:
     return correspondences
 
 
-def apply_geometric_verification(
-    kpts0: np.ndarray, kpts1: np.ndarray, correspondences: np.ndarray, config: dict
-) -> np.ndarray:
-    mkpts0 = kpts0[correspondences[:, 0]]
-    mkpts1 = kpts1[correspondences[:, 1]]
-    _, inlMask = geometric_verification(
-        kpts0=mkpts0,
-        kpts1=mkpts1,
-        method=config["geom_verification"],
-        threshold=config["gv_threshold"],
-        confidence=config["gv_confidence"],
-    )
-    return correspondences[inlMask]
-
-
 def get_pairs_from_file(pair_file: Path) -> list:
     pairs = []
     with open(pair_file, "r") as txt_file:
@@ -371,13 +356,29 @@ class ImageMatching:
             correspondences = get_matches(matches_path, im0.name, im1.name)
             timer.update("Get matches")
 
-            # Apply geometric verification
-            correspondences_cleaned = apply_geometric_verification(
-                kpts0=kpts0,
-                kpts1=kpts1,
-                correspondences=correspondences,
-                config=self.custom_config["general"],
+            # Rescale threshold according the image qualit
+            scales = {
+                Quality.HIGHEST: 1.0,
+                Quality.HIGH: 1.0,
+                Quality.MEDIUM: 1.5,
+                Quality.LOW: 2.0,
+                Quality.LOWEST: 3.0,
+            }
+            gv_threshold = (
+                self.custom_config["general"]["gv_threshold"]
+                * scales[self.custom_config["general"]["quality"]]
             )
+
+            # Apply geometric verification
+            _, inlMask = geometric_verification(
+                kpts0=kpts0[correspondences[:, 0]],
+                kpts1=kpts1[correspondences[:, 1]],
+                correspondences=correspondences,
+                method=self.custom_config["general"]["geom_verification"],
+                threshold=gv_threshold,
+                confidence=self.custom_config["general"]["gv_confidence"],
+            )
+            correspondences_cleaned = correspondences[inlMask]
             timer.update("Geom verif")
 
             # Update matches in h5 file
