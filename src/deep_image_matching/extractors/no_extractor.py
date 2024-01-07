@@ -10,12 +10,10 @@ from ..utils.image import Image
 from .extractor_base import ExtractorBase
 
 
-# TODO: skip the loading of hloc extractor, but implement it directly here.
 class NoExtractor(ExtractorBase):
     default_conf = {}
 
     def __init__(self, config: dict):
-        # Init the base class
         super().__init__(config)
 
     def extract(self, img: Union[Image, Path, str]) -> np.ndarray:
