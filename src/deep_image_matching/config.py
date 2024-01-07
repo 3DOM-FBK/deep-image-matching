@@ -38,7 +38,7 @@ confs = {
             "flash": True,  # enable FlashAttention if available.
             "depth_confidence": -1,  # 0.95,  # early stopping, disable with -1
             "width_confidence": -1,  # 0.99,  # point pruning, disable with -1
-            "filter_threshold": 0.5,  # match threshold
+            "filter_threshold": 0.1,  # match threshold
         },
     },
     "superpoint+lightglue_fast": {
