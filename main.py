@@ -1,9 +1,11 @@
+import os
 import shutil
 from importlib import import_module
-
+from pathlib import Path
 from src.deep_image_matching import logger, timer
 from src.deep_image_matching.image_matching import ImageMatching
 from src.deep_image_matching.io.h5_to_db import export_to_colmap
+from src.deep_image_matching.io.h5_to_openmvg import export_to_openmvg
 from src.deep_image_matching.parser import parse_config
 
 # Parse arguments
@@ -64,6 +66,17 @@ export_to_colmap(
     single_camera=True,
 )
 timer.update("export_to_colmap")
+
+# Export in openMVG format
+openmvg_out_path = output_dir / "openmvg"
+export_to_openmvg(
+    img_dir=imgs_dir,
+    feature_path=feature_path,
+    match_path=match_path,
+    openmvg_out_path=openmvg_out_path,
+    openmvg_sfm_bin=Path(r"C:\Users\lmorelli\Desktop\openMVG\ReleaseV1.6.Halibut.WindowsBinaries_VS2017"),
+)
+timer.update("export_to_openMVG")
 
 # If --skip_reconstruction is not specified, run reconstruction
 if not config["general"]["skip_reconstruction"]:
