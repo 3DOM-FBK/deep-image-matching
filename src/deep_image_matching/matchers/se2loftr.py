@@ -10,11 +10,10 @@ import torch
 # from ..thirdparty.se2loftr.src.utils.misc import lower_config
 from yacs.config import CfgNode as CN
 
-from .. import logger
+from .. import Quality, TileSelection, logger
 from ..io.h5 import get_features
 from ..thirdparty.se2loftr.configs.loftr.outdoor import loftr_ds_e2_dense_8rot
 from ..thirdparty.se2loftr.src.loftr import LoFTR
-from ..utils.consts import Quality, TileSelection
 from ..utils.tiling import Tiler
 from .matcher_base import FeaturesDict, MatcherBase
 

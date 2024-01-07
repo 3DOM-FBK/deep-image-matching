@@ -4,8 +4,7 @@ from typing import Tuple
 import cv2
 import numpy as np
 
-from .. import logger
-from .consts import GeometricVerification
+from deep_image_matching import GeometricVerification, logger
 
 
 def geometric_verification(

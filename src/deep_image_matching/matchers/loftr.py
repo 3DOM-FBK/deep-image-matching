@@ -1,13 +1,11 @@
 from pathlib import Path
-from typing import Tuple
 
 import kornia as K
 import numpy as np
 import torch
 from kornia import feature as KF
 
-from .. import Timer, logger
-from ..utils.consts import TileSelection
+from .. import TileSelection, Timer, logger
 from ..utils.tiling import Tiler
 from .matcher_base import DetectorFreeMatcherBase, tile_selection
 

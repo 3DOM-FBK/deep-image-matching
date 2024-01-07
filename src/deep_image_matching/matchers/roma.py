@@ -7,9 +7,8 @@ import numpy as np
 import torch
 from PIL import Image
 
-from .. import Timer, logger
+from .. import TileSelection, Timer, logger
 from ..thirdparty.RoMa.roma import roma_outdoor
-from ..utils.consts import TileSelection
 from ..utils.tiling import Tiler
 from .matcher_base import DetectorFreeMatcherBase, tile_selection
 

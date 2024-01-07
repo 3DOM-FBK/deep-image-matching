@@ -8,8 +8,7 @@ import h5py
 import numpy as np
 import torch
 
-from .. import logger
-from ..utils.consts import Quality, TileSelection
+from .. import Quality, TileSelection, logger
 from ..utils.image import Image
 from ..utils.tiling import Tiler
 
