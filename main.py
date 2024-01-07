@@ -145,11 +145,6 @@ if __name__ == "__main__":
     imgs_dir = config.general["image_dir"]
     output_dir = config.general["output_dir"]
     matching_strategy = config.general["matching_strategy"]
-    retrieval_option = config.general["retrieval"]
-    pair_file = config.general["pair_file"]
-    overlap = config.general["overlap"]
-    existing_colmap_model = config.general["db_path"]
-    upright = config.general["upright"]
     extractor = config.extractor["name"]
     matcher = config.matcher["name"]
 
@@ -160,10 +155,10 @@ if __name__ == "__main__":
         matching_strategy=matching_strategy,
         local_features=extractor,
         matching_method=matcher,
-        pair_file=pair_file,
-        retrieval_option=retrieval_option,
-        overlap=overlap,
-        existing_colmap_model=existing_colmap_model,
+        pair_file=config.general["pair_file"],
+        retrieval_option=config.general["retrieval"],
+        overlap=config.general["overlap"],
+        existing_colmap_model=config.general["db_path"],
         custom_config=config.as_dict(),
     )
 
@@ -172,7 +167,7 @@ if __name__ == "__main__":
     timer.update("generate_pairs")
 
     # Try to rotate images so they will be all "upright", useful for deep-learning approaches that usually are not rotation invariant
-    if upright:
+    if config.general["upright"]:
         img_matching.rotate_upright_images()
         timer.update("rotate_upright_images")
 
@@ -184,8 +179,8 @@ if __name__ == "__main__":
     match_path = img_matching.match_pairs(feature_path)
     timer.update("matching")
 
-    # Features are extracted on "upright" images, this function report back images on their original orientation
-    if upright:
+    # If features have been extracted on "upright" images, this function bring features back to their original image orientation
+    if config.general["upright"]:
         img_matching.rotate_back_features(feature_path)
         timer.update("rotate_back_features")
 
