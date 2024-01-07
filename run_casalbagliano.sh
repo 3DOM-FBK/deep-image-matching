@@ -5,7 +5,7 @@ PRJ_DIR=/home/francesco/casalbagliano/subset_A
 
 # Set the config and strategy
 SFM_CONFIG=superpoint+lightglue
-SFM_STRATEGY=covisibility #matching_lowres
+SFM_STRATEGY=matching_lowres
 SFM_QUALITY=high
 SFM_TILING=preselection
 
@@ -14,7 +14,7 @@ DENSE_STRATEGY=covisibility
 DENSE_QUALITY=low
 DENSE_TILING=preselection
 
-SKIP_SFM=false
+SKIP_SFM=true
 DEBUG=true
 
 if [ "$DEBUG" = true ] ; then

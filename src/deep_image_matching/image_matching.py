@@ -335,9 +335,12 @@ class ImageMatching:
         logger.info("Matching features...")
         logger.info("")
         for i, pair in enumerate(tqdm(self.pairs)):
-            logger.debug(f"Matching image pair: {pair[0].name} - {pair[1].name}")
-            im0 = self.image_dir / pair[0].name
-            im1 = self.image_dir / pair[1].name
+            name0 = pair[0].name if isinstance(pair[0], Path) else pair[0]
+            name1 = pair[1].name if isinstance(pair[1], Path) else pair[1]
+            im0 = self.image_dir / name0
+            im1 = self.image_dir / name1
+
+            logger.debug(f"Matching image pair: {name0} - {name1}")
 
             # Run matching
             matches = self._matcher.match(
