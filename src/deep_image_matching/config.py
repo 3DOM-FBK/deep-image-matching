@@ -133,6 +133,38 @@ confs = {
     },
 }
 
+opt_zoo = {
+    "extractors": [
+        "superpoint",
+        "alike",
+        "aliked",
+        "disk",
+        "dedode",
+        "keynetaffnethardnet",
+        "orb",
+        "sift",
+        "no_extractor",
+    ],
+    "matchers": [
+        "superglue",
+        "lightglue",
+        "loftr",
+        "se2loftr",
+        "adalam",
+        "kornia_matcher",
+        "roma",
+    ],
+    "retrieval": ["netvlad", "openibl", "cosplace", "dir"],
+    "matching_strategy": [
+        "bruteforce",
+        "sequential",
+        "retrieval",
+        "custom_pairs",
+        "matching_lowres",
+        "covisibility",
+    ],
+}
+
 
 class Config:
     cfg = {
@@ -310,36 +342,3 @@ class Config:
         }
 
         return cfg
-
-
-opt_zoo = {
-    "extractors": [
-        "superpoint",
-        "alike",
-        "aliked",
-        "disk",
-        "dedode",
-        "keynetaffnethardnet",
-        "orb",
-        "sift",
-        "no_extractor",
-    ],
-    "matchers": [
-        "superglue",
-        "lightglue",
-        "loftr",
-        "se2loftr",
-        "adalam",
-        "kornia_matcher",
-        "roma",
-    ],
-    "retrieval": ["netvlad", "openibl", "cosplace", "dir"],
-    "matching_strategy": [
-        "bruteforce",
-        "sequential",
-        "retrieval",
-        "custom_pairs",
-        "matching_lowres",
-        "covisibility",
-    ],
-}
