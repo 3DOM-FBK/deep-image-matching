@@ -167,27 +167,28 @@ opt_zoo = {
 
 
 class Config:
-    cfg = {
-        "general": {},
-        "extractor": {},
-        "matcher": {},
-    }
     default_cli_opts = {
         "gui": False,
         "dir": None,
         "images": None,
         "outs": None,
-        "config": "superpoint+lightglue",
+        "config": None,
         "quality": "high",
         "tiling": "none",
         "strategy": "matching_lowres",
         "pairs": None,
-        "overlap": 1,
+        "overlap": None,
         "retrieval": None,
+        "db_path": None,
         "upright": False,
         "skip_reconstruction": False,
         "force": True,
         "verbose": False,
+    }
+    cfg = {
+        "general": {},
+        "extractor": {},
+        "matcher": {},
     }
 
     @property
@@ -290,7 +291,7 @@ class Config:
         # Check extraction and matching configuration
         if args["config"] is None or args["config"] not in confs:
             raise ValueError(
-                "--config option is required and must be a valid configuration (check config.py))"
+                "Invalid config. --config option is required and must be a valid configuration. Check --help for details"
             )
         extractor = confs[args["config"]]["extractor"]["name"]
         if extractor not in opt_zoo["extractors"]:
@@ -303,14 +304,28 @@ class Config:
                 f"Invalid matcher option: {matcher}. Valid options are: {opt_zoo['matchers']}"
             )
 
-        # Matching strategy
-        if args["strategy"] is None:
-            raise ValueError("--strategy option is required")
+        # Check matching strategy and related options
         if args["strategy"] not in opt_zoo["matching_strategy"]:
             raise ValueError(
-                f"Invalid strategy option: {args['strategy']}. Valid options are: {opt_zoo['matching_strategy']}"
+                f"Invalid strategy option: {args['strategy']}. Valid options are: {opt_zoo['matching_strategy']}. Check --help for details"
             )
-        if args["strategy"] == "retrieval":
+
+        if args["strategy"] == "sequential":
+            num_imgs = len(list(args["images"].glob("*")))
+            if args["overlap"] is None or not isinstance(args["overlap"], int):
+                raise ValueError(
+                    "Invalid overlap. --overlap 'int' option is required when --strategy is set to sequential"
+                )
+            elif args["overlap"] < 1:
+                raise ValueError(
+                    "Invalid overlap. --overlap must be a positive integer greater than 0"
+                )
+            elif args["overlap"] >= num_imgs - 1:
+                raise ValueError(
+                    "Invalid overlap. --overlap must be less than the number of images-1"
+                )
+
+        elif args["strategy"] == "retrieval":
             if args["retrieval"] is None:
                 raise ValueError(
                     "--retrieval option is required when --strategy is set to retrieval"
@@ -319,9 +334,17 @@ class Config:
                 raise ValueError(
                     f"Invalid retrieval option: {args['retrieval']}. Valid options are: {opt_zoo['retrieval']}"
                 )
-        else:
-            args["retrieval"] = None
-        if args["strategy"] == "custom_pairs":
+
+        elif args["strategy"] == "covisibility":
+            if args["db_path"] is None:
+                raise ValueError(
+                    "--db_path option is required when --strategy is set to covisibility"
+                )
+            args["db_path"] = Path(args["db_path"])
+            if not args["db_path"].exists():
+                raise ValueError(f"File {args['db_path']} does not exist")
+
+        elif args["strategy"] == "custom_pairs":
             if args["pairs"] is None:
                 raise ValueError(
                     "--pairs option is required when --strategy is set to custom_pairs"
@@ -331,13 +354,6 @@ class Config:
                 raise ValueError(f"File {args['pairs']} does not exist")
         else:
             args["pairs"] = args["outs"] / "pairs.txt"
-        if args["strategy"] == "sequential":
-            if args["overlap"] is None:
-                raise ValueError(
-                    "--overlap option is required when --strategy is set to sequential"
-                )
-        else:
-            args["overlap"] = None
 
         if args["verbose"]:
             change_logger_level(logger.name, "debug")
@@ -352,6 +368,7 @@ class Config:
             "retrieval": args["retrieval"],
             "pair_file": args["pairs"],
             "overlap": args["overlap"],
+            "db_path": args["db_path"],
             "upright": args["upright"],
             "verbose": args["verbose"],
             "skip_reconstruction": args["skip_reconstruction"],
