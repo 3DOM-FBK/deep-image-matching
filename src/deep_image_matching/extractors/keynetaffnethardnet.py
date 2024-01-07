@@ -6,7 +6,6 @@ import torch
 from .extractor_base import ExtractorBase, FeaturesDict
 
 
-# TODO: skip the loading of hloc extractor, but implement it directly here.
 class KeyNet(ExtractorBase):
     default_conf = {
         "name:": "",
