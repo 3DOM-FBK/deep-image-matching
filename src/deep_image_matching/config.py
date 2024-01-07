@@ -352,7 +352,8 @@ class Config:
             args["pairs"] = Path(args["pairs"])
             if not args["pairs"].exists():
                 raise ValueError(f"File {args['pairs']} does not exist")
-        else:
+
+        if args["strategy"] != "custom_pairs":
             args["pairs"] = args["outs"] / "pairs.txt"
 
         if args["verbose"]:
