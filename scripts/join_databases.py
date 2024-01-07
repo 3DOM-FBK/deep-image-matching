@@ -25,8 +25,17 @@ def parse_args():
         help="Folder containing COLMAP databases to join",
         required=True,
     )
-    parser.add_argument("-o", "--output", type=str, help="Output folder", required=True)
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        help="Output folder (if None, use the input folder)",
+        default=None,
+    )
     args = parser.parse_args()
+
+    if args.output is None:
+        args.output = args.input
 
     return args
 
@@ -182,6 +191,7 @@ def MergeColmapDatabases(db_path1: Path, db_path2: Path, db_joined: Path) -> Non
 
 def main():
     args = parse_args()
+
     databases_dir = Path(args.input)
     db_out = Path(args.output) / "joined.db"
     db_temp = db_out.parent / "temp.db"
