@@ -16,16 +16,16 @@
       "console": "integratedTerminal",
       "args": [
         "--dir",
-        "/home/francesco/casalbagliano/subset_A",
+        "/home/francesco/casalbagliano/subset_B",
         "--config",
         "superpoint+lightglue",
+        "--strategy",
+        "matching_lowres",
         "--quality",
         "high",
         "--tiling",
         "preselection",
-        "--strategy",
-        "matching_lowres",
-        // "--skip_reconstruction",
+        "--skip_reconstruction",
         "--force",
         "-V"
       ]

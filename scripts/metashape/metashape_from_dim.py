@@ -9,7 +9,7 @@ from ms_utils import cameras_from_bundler, create_new_project, import_markers
 root_dir = Path("/home/francesco/casalbagliano/subset_A")
 
 # name = "casalbagliano_superpoint+lightglue_bruteforce"
-name = "casalbagliano_roma_sequential"
+name = "results_superpoint+lightglue_matching_lowres_quality_high"
 
 images_dir = root_dir / "images"
 project_path = root_dir / "metashape" / f"{name}.psx"
