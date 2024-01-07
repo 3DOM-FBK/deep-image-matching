@@ -227,6 +227,10 @@ class Config:
         return list(confs.keys())
 
     @staticmethod
+    def get_matching_strategy_names() -> list:
+        return opt_zoo["matching_strategy"]
+
+    @staticmethod
     def get_extractor_names() -> list:
         return opt_zoo["extractors"]
 
@@ -237,10 +241,6 @@ class Config:
     @staticmethod
     def get_retrieval_names() -> list:
         return opt_zoo["retrieval"]
-
-    @staticmethod
-    def get_matching_strategy_names() -> list:
-        return opt_zoo["matching_strategy"]
 
     @staticmethod
     def parse_config(input_args: dict):
