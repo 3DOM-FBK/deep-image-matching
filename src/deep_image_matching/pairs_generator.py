@@ -9,10 +9,10 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from deep_image_matching import Timer, logger
-from deep_image_matching.image_retrieval import ImageRetrieval
-from deep_image_matching.io.colmap_read_write_model import read_model
-from deep_image_matching.utils.geometric_verification import geometric_verification
+from . import Timer, logger
+from .image_retrieval import ImageRetrieval
+from .io.colmap_read_write_model import read_model
+from .utils.geometric_verification import geometric_verification
 
 
 def pairs_from_sequential(

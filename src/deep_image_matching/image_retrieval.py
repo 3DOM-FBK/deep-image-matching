@@ -59,7 +59,7 @@ def ImageRetrieval(imgs_dir, outs_dir, retrieval_option, sfm_pairs):
     return pairs
 
 
-# deprecated. Use the full implemented ImageMatching class
+# deprecated. Use the full implemented ImageMatching class.
 def MatchImgs(matcher_option, imgs_dir, output_dir, retrieval_option):
     img_pairs = []
 

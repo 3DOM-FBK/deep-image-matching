@@ -11,11 +11,10 @@ import torch
 
 from deep_image_matching.extractors.extractor_base import ExtractorBase
 
-from .. import Timer, logger
+from .. import Quality, TileSelection, Timer, logger
 from ..hloc.extractors.superpoint import SuperPoint
 from ..io.h5 import get_features, get_matches
 from ..thirdparty.LightGlue.lightglue import LightGlue
-from ..utils.consts import Quality, TileSelection
 from ..utils.geometric_verification import geometric_verification
 from ..utils.tiling import Tiler
 from ..visualization import viz_matches_cv2, viz_matches_mpl
