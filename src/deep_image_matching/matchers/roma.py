@@ -211,7 +211,7 @@ class RomaMatcher(DetectorFreeMatcherBase):
             preselction_matcher=self._preselction_matcher,
             tile_size=tile_size,
             tile_overlap=overlap,
-            preselection_size_max=self.preselection_size_max,
+            tile_preselection_size=self.tile_preselection_size,
             min_matches_per_tile=self.min_matches_per_tile,
             device=self._device,
         )

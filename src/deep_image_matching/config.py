@@ -1,21 +1,45 @@
 import shutil
 from pathlib import Path
 
-from deep_image_matching import Quality, TileSelection, change_logger_level, logger
-
-from . import GeometricVerification, Quality, TileSelection
+from deep_image_matching import (
+    GeometricVerification,
+    Quality,
+    TileSelection,
+    change_logger_level,
+    logger,
+)
 
 # General configuration for the matching process.
 # It defines the quality of the matching process, the tile selection strategy, the tiling grid, the overlap between tiles, the geometric verification method, and the geometric verification parameters.
 conf_general = {
-    "quality": Quality.HIGH,  # Quality.HIGHEST, Quality.HIGH, Quality.MEDIUM, Quality.LOW, Quality.LOWEST
-    "tile_selection": TileSelection.PRESELECTION,  # [TileSelection.NONE, TileSelection.PRESELECTION, TileSelection.GRID]
-    "tile_size": (2400, 2000),  # (x, y) or (width, height)
-    "tile_overlap": 50,  # in pixels
+    # Image resolution presets:
+    #   Quality.HIGHEST (x2)
+    #   Quality.HIGH (x1 - full resolutions)
+    #   Quality.MEDIUM (x1/2)
+    #   Quality.LOW (x1/4)
+    #   Quality.LOWEST (x1/8)
+    "quality": Quality.HIGH,
+    # Tile selection approach:
+    #   TileSelection.NONE (no tile selection, use entire images),
+    #   TileSelection.PRESELECTION (select tiles based on a low resolution matching),
+    #   TileSelection.GRID (match all the corresponding tiles in a grid)
+    #   TileSelection.EXHAUSTIVE (match all the possible pairs of tiles)
+    "tile_selection": TileSelection.PRESELECTION,
+    # Size of the tiles in pixels (width, height) or (x, y)
+    "tile_size": (2400, 2000),
+    # Overlap between tiles in pixels
+    "tile_overlap": 50,
+    # Size of the low resolution tiles used for the tile preselection
+    "tile_preselection_size": 2000,
+    # Geometric verification method and parameters:
+    #   GeometricVerification.NONE (no geometric verification),
+    #   GeometricVerification.PYDEGENSAC (use pydegensac),
+    #   GeometricVerification.MAGSAC (use opencv MAGSAC),
     "geom_verification": GeometricVerification.PYDEGENSAC,
     "gv_threshold": 0.5,
     "gv_confidence": 0.999999,
-    "preselection_size_max": 2000,
+    # Minimum number of inliers matches per pair
+    "min_inliers_per_pair": 20,
 }
 
 
@@ -205,13 +229,13 @@ class Config:
 
     def __init__(self, args: dict):
         # Parse input arguments
-        general = self.parse_config(args)
+        user_conf = self.parse_user_config(args)
 
         # Build configuration dictionary
-        self.cfg["general"] = {**conf_general, **general}
-        config = self.get_config(args["config"])
-        self.cfg["extractor"] = config["extractor"]
-        self.cfg["matcher"] = config["matcher"]
+        self.cfg["general"] = {**conf_general, **user_conf}
+        features_config = self.get_config(args["config"])
+        self.cfg["extractor"] = features_config["extractor"]
+        self.cfg["matcher"] = features_config["matcher"]
 
     def as_dict(self):
         return self.cfg
@@ -244,7 +268,7 @@ class Config:
         return opt_zoo["retrieval"]
 
     @staticmethod
-    def parse_config(input_args: dict):
+    def parse_user_config(input_args: dict):
         """Do checks on the input arguments and return the configuration dictionary with the following keys: general, extractor, matcher"""
 
         args = {**Config.default_cli_opts, **input_args}

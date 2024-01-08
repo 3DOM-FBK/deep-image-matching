@@ -350,6 +350,9 @@ class ImageMatching:
             if matches is None:
                 continue
 
+            # Do additional geometric verification
+            # TODO: remove it here ad move to the end of the matching process
+
             # Get original keypoints from h5 file
             kpts0 = get_features(feature_path, im0.name)["keypoints"]
             kpts1 = get_features(feature_path, im1.name)["keypoints"]
