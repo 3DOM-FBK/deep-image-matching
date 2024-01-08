@@ -36,8 +36,8 @@ confs = {
             "name": "lightglue",
             "n_layers": 9,
             "flash": True,  # enable FlashAttention if available.
-            "depth_confidence": -1,  # 0.95,  # early stopping, disable with -1
-            "width_confidence": -1,  # 0.99,  # point pruning, disable with -1
+            "depth_confidence": 0.98,  # 0.95,  # early stopping, disable with -1
+            "width_confidence": 0.99,  # 0.99,  # point pruning, disable with -1
             "filter_threshold": 0.1,  # match threshold
         },
     },

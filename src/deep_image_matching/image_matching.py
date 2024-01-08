@@ -373,7 +373,6 @@ class ImageMatching:
             _, inlMask = geometric_verification(
                 kpts0=kpts0[correspondences[:, 0]],
                 kpts1=kpts1[correspondences[:, 1]],
-                correspondences=correspondences,
                 method=self.custom_config["general"]["geom_verification"],
                 threshold=gv_threshold,
                 confidence=self.custom_config["general"]["gv_confidence"],
