@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from PIL import Image
 
-from .. import Quality, TileSelection, Timer, logger
+from .. import TileSelection, Timer, logger
 from ..io.h5 import get_features
 from ..thirdparty.RoMa.roma import roma_outdoor
 from ..utils.geometric_verification import geometric_verification
@@ -32,7 +32,7 @@ class RomaMatcher(DetectorFreeMatcherBase):
 
     grayscale = False
     as_float = True
-    max_tile_size = 600  # 448
+    max_tile_size = 448
     max_tile_pairs = 50
     keep_tiles = False
 
@@ -102,18 +102,10 @@ class RomaMatcher(DetectorFreeMatcherBase):
         features0 = get_features(feature_path, img0_name)
         features1 = get_features(feature_path, img1_name)
 
-        # Rescale threshold according the image qualit
-        scales = {
-            Quality.HIGHEST: 1.0,
-            Quality.HIGH: 1.0,
-            Quality.MEDIUM: 1.5,
-            Quality.LOW: 2.0,
-            Quality.LOWEST: 3.0,
-        }
-        gv_threshold = (
-            self._config["general"]["gv_threshold"]
-            * scales[self._config["general"]["quality"]]
-        )
+        # Rescale threshold according the image original image size
+        img_shape = cv2.imread(str(img0)).shape
+        scale_fct = np.floor(max(img_shape) / self.max_tile_size / 2)
+        gv_threshold = self._config["general"]["gv_threshold"] * scale_fct
 
         # Apply geometric verification
         _, inlMask = geometric_verification(
