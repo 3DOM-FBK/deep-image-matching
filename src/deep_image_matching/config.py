@@ -13,7 +13,7 @@ conf_general = {
     "tile_size": (2400, 2000),  # (x, y) or (width, height)
     "tile_overlap": 50,  # in pixels
     "geom_verification": GeometricVerification.PYDEGENSAC,
-    "gv_threshold": 2,
+    "gv_threshold": 0.5,
     "gv_confidence": 0.999999,
     "preselection_size_max": 2000,
 }
@@ -30,7 +30,7 @@ confs = {
         "extractor": {
             "name": "superpoint",
             "keypoint_threshold": 0.005,
-            "max_keypoints": 4096,
+            "max_keypoints": 10000,
         },
         "matcher": {
             "name": "lightglue",

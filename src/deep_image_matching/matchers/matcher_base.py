@@ -173,6 +173,9 @@ class MatcherBase(metaclass=ABCMeta):
                 .eval()
                 .to(self._device)
             )
+        else:
+            self._preselction_extractor = None
+            self._preselction_matcher = None
 
     @property
     def features0(self):
