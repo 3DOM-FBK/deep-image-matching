@@ -61,7 +61,7 @@ class SuperPoint(nn.Module):
 
 class SuperPointExtractor(ExtractorBase):
     default_conf = {
-        "name:": "superpoint",
+        "name": "superpoint",
         "nms_radius": 4,
         "keypoint_threshold": 0.005,
         "max_keypoints": -1,
