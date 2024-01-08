@@ -87,6 +87,7 @@ class MatcherBase(metaclass=ABCMeta):
     default_conf = {}
     required_inputs = []
     min_inliers_per_pair = 15
+    min_inliers_ratio = 0.2
     min_matches_per_tile = 5
     max_feat_no_tiling = 100000
     tile_preselection_size = 1024
@@ -305,21 +306,28 @@ class MatcherBase(metaclass=ABCMeta):
             threshold=gv_threshold,
             confidence=self._config["general"]["gv_confidence"],
         )
+        num_inliers = np.sum(inlMask)
+        inliers_ratio = num_inliers / len(matches)
         matches = matches[inlMask]
+        if num_inliers < self.min_inliers_per_pair:
+            logger.debug(
+                f"Too few inliers matches found ({num_inliers}). Skipping image pair {img0.name}-{img1.name}"
+            )
+            timer_match.print(f"{__class__.__name__} match")
+            return None
+        elif inliers_ratio < self.min_inliers_ratio:
+            logger.debug(
+                f"Too small inlier ratio ({inliers_ratio:.2f}). Skipping image pair {img0.name}-{img1.name}"
+            )
+            timer_match.print(f"{__class__.__name__} match")
+            return None
         timer_match.update("Geom. verification")
 
         # Save to h5 file
-        n_matches = len(matches)
         with h5py.File(str(matches_path), "a", libver="latest") as fd:
             group = fd.require_group(img0_name)
-            if n_matches >= self.min_inliers_per_pair:
-                # TODO: or use require_dataset
-                group.create_dataset(img1_name, data=matches)
-            else:
-                logger.debug(
-                    f"Too few matches found. Skipping image pair {img0.name}-{img1.name}"
-                )
-                return None
+            group.create_dataset(img1_name, data=matches)
+
         timer_match.update("save to h5")
         timer_match.print(f"{__class__.__name__} match")
 
@@ -667,18 +675,10 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         features0 = get_features(feature_path, img0_name)
         features1 = get_features(feature_path, img1_name)
 
-        # Rescale threshold according the image qualit
-        scales = {
-            Quality.HIGHEST: 1.0,
-            Quality.HIGH: 1.0,
-            Quality.MEDIUM: 1.5,
-            Quality.LOW: 2.0,
-            Quality.LOWEST: 3.0,
-        }
-        gv_threshold = (
-            self._config["general"]["gv_threshold"]
-            * scales[self._config["general"]["quality"]]
-        )
+        # Rescale threshold according the image original image size
+        img_shape = cv2.imread(str(img0)).shape
+        scale_fct = np.floor(max(img_shape) / self.max_tile_size / 2)
+        gv_threshold = self._config["general"]["gv_threshold"] * scale_fct
 
         # Apply geometric verification
         _, inlMask = geometric_verification(
