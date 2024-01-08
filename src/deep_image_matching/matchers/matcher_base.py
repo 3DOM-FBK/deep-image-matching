@@ -69,10 +69,10 @@ class MatcherBase(metaclass=ABCMeta):
         general_conf (dict): Default configuration for general settings.
         default_conf (dict): Default configuration for matcher-specific settings.
         required_inputs (list): List of required input parameters.
-        min_matches (int): Minimum number of matches required.
+        min_inliers_per_pair (int): Minimum number of matches required.
         min_matches_per_tile (int): Minimum number of matches required per tile.
         max_feat_no_tiling (int): Maximum number of features without tiling.
-        preselection_size_max (int): Maximum resize dimension for preselection.
+        tile_preselection_size (int): Maximum resize dimension for preselection.
     """
 
     general_conf = {
@@ -86,10 +86,10 @@ class MatcherBase(metaclass=ABCMeta):
     }
     default_conf = {}
     required_inputs = []
-    min_matches = 20
+    min_inliers_per_pair = 20
     min_matches_per_tile = 5
     max_feat_no_tiling = 100000
-    preselection_size_max = 1024
+    tile_preselection_size = 1024
 
     def __init__(self, custom_config) -> None:
         """
@@ -118,13 +118,13 @@ class MatcherBase(metaclass=ABCMeta):
             },
         }
 
-        if "min_matches" in custom_config["general"]:
-            self.min_matches = custom_config["general"]["min_matches"]
+        if "min_inliers_per_pair" in custom_config["general"]:
+            self.min_inliers_per_pair = custom_config["general"]["min_inliers_per_pair"]
         if "min_matches_per_tile" in custom_config["general"]:
             self.min_matches_per_tile = custom_config["general"]["min_matches_per_tile"]
-        if "preselection_size_max" in custom_config["general"]:
-            self.preselection_size_max = custom_config["general"][
-                "preselection_size_max"
+        if "tile_preselection_size" in custom_config["general"]:
+            self.tile_preselection_size = custom_config["general"][
+                "tile_preselection_size"
             ]
 
         # Get main processing parameters and save them as class members
@@ -149,10 +149,10 @@ class MatcherBase(metaclass=ABCMeta):
         logger.debug(f"Running inference on device {self._device}")
 
         # All features detected on image 0 (FeaturesBase object with N keypoints)
-        self._features0 = None
+        features0 = None
 
         # All features detected on image 1 (FeaturesBase object with M keypoints)
-        self._features1 = None
+        features1 = None
 
         # Index of the matches in both the images. The first column contains the index of the mathced keypoints in features0.keypoints, the second column contains the index of the matched keypoints in features1.keypoints (Kx2 array)
         self._matches01 = None
@@ -176,18 +176,6 @@ class MatcherBase(metaclass=ABCMeta):
         else:
             self._preselction_extractor = None
             self._preselction_matcher = None
-
-    @property
-    def features0(self):
-        return self._features0
-
-    @property
-    def features1(self):
-        return self._features1
-
-    @property
-    def matches0(self):
-        return self._matches0
 
     @abstractmethod
     def _match_pairs(
@@ -246,16 +234,16 @@ class MatcherBase(metaclass=ABCMeta):
         # Get features from h5 file
         img0_name = img0.name
         img1_name = img1.name
-        self._features0 = get_features(self._feature_path, img0.name)
-        self._features1 = get_features(self._feature_path, img1.name)
+        features0 = get_features(self._feature_path, img0.name)
+        features1 = get_features(self._feature_path, img1.name)
         timer_match.update("load h5 features")
 
         # Perform matching (on tiles or full images)
         # If the features are not too many, try first to match all features together on full image, if it fails, try to match by tiles
         fallback_flag = False
         high_feats_flag = (
-            len(self._features0["keypoints"]) > self.max_feat_no_tiling
-            or len(self._features1["keypoints"]) > self.max_feat_no_tiling
+            len(features0["keypoints"]) > self.max_feat_no_tiling
+            or len(features1["keypoints"]) > self.max_feat_no_tiling
         )
 
         if self._tiling == TileSelection.NONE:
@@ -272,7 +260,7 @@ class MatcherBase(metaclass=ABCMeta):
                 logger.debug(
                     f"Tile selection was {self._tiling.name}. Matching full images..."
                 )
-                self._matches = self._match_pairs(self._features0, self._features1)
+                matches = self._match_pairs(features0, features1)
                 timer_match.update("[match] try to match full images")
             except Exception as e:
                 if "CUDA out of memory" in str(e):
@@ -286,23 +274,46 @@ class MatcherBase(metaclass=ABCMeta):
         # If try_full_image is disabled or matching full images failed, match by tiles
         if not try_full_image or fallback_flag:
             logger.debug(f"Matching by tile with {self._tiling.name} selection...")
-            self._matches = self._match_by_tile(
+            matches = self._match_by_tile(
                 img0,
                 img1,
-                self._features0,
-                self._features1,
+                features0,
+                features1,
                 method=self._tiling,
             )
             timer_match.update("tile matching")
 
+        # Do Geometric verification
+        # Rescale threshold according the image qualit
+        scales = {
+            Quality.HIGHEST: 1.0,
+            Quality.HIGH: 1.0,
+            Quality.MEDIUM: 1.5,
+            Quality.LOW: 2.0,
+            Quality.LOWEST: 3.0,
+        }
+        gv_threshold = (
+            self._config["general"]["gv_threshold"]
+            * scales[self._config["general"]["quality"]]
+        )
+
+        # Apply geometric verification
+        _, inlMask = geometric_verification(
+            kpts0=features0["keypoints"][matches[:, 0]],
+            kpts1=features1["keypoints"][matches[:, 1]],
+            method=self._config["general"]["geom_verification"],
+            threshold=gv_threshold,
+            confidence=self._config["general"]["gv_confidence"],
+        )
+        matches = matches[inlMask]
+
         # Save to h5 file
-        n_matches = len(self._matches)
+        n_matches = len(matches)
         with h5py.File(str(matches_path), "a", libver="latest") as fd:
             group = fd.require_group(img0_name)
-            if n_matches >= self.min_matches:
-                group.create_dataset(
-                    img1_name, data=self._matches
-                )  # or use require_dataset
+            if n_matches >= self.min_inliers_per_pair:
+                # TODO: or use require_dataset
+                group.create_dataset(img1_name, data=matches)
             else:
                 logger.debug(
                     f"Too few matches found. Skipping image pair {img0.name}-{img1.name}"
@@ -324,7 +335,7 @@ class MatcherBase(metaclass=ABCMeta):
         #     save_path=viz_dir / f"{img0_name}_{img1_name}.png",
         # )
 
-        return self._matches
+        return matches
 
     def _match_by_tile(
         self,
@@ -365,7 +376,7 @@ class MatcherBase(metaclass=ABCMeta):
             preselction_matcher=self._preselction_matcher,
             tile_size=self._config["general"]["tile_size"],
             tile_overlap=self._config["general"]["tile_overlap"],
-            preselection_size_max=self.preselection_size_max,
+            tile_preselection_size=self.tile_preselection_size,
             min_matches_per_tile=self.min_matches_per_tile,
             device=self._device,
         )
@@ -506,10 +517,10 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         general_conf (dict): Default configuration for general settings.
         default_conf (dict): Default configuration for matcher-specific settings.
         required_inputs (list): List of required input parameters.
-        min_matches (int): Minimum number of matches required.
+        min_inliers_per_pair (int): Minimum number of matches required.
         min_matches_per_tile (int): Minimum number of matches required per tile.
         max_feat_no_tiling (int): Maximum number of features without tiling.
-        preselection_size_max (int): Maximum resize dimension for preselection.
+        tile_preselection_size (int): Maximum resize dimension for preselection.
     """
 
     general_conf = {
@@ -523,9 +534,9 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
     }
     default_conf = {}
     required_inputs = []
-    min_matches = 20
+    min_inliers_per_pair = 20
     min_matches_per_tile = 5
-    preselection_size_max = 1024
+    tile_preselection_size = 1024
 
     def __init__(self, custom_config) -> None:
         """
@@ -557,13 +568,13 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         # Get main processing parameters and save them as class members
         self._quality = self._config["general"]["quality"]
         self._tiling = self._config["general"]["tile_selection"]
-        if "min_matches" in custom_config["general"]:
-            self.min_matches = custom_config["general"]["min_matches"]
+        if "min_inliers_per_pair" in custom_config["general"]:
+            self.min_inliers_per_pair = custom_config["general"]["min_inliers_per_pair"]
         if "min_matches_per_tile" in custom_config["general"]:
             self.min_matches_per_tile = custom_config["general"]["min_matches_per_tile"]
-        if "preselection_size_max" in custom_config["general"]:
-            self.preselection_size_max = custom_config["general"][
-                "preselection_size_max"
+        if "tile_preselection_size" in custom_config["general"]:
+            self.tile_preselection_size = custom_config["general"][
+                "tile_preselection_size"
             ]
         logger.debug(f"Matching options: Tiling: {self._tiling.name}")
 
@@ -655,7 +666,7 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         n_matches = len(matches)
         with h5py.File(str(matches_path), "a", libver="latest") as fd:
             group = fd.require_group(img0_name)
-            if n_matches >= self.min_matches:
+            if n_matches >= self.min_inliers_per_pair:
                 group.create_dataset(img1_name, data=matches)
             else:
                 logger.debug(
@@ -896,7 +907,7 @@ def tile_selection(
     preselction_matcher: MatcherBase,
     tile_size: Tuple[int, int],
     tile_overlap: int,
-    preselection_size_max: int = 1024,
+    tile_preselection_size: int = 1024,
     min_matches_per_tile: int = 5,
     device: str = "cpu",
 ):
@@ -945,8 +956,8 @@ def tile_selection(
         # Downsampled images
         size0 = i0.shape[:2][::-1]
         size1 = i1.shape[:2][::-1]
-        scale0 = preselection_size_max / max(size0)
-        scale1 = preselection_size_max / max(size1)
+        scale0 = tile_preselection_size / max(size0)
+        scale1 = tile_preselection_size / max(size1)
         size0_new = tuple(int(round(x * scale0)) for x in size0)
         size1_new = tuple(int(round(x * scale1)) for x in size1)
         i0 = cv2.resize(i0, size0_new, interpolation=cv2.INTER_AREA)
