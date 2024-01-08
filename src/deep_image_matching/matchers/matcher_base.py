@@ -86,7 +86,7 @@ class MatcherBase(metaclass=ABCMeta):
     }
     default_conf = {}
     required_inputs = []
-    min_inliers_per_pair = 20
+    min_inliers_per_pair = 15
     min_matches_per_tile = 5
     max_feat_no_tiling = 100000
     tile_preselection_size = 1024
@@ -306,6 +306,7 @@ class MatcherBase(metaclass=ABCMeta):
             confidence=self._config["general"]["gv_confidence"],
         )
         matches = matches[inlMask]
+        timer_match.update("Geom. verification")
 
         # Save to h5 file
         n_matches = len(matches)
@@ -661,6 +662,34 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
                 select_unique=True,
             )
             timer_match.update("[match] Match by tile")
+
+        # Do Geometric verification
+        features0 = get_features(feature_path, img0_name)
+        features1 = get_features(feature_path, img1_name)
+
+        # Rescale threshold according the image qualit
+        scales = {
+            Quality.HIGHEST: 1.0,
+            Quality.HIGH: 1.0,
+            Quality.MEDIUM: 1.5,
+            Quality.LOW: 2.0,
+            Quality.LOWEST: 3.0,
+        }
+        gv_threshold = (
+            self._config["general"]["gv_threshold"]
+            * scales[self._config["general"]["quality"]]
+        )
+
+        # Apply geometric verification
+        _, inlMask = geometric_verification(
+            kpts0=features0["keypoints"][matches[:, 0]],
+            kpts1=features1["keypoints"][matches[:, 1]],
+            method=self._config["general"]["geom_verification"],
+            threshold=gv_threshold,
+            confidence=self._config["general"]["gv_confidence"],
+        )
+        matches = matches[inlMask]
+        timer_match.update("Geom. verification")
 
         # Save to h5 file
         n_matches = len(matches)
