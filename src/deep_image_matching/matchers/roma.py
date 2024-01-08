@@ -7,8 +7,10 @@ import numpy as np
 import torch
 from PIL import Image
 
-from .. import TileSelection, Timer, logger
+from .. import Quality, TileSelection, Timer, logger
+from ..io.h5 import get_features
 from ..thirdparty.RoMa.roma import roma_outdoor
+from ..utils.geometric_verification import geometric_verification
 from ..utils.tiling import Tiler
 from .matcher_base import DetectorFreeMatcherBase, tile_selection
 
@@ -96,11 +98,39 @@ class RomaMatcher(DetectorFreeMatcherBase):
             )
             timer_match.update("[match] Match by tile")
 
+        # Do Geometric verification
+        features0 = get_features(feature_path, img0_name)
+        features1 = get_features(feature_path, img1_name)
+
+        # Rescale threshold according the image qualit
+        scales = {
+            Quality.HIGHEST: 1.0,
+            Quality.HIGH: 1.0,
+            Quality.MEDIUM: 1.5,
+            Quality.LOW: 2.0,
+            Quality.LOWEST: 3.0,
+        }
+        gv_threshold = (
+            self._config["general"]["gv_threshold"]
+            * scales[self._config["general"]["quality"]]
+        )
+
+        # Apply geometric verification
+        _, inlMask = geometric_verification(
+            kpts0=features0["keypoints"][matches[:, 0]],
+            kpts1=features1["keypoints"][matches[:, 1]],
+            method=self._config["general"]["geom_verification"],
+            threshold=gv_threshold,
+            confidence=self._config["general"]["gv_confidence"],
+        )
+        matches = matches[inlMask]
+        timer_match.update("Geom. verification")
+
         # Save to h5 file
         n_matches = len(matches)
         with h5py.File(str(matches_path), "a", libver="latest") as fd:
             group = fd.require_group(img0_name)
-            if n_matches >= self.min_matches:
+            if n_matches >= self.min_inliers_per_pair:
                 group.create_dataset(img1_name, data=matches)
             else:
                 logger.debug(

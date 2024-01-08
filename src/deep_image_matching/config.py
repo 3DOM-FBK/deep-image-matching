@@ -39,7 +39,7 @@ conf_general = {
     "gv_threshold": 0.5,
     "gv_confidence": 0.999999,
     # Minimum number of inliers matches per pair
-    "min_inliers_per_pair": 20,
+    "min_inliers_per_pair": 5,
 }
 
 
