@@ -56,6 +56,7 @@ class ExtractorBase(metaclass=ABCMeta):
     grayscale = True
     as_float = True
     descriptor_size = 128
+    features_as_half = False
 
     def __init__(self, custom_config: dict):
         """
@@ -166,12 +167,11 @@ class ExtractorBase(metaclass=ABCMeta):
 
         # Save features to disk in h5 format (TODO: MOVE it to another method)
         # def save_features_to_h5(self)
-        as_half = True  # TODO: add this to the config
         output_dir.mkdir(parents=True, exist_ok=True)
         im_name = im_path.name
 
-        # If as_half is True then the features are converted to float32 or float16.
-        if as_half:
+        # If features_as_half is True then the features are converted to float16.
+        if self.features_as_half:
             for k in features:
                 if not isinstance(features[k], np.ndarray):
                     continue

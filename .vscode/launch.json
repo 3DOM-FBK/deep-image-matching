@@ -18,7 +18,7 @@
         "--dir",
         "/home/francesco/casalbagliano/subset_B",
         "--config",
-        "superpoint+lightglue",
+        "aliked+lightglue",
         "--strategy",
         "bruteforce",
         // "--db_path",
@@ -40,7 +40,6 @@
       "console": "integratedTerminal",
       "args": ["--gui"]
     },
-
     {
       "name": "Python: dense",
       "type": "python",

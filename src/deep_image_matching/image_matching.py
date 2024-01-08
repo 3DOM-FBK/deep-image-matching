@@ -346,11 +346,11 @@ class ImageMatching:
             )
             timer.update("Match pair")
 
-            if matches is None:
-                continue
+            # NOTE: Geometric verif. is moved to the end of the matching process
+            # if matches is None:
+            #     continue
 
             # # Do additional geometric verification
-            # # TODO: remove it here ad move to the end of the matching process
 
             # # Get original keypoints from h5 file
             # kpts0 = get_features(feature_path, im0.name)["keypoints"]
@@ -382,24 +382,19 @@ class ImageMatching:
             # correspondences_cleaned = correspondences[inlMask]
             # timer.update("Geom verif")
 
-            # Update matches in h5 file
-            with h5py.File(str(matches_path), "a", libver="latest") as fd:
-                group = fd.require_group(im0.name)
-                if im1.name in group:
-                    del group[im1.name]
-                group.create_dataset(im1.name, data=matches)
-            logger.debug(f"Pairs: {pair[0].name} - {pair[1].name} done.")
-            timer.update("h5 save")
+            # # Update matches in h5 file
+            # with h5py.File(str(matches_path), "a", libver="latest") as fd:
+            #     group = fd.require_group(im0.name)
+            #     if im1.name in group:
+            #         del group[im1.name]
+            #     group.create_dataset(im1.name, data=matches)
+            # logger.debug(f"Pairs: {pair[0].name} - {pair[1].name} done.")
+            # timer.update("h5 save")
 
-        # Clean up features with no matches
-        with h5py.File(str(matches_path), "r+", libver="latest") as fd:
-            for img in tqdm(self.image_list):
-                if img.name not in fd:
-                    del fd[img.name]
+        # TODO: Clean up features with no matches
 
         torch.cuda.empty_cache()
         timer.print("matching")
-        logger.info("Matching done.")
 
         return matches_path
 
