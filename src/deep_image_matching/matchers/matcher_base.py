@@ -89,8 +89,8 @@ class MatcherBase(metaclass=ABCMeta):
     min_inliers_per_pair = 15
     min_inliers_ratio = 0.2
     min_matches_per_tile = 5
-    max_feat_no_tiling = 100000
     tile_preselection_size = 1024
+    max_feat_no_tiling = 100000
 
     def __init__(self, custom_config) -> None:
         """
@@ -149,14 +149,14 @@ class MatcherBase(metaclass=ABCMeta):
         )
         logger.debug(f"Running inference on device {self._device}")
 
-        # All features detected on image 0 (FeaturesBase object with N keypoints)
-        features0 = None
+        # # All features detected on image 0 (FeaturesBase object with N keypoints)
+        # features0 = None
 
-        # All features detected on image 1 (FeaturesBase object with M keypoints)
-        features1 = None
+        # # All features detected on image 1 (FeaturesBase object with M keypoints)
+        # features1 = None
 
-        # Index of the matches in both the images. The first column contains the index of the mathced keypoints in features0.keypoints, the second column contains the index of the matched keypoints in features1.keypoints (Kx2 array)
-        self._matches01 = None
+        # # Index of the matches in both the images. The first column contains the index of the mathced keypoints in features0.keypoints, the second column contains the index of the matched keypoints in features1.keypoints (Kx2 array)
+        # self._matches01 = None
 
         # Load extractor and matcher for the preselction
         if self._config["general"]["tile_selection"] == TileSelection.PRESELECTION:
@@ -262,7 +262,7 @@ class MatcherBase(metaclass=ABCMeta):
                     f"Tile selection was {self._tiling.name}. Matching full images..."
                 )
                 matches = self._match_pairs(features0, features1)
-                timer_match.update("[match] try to match full images")
+                timer_match.update("match full images")
             except Exception as e:
                 if "CUDA out of memory" in str(e):
                     logger.warning(
@@ -286,6 +286,12 @@ class MatcherBase(metaclass=ABCMeta):
 
         # Do Geometric verification
         # Rescale threshold according the image qualit
+        if len(matches) < 8:
+            logger.debug(
+                f"Too few matches found ({len(matches)}). Skipping image pair {img0.name}-{img1.name}"
+            )
+            return None
+
         scales = {
             Quality.HIGHEST: 1.0,
             Quality.HIGH: 1.0,
@@ -317,7 +323,7 @@ class MatcherBase(metaclass=ABCMeta):
             return None
         elif inliers_ratio < self.min_inliers_ratio:
             logger.debug(
-                f"Too small inlier ratio ({inliers_ratio:.2f}). Skipping image pair {img0.name}-{img1.name}"
+                f"Too small inlier ratio ({inliers_ratio*100:.2f}%). Skipping image pair {img0.name}-{img1.name}"
             )
             timer_match.print(f"{__class__.__name__} match")
             return None

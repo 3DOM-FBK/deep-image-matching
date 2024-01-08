@@ -6,7 +6,7 @@ sys.path.append(Path(__file__))
 import Metashape
 from ms_utils import cameras_from_bundler, create_new_project, import_markers
 
-root_dir = Path("/home/francesco/casalbagliano/subset_A")
+root_dir = Path("/home/francesco/casalbagliano/subset_B")
 
 # name = "casalbagliano_superpoint+lightglue_bruteforce"
 name = "results_superpoint+lightglue_matching_lowres_quality_high"

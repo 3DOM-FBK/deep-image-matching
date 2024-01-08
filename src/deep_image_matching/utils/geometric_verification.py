@@ -48,7 +48,7 @@ def geometric_verification(
     F = None
     inlMask = np.ones(len(kpts0), dtype=bool)
 
-    if len(kpts0) < 4:
+    if len(kpts0) < 8:
         if not quiet:
             logger.warning("Not enough matches to perform geometric verification.")
         return F, inlMask
