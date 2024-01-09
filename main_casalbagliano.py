@@ -323,74 +323,9 @@ if __name__ == "__main__":
     if model and do_export_to_metashape:
         sys.path.append(Path(__file__))
 
-        import Metashape
+        from scripts.metashape.metashape_from_dim import export_to_metashape
 
-        from scripts.metashape.ms_utils import (
-            cameras_from_bundler,
-            create_new_project,
-            import_markers,
-        )
-
-        def export_to_metashape(
-            project_path: Path,
-            images_dir: Path,
-            bundler_file_path: Path,
-            bundler_im_list: Path,
-            marker_image_path: Path,
-            marker_world_path: Path,
-            marker_file_columns: str = "noxyz",
-            prm_to_optimize: dict = {},
-        ):
-            image_list = list(images_dir.glob("*"))
-            images = [str(x) for x in image_list if x.is_file()]
-
-            doc = create_new_project(str(project_path), read_only=False)
-            chunk = doc.chunk
-
-            # Add photos to chunk
-            chunk.addPhotos(images)
-            cameras_from_bundler(
-                chunk=chunk,
-                fname=bundler_file_path,
-                image_list=bundler_im_list,
-            )
-
-            # Import markers image coordinates
-            import_markers(
-                marker_image_file=marker_image_path,
-                chunk=chunk,
-            )
-
-            # Import markers world coordinates
-            chunk.importReference(
-                path=str(marker_world_path),
-                format=Metashape.ReferenceFormatCSV,
-                delimiter=",",
-                skip_rows=1,
-                columns=marker_file_columns,
-            )
-
-            # optimize camera alignment
-            chunk.optimizeCameras(
-                fit_f=prm_to_optimize["f"],
-                fit_cx=prm_to_optimize["cx"],
-                fit_cy=prm_to_optimize["cy"],
-                fit_k1=prm_to_optimize["k1"],
-                fit_k2=prm_to_optimize["k2"],
-                fit_k3=prm_to_optimize["k3"],
-                fit_k4=prm_to_optimize["k4"],
-                fit_p1=prm_to_optimize["p1"],
-                fit_p2=prm_to_optimize["p2"],
-                fit_b1=prm_to_optimize["b1"],
-                fit_b2=prm_to_optimize["b2"],
-                tiepoint_covariance=prm_to_optimize["tiepoint_covariance"],
-            )
-
-            # save project
-            doc.read_only = False
-            doc.save()
-
-        # Parameters
+        # Hard-coded parameters
         project_dir = config.general["output_dir"].parent / "metashape"
         project_name = config.general["output_dir"].name + ".psx"
         project_path = project_dir / project_name
@@ -399,9 +334,9 @@ if __name__ == "__main__":
         bundler_file_path = rec_dir / "bundler.out"
         bundler_im_list = rec_dir / "bundler_list.txt"
 
-        # Hard-coded parameters
         marker_image_path = config.general["output_dir"].parent / "gcp_images_list.csv"
         marker_world_path = config.general["output_dir"].parent / "gcp_list.csv"
+        column_format = "noxyz"
 
         prm_to_optimize = {
             "f": True,
@@ -425,7 +360,7 @@ if __name__ == "__main__":
             bundler_im_list=bundler_im_list.resolve(),
             marker_image_path=marker_image_path.resolve(),
             marker_world_path=marker_world_path.resolve(),
-            marker_file_columns="noxyz",
+            marker_file_columns=column_format,
             prm_to_optimize=prm_to_optimize,
         )
 
