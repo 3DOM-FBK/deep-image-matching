@@ -131,7 +131,6 @@ def main(
     export_text: bool = True,
     export_bundler: bool = True,
     export_ply: bool = True,
-    copy_images: bool = True,
     reconst_opts: Optional[Dict[str, Any]] = None,
     verbose: bool = True,
 ) -> pycolmap.Reconstruction:
@@ -171,9 +170,8 @@ def main(
             + f"\n\tnum_input_images = {len(image_ids)}"
         )
 
-        # # Copy images to sfm_dir
-        # if copy_images:
-        #     shutil.copytree(image_dir, sfm_dir / "images", dirs_exist_ok=True)
+        # Copy images to sfm_dir (for debugging)
+        # shutil.copytree(image_dir, sfm_dir / "images", dirs_exist_ok=True)
 
         # Create reconstruction directory
         reconstruction_dir = sfm_dir / "reconstruction"

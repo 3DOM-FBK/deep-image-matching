@@ -39,11 +39,11 @@ conf_general = {
     #   GeometricVerification.PYDEGENSAC (use pydegensac),
     #   GeometricVerification.MAGSAC (use opencv MAGSAC),
     "geom_verification": GeometricVerification.PYDEGENSAC,
-    "gv_threshold": 1,
-    "gv_confidence": 0.999999,
+    "gv_threshold": 4,
+    "gv_confidence": 0.99999,
     # Minimum number of inliers matches and minumum inlier ratio per pair
-    "min_inliers_per_pair": 10,
-    "min_inlier_ratio_per_pair": 0.2,
+    "min_inliers_per_pair": 15,
+    "min_inlier_ratio_per_pair": 0.25,
 }
 
 
@@ -57,8 +57,8 @@ confs = {
     "superpoint+lightglue": {
         "extractor": {
             "name": "superpoint",
-            "keypoint_threshold": 0.001,
-            "max_keypoints": 10000,
+            "keypoint_threshold": 0.005,
+            "max_keypoints": 4096,
         },
         "matcher": {
             "name": "lightglue",
@@ -107,7 +107,7 @@ confs = {
         "extractor": {
             "name": "aliked",
             "model_name": "aliked-n16rot",
-            "max_num_keypoints": 4096,
+            "max_num_keypoints": 10000,
             "detection_threshold": 0.2,
             "nms_radius": 2,
         },
@@ -425,4 +425,4 @@ class Config:
                     cfg[k][kk] = str(vv)
 
         with open(path, "w") as file:
-            json.dump(cfg, file)
+            json.dump(cfg, file, indent=4)
