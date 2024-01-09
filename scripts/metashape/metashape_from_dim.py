@@ -9,14 +9,14 @@ from ms_utils import cameras_from_bundler, create_new_project, import_markers
 root_dir = Path("/home/francesco/casalbagliano/subset_B")
 
 # name = "casalbagliano_superpoint+lightglue_bruteforce"
-name = "results_superpoint+lightglue_matching_lowres_quality_high"
+name = "results_superpoint+lightglue_bruteforce_quality_medium_success"
 
 images_dir = root_dir / "images"
-project_path = root_dir / "metashape" / f"{name}.psx"
 marker_image_path = root_dir / "metashape" / "subset_full_markers.txt"
 marker_world_path = root_dir / "metashape" / "subset_full_markers_world.txt"
 
 sfm_dir = root_dir / name
+project_path = sfm_dir / "metashape" / f"{name}.psx"
 bundler_file_path = sfm_dir / "reconstruction" / "bundler.out"
 bundler_im_list = sfm_dir / "reconstruction" / "bundler_list.txt"
 

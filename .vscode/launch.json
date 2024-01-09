@@ -16,18 +16,19 @@
       "console": "integratedTerminal",
       "args": [
         "--dir",
-        "/home/francesco/casalbagliano/subset_B",
+        // "/home/francesco/casalbagliano/B_extended",
+        "datasets/enrich_square",
         "--config",
-        "aliked+lightglue",
+        "superpoint+lightglue",
         "--strategy",
         "bruteforce",
         // "--db_path",
         // "datasets/casalbagliano/results_superpoint+lightglue_bruteforce_quality_high/reconstruction",
         "--quality",
-        "medium",
+        "low",
         "--tiling",
         "none",
-        "--skip_reconstruction",
+        // "--skip_reconstruction",
         "--force",
         "-V"
       ]

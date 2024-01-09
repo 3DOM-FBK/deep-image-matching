@@ -1,5 +1,7 @@
 import argparse
+import sys
 from importlib import import_module
+from pathlib import Path
 
 from deep_image_matching import logger, timer
 from deep_image_matching.config import Config
@@ -141,6 +143,14 @@ if __name__ == "__main__":
     # Build configuration
     config = Config(args)
 
+    # Updare some config parameters to not modify the main config file
+    config.general["gv_threshold"] = 2
+    config.general["gv_confidence"] = 0.999999
+    config.general["min_inliers_per_pair"] = 10
+    config.general["min_inlier_ratio_per_pair"] = 0.3
+    config.extractor["max_keypoints"] = 8192
+    config.extractor["keypoint_threshold"] = 0.001
+
     # For simplicity, save some of the configuration parameters in variables.
     imgs_dir = config.general["image_dir"]
     output_dir = config.general["output_dir"]
@@ -257,17 +267,36 @@ if __name__ == "__main__":
             #     params=[6.621, 3.013, 1.943],
             # )
             # cameras = [cam0] # or cameras = [cam1, cam2]
-            cameras = []
+            # cameras = [
+            #     pycolmap.Camera(
+            #         model="FULL_OPENCV",
+            #         width=5184,
+            #         height=3456,
+            #         params=[
+            #             4999.743761184519,
+            #             5000.6093606299955,
+            #             2624.437497520331,
+            #             1713.0874440334837,
+            #             -0.013354229348170842,
+            #             0.08536745182816073,
+            #             -5.6676843405109726e-05,
+            #             -0.0005887324415077316,
+            #             -0.15296510632186128,
+            #             0.0,
+            #             0.0,
+            #             0.0,
+            #         ],
+            #     )
+            # ]
+            cameras = None
 
             # Optional - You can specify some reconstruction configuration
-            # reconst_opts = (
-            #     {
-            #         "ba_refine_focal_length": True,
-            #         "ba_refine_principal_point": False,
-            #         "ba_refine_extra_params": False,
-            #     },
-            # )
-            reconst_opts = {}
+            reconst_opts = {
+                "ba_refine_focal_length": True,
+                "ba_refine_principal_point": False,
+                "ba_refine_extra_params": False,
+            }
+            # reconst_opts = {}
 
             # Run reconstruction
             model = reconstruction.main(
@@ -279,7 +308,7 @@ if __name__ == "__main__":
                 sfm_dir=output_dir,
                 camera_mode=camera_mode,
                 cameras=cameras,
-                skip_geometric_verification=True,
+                skip_geometric_verification=False,
                 reconst_opts=reconst_opts,
                 verbose=config.general["verbose"],
             )
@@ -288,5 +317,116 @@ if __name__ == "__main__":
 
         else:
             logger.warning("Reconstruction with COLMAP CLI is not implemented yet.")
+
+    do_export_to_metashape = True
+
+    if model and do_export_to_metashape:
+        sys.path.append(Path(__file__))
+
+        import Metashape
+
+        from scripts.metashape.ms_utils import (
+            cameras_from_bundler,
+            create_new_project,
+            import_markers,
+        )
+
+        def export_to_metashape(
+            project_path: Path,
+            images_dir: Path,
+            bundler_file_path: Path,
+            bundler_im_list: Path,
+            marker_image_path: Path,
+            marker_world_path: Path,
+            marker_file_columns: str = "noxyz",
+            prm_to_optimize: dict = {},
+        ):
+            image_list = list(images_dir.glob("*"))
+            images = [str(x) for x in image_list if x.is_file()]
+
+            doc = create_new_project(str(project_path), read_only=False)
+            chunk = doc.chunk
+
+            # Add photos to chunk
+            chunk.addPhotos(images)
+            cameras_from_bundler(
+                chunk=chunk,
+                fname=bundler_file_path,
+                image_list=bundler_im_list,
+            )
+
+            # Import markers image coordinates
+            import_markers(
+                marker_image_file=marker_image_path,
+                chunk=chunk,
+            )
+
+            # Import markers world coordinates
+            chunk.importReference(
+                path=str(marker_world_path),
+                format=Metashape.ReferenceFormatCSV,
+                delimiter=",",
+                skip_rows=1,
+                columns=marker_file_columns,
+            )
+
+            # optimize camera alignment
+            chunk.optimizeCameras(
+                fit_f=prm_to_optimize["f"],
+                fit_cx=prm_to_optimize["cx"],
+                fit_cy=prm_to_optimize["cy"],
+                fit_k1=prm_to_optimize["k1"],
+                fit_k2=prm_to_optimize["k2"],
+                fit_k3=prm_to_optimize["k3"],
+                fit_k4=prm_to_optimize["k4"],
+                fit_p1=prm_to_optimize["p1"],
+                fit_p2=prm_to_optimize["p2"],
+                fit_b1=prm_to_optimize["b1"],
+                fit_b2=prm_to_optimize["b2"],
+                tiepoint_covariance=prm_to_optimize["tiepoint_covariance"],
+            )
+
+            # save project
+            doc.read_only = False
+            doc.save()
+
+        # Parameters
+        project_dir = config.general["output_dir"].parent / "metashape"
+        project_name = config.general["output_dir"].name + ".psx"
+        project_path = project_dir / project_name
+
+        rec_dir = config.general["output_dir"] / "reconstruction"
+        bundler_file_path = rec_dir / "bundler.out"
+        bundler_im_list = rec_dir / "bundler_list.txt"
+
+        # Hard-coded parameters
+        marker_image_path = config.general["output_dir"].parent / "gcp_images_list.csv"
+        marker_world_path = config.general["output_dir"].parent / "gcp_list.csv"
+
+        prm_to_optimize = {
+            "f": True,
+            "cx": True,
+            "cy": True,
+            "k1": True,
+            "k2": True,
+            "k3": True,
+            "k4": False,
+            "p1": True,
+            "p2": True,
+            "b1": False,
+            "b2": False,
+            "tiepoint_covariance": True,
+        }
+
+        export_to_metashape(
+            project_path=project_path,
+            images_dir=config.general["image_dir"],
+            bundler_file_path=bundler_file_path.resolve(),
+            bundler_im_list=bundler_im_list.resolve(),
+            marker_image_path=marker_image_path.resolve(),
+            marker_world_path=marker_world_path.resolve(),
+            marker_file_columns="noxyz",
+            prm_to_optimize=prm_to_optimize,
+        )
 
     timer.print("Deep Image Matching")
