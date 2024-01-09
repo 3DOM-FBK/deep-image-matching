@@ -218,6 +218,8 @@ python ./join_databases.py --input assets/to_be_joined --output assets/to_be_joi
 - [ ] Apply masks during feature extraction
 - [ ] Check scripts
 - [ ] Integrate support for Pix4D [Open Photogrammetry Format](https://github.com/Pix4D/opf-spec)
+- [ ] Work with submodules
+- [ ] Update README CLI options
 
 ## References
 
