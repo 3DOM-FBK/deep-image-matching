@@ -16,8 +16,7 @@
       "console": "integratedTerminal",
       "args": [
         "--dir",
-        // "/home/francesco/casalbagliano/B_extended",
-        "datasets/enrich_square",
+        "/home/francesco/casalbagliano/B_extended",
         "--config",
         "superpoint+lightglue",
         "--strategy",
@@ -25,9 +24,9 @@
         // "--db_path",
         // "datasets/casalbagliano/results_superpoint+lightglue_bruteforce_quality_high/reconstruction",
         "--quality",
-        "low",
+        "high",
         "--tiling",
-        "none",
+        "preselection",
         // "--skip_reconstruction",
         "--force",
         "-V"

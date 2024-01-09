@@ -6,37 +6,17 @@ sys.path.append(Path(__file__))
 import Metashape
 from ms_utils import cameras_from_bundler, create_new_project, import_markers
 
-root_dir = Path("/home/francesco/casalbagliano/subset_B")
 
-# name = "casalbagliano_superpoint+lightglue_bruteforce"
-name = "results_superpoint+lightglue_bruteforce_quality_medium_success"
-
-images_dir = root_dir / "images"
-marker_image_path = root_dir / "metashape" / "subset_full_markers.txt"
-marker_world_path = root_dir / "metashape" / "subset_full_markers_world.txt"
-
-sfm_dir = root_dir / name
-project_path = sfm_dir / "metashape" / f"{name}.psx"
-bundler_file_path = sfm_dir / "reconstruction" / "bundler.out"
-bundler_im_list = sfm_dir / "reconstruction" / "bundler_list.txt"
-
-prm_to_optimize = {
-    "f": True,
-    "cx": True,
-    "cy": True,
-    "k1": True,
-    "k2": True,
-    "k3": True,
-    "k4": False,
-    "p1": True,
-    "p2": True,
-    "b1": False,
-    "b2": False,
-    "tiepoint_covariance": True,
-}
-
-
-def main():
+def export_to_metashape(
+    project_path: Path,
+    images_dir: Path,
+    bundler_file_path: Path,
+    bundler_im_list: Path,
+    marker_image_path: Path,
+    marker_world_path: Path,
+    marker_file_columns: str = "noxyz",
+    prm_to_optimize: dict = {},
+):
     image_list = list(images_dir.glob("*"))
     images = [str(x) for x in image_list if x.is_file()]
 
@@ -63,7 +43,7 @@ def main():
         format=Metashape.ReferenceFormatCSV,
         delimiter=",",
         skip_rows=1,
-        columns="noxyz",
+        columns=marker_file_columns,
     )
 
     # optimize camera alignment
@@ -88,4 +68,42 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    root_dir = Path("/home/francesco/casalbagliano/subset_B")
+
+    # name = "casalbagliano_superpoint+lightglue_bruteforce"
+    name = "results_superpoint+lightglue_bruteforce_quality_medium_success"
+
+    images_dir = root_dir / "images"
+    marker_image_path = root_dir / "metashape" / "subset_full_markers.txt"
+    marker_world_path = root_dir / "metashape" / "subset_full_markers_world.txt"
+    marker_file_columns = "noxyz"
+
+    sfm_dir = root_dir / name
+    project_path = sfm_dir / "metashape" / f"{name}.psx"
+    bundler_file_path = sfm_dir / "reconstruction" / "bundler.out"
+    bundler_im_list = sfm_dir / "reconstruction" / "bundler_list.txt"
+
+    prm_to_optimize = {
+        "f": True,
+        "cx": True,
+        "cy": True,
+        "k1": True,
+        "k2": True,
+        "k3": True,
+        "k4": False,
+        "p1": True,
+        "p2": True,
+        "b1": False,
+        "b2": False,
+        "tiepoint_covariance": True,
+    }
+    export_to_metashape(
+        project_path=project_path,
+        images_dir=images_dir,
+        bundler_file_path=bundler_file_path,
+        bundler_im_list=bundler_im_list,
+        marker_image_path=marker_image_path,
+        marker_world_path=marker_world_path,
+        marker_file_columns=marker_file_columns,
+        prm_to_optimize=prm_to_optimize,
+    )
