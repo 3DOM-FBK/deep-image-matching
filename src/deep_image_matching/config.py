@@ -44,6 +44,8 @@ conf_general = {
     # Minimum number of inliers matches and minumum inlier ratio per pair
     "min_inliers_per_pair": 15,
     "min_inlier_ratio_per_pair": 0.25,
+    # Even if the features are extracted by tiles, you can try to match the features of the entire image first (if the number of features is not too high and they can fit into memory). Default is False.
+    "try_match_full_images": False,
 }
 
 

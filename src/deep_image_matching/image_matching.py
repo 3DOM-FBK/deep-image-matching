@@ -175,7 +175,7 @@ class ImageMatching:
     def img_names(self):
         return self.image_list.img_names
 
-    def generate_pairs(self) -> Path:
+    def generate_pairs(self, **kwargs) -> Path:
         if self.pair_file is not None and self.matching_strategy == "custom_pairs":
             if not self.pair_file.exists():
                 raise FileExistsError(f"File {self.pair_file} does not exist")
@@ -195,6 +195,7 @@ class ImageMatching:
                 self.image_dir,
                 self.output_dir,
                 self.existing_colmap_model,
+                **kwargs,
             )
             self.pairs = pairs_generator.run()
 
@@ -312,7 +313,7 @@ class ImageMatching:
 
         return feature_path
 
-    def match_pairs(self, feature_path: Path) -> Path:
+    def match_pairs(self, feature_path: Path, try_full_image: bool = False) -> Path:
         timer = Timer(log_level="debug")
 
         logger.info(f"Matching features with {self.matching_method}...")
@@ -343,53 +344,13 @@ class ImageMatching:
                 matches_path=matches_path,
                 img0=im0,
                 img1=im1,
+                try_full_image=try_full_image,
             )
             timer.update("Match pair")
 
-            # NOTE: Geometric verif. is moved to the end of the matching process
+            # NOTE: Geometric verif. has been moved to the end of the matching process
             # if matches is None:
             #     continue
-
-            # # Do additional geometric verification
-
-            # # Get original keypoints from h5 file
-            # kpts0 = get_features(feature_path, im0.name)["keypoints"]
-            # kpts1 = get_features(feature_path, im1.name)["keypoints"]
-            # correspondences = get_matches(matches_path, im0.name, im1.name)
-            # timer.update("Get matches")
-
-            # # Rescale threshold according the image qualit
-            # scales = {
-            #     Quality.HIGHEST: 1.0,
-            #     Quality.HIGH: 1.0,
-            #     Quality.MEDIUM: 1.5,
-            #     Quality.LOW: 2.0,
-            #     Quality.LOWEST: 3.0,
-            # }
-            # gv_threshold = (
-            #     self.custom_config["general"]["gv_threshold"]
-            #     * scales[self.custom_config["general"]["quality"]]
-            # )
-
-            # # Apply geometric verification
-            # _, inlMask = geometric_verification(
-            #     kpts0=kpts0[correspondences[:, 0]],
-            #     kpts1=kpts1[correspondences[:, 1]],
-            #     method=self.custom_config["general"]["geom_verification"],
-            #     threshold=gv_threshold,
-            #     confidence=self.custom_config["general"]["gv_confidence"],
-            # )
-            # correspondences_cleaned = correspondences[inlMask]
-            # timer.update("Geom verif")
-
-            # # Update matches in h5 file
-            # with h5py.File(str(matches_path), "a", libver="latest") as fd:
-            #     group = fd.require_group(im0.name)
-            #     if im1.name in group:
-            #         del group[im1.name]
-            #     group.create_dataset(im1.name, data=matches)
-            # logger.debug(f"Pairs: {pair[0].name} - {pair[1].name} done.")
-            # timer.update("h5 save")
 
         # TODO: Clean up features with no matches
 

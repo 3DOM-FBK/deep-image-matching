@@ -55,10 +55,6 @@ def matcher_loader(root, model):
     return classes[0][1]
 
 
-# NOTE: The MatcherBase class should contain all the common methods and attributes for all the matchers and must be used as a base class.
-# The specific matchers MUST contain at least the `_match_pairs` method, which takes in two images as Numpy arrays, and returns the matches between keypoints and descriptors in those images. It doesn not care if the images are tiles or full-res images, as the tiling is handled by the MatcherBase class that calls the `_match_pairs` method for each tile pair or for the full images depending on the tile selection method.
-
-
 class MatcherBase(metaclass=ABCMeta):
     """
     Base class for matchers. It defines the basic interface for matchers
@@ -149,15 +145,6 @@ class MatcherBase(metaclass=ABCMeta):
         )
         logger.debug(f"Running inference on device {self._device}")
 
-        # # All features detected on image 0 (FeaturesBase object with N keypoints)
-        # features0 = None
-
-        # # All features detected on image 1 (FeaturesBase object with M keypoints)
-        # features1 = None
-
-        # # Index of the matches in both the images. The first column contains the index of the mathced keypoints in features0.keypoints, the second column contains the index of the matched keypoints in features1.keypoints (Kx2 array)
-        # self._matches01 = None
-
         # Load extractor and matcher for the preselction
         if self._config["general"]["tile_selection"] == TileSelection.PRESELECTION:
             self._preselction_extractor = (
@@ -240,41 +227,52 @@ class MatcherBase(metaclass=ABCMeta):
         timer_match.update("load h5 features")
 
         # Perform matching (on tiles or full images)
-        # If the features are not too many, try first to match all features together on full image, if it fails, try to match by tiles
         fallback_flag = False
-        high_feats_flag = (
-            len(features0["keypoints"]) > self.max_feat_no_tiling
-            or len(features1["keypoints"]) > self.max_feat_no_tiling
-        )
 
         if self._tiling == TileSelection.NONE:
-            if high_feats_flag:
+            too_many_features = (
+                len(features0["keypoints"]) > self.max_feat_no_tiling
+                or len(features1["keypoints"]) > self.max_feat_no_tiling
+            )
+            if too_many_features:
                 raise RuntimeError(
                     "Too many features to run the matching on full images. Try running the matching with tile selection or use a lower max_keypoints value."
                 )
-            else:
-                try_full_image = True
-
-        # Try to match full images first
-        if try_full_image and not high_feats_flag:
-            try:
-                logger.debug(
-                    f"Tile selection was {self._tiling.name}. Matching full images..."
-                )
-                matches = self._match_pairs(features0, features1)
-                timer_match.update("match full images")
-            except Exception as e:
-                if "CUDA out of memory" in str(e):
-                    logger.warning(
-                        f"Matching full images failed: {e}. \nTrying to match by tiles..."
+            logger.debug(
+                f"Tile selection was {self._tiling.name}. Matching full images..."
+            )
+            matches = self._match_pairs(features0, features1)
+            timer_match.update("match full images")
+        else:
+            # If try_full_image is set, try to match full images first
+            if try_full_image:
+                try:
+                    logger.debug(
+                        f"Tile selection was {self._tiling.name} but try_full_image is set. Matching full images..."
                     )
-                    fallback_flag = True
-                else:
-                    raise e
+                    matches = self._match_pairs(features0, features1)
+                    timer_match.update("match full images")
+                except Exception as e:
+                    if "CUDA out of memory" in str(e):
+                        logger.warning(
+                            f"Matching full images failed: {e}."
+                        )
+                        fallback_flag = True
+                    else:
+                        raise e
+            else:
+                logger.debug(f"Matching by tile with {self._tiling.name} selection...")
+                matches = self._match_by_tile(
+                    img0,
+                    img1,
+                    features0,
+                    features1,
+                    method=self._tiling,
+                )
 
-        # If try_full_image is disabled or matching full images failed, match by tiles
-        if not try_full_image or fallback_flag:
-            logger.debug(f"Matching by tile with {self._tiling.name} selection...")
+        # If the fallback flag was set for any reason, try to match by tiles
+        if fallback_flag:
+            logger.debug(f"Fallback: matching by tile with {self._tiling.name} selection...")
             matches = self._match_by_tile(
                 img0,
                 img1,

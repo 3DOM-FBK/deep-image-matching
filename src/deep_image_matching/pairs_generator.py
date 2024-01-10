@@ -218,6 +218,7 @@ class PairsGenerator:
         image_dir: str | Path = "",
         output_dir: str | Path = "",
         existing_colmap_model: str | Path = "",
+        **kwargs,
     ) -> None:
         self.img_paths = img_paths
         self.pair_file = pair_file
@@ -227,6 +228,8 @@ class PairsGenerator:
         self.image_dir = image_dir
         self.output_dir = output_dir
         self.existing_colmap_model = existing_colmap_model
+
+        self._config = kwargs
 
     def bruteforce(self):
         logger.debug("Bruteforce matching, generating pairs ..")
@@ -261,9 +264,10 @@ class PairsGenerator:
 
     def covisibility(self):
         logger.info("Covisibility matching, generating pairs ..")
+        num_matched = self._config.get("num_matched", 10)
         pairs = pairs_from_covisibility(
             model=self.existing_colmap_model,
-            num_matched=10,
+            num_matched=num_matched,
         )
         return pairs
 

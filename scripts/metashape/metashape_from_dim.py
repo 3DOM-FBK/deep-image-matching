@@ -4,7 +4,8 @@ from pathlib import Path
 sys.path.append(Path(__file__))
 
 import Metashape
-from ms_utils import cameras_from_bundler, create_new_project, import_markers
+
+from .ms_utils import cameras_from_bundler, create_new_project, import_markers
 
 
 def export_to_metashape(
@@ -61,6 +62,8 @@ def export_to_metashape(
         fit_b2=prm_to_optimize["b2"],
         tiepoint_covariance=prm_to_optimize["tiepoint_covariance"],
     )
+
+    # Export cameras and gcp residuals
 
     # save project
     doc.read_only = False
