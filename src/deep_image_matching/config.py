@@ -1,5 +1,4 @@
 import json
-import shutil
 from copy import deepcopy
 from enum import Enum
 from pathlib import Path
@@ -31,9 +30,11 @@ conf_general = {
     # Size of the tiles in pixels (width, height) or (x, y)
     "tile_size": (2400, 2000),
     # Overlap between tiles in pixels
-    "tile_overlap": 50,
+    "tile_overlap": 10,
     # Size of the low resolution tiles used for the tile preselection
-    "tile_preselection_size": 2000,
+    "tile_preselection_size": 1000,
+    # Minimum number of matches per tile
+    "min_matches_per_tile": 10,
     # Geometric verification method and parameters:
     #   GeometricVerification.NONE (no geometric verification),
     #   GeometricVerification.PYDEGENSAC (use pydegensac),
@@ -59,21 +60,24 @@ confs = {
     "superpoint+lightglue": {
         "extractor": {
             "name": "superpoint",
+            "nms_radius": 3,
             "keypoint_threshold": 0.005,
             "max_keypoints": 4096,
         },
         "matcher": {
             "name": "lightglue",
             "n_layers": 9,
+            "mp": False,  # enable mixed precision
             "flash": True,  # enable FlashAttention if available.
-            "depth_confidence": 0.98,  # 0.95,  # early stopping, disable with -1
-            "width_confidence": 0.99,  # 0.99,  # point pruning, disable with -1
+            "depth_confidence": 0.95,  # early stopping, disable with -1
+            "width_confidence": 0.99,  # point pruning, disable with -1
             "filter_threshold": 0.1,  # match threshold
         },
     },
     "superpoint+lightglue_fast": {
         "extractor": {
             "name": "superpoint",
+            "nms_radius": 3,
             "keypoint_threshold": 0.005,
             "max_keypoints": 1024,
         },
@@ -88,6 +92,7 @@ confs = {
     "superpoint+superglue": {
         "extractor": {
             "name": "superpoint",
+            "nms_radius": 3,
             "keypoint_threshold": 0.005,
             "max_keypoints": 4096,
         },
@@ -243,7 +248,8 @@ class Config:
         self.cfg["extractor"] = features_config["extractor"]
         self.cfg["matcher"] = features_config["matcher"]
 
-        self.save_config(user_conf["output_dir"] / "config.json")
+        self._config_file = user_conf["output_dir"] / "config.json"
+        self.save_config(self._config_file)
 
     def as_dict(self):
         return self.cfg
@@ -313,12 +319,13 @@ class Config:
                 logger.warning(
                     f"{args['outs']} already exists, removing {args['outs']}"
                 )
-                shutil.rmtree(args["outs"])
-            else:
-                raise ValueError(
-                    f"{args['outs']} already exists, use '--force' to overwrite it"
-                )
-        args["outs"].mkdir(parents=True)
+                # shutil.rmtree(args["outs"])
+            # else:
+            #     raise ValueError(
+            #         f"{args['outs']} already exists, use '--force' to overwrite it"
+            #     )
+        # args["outs"].mkdir(parents=True)
+        args["outs"].mkdir(parents=True, exist_ok=True)
 
         # Check extraction and matching configuration
         if args["config"] is None or args["config"] not in confs:
@@ -409,8 +416,14 @@ class Config:
 
         return cfg
 
-    def save_config(self, path: Path):
+    def save_config(self, path: Path = None):
         """Save configuration to file"""
+
+        if path is None:
+            path = self._config_file
+        else:
+            path = Path(path)
+            path.parent.mkdir(parents=True, exist_ok=True)
 
         cfg = deepcopy(self.cfg)
 

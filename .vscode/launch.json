@@ -16,11 +16,11 @@
       "console": "integratedTerminal",
       "args": [
         "--dir",
-        "/home/francesco/casalbagliano/B_extended",
+        "/home/francesco/casalbagliano/C",
         "--config",
         "superpoint+lightglue",
         "--strategy",
-        "bruteforce",
+        "matching_lowres",
         // "--db_path",
         // "/home/francesco/casalbagliano/B_extended/results_superpoint+lightglue_bruteforce_quality_high/reconstruction",
         "--quality",
@@ -28,7 +28,7 @@
         "--tiling",
         "preselection",
         // "--skip_reconstruction",
-        "--force",
+        // "--force",
         "-V"
       ]
     },

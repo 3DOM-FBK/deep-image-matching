@@ -8,6 +8,8 @@ from torch import nn
 from ..thirdparty.SuperGluePretrainedNetwork.models import superpoint
 from .extractor_base import ExtractorBase
 
+# TODO: Use Superpoint implementation from LightGlue
+
 
 # The original keypoint sampling is incorrect. We patch it here but
 # we don't fix it upstream to not impact exisiting evaluations.
@@ -31,7 +33,7 @@ class SuperPoint(nn.Module):
         "keypoint_threshold": 0.005,
         "max_keypoints": -1,
         "remove_borders": 4,
-        "fix_sampling": False,
+        "fix_sampling": True,
     }
     required_inputs = ["image"]
     detection_noise = 2.0

@@ -85,8 +85,8 @@ class MatcherBase(metaclass=ABCMeta):
     min_inliers_per_pair = 15
     min_inliers_ratio = 0.2
     min_matches_per_tile = 5
-    tile_preselection_size = 1024
-    max_feat_no_tiling = 100000
+    tile_preselection_size = 1000
+    max_feat_no_tiling = 20000
 
     def __init__(self, custom_config) -> None:
         """
@@ -156,7 +156,8 @@ class MatcherBase(metaclass=ABCMeta):
                     n_layers=7,
                     depth_confidence=0.9,
                     width_confidence=0.95,
-                    flash=False,
+                    filter_threshold=0.2,
+                    flash=True,
                 )
                 .eval()
                 .to(self._device)
@@ -254,9 +255,7 @@ class MatcherBase(metaclass=ABCMeta):
                     timer_match.update("match full images")
                 except Exception as e:
                     if "CUDA out of memory" in str(e):
-                        logger.warning(
-                            f"Matching full images failed: {e}."
-                        )
+                        logger.warning(f"Matching full images failed: {e}.")
                         fallback_flag = True
                     else:
                         raise e
@@ -272,7 +271,9 @@ class MatcherBase(metaclass=ABCMeta):
 
         # If the fallback flag was set for any reason, try to match by tiles
         if fallback_flag:
-            logger.debug(f"Fallback: matching by tile with {self._tiling.name} selection...")
+            logger.debug(
+                f"Fallback: matching by tile with {self._tiling.name} selection..."
+            )
             matches = self._match_by_tile(
                 img0,
                 img1,
@@ -1021,8 +1022,8 @@ def tile_selection(
         _, inlMask = geometric_verification(
             kpts0=kp0,
             kpts1=kp1,
-            threshold=4,
-            confidence=0.999,
+            threshold=6,
+            confidence=0.9999,
         )
         kp0 = kp0[inlMask]
         kp1 = kp1[inlMask]
