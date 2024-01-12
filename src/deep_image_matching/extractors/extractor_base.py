@@ -172,12 +172,15 @@ class ExtractorBase(metaclass=ABCMeta):
 
         # If features_as_half is True then the features are converted to float16.
         if self.features_as_half:
+            feat_dtype = np.float16
             for k in features:
                 if not isinstance(features[k], np.ndarray):
                     continue
                 dt = features[k].dtype
-                if (dt == np.float32) and (dt != np.float16):
-                    features[k] = features[k].astype(np.float16)
+                if (dt == np.float32) and (dt != feat_dtype):
+                    features[k] = features[k].astype(feat_dtype)
+        else:
+            feat_dtype = np.float32
 
         with h5py.File(str(feature_path), "a", libver="latest") as fd:
             try:
@@ -188,7 +191,13 @@ class ExtractorBase(metaclass=ABCMeta):
                     if k == "im_path" or k == "feature_path":
                         grp.create_dataset(k, data=str(v))
                     if isinstance(v, np.ndarray):
-                        grp.create_dataset(k, data=v)
+                        grp.create_dataset(
+                            k,
+                            data=v,
+                            dtype=feat_dtype,
+                            compression="gzip",
+                            compression_opts=9,
+                        )
 
             except OSError as error:
                 if "No space left on device" in error.args[0]:
