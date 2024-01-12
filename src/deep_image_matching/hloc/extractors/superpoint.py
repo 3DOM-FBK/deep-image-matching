@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+
 import torch
 
 from ..utils.base_model import BaseModel
@@ -27,10 +28,10 @@ def sample_descriptors_fix_sampling(keypoints, descriptors, s: int = 8):
 class SuperPoint(BaseModel):
     default_conf = {
         "nms_radius": 4,
-        "keypoint_threshold": 0.005,
+        "keypoint_threshold": 0.001,
         "max_keypoints": -1,
         "remove_borders": 4,
-        "fix_sampling": False,
+        "fix_sampling": True,
     }
     required_inputs = ["image"]
     detection_noise = 2.0

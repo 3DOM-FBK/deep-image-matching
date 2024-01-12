@@ -13,8 +13,10 @@ def featuresDict_2_lightglue(feats: FeaturesDict, device: torch.device) -> dict:
         if feats["descriptors"].shape[-1] != 256:
             feats["descriptors"] = feats["descriptors"].T
 
-    if 'feature_path' in feats.keys(): del feats['feature_path']
-    if 'im_path' in feats.keys(): del feats['im_path']
+    if "feature_path" in feats.keys():
+        del feats["feature_path"]
+    if "im_path" in feats.keys():
+        del feats["im_path"]
 
     # Add batch dimension
     feats = {k: v[None] for k, v in feats.items()}

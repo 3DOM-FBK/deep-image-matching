@@ -199,6 +199,24 @@ class ExtractorBase(metaclass=ABCMeta):
                     del grp, fd[im_name]
                 raise error
 
+        # For debug: visualize keypoints and save to disk
+        if self._config["general"]["verbose"]:
+            img = cv2.imread(str(im_path))
+            kk = [cv2.KeyPoint(x, y, 1) for x, y in features["keypoints"]]
+            out = cv2.drawKeypoints(
+                img,
+                kk,
+                0,
+                (0, 255, 0),
+                flags=cv2.DRAW_MATCHES_FLAGS_DEFAULT,
+            )
+            viz_tile_dir = self._output_dir / "debug"
+            cv2.imwrite(
+                str(viz_tile_dir / f"{im_path.stem}.png"),
+                out,
+                [int(cv2.IMWRITE_JPEG_QUALITY), 70],
+            )
+
         return feature_path
 
     @abstractmethod
@@ -265,6 +283,25 @@ class ExtractorBase(metaclass=ABCMeta):
             else:
                 scor_tile = None
 
+            # For debug: visualize keypoints and save to disk
+            if self._config["general"]["verbose"]:
+                tile = np.uint8(tile)
+                kk = [cv2.KeyPoint(x, y, 1) for x, y in kp_tile]
+                out = cv2.drawKeypoints(
+                    tile,
+                    kk,
+                    0,
+                    (0, 255, 0),
+                    flags=cv2.DRAW_MATCHES_FLAGS_DEFAULT,
+                )
+                viz_tile_dir = self._output_dir / "debug"
+                viz_tile_dir.mkdir(parents=True, exist_ok=True)
+                cv2.imwrite(
+                    str(viz_tile_dir / f"tile_{idx}.jpg"),
+                    out,
+                    [int(cv2.IMWRITE_JPEG_QUALITY), 70],
+                )
+
             # get keypoints in original image coordinates
             kp_tile += np.array(tiles_origins[idx])
 
@@ -280,22 +317,6 @@ class ExtractorBase(metaclass=ABCMeta):
             des_tile = des_tile[:, mask]
             if scor_tile is not None:
                 scor_tile = scor_tile[mask]
-
-            # For debug: visualize keypoints and save to disk
-            # tile = np.uint8(tile)
-            # out = cv2.drawKeypoints(
-            #     tile,
-            #     [
-            #         cv2.KeyPoint(
-            #             x - tiles_origins[idx][0], y - tiles_origins[idx][1], 1
-            #         )
-            #         for x, y in kp_tile
-            #     ],
-            #     0,
-            #     (0, 255, 0),
-            #     flags=cv2.DRAW_MATCHES_FLAGS_DEFAULT,
-            # )
-            # cv2.imwrite(f"sandbox/tile_{idx}.png", out)
 
             if len(kp_tile) > 0:
                 kpts_full = np.vstack((kpts_full, kp_tile))

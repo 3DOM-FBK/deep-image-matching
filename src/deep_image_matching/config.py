@@ -51,20 +51,19 @@ conf_general = {
 
 
 # The configuration for DeepImageMatching is defined as a dictionary with the following keys:
-# - 'general': general configuration (it is independent from the extractor/matcher and it is defined in the 'conf_general' variable)
 # - 'extractor': extractor configuration
 # - 'matcher': matcher configuration
 # The 'extractor' and 'matcher' values must contain a 'name' key with the name of the extractor/matcher to be used. Additionally, the other parameters of the extractor/matcher can be specified.
-# You can get your configuration by accessing the 'confs' dictionary with the name of the configuration (e.g., 'superpoint+lightglue').
 confs = {
     "superpoint+lightglue": {
         "extractor": {
             "name": "superpoint",
             "nms_radius": 3,
-            "keypoint_threshold": 0.005,
+            "keypoint_threshold": 0.0005,
             "max_keypoints": 4096,
         },
         "matcher": {
+            # Refer to https://github.com/cvg/LightGlue/tree/main for the meaning of the parameters
             "name": "lightglue",
             "n_layers": 9,
             "mp": False,  # enable mixed precision
@@ -78,12 +77,14 @@ confs = {
         "extractor": {
             "name": "superpoint",
             "nms_radius": 3,
-            "keypoint_threshold": 0.005,
+            "keypoint_threshold": 0.0005,
             "max_keypoints": 1024,
         },
         "matcher": {
             "name": "lightglue",
             "n_layers": 7,
+            "mp": False,  # enable mixed precision
+            "flash": True,  # enable FlashAttention if available.
             "depth_confidence": 0.95,  # early stopping, disable with -1
             "width_confidence": 0.99,  # point pruning, disable with -1
             "filter_threshold": 0.1,  # match threshold
@@ -93,7 +94,7 @@ confs = {
         "extractor": {
             "name": "superpoint",
             "nms_radius": 3,
-            "keypoint_threshold": 0.005,
+            "keypoint_threshold": 0.0005,
             "max_keypoints": 4096,
         },
         "matcher": {

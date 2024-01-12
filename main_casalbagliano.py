@@ -19,25 +19,25 @@ config = Config(args)
 # Updare some config parameters to not modify the main config file
 do_export_to_metashape = True
 
-config.general["tile_size"] = (4500, 3000)
-config.general["tile_overlap"] = 20
-config.general["min_matches_per_tile"] = 10
-config.general["tile_preselection_size"] = 1000
-config.general["gv_threshold"] = 2
-config.general["gv_confidence"] = 0.999999
-config.general["min_inliers_per_pair"] = 30
-config.general["min_inlier_ratio_per_pair"] = 0.3
+config.general["tile_size"] = (2400, 1600)
+config.general["tile_overlap"] = 0
+config.general["min_matches_per_tile"] = 5
+config.general["tile_preselection_size"] = 2000
+config.general["gv_threshold"] = 4
+config.general["gv_confidence"] = 0.9999
+config.general["min_inliers_per_pair"] = 10
+config.general["min_inlier_ratio_per_pair"] = 0.2
 config.general["try_match_full_images"] = False
 
-config.extractor["max_keypoints"] = 4000
-config.extractor["keypoint_threshold"] = 0.05
+config.extractor["max_keypoints"] = 8000
+config.extractor["keypoint_threshold"] = 0.0005
 
 config.matcher["n_layers"] = 9
 config.matcher["depth_confidence"] = -1
 config.matcher["width_confidence"] = -1
 config.matcher["filter_threshold"] = 0.1
-config.matcher["mp"] = True
-config.matcher["flash"] = False
+config.matcher["mp"] = False
+config.matcher["flash"] = True
 
 # Save configuration to file
 config.save_config()
@@ -71,8 +71,8 @@ prm_to_optimize = {
 }
 
 
-existing_features_path = "/home/francesco/casalbagliano/C/results_superpoint+lightglue_matching_lowres_quality_highest/features.h5"
-# existing_features_path = None
+# existing_features_path = "/home/francesco/casalbagliano/C/results_superpoint+lightglue_matching_lowres_quality_highest/features.h5"
+existing_features_path = None
 
 # For simplicity, save some of the configuration parameters in variables.
 imgs_dir = config.general["image_dir"]
@@ -178,28 +178,7 @@ if not config.general["skip_reconstruction"]:
     #    RADIAL_FISHEYE: f, cx, cy, k1, k2
     #    THIN_PRISM_FISHEYE: fx, fy, cx, cy, k1, k2, p1, p2, k3, k4, sx1, sy1
 
-    cameras = [
-        pycolmap.Camera(
-            model="FULL_OPENCV",
-            width=5184,
-            height=3456,
-            params=[
-                4999.743761184519,
-                5000.6093606299955,
-                2624.437497520331,
-                1713.0874440334837,
-                -0.013354229348170842,
-                0.08536745182816073,
-                -5.6676843405109726e-05,
-                -0.0005887324415077316,
-                -0.15296510632186128,
-                0.0,
-                0.0,
-                0.0,
-            ],
-        )
-    ]
-    # cameras = None
+    cameras = None
 
     # Optional - You can specify some reconstruction configuration
     reconst_opts = {

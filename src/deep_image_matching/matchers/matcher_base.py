@@ -148,7 +148,15 @@ class MatcherBase(metaclass=ABCMeta):
         # Load extractor and matcher for the preselction
         if self._config["general"]["tile_selection"] == TileSelection.PRESELECTION:
             self._preselction_extractor = (
-                SuperPoint({"max_keypoints": 2048}).eval().to(self._device)
+                SuperPoint(
+                    {
+                        "nms_radius": 3,
+                        "max_keypoints": 2048,
+                        "keypoint_threshold": 0.0005,
+                    }
+                )
+                .eval()
+                .to(self._device)
             )
             self._preselction_matcher = (
                 LightGlue(
@@ -339,15 +347,16 @@ class MatcherBase(metaclass=ABCMeta):
         logger.debug(f"Matching {img0_name}-{img1_name} done!")
 
         # For debugging
-        # viz_dir = self._output_dir / "viz"
-        # viz_dir.mkdir(parents=True, exist_ok=True)
-        # self.viz_matches(
-        #     feature_path,
-        #     matches_path,
-        #     img0,
-        #     img1,
-        #     save_path=viz_dir / f"{img0_name}_{img1_name}.png",
-        # )
+        viz_dir = self._output_dir / "debug"
+        viz_dir.mkdir(parents=True, exist_ok=True)
+        self.viz_matches(
+            feature_path,
+            matches_path,
+            img0,
+            img1,
+            save_path=viz_dir / f"{img0_name}_{img1_name}.png",
+            hide_matching_track=True,
+        )
 
         return matches
 
@@ -443,7 +452,7 @@ class MatcherBase(metaclass=ABCMeta):
         save_path: str = None,
         fast_viz: bool = True,
         interactive_viz: bool = False,
-        **config,
+        **kwargs,
     ) -> None:
         # Check input parameters
         if not interactive_viz:
@@ -457,14 +466,21 @@ class MatcherBase(metaclass=ABCMeta):
                 save_path is not None
             ), "output_dir must be specified if fast_viz is True"
 
+        # Get config parameters
+        interactive_viz = kwargs.get("interactive_viz", False)
+        autoresize = kwargs.get("autoresize", True)
+        max_long_edge = kwargs.get("max_long_edge", 1200)
+        jpg_quality = kwargs.get("jpg_quality", 80)
+        hide_matching_track = kwargs.get("hide_matching_track", False)
+
         img0 = Path(img0)
         img1 = Path(img1)
         img0_name = img0.name
         img1_name = img1.name
 
         # Load images
-        image0 = load_image_np(img0, self.as_float, self.grayscale)
-        image1 = load_image_np(img1, self.as_float, self.grayscale)
+        image0 = load_image_np(img0, as_float=False, grayscale=True)
+        image1 = load_image_np(img1, as_float=False, grayscale=True)
 
         # Load features and matches
         features0 = get_features(feature_path, img0_name)
@@ -475,15 +491,10 @@ class MatcherBase(metaclass=ABCMeta):
 
         # Make visualization with OpenCV or Matplotlib
         if fast_viz:
-            # Get config for OpenCV visualization
-            autoresize = config.get("autoresize", True)
-            max_long_edge = config.get("max_long_edge", 1200)
-            jpg_quality = config.get("jpg_quality", 80)
-            hide_matching_track = config.get("hide_matching_track", False)
             if hide_matching_track:
                 line_thickness = -1
             else:
-                line_thickness = 0.5
+                line_thickness = 1
 
             viz_matches_cv2(
                 image0,
@@ -497,7 +508,6 @@ class MatcherBase(metaclass=ABCMeta):
                 jpg_quality=jpg_quality,
             )
         else:
-            interactive_viz = config.get("interactive_viz", False)
             hide_fig = not interactive_viz
             if interactive_viz:
                 viz_matches_mpl(
@@ -506,7 +516,7 @@ class MatcherBase(metaclass=ABCMeta):
                     kpts0,
                     kpts1,
                     hide_fig=hide_fig,
-                    config=config,
+                    config=kwargs,
                 )
             else:
                 viz_matches_mpl(
@@ -517,7 +527,7 @@ class MatcherBase(metaclass=ABCMeta):
                     save_path,
                     hide_fig=hide_fig,
                     point_size=5,
-                    config=config,
+                    config=kwargs,
                 )
 
 
@@ -1019,14 +1029,14 @@ def tile_selection(
         kp1 = kp1 / scale1
 
         # geometric verification
-        _, inlMask = geometric_verification(
-            kpts0=kp0,
-            kpts1=kp1,
-            threshold=6,
-            confidence=0.9999,
-        )
-        kp0 = kp0[inlMask]
-        kp1 = kp1[inlMask]
+        # _, inlMask = geometric_verification(
+        #     kpts0=kp0,
+        #     kpts1=kp1,
+        #     threshold=6,
+        #     confidence=0.9999,
+        # )
+        # kp0 = kp0[inlMask]
+        # kp1 = kp1[inlMask]
 
         # Select tile pairs where there are enough matches
         tile_pairs = []
