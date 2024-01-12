@@ -30,8 +30,9 @@ config.general["min_inlier_ratio_per_pair"] = 0.2
 config.general["try_match_full_images"] = False
 
 # SuperPoint
-config.extractor["max_keypoints"] = 8000
+config.extractor["max_keypoints"] = 2000
 config.extractor["keypoint_threshold"] = 0.0005
+config.extractor["nms_radius"] = 5
 
 # # Aliked
 # config.extractor["max_num_keypoints"] = 2000
