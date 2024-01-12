@@ -18,18 +18,18 @@
         "--dir",
         "/home/francesco/casalbagliano/C",
         "--config",
-        "superpoint+lightglue",
+        "aliked+lightglue",
         "--strategy",
         "matching_lowres",
-        // "--db_path",
-        // "/home/francesco/casalbagliano/B_extended/results_superpoint+lightglue_bruteforce_quality_high/reconstruction",
         "--quality",
         "highest",
         "--tiling",
         "preselection",
+        "-V"
+        // "--db_path",
+        // "/home/francesco/casalbagliano/B_extended/results_superpoint+lightglue_bruteforce_quality_high/reconstruction",
         // "--skip_reconstruction",
         // "--force",
-        "-V"
       ]
     },
     {

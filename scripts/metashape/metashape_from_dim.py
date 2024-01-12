@@ -13,8 +13,8 @@ def export_to_metashape(
     images_dir: Path,
     bundler_file_path: Path,
     bundler_im_list: Path,
-    marker_image_path: Path,
-    marker_world_path: Path,
+    marker_image_path: Path = None,
+    marker_world_path: Path = None,
     marker_file_columns: str = "noxyz",
     prm_to_optimize: dict = {},
 ):
@@ -32,36 +32,43 @@ def export_to_metashape(
         image_list=bundler_im_list,
     )
 
+    # save project
+    doc.read_only = False
+    doc.save()
+
     # Import markers image coordinates
-    import_markers(
-        marker_image_file=marker_image_path,
-        chunk=chunk,
-    )
+    if marker_image_path is not None:
+        import_markers(
+            marker_image_file=marker_image_path,
+            chunk=chunk,
+        )
 
     # Import markers world coordinates
-    chunk.importReference(
-        path=str(marker_world_path),
-        format=Metashape.ReferenceFormatCSV,
-        delimiter=",",
-        skip_rows=1,
-        columns=marker_file_columns,
-    )
+    if marker_world_path is not None:
+        chunk.importReference(
+            path=str(marker_world_path),
+            format=Metashape.ReferenceFormatCSV,
+            delimiter=",",
+            skip_rows=1,
+            columns=marker_file_columns,
+        )
 
     # optimize camera alignment
-    chunk.optimizeCameras(
-        fit_f=prm_to_optimize["f"],
-        fit_cx=prm_to_optimize["cx"],
-        fit_cy=prm_to_optimize["cy"],
-        fit_k1=prm_to_optimize["k1"],
-        fit_k2=prm_to_optimize["k2"],
-        fit_k3=prm_to_optimize["k3"],
-        fit_k4=prm_to_optimize["k4"],
-        fit_p1=prm_to_optimize["p1"],
-        fit_p2=prm_to_optimize["p2"],
-        fit_b1=prm_to_optimize["b1"],
-        fit_b2=prm_to_optimize["b2"],
-        tiepoint_covariance=prm_to_optimize["tiepoint_covariance"],
-    )
+    if prm_to_optimize:
+        chunk.optimizeCameras(
+            fit_f=prm_to_optimize["f"],
+            fit_cx=prm_to_optimize["cx"],
+            fit_cy=prm_to_optimize["cy"],
+            fit_k1=prm_to_optimize["k1"],
+            fit_k2=prm_to_optimize["k2"],
+            fit_k3=prm_to_optimize["k3"],
+            fit_k4=prm_to_optimize["k4"],
+            fit_p1=prm_to_optimize["p1"],
+            fit_p2=prm_to_optimize["p2"],
+            fit_b1=prm_to_optimize["b1"],
+            fit_b2=prm_to_optimize["b2"],
+            tiepoint_covariance=prm_to_optimize["tiepoint_covariance"],
+        )
 
     # Export cameras and gcp residuals
 

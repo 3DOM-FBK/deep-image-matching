@@ -10,8 +10,10 @@ import torch
 from tqdm import tqdm
 
 from . import Timer, logger
+from .hloc.extractors.superpoint import SuperPoint
 from .image_retrieval import ImageRetrieval
 from .io.colmap_read_write_model import read_model
+from .thirdparty.LightGlue.lightglue import LightGlue
 from .utils.geometric_verification import geometric_verification
 
 
@@ -40,9 +42,11 @@ def pairs_from_bruteforce(img_list: List[Union[str, Path]]) -> List[tuple]:
 
 def pairs_from_lowres(
     img_list: List[Union[str, Path]],
-    resize_max: int = 800,
-    min_matches: int = 30,
+    resize_max: int = 1000,
+    min_matches: int = 20,
     max_keypoints: int = 1024,
+    use_superpoint: bool = True,
+    do_geometric_verification: bool = False,
 ) -> List[tuple]:
     def read_tensor_image(
         path: Path, resize_to: int = 500, device="cuda"
@@ -65,35 +69,100 @@ def pairs_from_lowres(
         mkpts2 = KF.get_laf_center(lafs2).squeeze()[idxs[:, 1]].detach().cpu().numpy()
         return mkpts1, mkpts2
 
+    def frame2tensor(image: np.ndarray, device: str = "cpu"):
+        if len(image.shape) == 2:
+            image = image[None][None]
+        elif len(image.shape) == 3:
+            image = image.transpose(2, 0, 1)[None]
+        return torch.tensor(image / 255.0, dtype=torch.float).to(device)
+
+    def sp2lg(feats: dict) -> dict:
+        feats = {
+            k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()
+        }
+        if feats["descriptors"].shape[-1] != 256:
+            feats["descriptors"] = feats["descriptors"].T
+        feats = {k: v[None] for k, v in feats.items()}
+        return feats
+
+    def rbd2np(data: dict) -> dict:
+        """Remove batch dimension from elements in data"""
+        return {
+            k: v[0].cpu().numpy()
+            if isinstance(v, (torch.Tensor, np.ndarray, list))
+            else v
+            for k, v in data.items()
+        }
+
+    use_superpoint = True
+
     timer = Timer(log_level="debug")
 
     brute_pairs = pairs_from_bruteforce(img_list)
 
     pairs = []
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    KNextractor = KF.KeyNetAffNetHardNet(
-        num_features=max_keypoints,
-        upright=False,
-        device=device,
-    )
+    if use_superpoint:
+        extractor = (
+            SuperPoint(
+                {
+                    "nms_radius": 3,
+                    "max_keypoints": 2048,
+                    "keypoint_threshold": 0.0005,
+                }
+            )
+            .eval()
+            .to(device)
+        )
+        matcher = (
+            LightGlue(
+                features="superpoint",
+                n_layers=7,
+                depth_confidence=0.9,
+                width_confidence=0.95,
+                filter_threshold=0.3,
+                flash=True,
+            )
+            .eval()
+            .to(device)
+        )
+        features = namedtuple("features", ["keypoints", "descriptors", "scores"])
+
+    else:
+        extractor = KF.KeyNetAffNetHardNet(
+            num_features=max_keypoints,
+            upright=False,
+            device=device,
+        )
+        features = namedtuple("features", ["lafs", "resps", "descs", "hw"])
 
     # Extract features
-    features = namedtuple("features", ["lafs", "resps", "descs", "hw"])
-
     features_dict = {}
     logger.info("Extracting features from downsampled images...")
     for img in tqdm(img_list):
-        with torch.inference_mode():
-            im0, _ = read_tensor_image(img, resize_max)
-            lafs1, resps1, descs1 = KNextractor(im0)
-            features_dict[img.name] = features(
-                lafs1.detach().cpu(),
-                resps1.detach().cpu(),
-                descs1.detach().cpu(),
-                im0.shape[2:],
-            )
-            del im0, lafs1, resps1, descs1
-            torch.cuda.empty_cache()
+        if use_superpoint:
+            i0 = cv2.imread(str(img), cv2.IMREAD_GRAYSCALE).astype(np.float32)
+            size = i0.shape[:2][::-1]
+            scale = resize_max / max(size)
+            size_new = tuple(int(round(x * scale)) for x in size)
+            i0 = cv2.resize(i0, size_new, interpolation=cv2.INTER_AREA)
+            with torch.inference_mode():
+                feats = extractor({"image": frame2tensor(i0, device)})
+                features_dict[img.name] = sp2lg(feats)
+                del feats
+        else:
+            with torch.inference_mode():
+                im0, _ = read_tensor_image(img, resize_max)
+                lafs1, resps1, descs1 = extractor(im0)
+                features_dict[img.name] = features(
+                    lafs1.detach().cpu(),
+                    resps1.detach().cpu(),
+                    descs1.detach().cpu(),
+                    im0.shape[2:],
+                )
+                del im0, lafs1, resps1, descs1
+
+        torch.cuda.empty_cache()
         timer.update("extraction")
 
     logger.info("Matching downsampled images...")
@@ -101,50 +170,64 @@ def pairs_from_lowres(
         im0_path = pair[0]
         im1_path = pair[1]
 
-        adalam_config = {"device": device}
+        if use_superpoint:
+            feats0 = features_dict[im0_path.name]
+            feats1 = features_dict[im1_path.name]
+            with torch.inference_mode():
+                res = matcher({"image0": feats0, "image1": feats1})
+            res = rbd2np(res)
+            kp0 = feats0["keypoints"].cpu().numpy()[0]
+            kp1 = feats1["keypoints"].cpu().numpy()[0]
+            mkpts0 = kp0[res["matches"][:, 0], :]
+            mkpts1 = kp1[res["matches"][:, 1], :]
+            del feats0, feats1, res, kp0, kp1
 
-        lafs1, resps1, descs1, hw1 = (
-            features_dict[im0_path.name].lafs.cuda(),
-            features_dict[im0_path.name].resps.cuda(),
-            features_dict[im0_path.name].descs.cuda(),
-            features_dict[im0_path.name].hw,
-        )
-        lafs2, resps2, descs2, hw2 = (
-            features_dict[im1_path.name].lafs.cuda(),
-            features_dict[im1_path.name].resps.cuda(),
-            features_dict[im1_path.name].descs.cuda(),
-            features_dict[im1_path.name].hw,
-        )
-        with torch.inference_mode():
-            dists, idxs = KF.match_adalam(
-                descs1.squeeze(0),
-                descs2.squeeze(0),
-                lafs1,
-                lafs2,  # Adalam takes into account also geometric information
-                config=adalam_config,
-                hw1=hw1,
-                hw2=hw2,  # Adalam also benefits from knowing image size
+        else:
+            adalam_config = {"device": device}
+            lafs1, resps1, descs1, hw1 = (
+                features_dict[im0_path.name].lafs.cuda(),
+                features_dict[im0_path.name].resps.cuda(),
+                features_dict[im0_path.name].descs.cuda(),
+                features_dict[im0_path.name].hw,
             )
+            lafs2, resps2, descs2, hw2 = (
+                features_dict[im1_path.name].lafs.cuda(),
+                features_dict[im1_path.name].resps.cuda(),
+                features_dict[im1_path.name].descs.cuda(),
+                features_dict[im1_path.name].hw,
+            )
+            with torch.inference_mode():
+                dists, idxs = KF.match_adalam(
+                    descs1.squeeze(0),
+                    descs2.squeeze(0),
+                    lafs1,
+                    lafs2,  # Adalam takes into account also geometric information
+                    config=adalam_config,
+                    hw1=hw1,
+                    hw2=hw2,  # Adalam also benefits from knowing image size
+                )
 
-        mkpts0, mkpts1 = get_matching_keypoints(lafs1, lafs2, idxs)
+            mkpts0, mkpts1 = get_matching_keypoints(lafs1, lafs2, idxs)
+            del lafs1, resps1, descs1, hw1, lafs2, resps2, descs2, hw2
 
-        _, inlMask = geometric_verification(
-            kpts0=mkpts0,
-            kpts1=mkpts1,
-            threshold=4,
-            confidence=0.99,
-            quiet=True,
-        )
-        count_true = np.count_nonzero(inlMask)
-        timer.update("geometric verification")
+        if do_geometric_verification:
+            _, inlMask = geometric_verification(
+                kpts0=mkpts0,
+                kpts1=mkpts1,
+                threshold=4,
+                confidence=0.99,
+                quiet=True,
+            )
+            count_true = np.count_nonzero(inlMask)
+            timer.update("geometric verification")
 
-        # print(im0_path.name, im1_path.name, count_true)
-        if count_true > min_matches:
-            pairs.append((pair))
-        # if len(mkpts0) > min_matches:
-        #     pairs.append(pair)
+            # print(im0_path.name, im1_path.name, count_true)
+            if count_true > min_matches:
+                pairs.append((pair))
+        else:
+            if len(mkpts0) > min_matches:
+                pairs.append(pair)
 
-        del lafs1, resps1, descs1, hw1, lafs2, resps2, descs2, hw2
         torch.cuda.empty_cache()
 
         timer.update("matching")
