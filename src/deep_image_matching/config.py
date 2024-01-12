@@ -77,7 +77,7 @@ confs = {
         "extractor": {
             "name": "superpoint",
             "nms_radius": 3,
-            "keypoint_threshold": 0.0005,
+            "keypoint_threshold": 0.001,
             "max_keypoints": 1024,
         },
         "matcher": {
@@ -115,9 +115,9 @@ confs = {
         "extractor": {
             "name": "aliked",
             "model_name": "aliked-n16rot",
-            "max_num_keypoints": 10000,
+            "max_num_keypoints": 4000,
             "detection_threshold": 0.2,
-            "nms_radius": 2,
+            "nms_radius": 3,
         },
         "matcher": {
             "name": "lightglue",

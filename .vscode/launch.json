@@ -16,13 +16,14 @@
       "console": "integratedTerminal",
       "args": [
         "--dir",
-        "/home/francesco/casalbagliano/C",
+        "datasets/easy_small",
+        // "/home/francesco/casalbagliano/C",
         "--config",
-        "aliked+lightglue",
+        "superpoint+lightglue",
         "--strategy",
         "matching_lowres",
         "--quality",
-        "highest",
+        "medium",
         "--tiling",
         "preselection",
         "-V"
