@@ -29,9 +29,16 @@ config.general["min_inliers_per_pair"] = 10
 config.general["min_inlier_ratio_per_pair"] = 0.2
 config.general["try_match_full_images"] = False
 
+# SuperPoint
 config.extractor["max_keypoints"] = 8000
 config.extractor["keypoint_threshold"] = 0.0005
 
+# # Aliked
+# config.extractor["max_num_keypoints"] = 2000
+# config.extractor["detection_threshold"] = 0.01
+# config.extractor["nms_radius"] = 2
+
+# Superglue
 config.matcher["n_layers"] = 9
 config.matcher["depth_confidence"] = -1
 config.matcher["width_confidence"] = -1
@@ -211,10 +218,10 @@ if model and do_export_to_metashape:
         images_dir=config.general["image_dir"],
         bundler_file_path=bundler_file_path.resolve(),
         bundler_im_list=bundler_im_list.resolve(),
-        marker_image_path=marker_image_path.resolve(),
-        marker_world_path=marker_world_path.resolve(),
-        marker_file_columns=column_format,
-        prm_to_optimize=prm_to_optimize,
+        # marker_image_path=marker_image_path.resolve(),
+        # marker_world_path=marker_world_path.resolve(),
+        # marker_file_columns=column_format,
+        # prm_to_optimize=prm_to_optimize,
     )
 
 timer.print("Deep Image Matching")
