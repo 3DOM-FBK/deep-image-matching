@@ -1,10 +1,11 @@
 from datetime import datetime
 from pathlib import Path
-from typing import Union
+from typing import Tuple, Union
 
 import cv2
 import exifread
 import numpy as np
+import PIL
 
 from .. import logger
 from .sensor_width_database import SensorWidthDatabase
@@ -41,16 +42,23 @@ def read_image(
     return image
 
 
-# Kept for compatibility with old code, but should be removed
-class Image_old:
-    def __init__(self, path: Path, img_id: int = None, read_exif: bool = False):
-        path = Path(path)
-        if not path.exists():
-            raise ValueError(f"File {path} does not exist")
-
-        self.id = img_id
-        self.name = path.stem
-        self.path = path
+def resize_image(
+    image: np.ndarray, size: Tuple[int], interp: str = "cv2_area"
+) -> np.ndarray:
+    if interp.startswith("cv2_"):
+        interp = getattr(cv2, "INTER_" + interp[len("cv2_") :].upper())
+        h, w = image.shape[:2]
+        if interp == cv2.INTER_AREA and (w < size[0] or h < size[1]):
+            interp = cv2.INTER_LINEAR
+        resized = cv2.resize(image, size, interpolation=interp)
+    elif interp.startswith("pil_"):
+        interp = getattr(PIL.Image, interp[len("pil_") :].upper())
+        resized = PIL.Image.fromarray(image.astype(np.uint8))
+        resized = resized.resize(size, resample=interp)
+        resized = np.asarray(resized, dtype=image.dtype)
+    else:
+        raise ValueError(f"Unknown interpolation {interp}.")
+    return resized
 
 
 class Image:
@@ -235,11 +243,8 @@ class Image:
                 "Image width and height found in exif. Try to load the image and get image size with PIL"
             )
             try:
-                from PIL import Image
-
                 img = Image.open(self.path)
                 self._height, self._width = img.size
-
             except:
                 raise RuntimeError("Unable to get image dimensions.")
 
@@ -258,7 +263,6 @@ class Image:
                     break
                 except ValueError:
                     continue
-
 
         # Get Focal Length
         if "EXIF FocalLength" in exif.keys():
