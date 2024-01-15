@@ -11,11 +11,12 @@ import torch
 
 from deep_image_matching.extractors.extractor_base import ExtractorBase
 
-from .. import Quality, TileSelection, Timer, logger
+from .. import Quality, TileSelection, Timer, get_size_by_quality, logger
 from ..hloc.extractors.superpoint import SuperPoint
 from ..io.h5 import get_features, get_matches
 from ..thirdparty.LightGlue.lightglue import LightGlue
 from ..utils.geometric_verification import geometric_verification
+from ..utils.image import resize_image
 from ..utils.tiling import Tiler
 from ..visualization import viz_matches_cv2, viz_matches_mpl
 
@@ -812,7 +813,9 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
 
         return matches0
 
-    def _resize_image(self, quality: Quality, image: np.ndarray) -> Tuple[np.ndarray]:
+    def _resize_image(
+        self, quality: Quality, image: np.ndarray, interp: str = "cv2_area"
+    ) -> Tuple[np.ndarray]:
         """
         Resize images based on the specified quality.
 
@@ -824,7 +827,8 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
             Tuple[np.ndarray]: Resized images.
 
         """
-        return resize_image(quality, image)
+        new_size = get_size_by_quality(quality, image.shape[:2])
+        return resize_image(image, new_size, interp=interp)
 
     def _resize_keypoints(self, quality: Quality, keypoints: np.ndarray) -> np.ndarray:
         """
@@ -1083,31 +1087,6 @@ def load_image_np(img_path: Path, as_float: bool = True, grayscale: bool = False
         image = image.astype(np.float32)
     if grayscale:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    return image
-
-
-def resize_image(quality: Quality, image: np.ndarray) -> Tuple[np.ndarray]:
-    """
-    Resize images based on the specified quality.
-
-    Args:
-        quality (Quality): The quality level for resizing.
-        image (np.ndarray): The first image.
-
-    Returns:
-        Tuple[np.ndarray]: Resized images.
-
-    """
-    if quality == Quality.HIGH:
-        return image
-    if quality == Quality.HIGHEST:
-        image = cv2.pyrUp(image)
-    elif quality == Quality.MEDIUM:
-        image = cv2.pyrDown(image)
-    elif quality == Quality.LOW:
-        image = cv2.pyrDown(cv2.pyrDown(image))
-    elif quality == Quality.LOWEST:
-        image = cv2.pyrDown(cv2.pyrDown(cv2.pyrDown(image)))
     return image
 
 
