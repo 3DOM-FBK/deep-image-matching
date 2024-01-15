@@ -221,21 +221,34 @@ class ExtractorBase(metaclass=ABCMeta):
         features["image_size"] = np.array(image.shape[:2])
 
         # Save features to disk in h5 format
-        threading.Thread(
+        h5_thread = threading.Thread(
             target=lambda: save_features_h5(
                 feature_path,
                 features,
                 im_path.name,
                 as_half=self.features_as_half,
             )
-        ).start()
+        )
+        h5_thread.start()
 
+        # For debug: visualize keypoints and save to disk
+        # Do everything in a separate thread not to block the main thread
         if self._config["general"]["verbose"]:
+
+            def debug_viz(im_path, keypoints, output_dir, im_name):
+                viz_dir = output_dir / "debug"
+                viz_dir.mkdir(parents=True, exist_ok=True)
+                image = cv2.imread(str(im_path))
+                self.viz_keypoints(image, keypoints, viz_dir, im_name)
+
             threading.Thread(
-                target=lambda: self.viz_keypoints(
-                    features["keypoints"], self._output_dir, im_path
+                target=debug_viz(
+                    im_path, features["keypoints"], output_dir, im_path.stem
                 )
             ).start()
+
+        # Wait for thread to finish (maybe not needed, but just to be sure)
+        h5_thread.join()
 
         return feature_path
 
@@ -275,7 +288,6 @@ class ExtractorBase(metaclass=ABCMeta):
         """
         # Compute tiles limits
         tile_size = self._config["general"]["tile_size"]
-        # grid = self._config["general"]["tile_grid"]
         overlap = self._config["general"]["tile_overlap"]
         tiler = Tiler(tiling_mode="size")
         tiles, tiles_origins, padding = tiler.compute_tiles_by_size(
@@ -305,22 +317,16 @@ class ExtractorBase(metaclass=ABCMeta):
 
             # For debug: visualize keypoints and save to disk
             if self._config["general"]["verbose"]:
-                tile = np.uint8(tile)
-                kk = [cv2.KeyPoint(x, y, 1) for x, y in kp_tile]
-                out = cv2.drawKeypoints(
-                    tile,
-                    kk,
-                    0,
-                    (0, 255, 0),
-                    flags=cv2.DRAW_MATCHES_FLAGS_DEFAULT,
-                )
-                viz_tile_dir = self._output_dir / "debug"
-                viz_tile_dir.mkdir(parents=True, exist_ok=True)
-                cv2.imwrite(
-                    str(viz_tile_dir / f"tile_{idx}.jpg"),
-                    out,
-                    [int(cv2.IMWRITE_JPEG_QUALITY), 70],
-                )
+
+                def debug_viz(tile, keypoints, output_dir, im_name):
+                    tile = np.uint8(tile)
+                    viz_dir = output_dir / "debug"
+                    viz_dir.mkdir(parents=True, exist_ok=True)
+                    self.viz_keypoints(tile, keypoints, viz_dir, im_name)
+
+                threading.Thread(
+                    target=debug_viz(tile, kp_tile, self._output_dir, f"tile_{idx}")
+                ).start()
 
             # get keypoints in original image coordinates
             kp_tile += np.array(tiles_origins[idx])
@@ -433,37 +439,35 @@ class ExtractorBase(metaclass=ABCMeta):
 
     def viz_keypoints(
         self,
+        image: np.ndarray,
         keypoints: np.ndarray,
         output_dir: Path,
-        im_path: Path,
+        im_name: Path = "keypoints",
         resize_to: int = 2000,
         img_format: str = "jpg",
-        jpg_quality: int = 70,
+        jpg_quality: int = 90,
     ):
-        viz_dir = output_dir / "debug"
-        viz_dir.mkdir(parents=True, exist_ok=True)
-
-        img = cv2.imread(str(im_path))
         if resize_to > 0:
-            size = img.shape[:2][::-1]
+            size = image.shape[:2][::-1]
             scale = resize_to / max(size)
             size_new = tuple(int(round(x * scale)) for x in size)
-            img = cv2.resize(img, size_new)
+            image = cv2.resize(image, size_new)
             keypoints = keypoints * scale
 
         kk = [cv2.KeyPoint(x, y, 1) for x, y in keypoints]
         out = cv2.drawKeypoints(
-            img,
+            image,
             kk,
             0,
             (0, 255, 0),
             flags=cv2.DRAW_MATCHES_FLAGS_DEFAULT,
         )
+        out_path = str(output_dir / f"{im_name}.{img_format}")
         if img_format == "jpg":
             cv2.imwrite(
-                str(viz_dir / f"{im_path.stem}.{img_format}"),
+                out_path,
                 out,
                 [int(cv2.IMWRITE_JPEG_QUALITY), jpg_quality],
             )
         else:
-            cv2.imwrite(str(viz_dir / f"{im_path.stem}.{img_format}"), out)
+            cv2.imwrite(out_path, out)
