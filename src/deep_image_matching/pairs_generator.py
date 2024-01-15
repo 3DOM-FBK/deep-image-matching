@@ -1,4 +1,5 @@
 from collections import defaultdict, namedtuple
+from itertools import combinations
 from pathlib import Path
 from typing import List, Tuple, Union
 
@@ -31,13 +32,7 @@ def pairs_from_sequential(
 
 
 def pairs_from_bruteforce(img_list: List[Union[str, Path]]) -> List[tuple]:
-    pairs = []
-    for i in range(len(img_list) - 1):
-        for j in range(i + 1, len(img_list)):
-            im1 = img_list[i]
-            im2 = img_list[j]
-            pairs.append((im1, im2))
-    return pairs
+    return list(combinations(img_list, 2))
 
 
 def pairs_from_lowres(

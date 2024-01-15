@@ -1,4 +1,5 @@
 import inspect
+import threading
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
 from typing import Optional, Tuple, TypedDict, Union
@@ -48,6 +49,52 @@ def extractor_loader(root, model):
     # return getattr(module, 'Model')
 
 
+def save_features_h5(
+    feature_path: Path, features: FeaturesDict, im_name: str, as_half: bool = True
+):
+    # If as_half is True then the features are converted to float16.
+    if as_half:
+        feat_dtype = np.float16
+        for k in features:
+            if not isinstance(features[k], np.ndarray):
+                continue
+            dt = features[k].dtype
+            if (dt == np.float32) and (dt != feat_dtype):
+                features[k] = features[k].astype(feat_dtype)
+    else:
+        feat_dtype = np.float32
+
+    with h5py.File(str(feature_path), "a", libver="latest") as fd:
+        try:
+            if im_name in fd:
+                del fd[im_name]
+            grp = fd.create_group(im_name)
+            for k, v in features.items():
+                if k == "im_path" or k == "feature_path":
+                    grp.create_dataset(k, data=str(v))
+                if isinstance(v, np.ndarray):
+                    grp.create_dataset(
+                        k,
+                        data=v,
+                        dtype=feat_dtype,
+                        compression="gzip",
+                        compression_opts=9,
+                    )
+                else:
+                    raise TypeError(
+                        f"Features data must be of type np.ndarray, not {type(v)}"
+                    )
+
+        except OSError as error:
+            if "No space left on device" in error.args[0]:
+                logger.error(
+                    "Out of disk space: storing features on disk can take "
+                    "significant space, did you enable the as_half flag?"
+                )
+                del grp, fd[im_name]
+            raise error
+
+
 class ExtractorBase(metaclass=ABCMeta):
     general_conf = {
         "output_dir": None,
@@ -64,7 +111,7 @@ class ExtractorBase(metaclass=ABCMeta):
     as_float = True
     interp = "cv2_area"  # "cv2_area", "cv2_linear", or "pil_bilinear" (more accurate but slower)
     descriptor_size = 128
-    features_as_half = False
+    features_as_half = True
 
     def __init__(self, custom_config: dict):
         """
@@ -173,66 +220,22 @@ class ExtractorBase(metaclass=ABCMeta):
         # Add the image_size to the features (if not already present)
         features["image_size"] = np.array(image.shape[:2])
 
-        # Save features to disk in h5 format (TODO: MOVE it to another method)
-        # def save_features_to_h5(self)
-        output_dir.mkdir(parents=True, exist_ok=True)
-        im_name = im_path.name
+        # Save features to disk in h5 format
+        threading.Thread(
+            target=lambda: save_features_h5(
+                feature_path,
+                features,
+                im_path.name,
+                as_half=self.features_as_half,
+            )
+        ).start()
 
-        # If features_as_half is True then the features are converted to float16.
-        if self.features_as_half:
-            feat_dtype = np.float16
-            for k in features:
-                if not isinstance(features[k], np.ndarray):
-                    continue
-                dt = features[k].dtype
-                if (dt == np.float32) and (dt != feat_dtype):
-                    features[k] = features[k].astype(feat_dtype)
-        else:
-            feat_dtype = np.float32
-
-        with h5py.File(str(feature_path), "a", libver="latest") as fd:
-            try:
-                if im_name in fd:
-                    del fd[im_name]
-                grp = fd.create_group(im_name)
-                for k, v in features.items():
-                    if k == "im_path" or k == "feature_path":
-                        grp.create_dataset(k, data=str(v))
-                    if isinstance(v, np.ndarray):
-                        grp.create_dataset(
-                            k,
-                            data=v,
-                            dtype=feat_dtype,
-                            compression="gzip",
-                            compression_opts=9,
-                        )
-
-            except OSError as error:
-                if "No space left on device" in error.args[0]:
-                    logger.error(
-                        "Out of disk space: storing features on disk can take "
-                        "significant space, did you enable the as_half flag?"
-                    )
-                    del grp, fd[im_name]
-                raise error
-
-        # For debug: visualize keypoints and save to disk
         if self._config["general"]["verbose"]:
-            img = cv2.imread(str(im_path))
-            kk = [cv2.KeyPoint(x, y, 1) for x, y in features["keypoints"]]
-            out = cv2.drawKeypoints(
-                img,
-                kk,
-                0,
-                (0, 255, 0),
-                flags=cv2.DRAW_MATCHES_FLAGS_DEFAULT,
-            )
-            viz_tile_dir = self._output_dir / "debug"
-            cv2.imwrite(
-                str(viz_tile_dir / f"{im_path.stem}.png"),
-                out,
-                [int(cv2.IMWRITE_JPEG_QUALITY), 70],
-            )
+            threading.Thread(
+                target=lambda: self.viz_keypoints(
+                    features["keypoints"], self._output_dir, im_path
+                )
+            ).start()
 
         return feature_path
 
@@ -380,8 +383,13 @@ class ExtractorBase(metaclass=ABCMeta):
             Tuple[np.ndarray]: Resized images.
 
         """
+        # If quality is HIGHEST, force interpolation to cv2_cubic
+        if quality == Quality.HIGHEST:
+            interp = "cv2_cubic"
+        if quality == Quality.HIGH:
+            return image  # No resize
         new_size = get_size_by_quality(quality, image.shape[:2])
-        return resize_image(image, new_size, interp=interp)
+        return resize_image(image, (new_size[1], new_size[0]), interp=interp)
 
     def _resize_features(
         self, quality: Quality, features: FeaturesDict
@@ -398,6 +406,18 @@ class ExtractorBase(metaclass=ABCMeta):
             Tuple[FeaturesDict]: Resized features.
 
         """
+        # quality_size_map = {
+        #     Quality.HIGHEST: 2,
+        #     Quality.HIGH: 1,
+        #     Quality.MEDIUM: 1 / 2,
+        #     Quality.LOW: 1 / 4,
+        #     Quality.LOWEST: 1 / 8,
+        # }
+        # f = quality_size_map[quality]
+
+        # features["keypoints"] /= f
+        # features["keypoints"] = features["keypoints"].astype(np.float32)
+
         if quality == Quality.HIGHEST:
             features["keypoints"] /= 2
         elif quality == Quality.HIGH:
@@ -410,3 +430,40 @@ class ExtractorBase(metaclass=ABCMeta):
             features["keypoints"] *= 8
 
         return features
+
+    def viz_keypoints(
+        self,
+        keypoints: np.ndarray,
+        output_dir: Path,
+        im_path: Path,
+        resize_to: int = 2000,
+        img_format: str = "jpg",
+        jpg_quality: int = 70,
+    ):
+        viz_dir = output_dir / "debug"
+        viz_dir.mkdir(parents=True, exist_ok=True)
+
+        img = cv2.imread(str(im_path))
+        if resize_to > 0:
+            size = img.shape[:2][::-1]
+            scale = resize_to / max(size)
+            size_new = tuple(int(round(x * scale)) for x in size)
+            img = cv2.resize(img, size_new)
+            keypoints = keypoints * scale
+
+        kk = [cv2.KeyPoint(x, y, 1) for x, y in keypoints]
+        out = cv2.drawKeypoints(
+            img,
+            kk,
+            0,
+            (0, 255, 0),
+            flags=cv2.DRAW_MATCHES_FLAGS_DEFAULT,
+        )
+        if img_format == "jpg":
+            cv2.imwrite(
+                str(viz_dir / f"{im_path.stem}.{img_format}"),
+                out,
+                [int(cv2.IMWRITE_JPEG_QUALITY), jpg_quality],
+            )
+        else:
+            cv2.imwrite(str(viz_dir / f"{im_path.stem}.{img_format}"), out)
