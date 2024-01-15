@@ -8,7 +8,7 @@ import h5py
 import numpy as np
 import torch
 
-from .. import Quality, TileSelection, logger
+from .. import Quality, TileSelection, get_size_by_quality, logger
 from ..utils.image import Image, resize_image
 from ..utils.tiling import Tiler
 
@@ -380,30 +380,8 @@ class ExtractorBase(metaclass=ABCMeta):
             Tuple[np.ndarray]: Resized images.
 
         """
-        # Deprecated
-        # if interp == "pyramid":
-        #     if quality == Quality.HIGHEST:
-        #         image_ = cv2.pyrUp(image)
-        #     elif quality == Quality.HIGH:
-        #         image_ = image
-        #     elif quality == Quality.MEDIUM:
-        #         image_ = cv2.pyrDown(image)
-        #     elif quality == Quality.LOW:
-        #         image_ = cv2.pyrDown(cv2.pyrDown(image))
-        #     elif quality == Quality.LOWEST:
-        #         image_ = cv2.pyrDown(cv2.pyrDown(cv2.pyrDown(image)))
-        # else:
-        size_map = {
-            Quality.HIGHEST: (image.shape[1] * 2, image.shape[0] * 2),
-            Quality.HIGH: (image.shape[1], image.shape[0]),
-            Quality.MEDIUM: (image.shape[1] // 2, image.shape[0] // 2),
-            Quality.LOW: (image.shape[1] // 4, image.shape[0] // 4),
-            Quality.LOWEST: (image.shape[1] // 8, image.shape[0] // 8),
-        }
-        size = size_map[quality]
-        image_ = resize_image(image, size, interp=interp)
-
-        return image_
+        new_size = get_size_by_quality(quality, image.shape[:2])
+        return resize_image(image, new_size, interp=interp)
 
     def _resize_features(
         self, quality: Quality, features: FeaturesDict

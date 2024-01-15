@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Tuple
 
 from .utils.logger import change_logger_level, get_logger, setup_logger  # noqa: F401
 from .utils.timer import Timer, timeit  # noqa: F401
@@ -34,3 +35,17 @@ class Quality(Enum):
     MEDIUM = 2
     HIGH = 3
     HIGHEST = 4
+
+
+def get_size_by_quality(
+    quality: Quality,
+    size: Tuple[int, int],
+):
+    quality_size_map = {
+        Quality.HIGHEST: (size[0] * 2, size[1] * 2),
+        Quality.HIGH: (size[0], size[1]),
+        Quality.MEDIUM: (size[0] // 2, size[1] // 2),
+        Quality.LOW: (size[0] // 4, size[1] // 4),
+        Quality.LOWEST: (size[0] // 8, size[1] // 8),
+    }
+    return quality_size_map[quality]
