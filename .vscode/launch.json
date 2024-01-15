@@ -28,7 +28,7 @@
         "--quality",
         "medium",
         "--tiling",
-        "none",
+        "preselection",
         "-V"
         // "--db_path",
         // "/home/francesco/casalbagliano/B_extended/results_superpoint+lightglue_bruteforce_quality_high/reconstruction",
