@@ -442,7 +442,7 @@ class ExtractorBase(metaclass=ABCMeta):
         image: np.ndarray,
         keypoints: np.ndarray,
         output_dir: Path,
-        im_name: Path = "keypoints",
+        im_name: str = "keypoints",
         resize_to: int = 2000,
         img_format: str = "jpg",
         jpg_quality: int = 90,

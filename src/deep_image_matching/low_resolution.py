@@ -1,4 +1,3 @@
-import threading
 from itertools import combinations
 from pathlib import Path
 from typing import List, Optional, Tuple, TypedDict, Union
@@ -13,6 +12,7 @@ from tqdm import tqdm
 
 from deep_image_matching import Timer, logger
 from deep_image_matching.hloc.extractors.superpoint import SuperPoint
+from deep_image_matching.io.h5 import get_features
 from deep_image_matching.thirdparty.LightGlue.lightglue import LightGlue
 from deep_image_matching.utils.geometric_verification import geometric_verification
 
@@ -48,11 +48,14 @@ def read_tensor_image(
     return img, scale
 
 
-def sp2lg(feats: dict) -> dict:
-    """Convert SuperPoint features dict to LightGlue features dict"""
+def feats2LG(feats: FeaturesDict) -> dict:
+    # Remove elements from list/tuple
     feats = {k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()}
-    if feats["descriptors"].shape[-1] != 256:
-        feats["descriptors"] = feats["descriptors"].T
+    # Move descriptors dimension to last
+    if "descriptors" in feats.keys():
+        if feats["descriptors"].shape[-1] != 256:
+            feats["descriptors"] = feats["descriptors"].T
+    # Add batch dimension
     feats = {k: v[None] for k, v in feats.items()}
     return feats
 
@@ -102,19 +105,30 @@ def save_features_h5(feature_path, features, im_name, as_half=True):
 
 def match_low_resolution(
     img_list: List[Union[str, Path]],
-    resize_max: int = 1000,
+    resize_max: int = 2000,
     min_matches: int = 20,
     max_keypoints: int = 1024,
     use_superpoint: bool = True,
     do_geometric_verification: bool = False,
 ) -> List[tuple]:
+    timer = Timer(log_level="debug")
+
     use_superpoint = True
 
-    timer = Timer(log_level="debug")
+    # Define paths
+    feature_path = Path("sandbox/features_lowres.h5")
+    matches_path = Path("sandbox/matches_lowres.h5")
+
+    # Remove previous files (temporary solution)
+    if feature_path.exists():
+        feature_path.unlink()
+    if matches_path.exists():
+        matches_path.unlink()
 
     brute_pairs = list(combinations(img_list, 2))
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+
     if use_superpoint:
         sp_cfg = {
             "nms_radius": 3,
@@ -142,10 +156,8 @@ def match_low_resolution(
         )
 
     # Extract features
-    feature_path = Path("features_lowres.h5")
-
-    features_dict = {}
     logger.info("Extracting features from downsampled images...")
+    threads = []
     for img_path in tqdm(img_list):
         if use_superpoint:
             img, scale = read_tensor_image(img_path, resize_max)
@@ -156,22 +168,23 @@ def match_low_resolution(
             # Scale keypoints
             feats["keypoints"] = feats["keypoints"] / scale
 
-            threading.Thread(
-                target=lambda: save_features_h5(
-                    feature_path,
-                    feats,
-                    img_path.name,
-                    as_half=True,
-                )
-            ).start()
+            # Add dummy tile_idx and image_size
+            feats["tile_idx"] = np.zeros((feats["keypoints"].shape[0], 1))
+            feats["image_size"] = np.array(img.shape[2:])
 
-            del feats
+            # Save features to disk
+            save_features_h5(
+                feature_path,
+                feats,
+                img_path.name,
+                as_half=True,
+            )
 
         else:
             with torch.inference_mode():
                 im0, _ = read_tensor_image(img, resize_max)
                 lafs, resps, descs = extractor(im0)
-                features_dict[img.name] = FeaturesDict(
+                feats = FeaturesDict(
                     lafs=lafs.detach().cpu(),
                     resps=resps.detach().cpu(),
                     descrs=descs.detach().cpu(),
@@ -183,49 +196,51 @@ def match_low_resolution(
         timer.update("extraction")
 
     logger.info("Matching downsampled images...")
-    for pair in tqdm(brute_pairs):
-        im0_path = pair[0]
-        im1_path = pair[1]
-
+    for im0_path, im1_path in tqdm(brute_pairs):
         if use_superpoint:
-            feats0 = features_dict[im0_path.name]
-            feats1 = features_dict[im1_path.name]
+            # Load features from disk
+            feats0 = feats2LG(
+                get_features(feature_path, im0_path.name, as_tensor=True, device=device)
+            )
+            feats1 = feats2LG(
+                get_features(feature_path, im1_path.name, as_tensor=True, device=device)
+            )
+            # Match
             with torch.inference_mode():
                 res = matcher({"image0": feats0, "image1": feats1})
-            matches_idx = res["matches"][0].cpu().numpy()
+            matches = res["matches"][0].cpu().numpy()
             kp0 = feats0["keypoints"].cpu().numpy()[0]
             kp1 = feats1["keypoints"].cpu().numpy()[0]
-            mkpts0 = kp0[matches_idx[:, 0], :]
-            mkpts1 = kp1[matches_idx[:, 1], :]
-            del feats0, feats1, res, kp0, kp1
+            mkpts0 = kp0[matches[:, 0], :]
+            mkpts1 = kp1[matches[:, 1], :]
 
         else:
             adalam_config = {"device": device}
-            lafs1, resps1, descs1, hw1 = (
-                features_dict[im0_path.name].lafs.cuda(),
-                features_dict[im0_path.name].resps.cuda(),
-                features_dict[im0_path.name].descs.cuda(),
-                features_dict[im0_path.name].hw,
-            )
-            lafs2, resps2, descs2, hw2 = (
-                features_dict[im1_path.name].lafs.cuda(),
-                features_dict[im1_path.name].resps.cuda(),
-                features_dict[im1_path.name].descs.cuda(),
-                features_dict[im1_path.name].hw,
-            )
-            with torch.inference_mode():
-                dists, idxs = KF.match_adalam(
-                    descs1.squeeze(0),
-                    descs2.squeeze(0),
-                    lafs1,
-                    lafs2,  # Adalam takes into account also geometric information
-                    config=adalam_config,
-                    hw1=hw1,
-                    hw2=hw2,  # Adalam also benefits from knowing image size
-                )
+            # lafs1, resps1, descs1, hw1 = (
+            #     features_dict[im0_path.name].lafs.cuda(),
+            #     features_dict[im0_path.name].resps.cuda(),
+            #     features_dict[im0_path.name].descs.cuda(),
+            #     features_dict[im0_path.name].hw,
+            # )
+            # lafs2, resps2, descs2, hw2 = (
+            #     features_dict[im1_path.name].lafs.cuda(),
+            #     features_dict[im1_path.name].resps.cuda(),
+            #     features_dict[im1_path.name].descs.cuda(),
+            #     features_dict[im1_path.name].hw,
+            # )
+            # with torch.inference_mode():
+            #     dists, idxs = KF.match_adalam(
+            #         descs1.squeeze(0),
+            #         descs2.squeeze(0),
+            #         lafs1,
+            #         lafs2,  # Adalam takes into account also geometric information
+            #         config=adalam_config,
+            #         hw1=hw1,
+            #         hw2=hw2,  # Adalam also benefits from knowing image size
+            #     )
 
-            mkpts0, mkpts1 = get_matching_keypoints(lafs1, lafs2, idxs)
-            del lafs1, resps1, descs1, hw1, lafs2, resps2, descs2, hw2
+            # mkpts0, mkpts1 = get_matching_keypoints(lafs1, lafs2, idxs)
+            # del lafs1, resps1, descs1, hw1, lafs2, resps2, descs2, hw2
 
         if do_geometric_verification:
             _, inlMask = geometric_verification(
@@ -235,8 +250,16 @@ def match_low_resolution(
                 confidence=0.99,
                 quiet=True,
             )
+            matches = matches[inlMask]
             mkpts0 = mkpts0[inlMask]
             mkpts1 = mkpts1[inlMask]
+
+        if len(matches) < min_matches:
+            continue
+
+        with h5py.File(str(matches_path), "a", libver="latest") as fd:
+            group = fd.require_group(im0_path.name)
+            group.create_dataset(im1_path.name, data=matches)
 
         timer.update("matching")
 
@@ -244,7 +267,9 @@ def match_low_resolution(
 
 
 if __name__ == "__main__":
-    img_dir = Path("datasets/easy_small/images")
+    img_dir = Path("datasets/casalbagliano/images")
     img_paths = list(img_dir.glob("*"))
 
-    pairs = match_low_resolution(img_paths, resize_max=1000, min_matches=20)
+    match_low_resolution(img_paths, resize_max=1000, min_matches=20)
+
+    print("Done")
