@@ -827,8 +827,13 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
             Tuple[np.ndarray]: Resized images.
 
         """
+        # If quality is HIGHEST, force interpolation to cv2_cubic
+        if quality == Quality.HIGHEST:
+            interp = "cv2_cubic"
+        if quality == Quality.HIGH:
+            return image  # No resize
         new_size = get_size_by_quality(quality, image.shape[:2])
-        return resize_image(image, new_size, interp=interp)
+        return resize_image(image, (new_size[1], new_size[0]), interp=interp)
 
     def _resize_keypoints(self, quality: Quality, keypoints: np.ndarray) -> np.ndarray:
         """
@@ -976,9 +981,12 @@ def tile_selection(
     i0 = cv2.imread(str(img0), cv2.IMREAD_GRAYSCALE).astype(np.float32)
     i1 = cv2.imread(str(img1), cv2.IMREAD_GRAYSCALE).astype(np.float32)
 
-    # Resize images to the specified quality to reproduce the same tiling
-    i0 = resize_image(quality, i0)
-    i1 = resize_image(quality, i1)
+    # Resize images to the specified quality to reproduce the same tiling as in feature extraction
+    if quality != Quality.HIGH:
+        i0_new_size = get_size_by_quality(quality, i0.shape[:2])
+        i1_new_size = get_size_by_quality(quality, i1.shape[:2])
+        i0 = resize_image(i0, (i0_new_size[1], i0_new_size[0]))
+        i1 = resize_image(i1, (i1_new_size[1], i1_new_size[0]))
 
     # Compute tiles
     tiles0, t_orig0, t_padding0 = tiler.compute_tiles_by_size(

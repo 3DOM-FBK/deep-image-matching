@@ -39,13 +39,14 @@ class Quality(Enum):
 
 def get_size_by_quality(
     quality: Quality,
-    size: Tuple[int, int],
+    size: Tuple[int, int],  # usually (width, height)
 ):
     quality_size_map = {
-        Quality.HIGHEST: (size[0] * 2, size[1] * 2),
-        Quality.HIGH: (size[0], size[1]),
-        Quality.MEDIUM: (size[0] // 2, size[1] // 2),
-        Quality.LOW: (size[0] // 4, size[1] // 4),
-        Quality.LOWEST: (size[0] // 8, size[1] // 8),
+        Quality.HIGHEST: 2,
+        Quality.HIGH: 1,
+        Quality.MEDIUM: 1 / 2,
+        Quality.LOW: 1 / 4,
+        Quality.LOWEST: 1 / 8,
     }
-    return quality_size_map[quality]
+    f = quality_size_map[quality]
+    return (int(size[0] * f), int(size[1] * f))

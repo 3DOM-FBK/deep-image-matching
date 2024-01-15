@@ -43,7 +43,9 @@ def read_image(
 
 
 def resize_image(
-    image: np.ndarray, size: Tuple[int], interp: str = "cv2_area"
+    image: np.ndarray,
+    size: Tuple[int, int],  # Destination size (width, height)
+    interp: str = "cv2_area",
 ) -> np.ndarray:
     if interp.startswith("cv2_"):
         interp = getattr(cv2, "INTER_" + interp[len("cv2_") :].upper())
