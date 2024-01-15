@@ -5,7 +5,7 @@ from ..thirdparty.LightGlue.lightglue import LightGlue
 from .matcher_base import FeaturesDict, MatcherBase
 
 
-def featuresDict_2_lightglue(feats: FeaturesDict, device: torch.device) -> dict:
+def featuresDict2Lightglue(feats: FeaturesDict, device: torch.device) -> dict:
     # Remove elements from list/tuple
     feats = {k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()}
     # Move descriptors dimension to last
@@ -66,8 +66,8 @@ class LightGlueMatcher(MatcherBase):
         feats0: FeaturesDict,
         feats1: FeaturesDict,
     ) -> np.ndarray:
-        feats0 = featuresDict_2_lightglue(feats0, self._device)
-        feats1 = featuresDict_2_lightglue(feats1, self._device)
+        feats0 = featuresDict2Lightglue(feats0, self._device)
+        feats1 = featuresDict2Lightglue(feats1, self._device)
 
         # match the features
         match_res = self._matcher({"image0": feats0, "image1": feats1})

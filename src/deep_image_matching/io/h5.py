@@ -45,7 +45,7 @@ def get_features(
     path: Path,
     name: str,
     as_tensor: bool = False,
-    device: "str" = "cuda",
+    device: torch.device = torch.device("cuda"),
 ) -> dict:
     with h5py.File(str(path), "r", libver="latest") as fd:
         if name in fd:
@@ -78,9 +78,8 @@ def get_features(
             raise ValueError(f"Cannot find image {name} in {path}")
 
         if as_tensor:
-            if device not in ("cpu", "cuda"):
-                raise ValueError(f"Unknown device {device}. It must be cpu or cuda.")
-            device = "cuda" if torch.cuda.is_available() and not device else "cpu"
+            if device.type == "cuda" and not torch.cuda.is_available():
+                device = torch.device("cpu")
             feats = {
                 k: torch.tensor(v, dtype=torch.float, device=device)
                 for k, v in feats.items()
