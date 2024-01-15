@@ -9,7 +9,7 @@ import numpy as np
 import torch
 
 from .. import Quality, TileSelection, logger
-from ..utils.image import Image
+from ..utils.image import Image, resize_image
 from ..utils.tiling import Tiler
 
 
@@ -21,14 +21,21 @@ class FeaturesDict(TypedDict):
     tile_idx: Optional[np.ndarray]
 
 
-def featuresDict_2_tensor(features: FeaturesDict, device: torch.device) -> FeaturesDict:
-    return {
-        k: torch.tensor(v, dtype=torch.float, device=device)
-        for k, v in features.items()
-    }
-
-
 def extractor_loader(root, model):
+    """
+    Load and return the specified extractor class from the given root module.
+
+    Args:
+        root (module): The root module where the extractor module is located.
+        model (str): The name of the extractor module.
+
+    Returns:
+        class: The specified extractor class.
+
+    Raises:
+        AssertionError: If no or multiple extractor classes are found.
+
+    """
     module_path = f"{root.__name__}.{model}"
     module = __import__(module_path, fromlist=[""])
     classes = inspect.getmembers(module, inspect.isclass)
@@ -55,6 +62,7 @@ class ExtractorBase(metaclass=ABCMeta):
     required_inputs = []
     grayscale = True
     as_float = True
+    interp = "cv2_area"  # "cv2_area", "cv2_linear", or "pil_bilinear" (more accurate but slower)
     descriptor_size = 128
     features_as_half = False
 
@@ -141,7 +149,7 @@ class ExtractorBase(metaclass=ABCMeta):
             image = image.astype(np.float32)
 
         # Resize images if needed
-        image_ = self._resize_image(self._quality, image)
+        image_ = self._resize_image(self._quality, image, interp=self.interp)
 
         if self._config["general"]["tile_selection"] == TileSelection.NONE:
             # Extract features from the whole image
@@ -358,7 +366,9 @@ class ExtractorBase(metaclass=ABCMeta):
 
         return features
 
-    def _resize_image(self, quality: Quality, image: np.ndarray) -> Tuple[np.ndarray]:
+    def _resize_image(
+        self, quality: Quality, image: np.ndarray, interp: str = "cv2_area"
+    ) -> Tuple[np.ndarray]:
         """
         Resize images based on the specified quality.
 
@@ -370,16 +380,29 @@ class ExtractorBase(metaclass=ABCMeta):
             Tuple[np.ndarray]: Resized images.
 
         """
-        if quality == Quality.HIGHEST:
-            image_ = cv2.pyrUp(image)
-        elif quality == Quality.HIGH:
-            image_ = image
-        elif quality == Quality.MEDIUM:
-            image_ = cv2.pyrDown(image)
-        elif quality == Quality.LOW:
-            image_ = cv2.pyrDown(cv2.pyrDown(image))
-        elif quality == Quality.LOWEST:
-            image_ = cv2.pyrDown(cv2.pyrDown(cv2.pyrDown(image)))
+        # Deprecated
+        # if interp == "pyramid":
+        #     if quality == Quality.HIGHEST:
+        #         image_ = cv2.pyrUp(image)
+        #     elif quality == Quality.HIGH:
+        #         image_ = image
+        #     elif quality == Quality.MEDIUM:
+        #         image_ = cv2.pyrDown(image)
+        #     elif quality == Quality.LOW:
+        #         image_ = cv2.pyrDown(cv2.pyrDown(image))
+        #     elif quality == Quality.LOWEST:
+        #         image_ = cv2.pyrDown(cv2.pyrDown(cv2.pyrDown(image)))
+        # else:
+        size_map = {
+            Quality.HIGHEST: (image.shape[1] * 2, image.shape[0] * 2),
+            Quality.HIGH: (image.shape[1], image.shape[0]),
+            Quality.MEDIUM: (image.shape[1] // 2, image.shape[0] // 2),
+            Quality.LOW: (image.shape[1] // 4, image.shape[0] // 4),
+            Quality.LOWEST: (image.shape[1] // 8, image.shape[0] // 8),
+        }
+        size = size_map[quality]
+        image_ = resize_image(image, size, interp=interp)
+
         return image_
 
     def _resize_features(
