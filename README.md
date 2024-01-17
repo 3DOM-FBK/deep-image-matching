@@ -37,7 +37,7 @@ Key features:
 | &check; SIFT (opencv)              |
 | &check; DeDoDe                     |
 
-## Colab demo  ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1gwdyLSiBIsq6e9_6g4X3VqucO0LBLuww?usp=sharing)
+## Colab demo  ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/deep_image_matching_example.ipynb)
 Want to run on a sample dataset? Try the Colab demo. Working to extend to other examples and visulize results..
 
 ## Installation
