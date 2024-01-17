@@ -1,8 +1,12 @@
 import shutil
-import tkinter as tk
 from pathlib import Path
 from pprint import pprint
-from tkinter import filedialog, messagebox, ttk
+
+try:
+    import tkinter as tk
+    from tkinter import filedialog, messagebox, ttk
+except:
+    print("Not possible to import tkinter")
 
 from .config import confs
 
