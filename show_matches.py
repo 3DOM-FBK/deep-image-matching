@@ -139,7 +139,7 @@ class ShowPairMatches:
         #cv2.waitKey(0)
         #cv2.destroyAllWindows()
 
-        cv2.imwrite(str(self.out_dir / f'matches_{img0_path.name}_{img1_path.name}.png'), img_matches_resized)
+        cv2.imwrite(str(self.out_dir / f'matches.png'), img_matches_resized)
 
     def resize_image(self, img, max_side_length):
         height, width = img.shape[:2]
