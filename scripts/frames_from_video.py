@@ -1,9 +1,11 @@
 import cv2
 import os
 import argparse
+from pathlib import Path
 
 def extract_frames(video_path, output_folder, interval):
     # Open the video file
+    video_name = Path(Path(video_path).name).stem
     cap = cv2.VideoCapture(video_path)
 
     # Check if the video file is opened successfully
@@ -25,7 +27,7 @@ def extract_frames(video_path, output_folder, interval):
 
         # Save frames at the specified interval
         if frame_count % interval == 0:
-            frame_filename = os.path.join(output_folder, f"frame_{frame_count}.jpg")
+            frame_filename = os.path.join(output_folder, f"{video_name}_{frame_count:06d}.jpg")
             cv2.imwrite(frame_filename, frame)
 
         frame_count += 1

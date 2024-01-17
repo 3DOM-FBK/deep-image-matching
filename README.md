@@ -11,7 +11,7 @@
 | ------------------------------------------------ | ---------------------------------------------------- |
 | <img src='assets/temple_rsift.gif' height="165"> | <img src='assets/temple_superglue.gif' height="165"> |
 
-Multivew matcher for COLMAP. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI. Feel free to collaborate!
+Multivew matcher for SfM software. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI. Feel free to collaborate!
 
 **Please, note that `deep-image-matching` is under active development** and it is still in an experimental stage. If you find any bug, please open an issue.
 
@@ -37,15 +37,22 @@ Key features:
 | &check; SIFT (opencv)              |
 | &check; DeDoDe                     |
 
-## Colab demo ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1gwdyLSiBIsq6e9_6g4X3VqucO0LBLuww?usp=sharing)
+| Supported SfM software                        |
+| --------------------------------------------- |
+| &check; COLMAP                                |
+| &check; OpenMVG                               |
+| &check; Agisoft Metashape                     |
+| &check; Software that supports bundler format |
 
-Want to run on a sample dataset? Try the Colab demo. Working to extend to other examples and visulize results..
+## Colab demo ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/deep_image_matching_example.ipynb)
+
+Want to run on a sample dataset? Try the Colab demo!
 
 ## Installation
 
 `Deep-image-matching` is tested on Ubuntu 22.04 and Windows 10 with `Python 3.9`. It is strongly recommended to have a NVIDIA GPU with at least 8GB of memory.
 
-Please, note that deep-image-matching relies on [pydegensac](https://github.com/ducha-aiki/pydegensac) for the geometric verification of matches, which is only available for `Python <=3.9` on Windows. If you are using Windows, please, install `Python 3.9` (on Linux, you can also use `Pythom 3.10`).
+Please, note that deep-image-matching relies on [pydegensac](https://github.com/ducha-aiki/pydegensac) for the geometric verification of matches, which is only available for `Python <=3.9` on Windows. If you are using Windows, please, install `Python 3.9` (on Linux, you can also use `Python 3.10`).
 
 For installing `deep-image-matching`, first create a conda environment:
 
@@ -167,6 +174,7 @@ Other additional options are:
 - `--retrieval`: if `strategy` is set to `retrieval`, the global descriptor to use for image retrieval (default: `None`)
 - `--upright`: if passed, try to find the best image rotation before running the matching
 - `--force`: if the output folder already exists, overwrite it
+- `--skip_reconstruction` : Skip reconstruction step carried out with pycolmap. This step is necessary to export the solution in Bundler format for Agisoft Metashape.
 - `-V`: enable verbose output
 
 To run sequential matching with Superpoint+LighGlue, you can use the following command:
@@ -220,6 +228,8 @@ python ./join_databases.py --input assets/to_be_joined --output assets/to_be_joi
 - [ ] Apply masks during feature extraction
 - [ ] Check scripts
 - [ ] Integrate support for Pix4D [Open Photogrammetry Format](https://github.com/Pix4D/opf-spec)
+- [ ] Work with submodules
+- [ ] Update README CLI options
 
 ## References
 

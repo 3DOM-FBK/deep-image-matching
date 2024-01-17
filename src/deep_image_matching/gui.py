@@ -1,10 +1,15 @@
 import shutil
-import tkinter as tk
 from pathlib import Path
 from pprint import pprint
-from tkinter import filedialog, messagebox, ttk
 
+from . import logger
 from .config import confs
+
+try:
+    import tkinter as tk
+    from tkinter import filedialog, messagebox, ttk
+except:
+    logger.warning("Not possible to import tkinter")
 
 
 class MatcherApp:
