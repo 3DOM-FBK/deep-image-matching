@@ -37,8 +37,15 @@ Key features:
 | &check; SIFT (opencv)              |
 | &check; DeDoDe                     |
 
+| Supported SfM software                       |
+| ---------------------------------------------|
+| &check; COLMAP                               |
+| &check; OpenMVG                              |
+| &check; Agisoft Metashape                    |
+| &check; Software that supports bundler format|
+
 ## Colab demo  ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/deep_image_matching_example.ipynb)
-Want to run on a sample dataset? Try the Colab demo.
+Want to run on a sample dataset? Try the Colab demo!
 
 ## Installation
 
