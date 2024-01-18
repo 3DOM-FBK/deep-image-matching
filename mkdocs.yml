@@ -1,6 +1,6 @@
 site_name: deep_image_matching
-repo_url: https://github.com/franioli/deep-image-matching/
-site_author: Francesco Ioli
+repo_url: https://3DOM-FBK.github.io/deep-image-matching
+site_author: 3DOM
 
 theme:
   name: material
