@@ -2,7 +2,7 @@
 
 | SIFT                                               | DISK                                                 | IMAGES ORIENTATION                                     | DENSE WITH ROMA                                   |
 | -------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------- |
-| <img src='./assets/matches_sift.gif' height="100"> | <img src='./assets/matches_joined.gif' height="100"> | <img src='./assets/orientation_deep.gif' height="100"> | <img src='../assets/roma_dense.gif' height="100"> |
+| <img src='./assets/matches_sift.gif' height="100"> | <img src='./assets/matches_joined.gif' height="100"> | <img src='./assets/orientation_deep.gif' height="100"> | <img src='./assets/roma_dense.gif' height="100"> |
 
 | SIFT                                               | SUPERGLUE                                              |
 | -------------------------------------------------- | ------------------------------------------------------ |
