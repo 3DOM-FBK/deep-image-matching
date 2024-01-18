@@ -1,6 +1,6 @@
 # Configuration
 
-Here you can find all the possible configurations
+**Page under construction...**
 
 ::: deep_image_matching.config.Config
     options:
