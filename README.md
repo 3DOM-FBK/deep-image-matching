@@ -15,6 +15,8 @@
 
 Multivew matcher for SfM software. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI. Feel free to collaborate!
 
+Check the documentation at <a href="https://3dom-fbk.github.io/deep-image-matching/">Docs</a>.
+
 **Please, note that `deep-image-matching` is under active development** and it is still in an experimental stage. If you find any bug, please open an issue.
 
 Key features:
@@ -52,11 +54,7 @@ Want to run on a sample dataset? Try the Colab demo!
 
 ## Installation
 
-`Deep-image-matching` is tested on Ubuntu 22.04 and Windows 10 with `Python 3.9`. It is strongly recommended to have a NVIDIA GPU with at least 8GB of memory.
-
-Please, note that deep-image-matching relies on [pydegensac](https://github.com/ducha-aiki/pydegensac) for the geometric verification of matches, which is only available for `Python <=3.9` on Windows. If you are using Windows, please, install `Python 3.9` (on Linux, you can also use `Python 3.10`).
-
-For installing `deep-image-matching`, first create a conda environment:
+For installing deep-image-matching, first create a conda environment:
 
 ```bash
 conda create -n deep-image-matching python=3.9
@@ -64,7 +62,7 @@ conda activate deep-image-matching
 pip install --upgrade pip
 ```
 
-Clone the repository and install `deep-image-matching` in editable mode:
+Clone the repository and install deep-image-matching in editable mode:
 
 ```bash
 git clone https://github.com/3DOM-FBK/deep-image-matching.git
@@ -72,139 +70,20 @@ cd deep-image-matching
 pip install -e .
 ```
 
-If you run into any troubles installing Pytorch (and its related packages, such as Kornia), please check the official website ([https://pytorch.org/get-started/locally/](https://pytorch.org/get-started/locally/)) and follow the instructions for your system and CUDA architecture. Then, try to install again deep-image-matching.
-
-For automatize 3D reconstruction, DEEP-IMAGE-MATCHING uses [pycolmap](https://github.com/colmap/pycolmap), which is only available in [pypi](https://pypi.org/project/pycolmap/) for Linux and macOS.
-If you are using Windows, you can use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) for installing pycolmap (please refer to issue [#34](https://github.com/colmap/pycolmap/issues/34) in pycolmap repo).
-
-Pycolmap is needed for running directly the 3D reconstruction (without the need to use COLMAP by GUI or CLI) and to export the reconstruction in Bundler format for importing into Metashape. Pycolmap is alse needed to create cameras from exif metadata in the COLMAP database.
-If pycolmap is not installed, deep-image-matching will still work and it will export the matches in a COLMAP SQlite databse, which can be opened by COLMAP GUI or CLI to run the 3D reconstruction.
-
-If you are on Linux or macOS, you can install pycolmap with:
+Install pycolmap:
 
 ```bash
 pip install pycolmap
 ```
 
+As [pycolmap](https://github.com/colmap/pycolmap) was released on PyPi only for Linux and macOS (up to version 0.4.0), it is not installed by default with deep-image-matching. 
+Therefore, it is not included in the dependencies of deep-image-matching.
+From version 0.5.0, pycolmap can be installed on Windows too, so we are considering to add it as a dependency of deep-image-matching.
+
+For more information, check the [documentation](https://3dom-fbk.github.io/deep-image-matching/installation/).
+
 ## Usage instructions
-
-You can run deep-image-matching with the CLI or with the GUI.
-
-All the configurations (that are used both from the CLI and the GUI) are in `config.py`.
-There are two main configuration in `config.py`: `conf_general` and `confs`.
-
-- `conf_general` contains some general configuration that is valid for all the combinations of local features and matchers, including the option to run the matching by tiles, run it on full images or on downsampled images, and the options for the geometric verification.
-
-  ```python
-    conf_general = {
-      "quality": Quality.HIGH, -> `Control the resolution of the images, where HIGH = full-res; MEDIUM = half res; LOW = 1/4 res; HIGHEST = 2x res`
-      "tile_selection": TileSelection.PRESELECTION, -> `Control the tiling approach. Options are NONE: disable tiling; PRESELECTION: divide the images into regular tiles and select the tiles to be matched by a low-resolution preselection (suggested for large images); GRID: divide images into regular tiles and match only tiles at the same location in the grid (e.g., 1-1, 2-2 etc); EXHAUSTIVE: match all the tiles with all the tiles. (slow)`
-      "tile_size": [3, 3], -> `Define the tile grid as [number of rows, number of columns] of the grid.`
-      "tile_overlap": 0, -> `Optionally, overlap tiles by a certain amount of pixels`
-      "geom_verification": GeometricVerification.PYDEGENSAC, -> `Enable or disable Geometric Verification. Options are: NONE: disabled; PYDEGENSAC: use pydegensac; MAGSAC: use OpenCV geometric verification with MAGSAC.`
-      "gv_threshold": 4, -> `Threshold [px] for the geometric verification`
-      "gv_confidence": 0.9999, -> `Confidence value for the geometric verification`
-      "tile_preselection_size": 2000, -> `if tile_selection == TileSelection.PRESELECTION, define the resolution at which the images are downsampled to run the low-resolution tile preselection.`
-    }
-  ```
-
-- `confs` is a dictionary that contains all the possibile combinations of local feature extrators and matchers that can be used in deep-image-matching and their configuration. Each configuration is defined by a name (e.g., "superpoint+lightglue") and it must be a dictionary containing two sub-dictionaries for the 'extractor' and the 'matcher'.
-
-  Each subdictionary contains the name of the extractor or the matcher and then a series of optional parameters to to be passed to the extractor or matcher. Please refer to the specific implementation of the Extractor or Matcher (located in the folders `src/deep_image_matching/extractors` or `src/deep_image_matching/matchers` for a list of all the possible options.
-
-  <details>
-
-  <summary>Show dictionary</summary>
-
-  ```python
-  confs = {
-      "superpoint+lightglue": {
-          "extractor": {
-              "name": "superpoint",
-              "keypoint_threshold": 0.0001,
-              "max_keypoints": 4096,
-          },
-          "matcher": {
-              "name": "lightglue",
-              "n_layers": 9,
-              "depth_confidence": -1,  # 0.95,  # early stopping, disable with -1
-              "width_confidence": -1,  # 0.99,  # point pruning, disable with -1
-              "filter_threshold": 0.5,  # match threshold
-          },
-      },
-      "aliked+lightglue": {
-          "extractor": {
-              "name": "aliked",
-              ...
-          },
-          "matcher": {
-              "name": "lightglue",
-              ...
-          },
-      },
-      "orb+kornia_matcher": {
-          "extractor": {
-              "name": "orb",
-              ...
-          },
-          "matcher": {
-              "name": "kornia_matcher",
-              ...
-          },
-      },
-    }
-  ```
-
-  </details>
-
-From both the CLI and GUI you can select a configuration by its name (e.g., "superpoint+lightglue") and the corresponding configuration will be used.
-
-### CLI
-
-Before running the CLI, check the options with `python ./main.py --help`.
-
-The minimal required options are:
-
-- `--images`: the path to the folder containing the images
-- `--config`: the name of the configuration to use (e.g., "superpoint+lightglue")
-
-Other additional options are:
-
-- `--outs`: the path to the folder where the matches will be saved (default: `./output`)
-- `--strategy`: the strategy to use for the matching (default: `sequential`)
-- `--overlap`: if `strategy` is set to `sequential`, set the number of images that are sequentially matched to each image in the sequence (default: `1`)
-- `--retrieval`: if `strategy` is set to `retrieval`, the global descriptor to use for image retrieval (default: `None`)
-- `--upright`: if passed, try to find the best image rotation before running the matching
-- `--force`: if the output folder already exists, overwrite it
-- `--skip_reconstruction` : Skip reconstruction step carried out with pycolmap. This step is necessary to export the solution in Bundler format for Agisoft Metashape.
-- `-V`: enable verbose output
-
-To run sequential matching with Superpoint+LighGlue, you can use the following command:
-
-```bash
-python ./main.py  --config superpoint+lightglue --images assets/example_cyprus --outs assets/output --strategy sequential --overlap 2
-```
-
-To run bruteforce matching with ALIKED+LightGlue and with image rotation, you can use the following command:
-
-```bash
-python ./main.py  --config aliked+lightglue --images assets/example_cyprus --strategy bruteforce --upright
-```
-
-See other examples in run.bat. If you want to customize detector and descpritor options, change default options in config.py.
-
-### GUI
-
-To run with the GUI:
-
-```bash
-python ./main.py --gui
-```
-
-![X4](assets/gui.png)
-
-In the GUI, you can define the same parameters that are available in the CLI.
-The GUI loads the available configurations from `config.py` and it shows them in the dropdown menu `choose available matching configuration`.
+For quick-starting usage instructions, please check the documenation at [https://3dom-fbk.github.io/deep-image-matching/](https://3dom-fbk.github.io/deep-image-matching/getting_started) or check the example notebooks.
 
 ### Merging databases with different local features
 
