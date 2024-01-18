@@ -73,22 +73,29 @@ class ShowPairMatches:
         print("Showing matches..")
         if self.imgs_dict['type'] == 'ids':
             id0 = int(self.imgs_dict['data'][0])
-            keypoints0 = self.keypoints[id0]       
-            print(f"Img {id0}: kpts shape = {keypoints0.shape}")
+            id1 = int(self.imgs_dict['data'][1])   
 
-            id1 = int(self.imgs_dict['data'][1])
-            keypoints1 = self.keypoints[id1]
-            print(f"Img {id1}: kpts shape = {keypoints1.shape}")  
+        elif self.imgs_dict['type'] == 'names':
+            inverted_dict = {v: k for k, v in self.imgs.items()}
+            im0 = self.imgs_dict['data'][0]
+            id0 = inverted_dict[im0]
+            im1 = self.imgs_dict['data'][1]
+            id1 = inverted_dict[im1]
 
-            print("raw matches shape", np.shape(self.matches[(id0, id1)]))
-            print("verified matches shape", np.shape(self.two_views_matches[(id0, id1)]))
 
-            img0_path = self.imgs_dir / self.imgs[id0]
-            img1_path = self.imgs_dir / self.imgs[id1]
-            print("img0_path", img0_path)
-            print("img1_path", img1_path)
+        keypoints0 = self.keypoints[id0]   
+        keypoints1 = self.keypoints[id1]
+        print(f"Img {id0}: kpts shape = {keypoints0.shape}")
+        print(f"Img {id1}: kpts shape = {keypoints1.shape}") 
+        print("raw matches shape", np.shape(self.matches[(id0, id1)]))
+        print("verified matches shape", np.shape(self.two_views_matches[(id0, id1)]))
 
-            self.GeneratePlot(img0_path, img1_path, keypoints0, keypoints1, self.two_views_matches[(id0, id1)])
+        img0_path = self.imgs_dir / self.imgs[id0]
+        img1_path = self.imgs_dir / self.imgs[id1]
+        print("img0_path", img0_path)
+        print("img1_path", img1_path)
+
+        self.GeneratePlot(img0_path, img1_path, keypoints0, keypoints1, self.two_views_matches[(id0, id1)])
     
     def GeneratePlot(
         self,
@@ -153,7 +160,7 @@ class ShowPairMatches:
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Show matches from COLMAP database."
+        description="Show matches from COLMAP database.   'python ./show_matches.py -d assets/output/database.db -i 'DSC_6466.JPG DSC_6468.JPG' -t names -o . -f assets/example_cyprus/' or 'python ./show_matches.py -d assets/output/database.db -i '1 2' -t ids -o . -f assets/example_cyprus/'"
     )
 
     parser.add_argument("-d", "--database", type=str, help="Path to COLMAP database", required=True)
