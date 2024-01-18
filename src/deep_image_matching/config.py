@@ -162,7 +162,7 @@ confs = {
         },
         "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.95},
     },
-    "dedode": {
+    "dedode+kornia_matcher": {
         "extractor": {
             "name": "dedode",
             "n_features": 1000,

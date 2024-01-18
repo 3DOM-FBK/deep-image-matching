@@ -7,10 +7,11 @@ from deep_image_matching.image_matching import ImageMatching
 from deep_image_matching.io.h5_to_db import export_to_colmap
 from deep_image_matching.parser import parse_cli
 
-config_file = "config.yaml"
-
 # Hard-coded flag for exporting the solution to Metashape (TODO: move to the configuration settings). Note that you need to install Metashape as module first.
 do_export_to_metashape = False
+
+# User defined configuration file
+config_file = "config.yaml"
 
 # Parse arguments from command line
 args = parse_cli()
@@ -19,7 +20,8 @@ args = parse_cli()
 config = Config(args)
 
 if config_file:
-    if not Path(config_file).exists():
+    config_file = (Path(__file__).parent / config_file).resolve()
+    if not config_file.exists():
         raise FileNotFoundError(f"Configuration file {config_file} not found.")
     config.update_from_yaml(config_file)
     config.print()

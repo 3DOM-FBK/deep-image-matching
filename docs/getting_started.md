@@ -13,9 +13,9 @@ The minimal required option are:
 
 Other optional parameters are:
 
-- `--quality` `-Q`  : the quality of the images to be matched. It can be `low`, `medium` or `high` (default: `high`).
-- `tiling` `-t`: if passed, the images are tiled in 4 parts and each part is matched separately. This is useful for large images (default: `Mone`).
-- `--strategy`: the strategy to use for matching the images. See [Matching strategies](#matching-strategies) for more details (default: `matching_lowres`)
+- `--strategy`: the strategy to use for matching the images. See [Matching strategies](#matching-strategies) section (default: `matching_lowres`)
+- `--quality` `-Q`  : the quality of the images to be matched. It can be `low`, `medium` or `high` See [Quality](#quality) section (default: `high`).
+- `tiling` `-t`: if passed, the images are tiled in 4 parts and each part is matched separately. This is useful for high-resolution images if you do not want to resize them. See [Tiling](#tiling) section (default: `None`).
 - `--images`: if the folder containing the image is not located in the project directory, you can manually specify the path to the folder containing the images If nothing is passed, deep_image_matching will look for a folder named "image" inside the project directory (default: `None`).
 - `--outs`: if you want the outputs to be save to a specific folder, different than the one set with '--dir', the path to the folder where the matches will be saved. If nothing is passed, the output will e saved in a folder 'results' inside the project direcoty (default: `None`)
 - `--upright`: if passed, try to find the best image rotation before running the matching (default: `False`).
@@ -43,15 +43,33 @@ python ./main.py --gui
 In the GUI, you can define the same parameters that are available in the CLI.
 The GUI loads the available configurations from `config.py` `config.py` file located in `/src/deep_image_matching`.
 
+## From a Jupyter notebook
+
+If you want to use Deep_Image_Matching from a Jupyter notebook, you can check the examples in the `notebooks` folder.
 
 ## Basic configuration
 
 ### Local feature extractor and matcher
 
-The combination of local feature extractor and matcher to be used for the matching is is defined by the `--config` option in the CLI. 
-All the available configurations are defined in the file `config.py` file located in `/src/deep_image_matching`. 
+The combination of local feature extractor and matcher to be used for the matching is is defined by the `--config` option in the CLI.
 
-You can see all the available configuration by running:
+Possible configurations are:
+
+- superpoint+lightglue
+- superpoint+lightglue_fast
+- superpoint+superglue
+- disk+lightglue
+- aliked+lightglue
+- orb+kornia_matcher (i.e., ORB (OpenCV) + Nearest Neighbor matcher)
+- sift+kornia_matcher (i.e., sift (OpenCV) + Nearest Neighbor matcher)
+- keynetaffnethardnet+kornia_matcher (i.e., keynetaffnethardnet (Kornia) + Nearest Neighbor matcher)
+- dedode+kornia_matcher (i.e., DeDoDe + Nearest Neighbor matcher)
+- loftr (detector-free matcher)
+- roma (detector-free matcher)
+
+
+
+All the available configurations are defined in the file `config.py` file located in `/src/deep_image_matching`. You can check them by running:
 
 ```bash
 python ./main.py --help
@@ -67,6 +85,7 @@ pprint(Config.get_config_names())
 ```
 
 From the GUI, you can chose the configuration from the drop-down menu.
+
 
 ### Matching strategies
 
@@ -98,6 +117,4 @@ The `Quality` parameter define the resolution at which the images are matched. T
 
 ### Advanced configuration
 
-The `config.py` file located in `/src/deep_image_matching` contains all the possible configuration options.
-
-The configuration is a dictionary of dictionaries, where the keys are the names of the configurations and the values are the configuration dictionaries.
+If you want to set any additional parameter, you can do it by editing the `config.yaml` file that must be located in the same directory of the `main.py` file.
