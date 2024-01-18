@@ -17,21 +17,15 @@
       "args": [
         "--dir",
         "datasets/easy_small",
-        // "datasets/belvedere_stereo",
-        // "datasets/casalbagliano",
-        // "/home/francesco/casalbagliano/C",
         "--config",
         "superpoint+lightglue",
         "--strategy",
-        // "matching_lowres",
-        "bruteforce",
+        "matching_lowres",
         "--quality",
         "medium",
         "--tiling",
-        "none",
+        "preselection",
         "-V"
-        // "--db_path",
-        // "/home/francesco/casalbagliano/B_extended/results_superpoint+lightglue_bruteforce_quality_high/reconstruction",
         // "--skip_reconstruction",
         // "--force",
       ]

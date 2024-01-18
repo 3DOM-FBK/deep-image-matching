@@ -1,13 +1,16 @@
 # User configuration file
 
 general:
+  tile_size: (3500, 2400)
+  geom_verification: none
   min_inliers_per_pair: 10
   min_inlier_ratio_per_pair: 0.1
 
 extractor:
-  name: "sift"
+  name: "superpoint"
   max_keypoints: 8000
 
 matcher:
   name: "lightglue"
   filter_threshold: 0.1
+  flash: False
