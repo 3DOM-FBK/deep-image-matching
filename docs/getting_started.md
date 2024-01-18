@@ -132,13 +132,9 @@ To control the tile size and the tile overlap, refer to the [Advanced configurat
 If you want to set any additional parameter, you can do it by editing the `config.yaml` file that must be located in the same directory of the `main.py` file.
 These are non-mandatory parameters that can be used to fine-tune the matching process, but none of them is specifically required to run the matching, as default values are set for all of them.
 
-The `config.yaml` file is a YAML file that contains all the parameters that can be set for the matching. The parameters are divided into different sections:
+The `config.yaml` file is a YAML file that contains all the parameters that can be set for the matching. The parameters are divided into different sections: 'general', 'extractor', 'matcher'.
 
-- `general`: contains general parameters for the processing (in addition to those defined by the CLI arguments).
-- `extractor`: contains the parameters that control the feature extractor with each approach.
-- `matcher`: contains the parameters for the matcher with each matching approach.
-
-The `general` section contains the following parameters:
+The `general` section contains general parameters for the processing (in addition to those defined by the CLI arguments):
 
 - `tile_size`: size of the tiles defined as a Tuple (width, height) in pixel (default `(2400, 2000)`),
 - `tile_overlap`: the tiles can be overlapped by a certain amount of pixel to avoid features/matches detected close to the tile borders (default `10`),
@@ -158,7 +154,7 @@ general:
   tile_overlap: 20
 ```
 
-The `extractor` and `matcher` sections **must contain the name** of the local feature extractor or the matcher that will be used for the matching and other additional. The name must be the same as the one used in the `--config` option in the CLI.
+The `extractor` section contains the parameters that control the feature extractor with each approach. The `extractor` section **must contain the name** of the local feature extractor that will be used for the matching and other additional parameters. The name must be the same as the one used in the `--config` option in the CLI.
 
 ```yaml
 extractor:
