@@ -15,6 +15,8 @@
 
 Multivew matcher for SfM software. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI. Feel free to collaborate!
 
+Check the documentation at <a href="https://3dom-fbk.github.io/deep-image-matching/">Docs</a>.
+
 **Please, note that `deep-image-matching` is under active development** and it is still in an experimental stage. If you find any bug, please open an issue.
 
 Key features:
@@ -81,7 +83,7 @@ From version 0.5.0, pycolmap can be installed on Windows too, so we are consider
 For more information, check the [documentation](https://3dom-fbk.github.io/deep-image-matching/installation/)
 
 ## Usage instructions
-[https://3dom-fbk.github.io/deep-image-matching/](https://3dom-fbk.github.io/deep-image-matching/)
+For quick-starting usage instructions, please check the documenation at [https://3dom-fbk.github.io/deep-image-matching/](https://3dom-fbk.github.io/deep-image-matching/getting_started)
 
 ### Merging databases with different local features
 
