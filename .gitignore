@@ -8,6 +8,8 @@ sandbox/
 src/deep_image_matching/thirdparty/weights
 fra_*
 sb_*
+config.yaml
+
 
 # VScode
 .vscode/

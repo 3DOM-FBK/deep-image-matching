@@ -1,14 +1,13 @@
-# Configuration file for Deep Image Matching
+# User configuration file
 
-# General
 general:
-  data_dir: /home/username/data
-  output_dir: /home/username/output
-  config: "superpoint+lightglue"
+  min_inliers_per_pair: 10
+  min_inlier_ratio_per_pair: 0.1
 
 extractor:
-
-
+  name: "superpoint"
+  max_keypoints: 8000
 
 matcher:
-  name: flann
+  name: "lightglue"
+  filter_threshold: 0.1

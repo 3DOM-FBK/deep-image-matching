@@ -1,9 +1,9 @@
-site_name: deep_image_matching
+site_name: Deep Image Matching
 repo_url: https://3DOM-FBK.github.io/deep-image-matching
 site_author: 3DOM
 
 theme:
-  name: material
+  name: readthedocs
   palette:
     primary: indigo
   font:
@@ -25,3 +25,10 @@ nav:
   - Home: index.md
   - Installation: installation.md
   - Getting started: getting_started.md
+  - API Reference:
+      - Configuration: config.md
+      - Extrctors: extractors.md
+      - Matchers: matchers.md
+      - IO: io.md
+      - Utils: utils.md
+  - About: about.md

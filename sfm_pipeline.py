@@ -10,6 +10,7 @@ from scripts.metashape.metashape_from_dim import export_to_metashape
 
 # Hard-coded flag for exporting the solution to Metashape (TODO: move to the configuration settings)
 do_export_to_metashape = False
+config_file = "config.yaml"
 
 # Parse arguments from command line
 args = parse_cli()
@@ -17,19 +18,12 @@ args = parse_cli()
 # Build configuration
 config = Config(args)
 
-# If you know what you are doing, you can update some config parameters directly updating the config dictionary (check the file config.py in the scr folder for the available parameters)
-# - General configuration
-config.general["min_inliers_per_pair"] = 10
-config.general["min_inlier_ratio_per_pair"] = 0.2
-
-# - SuperPoint configuration
-config.extractor["max_keypoints"] = 8000
-
-# - LightGue configuration
-config.matcher["filter_threshold"] = 0.1
+if config_file:
+    config.update_from_yaml(config_file)
+    config.print()
 
 # Save configuration to a json file in the output directory
-config.save_config()
+config.save()
 
 # For simplicity, save some of the configuration parameters in variables.
 imgs_dir = config.general["image_dir"]

@@ -2,6 +2,9 @@ import json
 from copy import deepcopy
 from enum import Enum
 from pathlib import Path
+from pprint import pprint
+
+import yaml
 
 from deep_image_matching import (
     GeometricVerification,
@@ -250,7 +253,7 @@ class Config:
         self.cfg["matcher"] = features_config["matcher"]
 
         self._config_file = user_conf["output_dir"] / "config.json"
-        self.save_config(self._config_file)
+        self.save(self._config_file)
 
     def as_dict(self):
         return self.cfg
@@ -417,7 +420,25 @@ class Config:
 
         return cfg
 
-    def save_config(self, path: Path = None):
+    def update_from_yaml(self, path: Path):
+        with open(path, "r") as file:
+            cfg = yaml.safe_load(file)
+
+        self.cfg["general"].update(cfg["general"])
+        self.cfg["extractor"].update(cfg["extractor"])
+        self.cfg["matcher"].update(cfg["matcher"])
+
+    def print(self):
+        print("Config general:")
+        pprint(self.general)
+        print("\n")
+        print("Config extractor:")
+        pprint(self.extractor)
+        print("\n")
+        print("Config matcher:")
+        pprint(self.matcher)
+
+    def save(self, path: Path = None):
         """Save configuration to file"""
 
         if path is None:

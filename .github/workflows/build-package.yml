@@ -29,8 +29,6 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Getting repository
         uses: actions/checkout@v3
-        with:
-          args: git submodule update --init --recursive
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
