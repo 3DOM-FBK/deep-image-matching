@@ -9,7 +9,7 @@ src/deep_image_matching/thirdparty/weights
 fra_*
 sb_*
 config.yaml
-
+run_casalbagliano.sh
 
 # VScode
 .vscode/
