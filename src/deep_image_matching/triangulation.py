@@ -77,39 +77,6 @@ def import_features(
     db.close()
 
 
-def import_matches_hloc(
-    image_ids: Dict[str, int],
-    database_path: Path,
-    matches_path: Path,
-    pairs_path: Path,
-    min_match_score: Optional[float] = None,
-    skip_geometric_verification: bool = False,
-):
-    logger.info("Importing matches into the database...")
-
-    with open(str(pairs_path), "r") as f:
-        pairs = [p.split() for p in f.readlines()]
-
-    db = COLMAPDatabase.connect(database_path)
-
-    matched = set()
-    for name0, name1 in tqdm(pairs):
-        id0, id1 = image_ids[name0], image_ids[name1]
-        if len({(id0, id1), (id1, id0)} & matched) > 0:
-            continue
-        matches, scores = get_matches(matches_path, name0, name1)
-        if min_match_score:
-            matches = matches[scores > min_match_score]
-        db.add_matches(id0, id1, matches)
-        matched |= {(id0, id1), (id1, id0)}
-
-        if skip_geometric_verification:
-            db.add_two_view_geometry(id0, id1, matches)
-
-    db.commit()
-    db.close()
-
-
 def import_matches(
     image_ids: Dict[str, int],
     database_path: Path,
@@ -159,7 +126,11 @@ def estimation_and_geometric_verification(
     with OutputCapture(verbose):
         with pycolmap.ostream():
             pycolmap.verify_matches(
-                database_path, pairs_path, max_num_trials=20000, min_inlier_ratio=0.1
+                database_path,
+                pairs_path,
+                pycolmap.TwoViewGeometryOptions(
+                    compute_relative_pose=True, min_num_inliers=15
+                ),
             )
 
 

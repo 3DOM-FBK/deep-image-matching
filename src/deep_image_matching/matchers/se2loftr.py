@@ -1,24 +1,22 @@
 from pathlib import Path
-from copy import deepcopy
+from typing import Tuple
 
 import cv2
+import h5py
 import kornia as K
 import numpy as np
 import torch
-from kornia import feature as KF
-import h5py
 
-from .. import logger
-from ..utils.consts import Quality, TileSelection
+# from ..thirdparty.se2loftr.src.utils.misc import lower_config
+from yacs.config import CfgNode as CN
+
+from .. import Quality, TileSelection, logger
+from ..io.h5 import get_features
+from ..thirdparty.se2loftr.configs.loftr.outdoor import loftr_ds_e2_dense_8rot
+from ..thirdparty.se2loftr.src.loftr import LoFTR
 from ..utils.tiling import Tiler
 from .matcher_base import FeaturesDict, MatcherBase
-from typing import Tuple
-from ..io.h5 import get_features
 
-from ..thirdparty.se2loftr.src.loftr import LoFTR, default_cfg
-#from ..thirdparty.se2loftr.src.utils.misc import lower_config
-from yacs.config import CfgNode as CN
-from ..thirdparty.se2loftr.configs.loftr.outdoor import loftr_ds_e2_dense_8rot
 
 class SE2LOFTRMatcher(MatcherBase):
     def __init__(self, config={}) -> None:
@@ -26,16 +24,24 @@ class SE2LOFTRMatcher(MatcherBase):
 
         super().__init__(config)
 
-        #_default_cfg = deepcopy(default_cfg)
-        #_default_cfg['coarse']['temp_bug_fix'] = False  # set to False when using the old ckpt
+        # _default_cfg = deepcopy(default_cfg)
+        # _default_cfg['coarse']['temp_bug_fix'] = False  # set to False when using the old ckpt
 
-        _used_cfg = self._lower_config(loftr_ds_e2_dense_8rot.cfg)['loftr']
-        _used_cfg['coarse']['temp_bug_fix'] = True  # set to False when using the old ckpt
+        _used_cfg = self._lower_config(loftr_ds_e2_dense_8rot.cfg)["loftr"]
+        _used_cfg["coarse"][
+            "temp_bug_fix"
+        ] = True  # set to False when using the old ckpt
 
-        #se2loftr_path = Path(__file__).parent.parent / "thirdparty" / "se2loftr" / "loftr_weights" / "outdoor_ds.ckpt" # Path to loftr weights
-        se2loftr_path = Path(__file__).parent.parent / "thirdparty" / "weights" / "se2loftr_weights" / "8rot.ckpt" # Path to se2loftr weights
+        # se2loftr_path = Path(__file__).parent.parent / "thirdparty" / "se2loftr" / "loftr_weights" / "outdoor_ds.ckpt" # Path to loftr weights
+        se2loftr_path = (
+            Path(__file__).parent.parent
+            / "thirdparty"
+            / "weights"
+            / "se2loftr_weights"
+            / "8rot.ckpt"
+        )  # Path to se2loftr weights
         self.matcher = LoFTR(config=_used_cfg)
-        self.matcher.load_state_dict(torch.load(str(se2loftr_path))['state_dict'])
+        self.matcher.load_state_dict(torch.load(str(se2loftr_path))["state_dict"])
         self.matcher = self.matcher.eval().to(device=self._device)
 
         self.grayscale = True
@@ -75,19 +81,23 @@ class SE2LOFTRMatcher(MatcherBase):
         if image.shape[1] > 2:
             image = K.color.rgb_to_grayscale(image)
         return image
-    
-    def _update_features(self, feature_path, im0_name, im1_name, new_keypoints0, new_keypoints1, matches0) -> None:
-        for i, im_name, new_keypoints in zip([0, 1], [im0_name, im1_name], [new_keypoints0, new_keypoints1]):
+
+    def _update_features(
+        self, feature_path, im0_name, im1_name, new_keypoints0, new_keypoints1, matches0
+    ) -> None:
+        for i, im_name, new_keypoints in zip(
+            [0, 1], [im0_name, im1_name], [new_keypoints0, new_keypoints1]
+        ):
             features = get_features(feature_path, im_name)
             existing_keypoints = features["keypoints"]
-            
+
             if len(existing_keypoints.shape) == 1:
                 features["keypoints"] = new_keypoints
                 with h5py.File(feature_path, "r+", libver="latest") as fd:
                     del fd[im_name]
                     grp = fd.create_group(im_name)
                     for k, v in features.items():
-                        if k == 'im_path' or k == 'feature_path':
+                        if k == "im_path" or k == "feature_path":
                             grp.create_dataset(k, data=str(v))
                         if isinstance(v, np.ndarray):
                             grp.create_dataset(k, data=v)
@@ -95,12 +105,12 @@ class SE2LOFTRMatcher(MatcherBase):
             else:
                 n_exisiting_keypoints = existing_keypoints.shape[0]
                 features["keypoints"] = np.vstack((existing_keypoints, new_keypoints))
-                matches0[:,i] = matches0[:,i] + n_exisiting_keypoints
+                matches0[:, i] = matches0[:, i] + n_exisiting_keypoints
                 with h5py.File(feature_path, "r+", libver="latest") as fd:
                     del fd[im_name]
                     grp = fd.create_group(im_name)
                     for k, v in features.items():
-                        if k == 'im_path' or k == 'feature_path':
+                        if k == "im_path" or k == "feature_path":
                             grp.create_dataset(k, data=str(v))
                         if isinstance(v, np.ndarray):
                             grp.create_dataset(k, data=v)
@@ -111,7 +121,6 @@ class SE2LOFTRMatcher(MatcherBase):
         feats0: FeaturesDict,
         feats1: FeaturesDict,
     ):
-
         """Matches keypoints and descriptors in two given images
         (no matter if they are tiles or full-res images) using
         the LoFTR algorithm.
@@ -122,7 +131,7 @@ class SE2LOFTRMatcher(MatcherBase):
 
         """
 
-        feature_path = feats0['feature_path']
+        feature_path = feats0["feature_path"]
 
         im_path0 = feats0["im_path"]
         im_path1 = feats1["im_path"]
@@ -142,26 +151,26 @@ class SE2LOFTRMatcher(MatcherBase):
             height1, width1 = image1.shape[:2]
 
         ## Resize images if needed
-        #image0 = self._resize_image(self._quality, image0)
-        #image1 = self._resize_image(self._quality, image1)
+        # image0 = self._resize_image(self._quality, image0)
+        # image1 = self._resize_image(self._quality, image1)
 
         # Inference with LoFTR and get prediction
         with torch.no_grad(), torch.inference_mode():
             img0_raw = cv2.resize(image0, (640, 480))
             img1_raw = cv2.resize(image1, (640, 480))
-            img0 = torch.from_numpy(img0_raw)[None][None].cuda() / 255.
-            img1 = torch.from_numpy(img1_raw)[None][None].cuda() / 255.
-            batch = {'image0': img0, 'image1': img1}
+            img0 = torch.from_numpy(img0_raw)[None][None].cuda() / 255.0
+            img1 = torch.from_numpy(img1_raw)[None][None].cuda() / 255.0
+            batch = {"image0": img0, "image1": img1}
             self.matcher(batch)
-            mkpts0 = batch['mkpts0_f'].cpu().numpy()
-            mkpts1 = batch['mkpts1_f'].cpu().numpy()
-            mconf = batch['mconf'].cpu().numpy()
+            mkpts0 = batch["mkpts0_f"].cpu().numpy()
+            mkpts1 = batch["mkpts1_f"].cpu().numpy()
+            mconf = batch["mconf"].cpu().numpy()
 
             # Upscale features to original size
-            mkpts0[:,0] = mkpts0[:,0] * width0/640
-            mkpts0[:,1] = mkpts0[:,1] * height0/480
-            mkpts1[:,0] = mkpts1[:,0] * width1/640
-            mkpts1[:,1] = mkpts1[:,1] * height1/480
+            mkpts0[:, 0] = mkpts0[:, 0] * width0 / 640
+            mkpts0[:, 1] = mkpts0[:, 1] * height0 / 480
+            mkpts1[:, 0] = mkpts1[:, 0] * width1 / 640
+            mkpts1[:, 1] = mkpts1[:, 1] * height1 / 480
 
         features0 = FeaturesDict(keypoints=mkpts0)
         features1 = FeaturesDict(keypoints=mkpts1)
@@ -172,7 +181,14 @@ class SE2LOFTRMatcher(MatcherBase):
         # Create a 1-to-1 matching array
         matches0 = np.arange(mkpts0.shape[0])
         matches = np.hstack((matches0.reshape((-1, 1)), matches0.reshape((-1, 1))))
-        self._update_features(feature_path, Path(im_path0).name, Path(im_path1).name, mkpts0, mkpts1, matches)
+        self._update_features(
+            feature_path,
+            Path(im_path0).name,
+            Path(im_path1).name,
+            mkpts0,
+            mkpts1,
+            matches,
+        )
 
         return matches
 

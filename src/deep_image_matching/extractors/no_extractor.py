@@ -10,23 +10,10 @@ from ..utils.image import Image
 from .extractor_base import ExtractorBase
 
 
-# TODO: skip the loading of hloc extractor, but implement it directly here.
 class NoExtractor(ExtractorBase):
-    default_conf = {
-        "name:": "alike",
-        "model": "alike-s",
-        "device": "cuda",
-        "top_k": 15000,
-        "scores_th": 0.2,
-        "n_limit": 15000,
-        "subpixel": True,
-    }
-    required_inputs = []
-    grayscale = False
-    descriptor_size = 96
+    default_conf = {}
 
     def __init__(self, config: dict):
-        # Init the base class
         super().__init__(config)
 
     def extract(self, img: Union[Image, Path, str]) -> np.ndarray:
@@ -78,7 +65,6 @@ class NoExtractor(ExtractorBase):
                         grp.create_dataset(k, data=str(v))
                     if isinstance(v, np.ndarray):
                         grp.create_dataset(k, data=v)
-
             except OSError as error:
                 if "No space left on device" in error.args[0]:
                     logger.error(

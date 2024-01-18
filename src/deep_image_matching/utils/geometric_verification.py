@@ -4,8 +4,7 @@ from typing import Tuple
 import cv2
 import numpy as np
 
-from .. import logger
-from .consts import GeometricVerification
+from deep_image_matching import GeometricVerification, logger
 
 
 def geometric_verification(
@@ -19,6 +18,7 @@ def geometric_verification(
     error_type: str = "sampson",
     symmetric_error_check: bool = True,
     enable_degeneracy_check: bool = True,
+    quiet: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Computes the fundamental matrix and inliers between the two images using geometric verification.
@@ -48,8 +48,9 @@ def geometric_verification(
     F = None
     inlMask = np.ones(len(kpts0), dtype=bool)
 
-    if len(kpts0) < 4:
-        logger.warning("Not enough matches to perform geometric verification.")
+    if len(kpts0) < 8:
+        if not quiet:
+            logger.warning("Not enough matches to perform geometric verification.")
         return F, inlMask
 
     if method == GeometricVerification.PYDEGENSAC:
@@ -74,14 +75,16 @@ def geometric_verification(
                 symmetric_error_check=symmetric_error_check,
                 enable_degeneracy_check=enable_degeneracy_check,
             )
-            logger.debug(
-                f"Pydegensac found {inlMask.sum()} inliers ({inlMask.sum()*100/len(kpts0):.2f}%)"
-            )
+            if not quiet:
+                logger.debug(
+                    f"Pydegensac found {inlMask.sum()} inliers ({inlMask.sum()*100/len(kpts0):.2f}%)"
+                )
         except Exception as err:
             # Fall back to MAGSAC++ if pydegensac fails
-            logger.warning(
-                f"{err}. Unable to perform geometric verification with Pydegensac. Trying using MAGSAC++ (OpenCV) instead."
-            )
+            if not quiet:
+                logger.warning(
+                    f"{err}. Unable to perform geometric verification with Pydegensac. Trying using MAGSAC++ (OpenCV) instead."
+                )
             fallback = True
 
     if method == GeometricVerification.MAGSAC or fallback:
@@ -90,9 +93,10 @@ def geometric_verification(
                 kpts0, kpts1, cv2.USAC_MAGSAC, threshold, confidence, max_iters
             )
             inlMask = (inliers > 0).squeeze()
-            logger.info(
-                f"MAGSAC++ found {inlMask.sum()} inliers ({inlMask.sum()*100/len(kpts0):.2f}%)"
-            )
+            if not quiet:
+                logger.debug(
+                    f"MAGSAC++ found {inlMask.sum()} inliers ({inlMask.sum()*100/len(kpts0):.2f}%)"
+                )
         except Exception as err:
             logger.error(
                 f"{err}. Unable to perform geometric verification with MAGSAC++."

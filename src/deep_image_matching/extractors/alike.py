@@ -5,7 +5,6 @@ from ..thirdparty.alike.alike import ALike, configs
 from .extractor_base import ExtractorBase
 
 
-# TODO: skip the loading of hloc extractor, but implement it directly here.
 class AlikeExtractor(ExtractorBase):
     default_conf = {
         "name:": "alike",

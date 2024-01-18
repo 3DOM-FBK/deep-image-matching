@@ -1,0 +1,14 @@
+# Configuration file for Deep Image Matching
+
+# General
+general:
+  data_dir: /home/username/data
+  output_dir: /home/username/output
+  config: "superpoint+lightglue"
+
+extractor:
+
+
+
+matcher:
+  name: flann

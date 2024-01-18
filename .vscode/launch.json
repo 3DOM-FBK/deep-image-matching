@@ -15,21 +15,25 @@
       "program": "${file}",
       "console": "integratedTerminal",
       "args": [
+        "--dir",
+        "datasets/easy_small",
+        // "datasets/belvedere_stereo",
+        // "datasets/casalbagliano",
+        // "/home/francesco/casalbagliano/C",
         "--config",
-        // "superpoint+lightglue",
-        "roma",
-        "--images",
-        "data/belv_lingua_easy",
-        "--quality",
-        "low",
-        "--tiling",
-        "preselection",
+        "superpoint+lightglue",
         "--strategy",
-        "low",
-        // "--upright",
-        "--skip_reconstruction",
-        "--force",
+        // "matching_lowres",
+        "bruteforce",
+        "--quality",
+        "medium",
+        "--tiling",
+        "none",
         "-V"
+        // "--db_path",
+        // "/home/francesco/casalbagliano/B_extended/results_superpoint+lightglue_bruteforce_quality_high/reconstruction",
+        // "--skip_reconstruction",
+        // "--force",
       ]
     },
     {
@@ -39,6 +43,19 @@
       "program": "${file}",
       "console": "integratedTerminal",
       "args": ["--gui"]
+    },
+    {
+      "name": "Python: dense",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "args": [
+        "--sfm_dir",
+        "/home/francesco/casalbagliano/subset_A/deep_image_matching/results_superpoint+lightglue_bruteforce_quality_high",
+        "--dense_dir",
+        "/home/francesco/casalbagliano/subset_A/deep_image_matching/results_roma_sequential_quality_low"
+      ]
     }
   ]
 }

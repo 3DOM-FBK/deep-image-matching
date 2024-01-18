@@ -1,16 +1,16 @@
-import os
-import glob
 import argparse
-import numpy as np
-
+import glob
+import os
 from copy import deepcopy
-from tqdm import tqdm
 from pathlib import Path
-from src.deep_image_matching.utils.database import (
+
+import numpy as np
+from deep_image_matching.utils.database import (
     COLMAPDatabase,
     blob_to_array,
     pair_id_to_image_ids,
 )
+from tqdm import tqdm
 
 
 def parse_args():
@@ -18,11 +18,27 @@ def parse_args():
         description="Merge all COLMAP databases of the input folder."
     )
 
-    parser.add_argument("-i", "--input", type=str, help="Folder containing COLMAP databases to join", required=True)
-    parser.add_argument("-o", "--output", type=str, help="Output folder", required=True)
+    parser.add_argument(
+        "-i",
+        "--input",
+        type=str,
+        help="Folder containing COLMAP databases to join",
+        required=True,
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        help="Output folder (if None, use the input folder)",
+        default=None,
+    )
     args = parser.parse_args()
 
+    if args.output is None:
+        args.output = args.input
+
     return args
+
 
 def MergeColmapDatabases(db_path1: Path, db_path2: Path, db_joined: Path) -> None:
     print(f"\nMerging {db_path1.name} and {db_path2.name} into {db_joined.name}")
@@ -46,7 +62,9 @@ def MergeColmapDatabases(db_path1: Path, db_path2: Path, db_joined: Path) -> Non
     )
 
     matches2 = {}
-    for pair_id, r, c, data in db2.execute("SELECT pair_id, rows, cols, data FROM matches"):
+    for pair_id, r, c, data in db2.execute(
+        "SELECT pair_id, rows, cols, data FROM matches"
+    ):
         if data is not None:
             pair_id = pair_id_to_image_ids(pair_id)
             matches2[(int(pair_id[0]), int(pair_id[1]))] = blob_to_array(
@@ -90,7 +108,9 @@ def MergeColmapDatabases(db_path1: Path, db_path2: Path, db_joined: Path) -> Non
 
     # Read existing matches from database 1
     matches1 = {}
-    for pair_id, r, c, data in db1.execute("SELECT pair_id, rows, cols, data FROM matches"):
+    for pair_id, r, c, data in db1.execute(
+        "SELECT pair_id, rows, cols, data FROM matches"
+    ):
         if data is not None:
             pair_id = pair_id_to_image_ids(pair_id)
             matches1[(int(pair_id[0]), int(pair_id[1]))] = blob_to_array(
@@ -171,6 +191,7 @@ def MergeColmapDatabases(db_path1: Path, db_path2: Path, db_joined: Path) -> Non
 
 def main():
     args = parse_args()
+
     databases_dir = Path(args.input)
     db_out = Path(args.output) / "joined.db"
     db_temp = db_out.parent / "temp.db"
@@ -198,7 +219,7 @@ def main():
             MergeColmapDatabases(db0, db1, db_out)
             os.remove(db_temp)
             os.rename(db_out, db_temp)
-    
+
     os.rename(db_temp, db_out)
 
 

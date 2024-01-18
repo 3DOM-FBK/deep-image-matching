@@ -1,14 +1,69 @@
+import sys
+from copy import copy
+
 import numpy as np
 import torch
+from torch import nn
 
-from ..hloc.extractors.superpoint import SuperPoint
+from ..thirdparty.SuperGluePretrainedNetwork.models import superpoint
 from .extractor_base import ExtractorBase
 
+# TODO: Use Superpoint implementation from LightGlue
 
-# TODO: skip the loading of hloc extractor, but implement it directly here.
+
+# The original keypoint sampling is incorrect. We patch it here but
+# we don't fix it upstream to not impact exisiting evaluations.
+def sample_descriptors_fix_sampling(keypoints, descriptors, s: int = 8):
+    """Interpolate descriptors at keypoint locations"""
+    b, c, h, w = descriptors.shape
+    keypoints = (keypoints + 0.5) / (keypoints.new_tensor([w, h]) * s)
+    keypoints = keypoints * 2 - 1  # normalize to (-1, 1)
+    descriptors = torch.nn.functional.grid_sample(
+        descriptors, keypoints.view(b, 1, -1, 2), mode="bilinear", align_corners=False
+    )
+    descriptors = torch.nn.functional.normalize(
+        descriptors.reshape(b, c, -1), p=2, dim=1
+    )
+    return descriptors
+
+
+class SuperPoint(nn.Module):
+    default_conf = {
+        "nms_radius": 4,
+        "keypoint_threshold": 0.005,
+        "max_keypoints": -1,
+        "remove_borders": 4,
+        "fix_sampling": True,
+    }
+    required_inputs = ["image"]
+    detection_noise = 2.0
+
+    def __init__(self, conf):
+        """Perform some logic and call the _init method of the child model."""
+        super().__init__()
+        self.conf = conf = {**self.default_conf, **conf}
+        self.required_inputs = copy(self.required_inputs)
+        self._init(conf)
+        sys.stdout.flush()
+
+    def forward(self, data):
+        """Check the data and call the _forward method of the child model."""
+        for key in self.required_inputs:
+            assert key in data, "Missing key {} in data".format(key)
+        return self._forward(data)
+
+    def _init(self, conf):
+        if conf["fix_sampling"]:
+            superpoint.sample_descriptors = sample_descriptors_fix_sampling
+        self.net = superpoint.SuperPoint(conf)
+
+    def _forward(self, data):
+        return self.net(data)
+
+
 class SuperPointExtractor(ExtractorBase):
     default_conf = {
-        "name:": "superpoint",
+        "name": "superpoint",
         "nms_radius": 4,
         "keypoint_threshold": 0.005,
         "max_keypoints": -1,

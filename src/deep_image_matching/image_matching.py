@@ -9,15 +9,21 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from . import Timer, extractors, logger, matchers
+from . import (
+    GeometricVerification,
+    Quality,
+    TileSelection,
+    Timer,
+    extractors,
+    logger,
+    matchers,
+)
 from .extractors.extractor_base import extractor_loader
 from .extractors.superpoint import SuperPointExtractor
-from .io.h5 import get_features, get_matches
+from .io.h5 import get_features
 from .matchers.lightglue import LightGlueMatcher
 from .matchers.matcher_base import matcher_loader
 from .pairs_generator import PairsGenerator
-from .utils.consts import GeometricVerification, Quality, TileSelection
-from .utils.geometric_verification import geometric_verification
 from .utils.image import ImageList
 
 
@@ -27,21 +33,6 @@ def make_correspondence_matrix(matches: np.ndarray) -> np.ndarray:
     matrix = np.hstack((n_tie_points, matches.reshape((-1, 1))))
     correspondences = matrix[~np.any(matrix == -1, axis=1)]
     return correspondences
-
-
-def apply_geometric_verification(
-    kpts0: np.ndarray, kpts1: np.ndarray, correspondences: np.ndarray, config: dict
-) -> np.ndarray:
-    mkpts0 = kpts0[correspondences[:, 0]]
-    mkpts1 = kpts1[correspondences[:, 1]]
-    _, inlMask = geometric_verification(
-        kpts0=mkpts0,
-        kpts1=mkpts1,
-        method=config["geom_verification"],
-        threshold=config["gv_threshold"],
-        confidence=config["gv_confidence"],
-    )
-    return correspondences[inlMask]
 
 
 def get_pairs_from_file(pair_file: Path) -> list:
@@ -68,6 +59,10 @@ class ImageMatching:
         "hide_matching_track": True,
         "do_viz_tiles": False,
     }
+    # pair_file=pair_file,
+    # retrieval_option=retrieval_option,
+    # overlap=overlap,
+    # existing_colmap_model=existing_colmap_model,
 
     def __init__(
         # TODO: add default values for not necessary parameters
@@ -75,12 +70,13 @@ class ImageMatching:
         imgs_dir: Path,
         output_dir: Path,
         matching_strategy: str,
-        retrieval_option: str,
         local_features: str,
         matching_method: str,
+        retrieval_option: str = None,
         pair_file: Path = None,
+        overlap: int = None,
+        existing_colmap_model: Path = None,
         custom_config: dict = {},
-        overlap: int = 1,
     ):
         self.image_dir = Path(imgs_dir)
         self.output_dir = Path(output_dir)
@@ -88,8 +84,9 @@ class ImageMatching:
         self.retrieval_option = retrieval_option
         self.local_features = local_features
         self.matching_method = matching_method
-        self.pair_file = Path(pair_file) if pair_file is not None else None
+        self.pair_file = Path(pair_file) if pair_file else None
         self.overlap = overlap
+        self.existing_colmap_model = existing_colmap_model
 
         # Merge default and custom config
         self.custom_config = custom_config
@@ -112,6 +109,16 @@ class ImageMatching:
             else:
                 if not self.pair_file.exists():
                     raise ValueError(f"File {self.pair_file} does not exist")
+        elif retrieval_option == "covisibility":
+            if self.existing_colmap_model is None:
+                raise ValueError(
+                    "'existing_colmap_model' option is required when 'strategy' is set to covisibility"
+                )
+            else:
+                if not self.existing_colmap_model.exists():
+                    raise ValueError(
+                        f"File {self.existing_colmap_model} does not exist"
+                    )
 
         # Initialize ImageList class
         self.image_list = ImageList(imgs_dir)
@@ -155,6 +162,10 @@ class ImageMatching:
         logger.info(f"  Output folder: {self.output_dir}")
         logger.info(f"  Number of images: {len(self.image_list)}")
         logger.info(f"  Matching strategy: {self.matching_strategy}")
+        logger.info(f"  Image quality: {self.custom_config['general']['quality']}")
+        logger.info(
+            f"  Tile selection: {self.custom_config['general']['tile_selection']}"
+        )
         logger.info(f"  Retrieval option: {self.retrieval_option}")
         logger.info(f"  Overlap: {self.overlap}")
         logger.info(f"  Feature extraction method: {self.local_features}")
@@ -164,7 +175,7 @@ class ImageMatching:
     def img_names(self):
         return self.image_list.img_names
 
-    def generate_pairs(self) -> Path:
+    def generate_pairs(self, **kwargs) -> Path:
         if self.pair_file is not None and self.matching_strategy == "custom_pairs":
             if not self.pair_file.exists():
                 raise FileExistsError(f"File {self.pair_file} does not exist")
@@ -183,6 +194,8 @@ class ImageMatching:
                 self.overlap,
                 self.image_dir,
                 self.output_dir,
+                self.existing_colmap_model,
+                **kwargs,
             )
             self.pairs = pairs_generator.run()
 
@@ -300,7 +313,7 @@ class ImageMatching:
 
         return feature_path
 
-    def match_pairs(self, feature_path: Path) -> Path:
+    def match_pairs(self, feature_path: Path, try_full_image: bool = False) -> Path:
         timer = Timer(log_level="debug")
 
         logger.info(f"Matching features with {self.matching_method}...")
@@ -318,9 +331,12 @@ class ImageMatching:
         logger.info("Matching features...")
         logger.info("")
         for i, pair in enumerate(tqdm(self.pairs)):
-            logger.debug(f"Matching image pair: {pair[0].name} - {pair[1].name}")
-            im0 = self.image_dir / pair[0].name
-            im1 = self.image_dir / pair[1].name
+            name0 = pair[0].name if isinstance(pair[0], Path) else pair[0]
+            name1 = pair[1].name if isinstance(pair[1], Path) else pair[1]
+            im0 = self.image_dir / name0
+            im1 = self.image_dir / name1
+
+            logger.debug(f"Matching image pair: {name0} - {name1}")
 
             # Run matching
             matches = self._matcher.match(
@@ -328,39 +344,18 @@ class ImageMatching:
                 matches_path=matches_path,
                 img0=im0,
                 img1=im1,
+                try_full_image=try_full_image,
             )
             timer.update("Match pair")
 
-            if matches is None:
-                continue
+            # NOTE: Geometric verif. has been moved to the end of the matching process
+            # if matches is None:
+            #     continue
 
-            # Get original keypoints from h5 file
-            kpts0 = get_features(feature_path, im0.name)["keypoints"]
-            kpts1 = get_features(feature_path, im1.name)["keypoints"]
-            correspondences = get_matches(matches_path, im0.name, im1.name)
-            timer.update("Get matches")
-
-            # Apply geometric verification
-            correspondences_cleaned = apply_geometric_verification(
-                kpts0=kpts0,
-                kpts1=kpts1,
-                correspondences=correspondences,
-                config=self.custom_config["general"],
-            )
-            timer.update("Geom verif")
-
-            # Update matches in h5 file
-            with h5py.File(str(matches_path), "a", libver="latest") as fd:
-                group = fd.require_group(im0.name)
-                if im1.name in group:
-                    del group[im1.name]
-                group.create_dataset(im1.name, data=correspondences_cleaned)
-            logger.debug(f"Pairs: {pair[0].name} - {pair[1].name} done.")
-            timer.update("h5 save")
+        # TODO: Clean up features with no matches
 
         torch.cuda.empty_cache()
         timer.print("matching")
-        logger.info("Matching done.")
 
         return matches_path
 
