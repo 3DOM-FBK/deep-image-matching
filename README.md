@@ -30,7 +30,7 @@ Key features:
 | &check; SuperPoint                 | &check; Lightglue (with Superpoint, Disk, and ALIKED)     |
 | &check; DISK                       | &check; SuperGlue (with Superpoint)                       |
 | &check; ALIKE                      | &check; LoFTR                                             |
-| &check; ALIKED                     | &#x2610; SE2-LoFTR                                         |
+| &check; ALIKED                     | &#x2610; SE2-LoFTR                                        |
 | &#x2610; Superpoint free           | &check; Nearest neighbor (with KORNIA Descriptor Matcher) |
 | &check; KeyNet + OriNet + HardNet8 | &check; RoMa                                              |
 | &check; ORB (opencv)               | &#x2610; GlueStick                                        |
@@ -44,7 +44,7 @@ Key features:
 | &check; Agisoft Metashape                     |
 | &check; Software that supports bundler format |
 
-## Colab demo ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/deep_image_matching_example.ipynb)
+## Colab demo ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/run_from_bash_example.ipynb)
 
 Want to run on a sample dataset? Try the Colab demo!
 
