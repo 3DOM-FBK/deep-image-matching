@@ -1,12 +1,12 @@
-import cv2
-import torch
-import numpy as np
-
 from pathlib import Path
-from .extractor_base import ExtractorBase, FeaturesDict
 
-from ..thirdparty.DeDoDe.DeDoDe import dedode_detector_L, dedode_descriptor_G
+import cv2
+import numpy as np
+import torch
+
+from ..thirdparty.DeDoDe.DeDoDe import dedode_descriptor_G, dedode_detector_L
 from ..thirdparty.DeDoDe.DeDoDe.utils import *
+from .extractor_base import ExtractorBase, FeaturesDict
 
 
 class DeDoDe(ExtractorBase):
@@ -25,39 +25,67 @@ class DeDoDe(ExtractorBase):
         cfg = self._config.get("extractor")
 
         # Load extractor
-        if not Path("./src/deep_image_matching/thirdparty/weights/dedode/dedode_detector_L.pth").is_file() \
-            or not Path("./src/deep_image_matching/thirdparty/weights/dedode/dedode_descriptor_G.pth").is_file():
-            print("DeDoDe weights not found:\n dedode_detector_L.pth and/or dedode_detector_L.pth missing.")
-            print("Please download them and put them in ./src/deep_image_matching/thirdparty/weights/dedode")
+        if (
+            not Path(
+                "./src/deep_image_matching/thirdparty/weights/dedode/dedode_detector_L.pth"
+            ).is_file()
+            or not Path(
+                "./src/deep_image_matching/thirdparty/weights/dedode/dedode_descriptor_G.pth"
+            ).is_file()
+        ):
+            print(
+                "DeDoDe weights not found:\n dedode_detector_L.pth and/or dedode_detector_L.pth missing."
+            )
+            print(
+                "Please download them and put them in ./src/deep_image_matching/thirdparty/weights/dedode"
+            )
             print("Exit")
             quit()
 
-        self.detector = dedode_detector_L(weights = torch.load("./src/deep_image_matching/thirdparty/weights/dedode/dedode_detector_L.pth", map_location = self._device))
-        self.descriptor = dedode_descriptor_G(weights = torch.load("./src/deep_image_matching/thirdparty/weights/dedode/dedode_descriptor_G.pth", map_location = self._device))
+        self.detector = dedode_detector_L(
+            weights=torch.load(
+                "./src/deep_image_matching/thirdparty/weights/dedode/dedode_detector_L.pth",
+                map_location=self._device,
+            )
+        )
+        self.descriptor = dedode_descriptor_G(
+            weights=torch.load(
+                "./src/deep_image_matching/thirdparty/weights/dedode/dedode_descriptor_G.pth",
+                map_location=self._device,
+            )
+        )
 
         import torchvision.transforms as transforms
-        self.normalizer = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        self.num_features=cfg["n_features"]
+
+        self.normalizer = transforms.Normalize(
+            mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+        )
+        self.num_features = cfg["n_features"]
 
     @torch.no_grad()
     def _extract(self, image: np.ndarray) -> np.ndarray:
         H, W, C = image.shape
         resized_image = cv2.resize(image, (784, 784))
-        standard_im = np.array(resized_image)/255.
-        norm_image = self.normalizer(torch.from_numpy(standard_im).permute(2,0,1)).float().to(self._device)[None]
+        standard_im = np.array(resized_image) / 255.0
+        norm_image = (
+            self.normalizer(torch.from_numpy(standard_im).permute(2, 0, 1))
+            .float()
+            .to(self._device)[None]
+        )
         batch = {"image": norm_image}
-        detections_A = self.detector.detect(batch, num_keypoints = self.num_features)
+        detections_A = self.detector.detect(batch, num_keypoints=self.num_features)
         keypoints_A, P_A = detections_A["keypoints"], detections_A["confidence"]
-        description_A = self.descriptor.describe_keypoints(batch, keypoints_A)["descriptions"]
+        description_A = self.descriptor.describe_keypoints(batch, keypoints_A)[
+            "descriptions"
+        ]
         kpts = keypoints_A.cpu().detach().numpy()[0]
         des = description_A.cpu().detach().numpy()[0]
 
-        kpts[:,0] =  ((kpts[:,0] + 1) * W / 2)
-        kpts[:,1] =  ((kpts[:,1] + 1) * H / 2)
+        kpts[:, 0] = (kpts[:, 0] + 1) * W / 2
+        kpts[:, 1] = (kpts[:, 1] + 1) * H / 2
         feats = FeaturesDict(keypoints=kpts, descriptors=des.T)
 
         return feats
-
 
     def _frame2tensor(self, image: np.ndarray, device: str = "cuda"):
         """

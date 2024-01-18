@@ -7,9 +7,10 @@ import numpy as np
 import torch
 from PIL import Image
 
-from .. import Timer, logger
+from .. import TileSelection, Timer, logger
+from ..io.h5 import get_features
 from ..thirdparty.RoMa.roma import roma_outdoor
-from ..utils.consts import TileSelection
+from ..utils.geometric_verification import geometric_verification
 from ..utils.tiling import Tiler
 from .matcher_base import DetectorFreeMatcherBase, tile_selection
 
@@ -31,8 +32,9 @@ class RomaMatcher(DetectorFreeMatcherBase):
 
     grayscale = False
     as_float = True
-    max_tile_size = 600  # 448
+    max_tile_size = 448
     max_tile_pairs = 50
+    keep_tiles = False
 
     def __init__(self, config={}) -> None:
         super().__init__(config)
@@ -96,11 +98,31 @@ class RomaMatcher(DetectorFreeMatcherBase):
             )
             timer_match.update("[match] Match by tile")
 
+        # Do Geometric verification
+        features0 = get_features(feature_path, img0_name)
+        features1 = get_features(feature_path, img1_name)
+
+        # Rescale threshold according the image original image size
+        img_shape = cv2.imread(str(img0)).shape
+        scale_fct = np.floor(max(img_shape) / self.max_tile_size / 2)
+        gv_threshold = self._config["general"]["gv_threshold"] * scale_fct
+
+        # Apply geometric verification
+        _, inlMask = geometric_verification(
+            kpts0=features0["keypoints"][matches[:, 0]],
+            kpts1=features1["keypoints"][matches[:, 1]],
+            method=self._config["general"]["geom_verification"],
+            threshold=gv_threshold,
+            confidence=self._config["general"]["gv_confidence"],
+        )
+        matches = matches[inlMask]
+        timer_match.update("Geom. verification")
+
         # Save to h5 file
         n_matches = len(matches)
         with h5py.File(str(matches_path), "a", libver="latest") as fd:
             group = fd.require_group(img0_name)
-            if n_matches >= self.min_matches:
+            if n_matches >= self.min_inliers_per_pair:
                 group.create_dataset(img1_name, data=matches)
             else:
                 logger.debug(
@@ -185,10 +207,10 @@ class RomaMatcher(DetectorFreeMatcherBase):
             np.ndarray: Array containing the indices of matched keypoints.
         """
 
-        def write_tiles_disk(output_dir: Path, tiles: dict):
+        def write_tiles_disk(output_dir: Path, tiles: dict) -> None:
             output_dir = Path(output_dir)
             if output_dir.exists():
-                shutil.rmtree(output_dir)
+                return None
             output_dir.mkdir(parents=True)
             for i, tile in tiles.items():
                 name = str(output_dir / f"tile_{i}.png")
@@ -211,7 +233,7 @@ class RomaMatcher(DetectorFreeMatcherBase):
             preselction_matcher=self._preselction_matcher,
             tile_size=tile_size,
             tile_overlap=overlap,
-            preselection_size_max=self.preselection_size_max,
+            tile_preselection_size=self.tile_preselection_size,
             min_matches_per_tile=self.min_matches_per_tile,
             device=self._device,
         )
@@ -225,8 +247,8 @@ class RomaMatcher(DetectorFreeMatcherBase):
         # Read images and resize them if needed
         image0 = cv2.imread(str(img0))
         image1 = cv2.imread(str(img1))
-        image0_orig_shape = image0.shape[:2]
-        image1_orig_shape = image1.shape[:2]
+        image0.shape[:2]
+        image1.shape[:2]
         image0 = self._resize_image(self._quality, image0)
         image1 = self._resize_image(self._quality, image1)
 
@@ -238,10 +260,10 @@ class RomaMatcher(DetectorFreeMatcherBase):
         tiles1, t_origins1, t_padding1 = tiler.compute_tiles_by_size(
             input=image1, window_size=tile_size, overlap=overlap
         )
-        out_dir = Path(self._config["general"]["output_dir"]) / "tiles"
-        write_tiles_disk(out_dir / img0.name, tiles0)
-        write_tiles_disk(out_dir / img1.name, tiles1)
-        logger.debug(f"Tiles saved to {out_dir}")
+        tiles_dir = Path(self._config["general"]["output_dir"]) / "tiles"
+        write_tiles_disk(tiles_dir / img0.name, tiles0)
+        write_tiles_disk(tiles_dir / img1.name, tiles1)
+        logger.debug(f"Tiles saved to {tiles_dir}")
 
         # Match each tile pair
         mkpts0_full = np.array([], dtype=np.float32).reshape(0, 2)
@@ -251,8 +273,8 @@ class RomaMatcher(DetectorFreeMatcherBase):
         for tidx0, tidx1 in tile_pairs:
             logger.debug(f"  - Matching tile pair ({tidx0}, {tidx1})")
 
-            tile_path0 = out_dir / img0.name / f"tile_{tidx0}.png"
-            tile_path1 = out_dir / img1.name / f"tile_{tidx1}.png"
+            tile_path0 = tiles_dir / img0.name / f"tile_{tidx0}.png"
+            tile_path1 = tiles_dir / img1.name / f"tile_{tidx1}.png"
 
             W_A, H_A = tiles0[tidx0].shape[1], tiles0[tidx0].shape[0]
             W_B, H_B = tiles1[tidx1].shape[1], tiles1[tidx1].shape[0]
@@ -333,5 +355,9 @@ class RomaMatcher(DetectorFreeMatcherBase):
             mkpts1_full,
             matches,
         )
+
+        # Remove tiles from disk
+        if not self.keep_tiles:
+            shutil.rmtree(tiles_dir)
 
         return matches

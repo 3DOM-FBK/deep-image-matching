@@ -11,12 +11,12 @@ import torch
 
 from deep_image_matching.extractors.extractor_base import ExtractorBase
 
-from .. import Timer, logger
+from .. import Quality, TileSelection, Timer, get_size_by_quality, logger
 from ..hloc.extractors.superpoint import SuperPoint
 from ..io.h5 import get_features, get_matches
 from ..thirdparty.LightGlue.lightglue import LightGlue
-from ..utils.consts import Quality, TileSelection
 from ..utils.geometric_verification import geometric_verification
+from ..utils.image import resize_image
 from ..utils.tiling import Tiler
 from ..visualization import viz_matches_cv2, viz_matches_mpl
 
@@ -56,10 +56,6 @@ def matcher_loader(root, model):
     return classes[0][1]
 
 
-# NOTE: The MatcherBase class should contain all the common methods and attributes for all the matchers and must be used as a base class.
-# The specific matchers MUST contain at least the `_match_pairs` method, which takes in two images as Numpy arrays, and returns the matches between keypoints and descriptors in those images. It doesn not care if the images are tiles or full-res images, as the tiling is handled by the MatcherBase class that calls the `_match_pairs` method for each tile pair or for the full images depending on the tile selection method.
-
-
 class MatcherBase(metaclass=ABCMeta):
     """
     Base class for matchers. It defines the basic interface for matchers
@@ -70,10 +66,10 @@ class MatcherBase(metaclass=ABCMeta):
         general_conf (dict): Default configuration for general settings.
         default_conf (dict): Default configuration for matcher-specific settings.
         required_inputs (list): List of required input parameters.
-        min_matches (int): Minimum number of matches required.
+        min_inliers_per_pair (int): Minimum number of matches required.
         min_matches_per_tile (int): Minimum number of matches required per tile.
         max_feat_no_tiling (int): Maximum number of features without tiling.
-        preselection_size_max (int): Maximum resize dimension for preselection.
+        tile_preselection_size (int): Maximum resize dimension for preselection.
     """
 
     general_conf = {
@@ -87,10 +83,11 @@ class MatcherBase(metaclass=ABCMeta):
     }
     default_conf = {}
     required_inputs = []
-    min_matches = 20
+    min_inliers_per_pair = 15
+    min_inliers_ratio = 0.2
     min_matches_per_tile = 5
-    max_feat_no_tiling = 100000
-    preselection_size_max = 1024
+    tile_preselection_size = 1000
+    max_feat_no_tiling = 20000
 
     def __init__(self, custom_config) -> None:
         """
@@ -119,13 +116,13 @@ class MatcherBase(metaclass=ABCMeta):
             },
         }
 
-        if "min_matches" in custom_config["general"]:
-            self.min_matches = custom_config["general"]["min_matches"]
+        if "min_inliers_per_pair" in custom_config["general"]:
+            self.min_inliers_per_pair = custom_config["general"]["min_inliers_per_pair"]
         if "min_matches_per_tile" in custom_config["general"]:
             self.min_matches_per_tile = custom_config["general"]["min_matches_per_tile"]
-        if "preselection_size_max" in custom_config["general"]:
-            self.preselection_size_max = custom_config["general"][
-                "preselection_size_max"
+        if "tile_preselection_size" in custom_config["general"]:
+            self.tile_preselection_size = custom_config["general"][
+                "tile_preselection_size"
             ]
 
         # Get main processing parameters and save them as class members
@@ -149,19 +146,18 @@ class MatcherBase(metaclass=ABCMeta):
         )
         logger.debug(f"Running inference on device {self._device}")
 
-        # All features detected on image 0 (FeaturesBase object with N keypoints)
-        self._features0 = None
-
-        # All features detected on image 1 (FeaturesBase object with M keypoints)
-        self._features1 = None
-
-        # Index of the matches in both the images. The first column contains the index of the mathced keypoints in features0.keypoints, the second column contains the index of the matched keypoints in features1.keypoints (Kx2 array)
-        self._matches01 = None
-
         # Load extractor and matcher for the preselction
         if self._config["general"]["tile_selection"] == TileSelection.PRESELECTION:
             self._preselction_extractor = (
-                SuperPoint({"max_keypoints": 2048}).eval().to(self._device)
+                SuperPoint(
+                    {
+                        "nms_radius": 3,
+                        "max_keypoints": 2048,
+                        "keypoint_threshold": 0.0005,
+                    }
+                )
+                .eval()
+                .to(self._device)
             )
             self._preselction_matcher = (
                 LightGlue(
@@ -169,23 +165,15 @@ class MatcherBase(metaclass=ABCMeta):
                     n_layers=7,
                     depth_confidence=0.9,
                     width_confidence=0.95,
-                    flash=False,
+                    filter_threshold=0.2,
+                    flash=True,
                 )
                 .eval()
                 .to(self._device)
             )
-
-    @property
-    def features0(self):
-        return self._features0
-
-    @property
-    def features1(self):
-        return self._features1
-
-    @property
-    def matches0(self):
-        return self._matches0
+        else:
+            self._preselction_extractor = None
+            self._preselction_matcher = None
 
     @abstractmethod
     def _match_pairs(
@@ -244,85 +232,134 @@ class MatcherBase(metaclass=ABCMeta):
         # Get features from h5 file
         img0_name = img0.name
         img1_name = img1.name
-        self._features0 = get_features(self._feature_path, img0.name)
-        self._features1 = get_features(self._feature_path, img1.name)
+        features0 = get_features(self._feature_path, img0.name)
+        features1 = get_features(self._feature_path, img1.name)
         timer_match.update("load h5 features")
 
         # Perform matching (on tiles or full images)
-        # If the features are not too many, try first to match all features together on full image, if it fails, try to match by tiles
         fallback_flag = False
-        high_feats_flag = (
-            len(self._features0["keypoints"]) > self.max_feat_no_tiling
-            or len(self._features1["keypoints"]) > self.max_feat_no_tiling
-        )
 
         if self._tiling == TileSelection.NONE:
-            if high_feats_flag:
+            too_many_features = (
+                len(features0["keypoints"]) > self.max_feat_no_tiling
+                or len(features1["keypoints"]) > self.max_feat_no_tiling
+            )
+            if too_many_features:
                 raise RuntimeError(
                     "Too many features to run the matching on full images. Try running the matching with tile selection or use a lower max_keypoints value."
                 )
-            else:
-                try_full_image = True
-
-        # Try to match full images first
-        if try_full_image and not high_feats_flag:
-            try:
-                logger.debug(
-                    f"Tile selection was {self._tiling.name}. Matching full images..."
-                )
-                self._matches = self._match_pairs(self._features0, self._features1)
-                timer_match.update("[match] try to match full images")
-            except Exception as e:
-                if "CUDA out of memory" in str(e):
-                    logger.warning(
-                        f"Matching full images failed: {e}. \nTrying to match by tiles..."
+            logger.debug(
+                f"Tile selection was {self._tiling.name}. Matching full images..."
+            )
+            matches = self._match_pairs(features0, features1)
+            timer_match.update("match full images")
+        else:
+            # If try_full_image is set, try to match full images first
+            if try_full_image:
+                try:
+                    logger.debug(
+                        f"Tile selection was {self._tiling.name} but try_full_image is set. Matching full images..."
                     )
-                    fallback_flag = True
-                else:
-                    raise e
+                    matches = self._match_pairs(features0, features1)
+                    timer_match.update("match full images")
+                except Exception as e:
+                    if "CUDA out of memory" in str(e):
+                        logger.warning(f"Matching full images failed: {e}.")
+                        fallback_flag = True
+                    else:
+                        raise e
+            else:
+                logger.debug(f"Matching by tile with {self._tiling.name} selection...")
+                matches = self._match_by_tile(
+                    img0,
+                    img1,
+                    features0,
+                    features1,
+                    method=self._tiling,
+                )
 
-        # If try_full_image is disabled or matching full images failed, match by tiles
-        if not try_full_image or fallback_flag:
-            logger.debug(f"Matching by tile with {self._tiling.name} selection...")
-            self._matches = self._match_by_tile(
+        # If the fallback flag was set for any reason, try to match by tiles
+        if fallback_flag:
+            logger.debug(
+                f"Fallback: matching by tile with {self._tiling.name} selection..."
+            )
+            matches = self._match_by_tile(
                 img0,
                 img1,
-                self._features0,
-                self._features1,
+                features0,
+                features1,
                 method=self._tiling,
             )
             timer_match.update("tile matching")
 
+        # Do Geometric verification
+        # Rescale threshold according the image qualit
+        if len(matches) < 8:
+            logger.debug(
+                f"Too few matches found ({len(matches)}). Skipping image pair {img0.name}-{img1.name}"
+            )
+            return None
+
+        scales = {
+            Quality.HIGHEST: 1.0,
+            Quality.HIGH: 1.0,
+            Quality.MEDIUM: 1.5,
+            Quality.LOW: 2.0,
+            Quality.LOWEST: 3.0,
+        }
+        gv_threshold = (
+            self._config["general"]["gv_threshold"]
+            * scales[self._config["general"]["quality"]]
+        )
+
+        # Apply geometric verification
+        _, inlMask = geometric_verification(
+            kpts0=features0["keypoints"][matches[:, 0]],
+            kpts1=features1["keypoints"][matches[:, 1]],
+            method=self._config["general"]["geom_verification"],
+            threshold=gv_threshold,
+            confidence=self._config["general"]["gv_confidence"],
+        )
+        num_inliers = np.sum(inlMask)
+        inliers_ratio = num_inliers / len(matches)
+        matches = matches[inlMask]
+        if num_inliers < self.min_inliers_per_pair:
+            logger.debug(
+                f"Too few inliers matches found ({num_inliers}). Skipping image pair {img0.name}-{img1.name}"
+            )
+            timer_match.print(f"{__class__.__name__} match")
+            return None
+        elif inliers_ratio < self.min_inliers_ratio:
+            logger.debug(
+                f"Too small inlier ratio ({inliers_ratio*100:.2f}%). Skipping image pair {img0.name}-{img1.name}"
+            )
+            timer_match.print(f"{__class__.__name__} match")
+            return None
+        timer_match.update("Geom. verification")
+
         # Save to h5 file
-        n_matches = len(self._matches)
         with h5py.File(str(matches_path), "a", libver="latest") as fd:
             group = fd.require_group(img0_name)
-            if n_matches >= self.min_matches:
-                group.create_dataset(
-                    img1_name, data=self._matches
-                )  # or use require_dataset
-            else:
-                logger.debug(
-                    f"Too few matches found. Skipping image pair {img0.name}-{img1.name}"
-                )
-                return None
+            group.create_dataset(img1_name, data=matches)
+
         timer_match.update("save to h5")
         timer_match.print(f"{__class__.__name__} match")
 
         logger.debug(f"Matching {img0_name}-{img1_name} done!")
 
         # For debugging
-        # viz_dir = self._output_dir / "viz"
-        # viz_dir.mkdir(parents=True, exist_ok=True)
-        # self.viz_matches(
-        #     feature_path,
-        #     matches_path,
-        #     img0,
-        #     img1,
-        #     save_path=viz_dir / f"{img0_name}_{img1_name}.png",
-        # )
+        viz_dir = self._output_dir / "debug"
+        viz_dir.mkdir(parents=True, exist_ok=True)
+        self.viz_matches(
+            feature_path,
+            matches_path,
+            img0,
+            img1,
+            save_path=viz_dir / f"{img0_name}_{img1_name}.png",
+            hide_matching_track=True,
+        )
 
-        return self._matches
+        return matches
 
     def _match_by_tile(
         self,
@@ -363,7 +400,7 @@ class MatcherBase(metaclass=ABCMeta):
             preselction_matcher=self._preselction_matcher,
             tile_size=self._config["general"]["tile_size"],
             tile_overlap=self._config["general"]["tile_overlap"],
-            preselection_size_max=self.preselection_size_max,
+            tile_preselection_size=self.tile_preselection_size,
             min_matches_per_tile=self.min_matches_per_tile,
             device=self._device,
         )
@@ -416,7 +453,7 @@ class MatcherBase(metaclass=ABCMeta):
         save_path: str = None,
         fast_viz: bool = True,
         interactive_viz: bool = False,
-        **config,
+        **kwargs,
     ) -> None:
         # Check input parameters
         if not interactive_viz:
@@ -430,14 +467,21 @@ class MatcherBase(metaclass=ABCMeta):
                 save_path is not None
             ), "output_dir must be specified if fast_viz is True"
 
+        # Get config parameters
+        interactive_viz = kwargs.get("interactive_viz", False)
+        autoresize = kwargs.get("autoresize", True)
+        max_long_edge = kwargs.get("max_long_edge", 1200)
+        jpg_quality = kwargs.get("jpg_quality", 80)
+        hide_matching_track = kwargs.get("hide_matching_track", False)
+
         img0 = Path(img0)
         img1 = Path(img1)
         img0_name = img0.name
         img1_name = img1.name
 
         # Load images
-        image0 = load_image_np(img0, self.as_float, self.grayscale)
-        image1 = load_image_np(img1, self.as_float, self.grayscale)
+        image0 = load_image_np(img0, as_float=False, grayscale=True)
+        image1 = load_image_np(img1, as_float=False, grayscale=True)
 
         # Load features and matches
         features0 = get_features(feature_path, img0_name)
@@ -448,15 +492,10 @@ class MatcherBase(metaclass=ABCMeta):
 
         # Make visualization with OpenCV or Matplotlib
         if fast_viz:
-            # Get config for OpenCV visualization
-            autoresize = config.get("autoresize", True)
-            max_long_edge = config.get("max_long_edge", 1200)
-            jpg_quality = config.get("jpg_quality", 80)
-            hide_matching_track = config.get("hide_matching_track", False)
             if hide_matching_track:
                 line_thickness = -1
             else:
-                line_thickness = 0.5
+                line_thickness = 1
 
             viz_matches_cv2(
                 image0,
@@ -470,7 +509,6 @@ class MatcherBase(metaclass=ABCMeta):
                 jpg_quality=jpg_quality,
             )
         else:
-            interactive_viz = config.get("interactive_viz", False)
             hide_fig = not interactive_viz
             if interactive_viz:
                 viz_matches_mpl(
@@ -479,7 +517,7 @@ class MatcherBase(metaclass=ABCMeta):
                     kpts0,
                     kpts1,
                     hide_fig=hide_fig,
-                    config=config,
+                    config=kwargs,
                 )
             else:
                 viz_matches_mpl(
@@ -490,7 +528,7 @@ class MatcherBase(metaclass=ABCMeta):
                     save_path,
                     hide_fig=hide_fig,
                     point_size=5,
-                    config=config,
+                    config=kwargs,
                 )
 
 
@@ -504,10 +542,10 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         general_conf (dict): Default configuration for general settings.
         default_conf (dict): Default configuration for matcher-specific settings.
         required_inputs (list): List of required input parameters.
-        min_matches (int): Minimum number of matches required.
+        min_inliers_per_pair (int): Minimum number of matches required.
         min_matches_per_tile (int): Minimum number of matches required per tile.
         max_feat_no_tiling (int): Maximum number of features without tiling.
-        preselection_size_max (int): Maximum resize dimension for preselection.
+        tile_preselection_size (int): Maximum resize dimension for preselection.
     """
 
     general_conf = {
@@ -521,9 +559,9 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
     }
     default_conf = {}
     required_inputs = []
-    min_matches = 20
+    min_inliers_per_pair = 20
     min_matches_per_tile = 5
-    preselection_size_max = 1024
+    tile_preselection_size = 1024
 
     def __init__(self, custom_config) -> None:
         """
@@ -555,13 +593,13 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         # Get main processing parameters and save them as class members
         self._quality = self._config["general"]["quality"]
         self._tiling = self._config["general"]["tile_selection"]
-        if "min_matches" in custom_config["general"]:
-            self.min_matches = custom_config["general"]["min_matches"]
+        if "min_inliers_per_pair" in custom_config["general"]:
+            self.min_inliers_per_pair = custom_config["general"]["min_inliers_per_pair"]
         if "min_matches_per_tile" in custom_config["general"]:
             self.min_matches_per_tile = custom_config["general"]["min_matches_per_tile"]
-        if "preselection_size_max" in custom_config["general"]:
-            self.preselection_size_max = custom_config["general"][
-                "preselection_size_max"
+        if "tile_preselection_size" in custom_config["general"]:
+            self.tile_preselection_size = custom_config["general"][
+                "tile_preselection_size"
             ]
         logger.debug(f"Matching options: Tiling: {self._tiling.name}")
 
@@ -649,11 +687,31 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
             )
             timer_match.update("[match] Match by tile")
 
+        # Do Geometric verification
+        features0 = get_features(feature_path, img0_name)
+        features1 = get_features(feature_path, img1_name)
+
+        # Rescale threshold according the image original image size
+        img_shape = cv2.imread(str(img0)).shape
+        scale_fct = np.floor(max(img_shape) / self.max_tile_size / 2)
+        gv_threshold = self._config["general"]["gv_threshold"] * scale_fct
+
+        # Apply geometric verification
+        _, inlMask = geometric_verification(
+            kpts0=features0["keypoints"][matches[:, 0]],
+            kpts1=features1["keypoints"][matches[:, 1]],
+            method=self._config["general"]["geom_verification"],
+            threshold=gv_threshold,
+            confidence=self._config["general"]["gv_confidence"],
+        )
+        matches = matches[inlMask]
+        timer_match.update("Geom. verification")
+
         # Save to h5 file
         n_matches = len(matches)
         with h5py.File(str(matches_path), "a", libver="latest") as fd:
             group = fd.require_group(img0_name)
-            if n_matches >= self.min_matches:
+            if n_matches >= self.min_inliers_per_pair:
                 group.create_dataset(img1_name, data=matches)
             else:
                 logger.debug(
@@ -755,7 +813,9 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
 
         return matches0
 
-    def _resize_image(self, quality: Quality, image: np.ndarray) -> Tuple[np.ndarray]:
+    def _resize_image(
+        self, quality: Quality, image: np.ndarray, interp: str = "cv2_area"
+    ) -> Tuple[np.ndarray]:
         """
         Resize images based on the specified quality.
 
@@ -767,7 +827,13 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
             Tuple[np.ndarray]: Resized images.
 
         """
-        return resize_image(quality, image)
+        # If quality is HIGHEST, force interpolation to cv2_cubic
+        if quality == Quality.HIGHEST:
+            interp = "cv2_cubic"
+        if quality == Quality.HIGH:
+            return image  # No resize
+        new_size = get_size_by_quality(quality, image.shape[:2])
+        return resize_image(image, (new_size[1], new_size[0]), interp=interp)
 
     def _resize_keypoints(self, quality: Quality, keypoints: np.ndarray) -> np.ndarray:
         """
@@ -894,7 +960,7 @@ def tile_selection(
     preselction_matcher: MatcherBase,
     tile_size: Tuple[int, int],
     tile_overlap: int,
-    preselection_size_max: int = 1024,
+    tile_preselection_size: int = 1024,
     min_matches_per_tile: int = 5,
     device: str = "cpu",
 ):
@@ -915,9 +981,12 @@ def tile_selection(
     i0 = cv2.imread(str(img0), cv2.IMREAD_GRAYSCALE).astype(np.float32)
     i1 = cv2.imread(str(img1), cv2.IMREAD_GRAYSCALE).astype(np.float32)
 
-    # Resize images to the specified quality to reproduce the same tiling
-    i0 = resize_image(quality, i0)
-    i1 = resize_image(quality, i1)
+    # Resize images to the specified quality to reproduce the same tiling as in feature extraction
+    if quality != Quality.HIGH:
+        i0_new_size = get_size_by_quality(quality, i0.shape[:2])
+        i1_new_size = get_size_by_quality(quality, i1.shape[:2])
+        i0 = resize_image(i0, (i0_new_size[1], i0_new_size[0]))
+        i1 = resize_image(i1, (i1_new_size[1], i1_new_size[0]))
 
     # Compute tiles
     tiles0, t_orig0, t_padding0 = tiler.compute_tiles_by_size(
@@ -943,8 +1012,8 @@ def tile_selection(
         # Downsampled images
         size0 = i0.shape[:2][::-1]
         size1 = i1.shape[:2][::-1]
-        scale0 = preselection_size_max / max(size0)
-        scale1 = preselection_size_max / max(size1)
+        scale0 = tile_preselection_size / max(size0)
+        scale1 = tile_preselection_size / max(size1)
         size0_new = tuple(int(round(x * scale0)) for x in size0)
         size1_new = tuple(int(round(x * scale1)) for x in size1)
         i0 = cv2.resize(i0, size0_new, interpolation=cv2.INTER_AREA)
@@ -972,14 +1041,14 @@ def tile_selection(
         kp1 = kp1 / scale1
 
         # geometric verification
-        _, inlMask = geometric_verification(
-            kpts0=kp0,
-            kpts1=kp1,
-            threshold=4,
-            confidence=0.999,
-        )
-        kp0 = kp0[inlMask]
-        kp1 = kp1[inlMask]
+        # _, inlMask = geometric_verification(
+        #     kpts0=kp0,
+        #     kpts1=kp1,
+        #     threshold=6,
+        #     confidence=0.9999,
+        # )
+        # kp0 = kp0[inlMask]
+        # kp1 = kp1[inlMask]
 
         # Select tile pairs where there are enough matches
         tile_pairs = []
@@ -1026,31 +1095,6 @@ def load_image_np(img_path: Path, as_float: bool = True, grayscale: bool = False
         image = image.astype(np.float32)
     if grayscale:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    return image
-
-
-def resize_image(quality: Quality, image: np.ndarray) -> Tuple[np.ndarray]:
-    """
-    Resize images based on the specified quality.
-
-    Args:
-        quality (Quality): The quality level for resizing.
-        image (np.ndarray): The first image.
-
-    Returns:
-        Tuple[np.ndarray]: Resized images.
-
-    """
-    if quality == Quality.HIGH:
-        return image
-    if quality == Quality.HIGHEST:
-        image = cv2.pyrUp(image)
-    elif quality == Quality.MEDIUM:
-        image = cv2.pyrDown(image)
-    elif quality == Quality.LOW:
-        image = cv2.pyrDown(cv2.pyrDown(image))
-    elif quality == Quality.LOWEST:
-        image = cv2.pyrDown(cv2.pyrDown(cv2.pyrDown(image)))
     return image
 
 

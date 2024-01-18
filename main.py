@@ -1,34 +1,55 @@
-import shutil
 from importlib import import_module
 
-from src.deep_image_matching import logger, timer
-from src.deep_image_matching.image_matching import ImageMatching
-from src.deep_image_matching.io.h5_to_db import export_to_colmap
-from src.deep_image_matching.parser import parse_config
+from deep_image_matching import logger, timer
+from deep_image_matching.config import Config
+from deep_image_matching.image_matching import ImageMatching
+from deep_image_matching.io.h5_to_db import export_to_colmap
+from deep_image_matching.parser import parse_cli
 
-# Parse arguments
-config = parse_config()
-imgs_dir = config["general"]["image_dir"]
-output_dir = config["general"]["output_dir"]
-matching_strategy = config["general"]["matching_strategy"]
-retrieval_option = config["general"]["retrieval"]
-pair_file = config["general"]["pair_file"]
-overlap = config["general"]["overlap"]
-upright = config["general"]["upright"]
-extractor = config["extractor"]["name"]
-matcher = config["matcher"]["name"]
+from scripts.metashape.metashape_from_dim import export_to_metashape
+
+# Hard-coded flag for exporting the solution to Metashape (TODO: move to the configuration settings)
+do_export_to_metashape = False
+
+# Parse arguments from command line
+args = parse_cli()
+
+# Build configuration
+config = Config(args)
+
+# If you know what you are doing, you can update some config parameters directly updating the config dictionary (check the file config.py in the scr folder for the available parameters)
+# - General configuration
+config.general["min_inliers_per_pair"] = 10
+config.general["min_inlier_ratio_per_pair"] = 0.2
+
+# - SuperPoint configuration
+config.extractor["max_keypoints"] = 8000
+
+# - LightGue configuration
+config.matcher["filter_threshold"] = 0.1
+
+# Save configuration to a json file in the output directory
+config.save_config()
+
+# For simplicity, save some of the configuration parameters in variables.
+imgs_dir = config.general["image_dir"]
+output_dir = config.general["output_dir"]
+matching_strategy = config.general["matching_strategy"]
+extractor = config.extractor["name"]
+matcher = config.matcher["name"]
 
 # Initialize ImageMatching class
 img_matching = ImageMatching(
     imgs_dir=imgs_dir,
     output_dir=output_dir,
     matching_strategy=matching_strategy,
-    retrieval_option=retrieval_option,
     local_features=extractor,
     matching_method=matcher,
-    pair_file=pair_file,
-    custom_config=config,
-    overlap=overlap,
+    pair_file=config.general["pair_file"],
+    retrieval_option=config.general["retrieval"],
+    overlap=config.general["overlap"],
+    existing_colmap_model=config.general["db_path"],
+    custom_config=config.as_dict(),
 )
 
 # Generate pairs to be matched
@@ -36,7 +57,7 @@ pair_path = img_matching.generate_pairs()
 timer.update("generate_pairs")
 
 # Try to rotate images so they will be all "upright", useful for deep-learning approaches that usually are not rotation invariant
-if upright:
+if config.general["upright"]:
     img_matching.rotate_upright_images()
     timer.update("rotate_upright_images")
 
@@ -48,8 +69,8 @@ timer.update("extract_features")
 match_path = img_matching.match_pairs(feature_path)
 timer.update("matching")
 
-# Features are extracted on "upright" images, this function report back images on their original orientation
-if upright:
+# If features have been extracted on "upright" images, this function bring features back to their original image orientation
+if config.general["upright"]:
     img_matching.rotate_back_features(feature_path)
     timer.update("rotate_back_features")
 
@@ -66,11 +87,7 @@ export_to_colmap(
 timer.update("export_to_colmap")
 
 # If --skip_reconstruction is not specified, run reconstruction
-if not config["general"]["skip_reconstruction"]:
-    # For debugging purposes, copy images to output folder
-    if config["general"]["verbose"]:
-        shutil.copytree(imgs_dir, output_dir / "images", dirs_exist_ok=True)
-
+if not config.general["skip_reconstruction"]:
     use_pycolmap = True
     try:
         pycolmap = import_module("pycolmap")
@@ -82,7 +99,7 @@ if not config["general"]["skip_reconstruction"]:
         # import reconstruction module
         reconstruction = import_module("src.deep_image_matching.reconstruction")
 
-        # Define database path and camera mode
+        # Define database path
         database = output_dir / "database_pycolmap.db"
 
         # Define how pycolmap create the cameras. Possible CameraMode are:
@@ -110,32 +127,28 @@ if not config["general"]["skip_reconstruction"]:
         #    SIMPLE_RADIAL_FISHEYE: f, cx, cy, k
         #    RADIAL_FISHEYE: f, cx, cy, k1, k2
         #    THIN_PRISM_FISHEYE: fx, fy, cx, cy, k1, k2, p1, p2, k3, k4, sx1, sy1
+        # NOTE: Use the SIMPLE-PINHOLE camera model if you want to export the solution to Metashape, as there are some bugs in COLMAP (or pycolamp) when exporting the solution in the Bundler format.
+        # e.g., using FULL-OPENCV camera model, the principal point is not exported correctly and the tie points are wrong in Metashape.
         #
         # cam0 = pycolmap.Camera(
         #    model="PINHOLE",
         #    width=1500,
         #    height=1000,
         #    params=[1500, 1500, 750, 500],
-        #)
+        # )
         # cam1 = pycolmap.Camera(
         #     model="SIMPLE_PINHOLE",
         #     width=6012,
         #     height=4008,
         #     params=[9.267, 3.053, 1.948],
         # )
-        # cam2 = pycolmap.Camera(
-        #     model="SIMPLE_PINHOLE",
-        #     width=6012,
-        #     height=4008,
-        #     params=[6.621, 3.013, 1.943],
-        # )
-        # cameras = [cam0] # or cameras = [cam1, cam2]
-        cameras = None
+        # cameras = [cam0] # or cameras = [cam0, cam1]
+        cameras = []
 
         # Optional - You can specify some reconstruction configuration
         # reconst_opts = (
         #     {
-        #         "ba_refine_focal_length": False,
+        #         "ba_refine_focal_length": True,
         #         "ba_refine_principal_point": False,
         #         "ba_refine_extra_params": False,
         #     },
@@ -154,12 +167,47 @@ if not config["general"]["skip_reconstruction"]:
             cameras=cameras,
             skip_geometric_verification=True,
             reconst_opts=reconst_opts,
-            verbose=config["general"]["verbose"],
+            verbose=config.general["verbose"],
         )
 
         timer.update("pycolmap reconstruction")
 
     else:
         logger.warning("Reconstruction with COLMAP CLI is not implemented yet.")
+
+
+if model and do_export_to_metashape:
+    # Hard-coded parameters for Metashape # TODO: improve this implementation.
+    # This is now given only as an example for how to use the export_to_metashape function.
+    project_dir = config.general["output_dir"] / "metashape"
+    project_name = config.general["output_dir"].name + ".psx"
+    project_path = project_dir / project_name
+
+    rec_dir = config.general["output_dir"] / "reconstruction"
+    bundler_file_path = rec_dir / "bundler.out"
+    bundler_im_list = rec_dir / "bundler_list.txt"
+
+    prm_to_optimize = {
+        "f": True,
+        "cx": True,
+        "cy": True,
+        "k1": True,
+        "k2": True,
+        "k3": True,
+        "k4": False,
+        "p1": True,
+        "p2": True,
+        "b1": False,
+        "b2": False,
+        "tiepoint_covariance": True,
+    }
+    export_to_metashape(
+        project_path=project_path,
+        images_dir=config.general["image_dir"],
+        bundler_file_path=bundler_file_path.resolve(),
+        bundler_im_list=bundler_im_list.resolve(),
+        prm_to_optimize=prm_to_optimize,
+    )
+
 
 timer.print("Deep Image Matching")

@@ -1,27 +1,39 @@
 import argparse
-import shutil
-from pathlib import Path
 
-from . import Quality, TileSelection, change_logger_level, logger
-from .config import conf_general, confs, opt_zoo
+from .config import Config
 from .gui import gui
 
 
-def parse_cli():
+def parse_cli() -> dict:
+    """Parse command line arguments and return a dictionary with the input arguments. If --gui is specified, run the GUI interface and return the arguments from the GUI."""
+
     parser = argparse.ArgumentParser(
         description="Matching with hand-crafted and deep-learning based local features and image retrieval."
     )
     parser.add_argument(
         "--gui", action="store_true", help="Run GUI interface", default=False
     )
-    parser.add_argument("-i", "--images", type=str, help="Input image folder")
-    parser.add_argument("-o", "--outs", type=str, help="Output folder", default=None)
+    parser.add_argument("-d", "--dir", type=str, help="Project folder.")
+    parser.add_argument(
+        "-i",
+        "--images",
+        type=str,
+        help="Folder containing images to process. If not specified, an 'images' folder inside the project folder is assumed.",
+        default=None,
+    )
+    parser.add_argument(
+        "-o",
+        "--outs",
+        type=str,
+        help="Output folder. If None, the output folder will be created inside the project folder.",
+        default=None,
+    )
     parser.add_argument(
         "-c",
         "--config",
         type=str,
         help="Extractor and matcher configuration",
-        choices=confs.keys(),
+        choices=Config.get_config_names(),
         default="superpoint+lightglue",
     )
     parser.add_argument(
@@ -44,13 +56,14 @@ def parse_cli():
         "-m",
         "--strategy",
         choices=[
+            "matching_lowres",
             "bruteforce",
             "sequential",
             "retrieval",
             "custom_pairs",
-            "matching_lowres",
+            "covisibility",
         ],
-        default="sequential",
+        default="matching_lowres",
         help="Matching strategy",
     )
     parser.add_argument(
@@ -61,14 +74,20 @@ def parse_cli():
         "--overlap",
         type=int,
         help="Image overlap, if using sequential overlap strategy",
-        default=1,
+        default=None,
     )
     parser.add_argument(
         "-r",
         "--retrieval",
-        choices=opt_zoo["retrieval"],
+        choices=Config.get_retrieval_names(),
         default=None,
         help="Specify image retrieval method",
+    )
+    parser.add_argument(
+        "--db_path",
+        type=str,
+        default=None,
+        help="Path to the COLMAP database to be use for covisibility pair selection.",
     )
     parser.add_argument(
         "--upright",
@@ -108,109 +127,4 @@ def parse_cli():
         args.upright = gui_out["upright"]
         args.force = True
 
-    return args
-
-
-def parse_config():
-    """Do checks on the input arguments and return the configuration dictionary with the following keys: general, extractor, matcher"""
-    args = parse_cli()
-
-    # Input folder
-    if args.images is None:
-        raise ValueError("--images option is required")
-    else:
-        args.images = Path(args.images)
-        if not args.images.exists() or not args.images.is_dir():
-            raise ValueError(f"Folder {args.images} does not exist")
-
-    # Output folder
-    if args.outs is None:
-        args.outs = Path("output") / f"{args.images.name}_{args.config}_{args.strategy}"
-    else:
-        args.outs = Path(args.outs)
-    if args.outs.exists():
-        if args.force:
-            logger.warning(f"{args.outs} already exists, removing {args.outs}")
-            shutil.rmtree(args.outs)
-        else:
-            raise ValueError(
-                f"{args.outs} already exists, use '--force' to overwrite it"
-            )
-    args.outs.mkdir(parents=True)
-
-    # Check extraction and matching configuration
-    if args.config is None or args.config not in confs:
-        raise ValueError(
-            "--config option is required and must be a valid configuration (check config.py))"
-        )
-    extractor = confs[args.config]["extractor"]["name"]
-    if extractor not in opt_zoo["extractors"]:
-        raise ValueError(
-            f"Invalid extractor option: {extractor}. Valid options are: {opt_zoo['extractors']}"
-        )
-    matcher = confs[args.config]["matcher"]["name"]
-    if matcher not in opt_zoo["matchers"]:
-        raise ValueError(
-            f"Invalid matcher option: {matcher}. Valid options are: {opt_zoo['matchers']}"
-        )
-
-    # Matching strategy
-    if args.strategy is None:
-        raise ValueError("--strategy option is required")
-    if args.strategy not in opt_zoo["matching_strategy"]:
-        raise ValueError(
-            f"Invalid strategy option: {args.strategy}. Valid options are: {opt_zoo['matching_strategy']}"
-        )
-    if args.strategy == "retrieval":
-        if args.retrieval is None:
-            raise ValueError(
-                "--retrieval option is required when --strategy is set to retrieval"
-            )
-        elif args.retrieval not in opt_zoo["retrieval"]:
-            raise ValueError(
-                f"Invalid retrieval option: {args.retrieval}. Valid options are: {opt_zoo['retrieval']}"
-            )
-    else:
-        args.retrieval = None
-    if args.strategy == "custom_pairs":
-        if args.pairs is None:
-            raise ValueError(
-                "--pairs option is required when --strategy is set to custom_pairs"
-            )
-        args.pairs = Path(args.pairs)
-        if not args.pairs.exists():
-            raise ValueError(f"File {args.pairs} does not exist")
-    else:
-        args.pairs = args.outs / "pairs.txt"
-    if args.strategy == "sequential":
-        if args.overlap is None:
-            raise ValueError(
-                "--overlap option is required when --strategy is set to sequential"
-            )
-    else:
-        args.overlap = None
-
-    if args.verbose:
-        change_logger_level(logger.name, "debug")
-
-    # Build configuration dictionary
-    cfg_general_user = {
-        "image_dir": args.images,
-        "output_dir": args.outs,
-        "quality": Quality[args.quality.upper()],
-        "tile_selection": TileSelection[args.tiling.upper()],
-        "matching_strategy": args.strategy,
-        "retrieval": args.retrieval,
-        "pair_file": args.pairs,
-        "overlap": args.overlap,
-        "upright": args.upright,
-        "verbose": args.verbose,
-        "skip_reconstruction": args.skip_reconstruction,
-    }
-    cfg = {
-        "general": {**conf_general, **cfg_general_user},
-        "extractor": confs[args.config]["extractor"],
-        "matcher": confs[args.config]["matcher"],
-    }
-
-    return cfg
+    return vars(args)

@@ -7,8 +7,8 @@
 | ------------------------------------------------ | -------------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------- |
 | <img src='assets/matches_sift.gif' height="100"> | <img src='assets/matches_joined.gif' height="100"> | <img src='assets/orientation_deep.gif' height="100"> | <img src='assets/roma_dense.gif' height="100"> |
 
-| SIFT                                             | SUPERGLUE                                            |            
-| ------------------------------------             | ------------------------------------                 |
+| SIFT                                             | SUPERGLUE                                            |
+| ------------------------------------------------ | ---------------------------------------------------- |
 | <img src='assets/temple_rsift.gif' height="165"> | <img src='assets/temple_superglue.gif' height="165"> |
 
 Multivew matcher for SfM software. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI. Feel free to collaborate!
@@ -37,14 +37,15 @@ Key features:
 | &check; SIFT (opencv)              |
 | &check; DeDoDe                     |
 
-| Supported SfM software                       |
-| ---------------------------------------------|
-| &check; COLMAP                               |
-| &check; OpenMVG                              |
-| &check; Agisoft Metashape                    |
-| &check; Software that supports bundler format|
+| Supported SfM software                        |
+| --------------------------------------------- |
+| &check; COLMAP                                |
+| &check; OpenMVG                               |
+| &check; Agisoft Metashape                     |
+| &check; Software that supports bundler format |
 
-## Colab demo  ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/deep_image_matching_example.ipynb)
+## Colab demo ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/deep_image_matching_example.ipynb)
+
 Want to run on a sample dataset? Try the Colab demo!
 
 ## Installation
@@ -101,7 +102,7 @@ There are two main configuration in `config.py`: `conf_general` and `confs`.
       "geom_verification": GeometricVerification.PYDEGENSAC, -> `Enable or disable Geometric Verification. Options are: NONE: disabled; PYDEGENSAC: use pydegensac; MAGSAC: use OpenCV geometric verification with MAGSAC.`
       "gv_threshold": 4, -> `Threshold [px] for the geometric verification`
       "gv_confidence": 0.9999, -> `Confidence value for the geometric verification`
-      "preselection_size_max": 2000, -> `if tile_selection == TileSelection.PRESELECTION, define the resolution at which the images are downsampled to run the low-resolution tile preselection.`
+      "tile_preselection_size": 2000, -> `if tile_selection == TileSelection.PRESELECTION, define the resolution at which the images are downsampled to run the low-resolution tile preselection.`
     }
   ```
 
@@ -206,6 +207,7 @@ The GUI loads the available configurations from `config.py` and it shows them in
 ### Merging databases with different local features
 
 To run the matching with different local features and/or matchers and marging together the results, you can use scripts in the `./scripts` directory for merging the COLMAP databases.
+
 ```bash
 python ./join_databases.py --help
 python ./join_databases.py --input assets/to_be_joined --output assets/to_be_joined

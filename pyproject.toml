@@ -40,7 +40,7 @@ requires-python = ">=3.8"
 dev = ["ruff", "black", "bumpver", "isort", "pip-tools", "pytest", "bumpver", "mkdocs", "mkdocs-material", "mkdocstrings[python]"]
 
 [project.urls]
-Homepage = "https://github.com/franioli/deep-image-matching"
+Homepage = "https://github.com/3DOM-FBK/deep-image-matching"
 
 [tool.pytest.ini_options]
 addopts = [

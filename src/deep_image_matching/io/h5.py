@@ -45,7 +45,7 @@ def get_features(
     path: Path,
     name: str,
     as_tensor: bool = False,
-    device: "str" = "cuda",
+    device: torch.device = torch.device("cuda"),
 ) -> dict:
     with h5py.File(str(path), "r", libver="latest") as fd:
         if name in fd:
@@ -54,23 +54,17 @@ def get_features(
                 descr = np.array(fd[name]["descriptors"]).astype(np.float32)
 
             except KeyError:
-                raise ValueError(f"Cannot find keypoints and descriptors in {path}")
+                raise KeyError(f"Cannot find keypoints and descriptors in {path}")
 
-            try:
-                feature_path = fd[name]["feature_path"][()].decode("utf-8")
-                im_path = fd[name]["im_path"][()].decode("utf-8")
-                feats = {
-                    "feature_path": feature_path,
-                    "im_path": im_path,
-                    "keypoints": kpts,
-                    "descriptors": descr,
-                }
-            except KeyError:
-                logger.warning(
-                    "Cannot find feature_path and im_path in the hdf5 file. "
-                    "Returning only keypoints and descriptors. Matching with end-to-end matchers (loftr, roma) will not work."
-                )
-                feats = {"keypoints": kpts, "descriptors": descr}
+            feats = {
+                "keypoints": kpts,
+                "descriptors": descr,
+            }
+
+            if "feature_path" in fd[name]:
+                feats["feature_path"] = fd[name]["feature_path"][()].decode("utf-8")
+            if "im_path" in fd[name]:
+                feats["im_path"] = fd[name]["im_path"][()].decode("utf-8")
 
             for k in ["tile_idx", "scores"]:
                 if k in fd[name]:
@@ -84,9 +78,8 @@ def get_features(
             raise ValueError(f"Cannot find image {name} in {path}")
 
         if as_tensor:
-            if device not in ("cpu", "cuda"):
-                raise ValueError(f"Unknown device {device}. It must be cpu or cuda.")
-            device = "cuda" if torch.cuda.is_available() and not device else "cpu"
+            if device.type == "cuda" and not torch.cuda.is_available():
+                device = torch.device("cpu")
             feats = {
                 k: torch.tensor(v, dtype=torch.float, device=device)
                 for k, v in feats.items()

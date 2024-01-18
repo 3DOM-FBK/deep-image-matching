@@ -7,10 +7,10 @@ import shutil
 import subprocess
 from pathlib import Path
 
-sfm_dir = Path(
-    "output/example_easy_lowres_superpoint+lightglue_bruteforce/reconstruction"
-)
-dense_dir = Path("output/belvedere_stereo_roma_bruteforce/roma_dense")
+# sfm_dir = Path(
+#     "output/example_easy_lowres_superpoint+lightglue_bruteforce/reconstruction"
+# )
+# dense_dir = Path("output/belvedere_stereo_roma_bruteforce/roma_dense")
 # dense_feats_db = dense_dir / "database_pycolmap.db"
 
 
@@ -79,8 +79,12 @@ def run_dense(
         RuntimeError: If the triangulation process fails.
     """
     # Run dense reconstruction with detector_free matchers the camera poses from descriptor-based reconstruction
-    images_path = dense_dir.parent / "images"
+    images_path = dense_dir.parents[1] / "images"
+    if not images_path.exists():
+        raise FileNotFoundError(f"Images directory {images_path} does not exist.")
     dense_database = dense_dir / dense_database
+    if not dense_database.exists():
+        raise FileNotFoundError(f"Dense database {dense_database} does not exist.")
 
     cmd = f"{colmap_bin} point_triangulator --database_path {dense_database} --image_path {images_path} --input_path {dense_dir} --output_path {dense_dir}"
     if use_two_view_tracks:
@@ -98,7 +102,7 @@ def run_dense(
         print(out.stdout.decode("utf-8"))
 
 
-def parse_args():
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Run dense reconstruction using COLMAP."
     )
@@ -135,14 +139,8 @@ def parse_args():
     )
     args = parser.parse_args()
 
-    return args
-
-
-if __name__ == "__main__":
-    args = parse_args()
-
     sfm_dir = Path(args.sfm_dir)
-    dense_dir = Path(args.dense_dir)
+    dense_matching_dir = Path(args.dense_dir)
     colmap_path = args.colmap_path
     dense_database = args.database
     use_two_view_tracks = args.use_two_view_tracks
@@ -157,7 +155,7 @@ if __name__ == "__main__":
         sfm_dir=sfm_dir / "reconstruction", dense_dir=dense_rec_dir, overwrite=True
     )
     # Copy database with dense features to the empty reconstruction
-    shutil.copy(dense_dir / dense_database, dense_rec_dir / dense_database)
+    shutil.copy(dense_matching_dir / dense_database, dense_rec_dir / dense_database)
 
     # Run dense matching
     run_dense(
