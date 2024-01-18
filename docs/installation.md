@@ -4,6 +4,8 @@
 
 Deep-image-matching is tested on Ubuntu 22.04 and Windows 10 with `Python 3.9`. It is strongly recommended to have a NVIDIA GPU with at least 8GB of memory.
 
+All the dependencies are listed in the `pyproject.toml` file.
+
 ## Installation
 
 For installing deep-image-matching, first create a conda environment:
