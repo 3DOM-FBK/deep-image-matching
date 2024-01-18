@@ -80,10 +80,10 @@ As [pycolmap](https://github.com/colmap/pycolmap) was released on PyPi only for 
 Therefore, it is not included in the dependencies of deep-image-matching.
 From version 0.5.0, pycolmap can be installed on Windows too, so we are considering to add it as a dependency of deep-image-matching.
 
-For more information, check the [documentation](https://3dom-fbk.github.io/deep-image-matching/installation/)
+For more information, check the [documentation](https://3dom-fbk.github.io/deep-image-matching/installation/).
 
 ## Usage instructions
-For quick-starting usage instructions, please check the documenation at [https://3dom-fbk.github.io/deep-image-matching/](https://3dom-fbk.github.io/deep-image-matching/getting_started)
+For quick-starting usage instructions, please check the documenation at [https://3dom-fbk.github.io/deep-image-matching/](https://3dom-fbk.github.io/deep-image-matching/getting_started) or check the example notebooks.
 
 ### Merging databases with different local features
 
