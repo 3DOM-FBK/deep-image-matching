@@ -255,7 +255,7 @@ class ExtractorBase(metaclass=ABCMeta):
     @abstractmethod
     def _extract(self, image: np.ndarray) -> dict:
         """
-        Extract features from an image. This is called by : meth : ` extract ` to extract features from the image. This method must be implemented by subclasses.
+        Extract features from an image. This is called by ` extract ` method to extract features from the image. This method must be implemented by subclasses.
 
         Args:
             image: A NumPy array of shape ( height width 3 )
@@ -405,25 +405,12 @@ class ExtractorBase(metaclass=ABCMeta):
 
         Args:
             quality (Quality): The quality level for resizing.
-            features0 (FeaturesDict): The features of the first image.
-            features1 (FeaturesDict): The features of the second image.
+            features (FeaturesDict): The features to be resized.
 
         Returns:
             Tuple[FeaturesDict]: Resized features.
 
         """
-        # quality_size_map = {
-        #     Quality.HIGHEST: 2,
-        #     Quality.HIGH: 1,
-        #     Quality.MEDIUM: 1 / 2,
-        #     Quality.LOW: 1 / 4,
-        #     Quality.LOWEST: 1 / 8,
-        # }
-        # f = quality_size_map[quality]
-
-        # features["keypoints"] /= f
-        # features["keypoints"] = features["keypoints"].astype(np.float32)
-
         if quality == Quality.HIGHEST:
             features["keypoints"] /= 2
         elif quality == Quality.HIGH:
@@ -447,6 +434,18 @@ class ExtractorBase(metaclass=ABCMeta):
         img_format: str = "jpg",
         jpg_quality: int = 90,
     ):
+        """
+        Visualizes keypoints on an image and saves the result to a file.
+
+        Args:
+            image (np.ndarray): The input image.
+            keypoints (np.ndarray): The keypoints to visualize.
+            output_dir (Path): The directory to save the output image.
+            im_name (str, optional): The name of the output image file. Defaults to "keypoints".
+            resize_to (int, optional): The maximum size (in pixels) to resize the image. Defaults to 2000.
+            img_format (str, optional): The format of the output image file. Defaults to "jpg".
+            jpg_quality (int, optional): The JPEG quality of the output image (only applicable if img_format is "jpg"). Defaults to 90.
+        """
         if resize_to > 0:
             size = image.shape[:2][::-1]
             scale = resize_to / max(size)

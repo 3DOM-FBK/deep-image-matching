@@ -5,7 +5,7 @@ general:
   min_inlier_ratio_per_pair: 0.1
 
 extractor:
-  name: "superpoint"
+  name: "sift"
   max_keypoints: 8000
 
 matcher:
