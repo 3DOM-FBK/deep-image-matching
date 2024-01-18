@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "deep_image_matching"
-version = "0.0.3"
+version = "0.0.4"
 description = ""
 readme = "README.md"
 authors = [{ name = "Francesco Ioli", email = "francesco.ioli@polimi.it" }]
@@ -52,7 +52,7 @@ addopts = [
 profile = "black"
 
 [tool.bumpver]
-current_version = "0.0.3"
+current_version = "0.0.4"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message = "bump version {old_version} -> {new_version}"
 commit = true
