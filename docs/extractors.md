@@ -1,6 +1,6 @@
 # Extractors
 
-Here you can find all the possible configurations
+**Page under construction...**
 
 ::: deep_image_matching.extractors.extractor_base.ExtractorBase
     options:

@@ -13,9 +13,6 @@ theme:
     - navigation.path
     - navigation.footer
 
-markdown_extensions:
-  - pymdownx.snippets
-
 plugins:
   - search
   - autorefs
@@ -31,6 +28,7 @@ nav:
   - Home: index.md
   - Installation: installation.md
   - Getting started: getting_started.md
+  # - Advanced usage: advanced_usage.md
   - API Reference:
       - Configuration: config.md
       - Extractors: extractors.md
