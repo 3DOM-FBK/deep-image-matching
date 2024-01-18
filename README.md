@@ -83,7 +83,30 @@ From version 0.5.0, pycolmap can be installed on Windows too, so we are consider
 For more information, check the [documentation](https://3dom-fbk.github.io/deep-image-matching/installation/).
 
 ## Usage instructions
-For quick-starting usage instructions, please check the documenation at [https://3dom-fbk.github.io/deep-image-matching/](https://3dom-fbk.github.io/deep-image-matching/getting_started) or check the example notebooks.
+
+You can run deep-image-matching from the command line or from the GUI.
+
+
+Use the following command to see all the available options from the CLI:
+
+```bash
+python -m deep_image_matching --help
+```
+
+For example, to run the matching with SuperPoint and LightGlue on a dataset, you can use the following command:
+
+```bash
+python -m deep_image_matching --dir assets/example_cyprus --config superpoint+lightglue
+```
+
+For all the usage instructions, refer to the documenation at [https://3dom-fbk.github.io/deep-image-matching/](https://3dom-fbk.github.io/deep-image-matching/getting_started) or check the example notebooks.
+
+To run the GUI by using the following command:
+
+```bash
+python main.py --gui
+
+```
 
 ### Merging databases with different local features
 
