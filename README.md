@@ -11,6 +11,8 @@
 | ------------------------------------------------ | ---------------------------------------------------- |
 | <img src='assets/temple_rsift.gif' height="165"> | <img src='assets/temple_superglue.gif' height="165"> |
 
+**Note: We are carrying out some major updates in deep-image-matching, so the program may collapse. We will release a new fully working version soon. Thanks for you patience.**
+
 Multivew matcher for SfM software. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI. Feel free to collaborate!
 
 **Please, note that `deep-image-matching` is under active development** and it is still in an experimental stage. If you find any bug, please open an issue.
