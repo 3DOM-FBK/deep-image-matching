@@ -122,8 +122,8 @@ def get_camera(chunk, label):
 
 
 def import_markers(
-    marker_image_file: str | Path,
-    marker_world_file: str | Path = None,
+    marker_image_file: Union[str, Path],
+    marker_world_file: Union[str, Path] = None,
     chunk: Metashape.Chunk = None,
 ) -> None:
     """Import markers from file. If no chunk is provided, the markers are added to the current chunk."""

@@ -206,6 +206,35 @@ opt_zoo = {
 
 
 class Config:
+    """
+    Configuration class for deep image matching.
+
+    This class represents the configuration settings for deep image matching. It provides methods to parse user input,
+    retrieve configuration options, update configuration from a YAML file, print the configuration settings, and save
+    the configuration to a file.
+
+    Attributes:
+        default_cli_opts (dict): The default command-line options.
+        cfg (dict): The configuration dictionary with the following keys: general, extractor, matcher.
+
+    Methods:
+        general: Get the general configuration options.
+        extractor: Get the extractor configuration options.
+        matcher: Get the matcher configuration options.
+        __init__: Initialize the Config object.
+        as_dict: Get the configuration dictionary.
+        get_config: Get a specific configuration by name.
+        get_config_names: Get a list of available configuration names.
+        get_matching_strategy_names: Get a list of available matching strategy names.
+        get_extractor_names: Get a list of available extractor names.
+        get_matcher_names: Get a list of available matcher names.
+        get_retrieval_names: Get a list of available retrieval names.
+        parse_user_config: Parse the user configuration and perform checks on the input arguments.
+        update_from_yaml: Update the configuration from a YAML file.
+        print: Print the configuration settings.
+        save: Save the configuration to a file.
+    """
+
     default_cli_opts = {
         "gui": False,
         "dir": None,
@@ -243,6 +272,12 @@ class Config:
         return self.cfg["matcher"]
 
     def __init__(self, args: dict):
+        """
+        Initialize the Config object.
+
+        Args:
+            args (dict): The input arguments provided by the user.
+        """
         # Parse input arguments
         user_conf = self.parse_user_config(args)
 
@@ -255,11 +290,29 @@ class Config:
         self._config_file = user_conf["output_dir"] / "config.json"
         self.save(self._config_file)
 
-    def as_dict(self):
+    def as_dict(self) -> dict:
+        """
+        Get the configuration dictionary.
+
+        Returns:
+            dict: The configuration dictionary.
+        """
         return self.cfg
 
     @staticmethod
     def get_config(name: str) -> dict:
+        """
+        Get a specific configuration by name.
+
+        Args:
+            name (str): The name of the configuration.
+
+        Returns:
+            dict: The configuration dictionary.
+
+        Raises:
+            ValueError: If the configuration name is invalid.
+        """
         try:
             return confs[name]
         except KeyError:
@@ -286,9 +339,27 @@ class Config:
         return opt_zoo["retrieval"]
 
     @staticmethod
-    def parse_user_config(input_args: dict):
-        """Do checks on the input arguments and return the configuration dictionary with the following keys: general, extractor, matcher"""
+    def parse_user_config(input_args: dict) -> dict:
+        """
+        Parses the user configuration and performs checks on the input arguments.
 
+        Args:
+            input_args (dict): The input arguments provided by the user (e.g., from CLI parser).
+
+        Returns:
+            dict: The configuration dictionary with the following keys: general, extractor, matcher.
+
+        Raises:
+            ValueError: If the project directory is invalid or does not exist.
+            ValueError: If the 'images' folder is not found in the project directory or is invalid.
+            ValueError: If the output folder already exists and the '--force' option is not used.
+            ValueError: If the configuration, extractor, or matcher options are invalid.
+            ValueError: If the matching strategy option is invalid.
+            ValueError: If the overlap option is invalid when the strategy is set to 'sequential'.
+            ValueError: If the retrieval option is invalid when the strategy is set to 'retrieval'.
+            ValueError: If the db_path option is invalid when the strategy is set to 'covisibility'.
+            ValueError: If the pairs option is invalid when the strategy is set to 'custom_pairs'.
+        """
         args = {**Config.default_cli_opts, **input_args}
 
         # Check and defines all input/output folders
@@ -421,14 +492,54 @@ class Config:
         return cfg
 
     def update_from_yaml(self, path: Path):
+        """
+        Update the configuration from a YAML file.
+
+        Args:
+            path (Path): The path to the YAML file.
+
+        Raises:
+            FileNotFoundError: If the configuration file is not found.
+            ValueError: If the extractor name in the configuration file does not match with the extractor chosen from CLI or GUI.
+            ValueError: If the matcher name in the configuration file does not match with the matcher chosen from CLI or GUI.
+
+        """
+        path = Path(path)
+        if not path.exists():
+            raise FileNotFoundError(f"Configuration file {path} not found.")
+
         with open(path, "r") as file:
             cfg = yaml.safe_load(file)
 
-        self.cfg["general"].update(cfg["general"])
-        self.cfg["extractor"].update(cfg["extractor"])
-        self.cfg["matcher"].update(cfg["matcher"])
+        if "general" in cfg:
+            self.cfg["general"].update(cfg["general"])
+        if "extractor" in cfg:
+            if "name" not in cfg["extractor"]:
+                raise ValueError(
+                    f"Extractor name is missing in configuration file {path}. Please specify the extractor name for which you want to update the configuration."
+                )
+            if cfg["extractor"]["name"] != self.cfg["extractor"]["name"]:
+                raise ValueError(
+                    f"Extractor name in configuration file {path} does not match with the extractor chosen from CLI or GUI. Please specify the correct extractor name for which you want to update the configuration."
+                )
+            self.cfg["extractor"].update(cfg["extractor"])
+        if "matcher" in cfg:
+            if "name" not in cfg["matcher"]:
+                raise ValueError(
+                    f"Matcher name is missing in configuration file {path}. Please specify the matcher name for which you want to update the configuration."
+                )
+            if cfg["matcher"]["name"] != self.cfg["matcher"]["name"]:
+                raise ValueError(
+                    f"Matcher name in configuration file {path} does not match with the matcher chosen from CLI or GUI. Please specify the correct matcher name for which you want to update the configuration."
+                )
+            self.cfg["matcher"].update(cfg["matcher"])
 
     def print(self):
+        """
+        Print the configuration settings.
+
+        This method prints the general, extractor, and matcher configuration settings.
+        """
         print("Config general:")
         pprint(self.general)
         print("\n")
@@ -439,8 +550,13 @@ class Config:
         pprint(self.matcher)
 
     def save(self, path: Path = None):
-        """Save configuration to file"""
+        """Save configuration to file.
 
+        Args:
+            path (Path, optional): The path where the configuration will be saved. If not provided, the default
+                configuration file path will be used.
+
+        """
         if path is None:
             path = self._config_file
         else:
@@ -455,7 +571,7 @@ class Config:
                 if isinstance(vv, Enum):
                     cfg[k][kk] = vv.name
 
-        # Conver Path objects to strings
+        # Convert Path objects to strings
         for k, v in cfg.items():
             for kk, vv in v.items():
                 if isinstance(vv, Path):

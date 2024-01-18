@@ -4,22 +4,25 @@ site_author: 3DOM
 
 theme:
   name: readthedocs
-  palette:
-    primary: indigo
-  font:
-    text: Open Sans
+  highlightjs: true
+  # palette:
+  #   primary: indigo
+  # font:
+  #   text: Open Sans
   features:
     - navigation.path
     - navigation.footer
 
 plugins:
   - search
+  - autorefs
   - mkdocstrings:
       handlers:
         python:
           paths: [src] # search packages in the src folder
           options:
             show_source: false
+            # heading_level: 2
 
 nav:
   - Home: index.md
@@ -27,7 +30,7 @@ nav:
   - Getting started: getting_started.md
   - API Reference:
       - Configuration: config.md
-      - Extrctors: extractors.md
+      - Extractors: extractors.md
       - Matchers: matchers.md
       - IO: io.md
       - Utils: utils.md

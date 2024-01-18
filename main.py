@@ -1,4 +1,5 @@
 from importlib import import_module
+from pathlib import Path
 
 from deep_image_matching import logger, timer
 from deep_image_matching.config import Config
@@ -19,6 +20,8 @@ args = parse_cli()
 config = Config(args)
 
 if config_file:
+    if not Path(config_file).exists():
+        raise FileNotFoundError(f"Configuration file {config_file} not found.")
     config.update_from_yaml(config_file)
     config.print()
 

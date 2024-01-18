@@ -233,15 +233,15 @@ def pairs_from_lowres(
 
 
 def pairs_from_covisibility(
-    model: str | Path,
+    model: Union[str, Path],
     num_matched: int = 10,
 ) -> List[tuple]:
     """
     Generate image pairs based on covisibility information.
 
     Args:
-        model (str | Path): The path to the COLMAP model file.
-        output (str | Path): The path to the output file where the pairs will be written.
+        model (Union[str, Path]): The path to the COLMAP model file.
+        output (Union[str, Path]): The path to the output file where the pairs will be written.
         num_matched (int, optional): The number of matched images to consider for each image. Defaults to 10.
     """
     logger.info("Reading the COLMAP model...")
@@ -293,9 +293,9 @@ class PairsGenerator:
         strategy: str,
         retrieval_option: Union[str, None] = None,
         overlap: int = 1,
-        image_dir: str | Path = "",
-        output_dir: str | Path = "",
-        existing_colmap_model: str | Path = "",
+        image_dir: Union[str, Path] = "",
+        output_dir: Union[str, Path] = "",
+        existing_colmap_model: Union[str, Path] = "",
         **kwargs,
     ) -> None:
         self.img_paths = img_paths
