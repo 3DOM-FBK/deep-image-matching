@@ -134,7 +134,7 @@ These are non-mandatory parameters that can be used to fine-tune the matching pr
 
 The `config.yaml` file is a YAML file that contains all the parameters that can be set for the matching. The parameters are divided into different sections: 'general', 'extractor', 'matcher'.
 
-The `general` section contains general parameters for the processing (in addition to those defined by the CLI arguments):
+The 'general' section contains general parameters for the processing (in addition to those defined by the CLI arguments):
 
 - `tile_size`: size of the tiles defined as a Tuple (width, height) in pixel (default `(2400, 2000)`),
 - `tile_overlap`: the tiles can be overlapped by a certain amount of pixel to avoid features/matches detected close to the tile borders (default `10`),

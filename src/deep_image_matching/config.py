@@ -1,3 +1,4 @@
+import ast
 import json
 from copy import deepcopy
 from enum import Enum
@@ -519,26 +520,45 @@ class Config:
             cfg = yaml.safe_load(file)
 
         if "general" in cfg:
+            if "quality" in cfg["general"]:
+                cfg["general"]["quality"] = Quality[cfg["general"]["quality"].upper()]
+            if "tile_selection" in cfg["general"]:
+                cfg["general"]["tile_selection"] = TileSelection[
+                    cfg["general"]["tile_selection"].upper()
+                ]
+            if "geom_verification" in cfg["general"]:
+                cfg["general"]["geom_verification"] = GeometricVerification[
+                    cfg["general"]["geom_verification"].upper()
+                ]
+            if "tile_size" in cfg["general"]:
+                cfg["general"]["tile_size"] = ast.literal_eval(
+                    cfg["general"]["tile_size"]
+                )
             self.cfg["general"].update(cfg["general"])
+
         if "extractor" in cfg:
             if "name" not in cfg["extractor"]:
-                raise ValueError(
+                logger.error(
                     f"Extractor name is missing in configuration file {path}. Please specify the extractor name for which you want to update the configuration."
                 )
+                exit(1)
             if cfg["extractor"]["name"] != self.cfg["extractor"]["name"]:
-                raise ValueError(
+                logger.error(
                     f"Extractor name in configuration file {path} does not match with the extractor chosen from CLI or GUI. Please specify the correct extractor name for which you want to update the configuration."
                 )
+                exit(1)
             self.cfg["extractor"].update(cfg["extractor"])
         if "matcher" in cfg:
             if "name" not in cfg["matcher"]:
-                raise ValueError(
+                logger.error(
                     f"Matcher name is missing in configuration file {path}. Please specify the matcher name for which you want to update the configuration."
                 )
+                exit(1)
             if cfg["matcher"]["name"] != self.cfg["matcher"]["name"]:
-                raise ValueError(
+                logger.error(
                     f"Matcher name in configuration file {path} does not match with the matcher chosen from CLI or GUI. Please specify the correct matcher name for which you want to update the configuration."
                 )
+                exit(1)
             self.cfg["matcher"].update(cfg["matcher"])
 
     def print(self):
