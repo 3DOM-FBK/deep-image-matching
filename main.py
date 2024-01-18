@@ -7,8 +7,6 @@ from deep_image_matching.image_matching import ImageMatching
 from deep_image_matching.io.h5_to_db import export_to_colmap
 from deep_image_matching.parser import parse_cli
 
-from scripts.metashape.metashape_from_dim import export_to_metashape
-
 # Hard-coded flag for exporting the solution to Metashape (TODO: move to the configuration settings)
 do_export_to_metashape = False
 config_file = "config.yaml"
@@ -174,6 +172,12 @@ if not config.general["skip_reconstruction"]:
 
 
 if model and do_export_to_metashape:
+    try:
+        from scripts.metashape.metashape_from_dim import export_to_metashape
+    except ImportError:
+        logger.error("Metashape module is not available. Cannot export to Metashape.")
+        exit()
+
     # Hard-coded parameters for Metashape # TODO: improve this implementation.
     # This is now given only as an example for how to use the export_to_metashape function.
     project_dir = config.general["output_dir"] / "metashape"
