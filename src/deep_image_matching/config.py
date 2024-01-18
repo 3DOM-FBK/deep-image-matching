@@ -362,6 +362,12 @@ class Config:
         """
         args = {**Config.default_cli_opts, **input_args}
 
+        # Check that at least one of the two options is provided
+        if args["images"] is None and args["dir"] is None:
+            raise ValueError(
+                "Invalid input. Either '--images' or '--dir' option must be provided."
+            )
+
         # Check and defines all input/output folders
         if not args["dir"]:
             raise ValueError(
@@ -372,6 +378,7 @@ class Config:
             if not args["dir"].exists() or not args["dir"].is_dir():
                 raise ValueError(f"Folder {args['dir']} does not exist")
 
+        # Check images folder
         if args["images"] is None:
             args["images"] = args["dir"] / "images"
             if not args["images"].exists() or not args["images"].is_dir():

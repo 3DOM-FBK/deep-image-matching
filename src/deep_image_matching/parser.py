@@ -13,7 +13,7 @@ def parse_cli() -> dict:
     parser.add_argument(
         "--gui", action="store_true", help="Run GUI interface", default=False
     )
-    parser.add_argument("-d", "--dir", type=str, help="Project folder.")
+    parser.add_argument("-d", "--dir", type=str, help="Project folder.", default=None)
     parser.add_argument(
         "-i",
         "--images",

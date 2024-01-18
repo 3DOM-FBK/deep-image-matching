@@ -7,9 +7,10 @@ from deep_image_matching.image_matching import ImageMatching
 from deep_image_matching.io.h5_to_db import export_to_colmap
 from deep_image_matching.parser import parse_cli
 
-# Hard-coded flag for exporting the solution to Metashape (TODO: move to the configuration settings)
-do_export_to_metashape = False
 config_file = "config.yaml"
+
+# Hard-coded flag for exporting the solution to Metashape (TODO: move to the configuration settings). Note that you need to install Metashape as module first.
+do_export_to_metashape = False
 
 # Parse arguments from command line
 args = parse_cli()
