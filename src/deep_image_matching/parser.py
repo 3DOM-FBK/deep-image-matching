@@ -80,13 +80,13 @@ def parse_cli() -> dict:
         "--overlap",
         type=int,
         help="Image overlap, if using sequential overlap strategy",
-        default=None,
+        default=1,
     )
     parser.add_argument(
         "-r",
         "--retrieval",
         choices=Config.get_retrieval_names(),
-        default=None,
+        default="netvlad",
         help="Specify image retrieval method",
     )
     parser.add_argument(

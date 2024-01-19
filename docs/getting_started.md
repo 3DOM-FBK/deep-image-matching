@@ -13,7 +13,7 @@ The minimal required option are:
 
 Other optional parameters are:
 
-- `--strategy` `-m`: the strategy to use for matching the images. See [Matching strategies](#matching-strategies) section (default: `matching_lowres`)
+- `--strategy` `-m`: the strategy to use for matching the images. It can be `matching_lowres`, `bruteforce`, `sequential`, `retrieval`, `custom_pairs`. See [Matching strategies](#matching-strategies) section (default: `matching_lowres`)
 - `--quality` `-Q`: the quality of the images to be matched. It can be `lowest`, `low`, `medium`, `high` or `highest`. See [Quality](#quality) section (default: `high`).
 - `tiling` `-t`: if passed, the images are tiled in 4 parts and each part is matched separately. This is useful for high-resolution images if you do not want to resize them. See [Tiling](#tiling) section (default: `None`).
 <!-- - `--images` `-i`: if the folder containing the image is not located in the project directory, you can manually specify the path to the folder containing the images If nothing is passed, deep_image_matching will look for a folder named "image" inside the project directory (default: `None`).
@@ -26,8 +26,8 @@ Other optional parameters are:
 
 Finally, there are some 'strategy-dependent' options (i.e., options that are used only with specific strategies). See [Matching strategies](#matching-strategies) section for more information. These options are:
 
-- `--overlap` `-v`: if  'strategy' is set to 'sequential', set the number of images that are sequentially matched in the sequence (default: `None`)
-- `--retrieval` `-r`: if `strategy` is set to `retrieval`, set the global descriptor to use for image retrieval. Options are: "netvlad", "openibl", "cosplace", "dir" (default: `None`).
+- `--overlap` `-v`: if  'strategy' is set to 'sequential', set the number of images that are sequentially matched in the sequence (default: `1`)
+- `--retrieval` `-r`: if `strategy` is set to `retrieval`, set the global descriptor to use for image retrieval. Options are: "netvlad", "openibl", "cosplace", "dir" (default: `netvlad`).
 - `--pairs` `-p`: if `strategy` is set to `custom_pairs`, set the path to the text file containing the pairs of images to be matched. (default: `None`).
 
 

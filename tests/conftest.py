@@ -6,7 +6,7 @@ import pytest
 
 @pytest.fixture
 def data_dir():
-    return Path(__file__).parents[0].parents[0] / "assets/example_cyprus"
+    return Path(__file__).parents[0].parents[0] / "assets/pytest"
 
 
 # @pytest.fixture
