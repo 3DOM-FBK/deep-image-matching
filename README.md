@@ -1,8 +1,12 @@
-[![Static Badge](https://img.shields.io/badge/Matches_for-COLMAP-red)](https://github.com/colmap/colmap)
-![Static Badge](https://img.shields.io/badge/Matches_for-Metashape-blue) [![Static Badge](https://img.shields.io/badge/Powered_by-Kornia-green)](https://github.com/kornia/kornia) [![Static Badge](https://img.shields.io/badge/Powered_by-hloc-blue)](https://github.com/kornia/kornia)
-
- [![Static Badge](https://img.shields.io/github/v/release/:user/:repo)](https://3dom-fbk.github.io/) [![Static Badge](https://img.shields.io/readthedocs/:packageName/:version
-)](https://3dom-fbk.github.io/)
+<div align="center">
+ 
+ [![Static Badge](https://img.shields.io/badge/Matches_for-COLMAP-red)](https://github.com/colmap/colmap)
+ ![Static Badge](https://img.shields.io/badge/Matches_for-Metashape-blue) [![Static Badge](https://img.shields.io/badge/Powered_by-Kornia-green)](https://github.com/kornia/kornia) [![Static Badge](https://img.shields.io/badge/Powered_by-hloc-blue)](https://github.com/kornia/kornia)
+ 
+  [![Static Badge](https://img.shields.io/github/v/release/:user/:repo)](https://3dom-fbk.github.io/) [![Static Badge](https://img.shields.io/badge/docs-DeepImageMatching-blue
+ )](https://3dom-fbk.github.io/deep-image-matching/)
+ 
+</div>
 
 ## DEEP-IMAGE-MATCHING
 
