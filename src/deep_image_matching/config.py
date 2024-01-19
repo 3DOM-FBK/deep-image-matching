@@ -1,5 +1,6 @@
 import ast
 import json
+import shutil
 from copy import deepcopy
 from enum import Enum
 from pathlib import Path
@@ -369,15 +370,26 @@ class Config:
                 "Invalid input. Either '--images' or '--dir' option must be provided."
             )
 
-        # Check and defines all input/output folders
-        if not args["dir"]:
-            raise ValueError(
-                "Invalid project directory. A valid folder must be passed to '--dir' option."
-            )
+        # If the project directory is not provided, check that the image folder is provided (and it valid)
+        if args["dir"] is None:
+            args["images"] = Path(args["images"])
+            if not args["images"]:
+                raise ValueError(
+                    "Invalid input. '--images' option is required when '--dir' option is not provided."
+                )
+            if not args["images"].exists() or not args["images"].is_dir():
+                raise ValueError(
+                    f"Invalid images folder {args['images']}. Direcotry does not exist"
+                )
+            args["dir"] = args["images"].parent
         else:
             args["dir"] = Path(args["dir"])
+            # Check and defines all input/output folders
             if not args["dir"].exists() or not args["dir"].is_dir():
                 raise ValueError(f"Folder {args['dir']} does not exist")
+            else:
+                if not args["dir"].exists() or not args["dir"].is_dir():
+                    raise ValueError(f"Folder {args['dir']} does not exist")
 
         # Check images folder
         if args["images"] is None:
@@ -393,21 +405,24 @@ class Config:
                     f"Invalid images folder {args['images']}. Direcotry does not exist"
                 )
 
-        args["outs"] = (
-            args["dir"]
-            / f"results_{args['config']}_{args['strategy']}_quality_{args['quality']}"
-        )
+        # if output folder is not provided, use the default one
+        if args["outs"] is None:
+            args["outs"] = (
+                args["dir"]
+                / f"results_{args['config']}_{args['strategy']}_quality_{args['quality']}"
+            )
+
         if args["outs"].exists():
             if args["force"]:
                 logger.warning(
-                    f"{args['outs']} already exists, removing {args['outs']}"
+                    f"{args['outs']} already exists, but the '--force' option is used. Deleting the folder."
                 )
-                # shutil.rmtree(args["outs"])
-            # else:
-            #     raise ValueError(
-            #         f"{args['outs']} already exists, use '--force' to overwrite it"
-            #     )
-        # args["outs"].mkdir(parents=True)
+                shutil.rmtree(args["outs"])
+            else:
+                logger.warning(
+                    f"{args['outs']} already exists. Use '--force' option to overwrite the folder. Using existing features is not yet fully implemented (it will be implemented in a future release). Exiting."
+                )
+                exit(1)
         args["outs"].mkdir(parents=True, exist_ok=True)
 
         # Check extraction and matching configuration

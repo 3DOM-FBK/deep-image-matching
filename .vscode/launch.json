@@ -20,14 +20,14 @@
         "--config",
         "superpoint+lightglue",
         "--strategy",
-        "matching_lowres",
+        "bruteforce",
         "--quality",
         "medium",
         "--tiling",
         "preselection",
-        "-V"
+        "-V",
         // "--skip_reconstruction",
-        // "--force",
+        "--force"
       ]
     },
     {

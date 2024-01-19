@@ -124,9 +124,7 @@ class ImageMatching:
         self.image_list = ImageList(imgs_dir)
         images = self.image_list.img_names
         if len(images) == 0:
-            raise ValueError(
-                "Image folder empty. Supported formats: '.jpg', '.JPG', '.png'"
-            )
+            raise ValueError(f"Image folder empty. Supported formats: {self.image_ext}")
         elif len(images) == 1:
             raise ValueError("Image folder must contain at least two images")
 
