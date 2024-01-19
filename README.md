@@ -101,7 +101,7 @@ python -m deep_image_matching --dir assets/example_cyprus --config superpoint+li
 
 For all the usage instructions, refer to the documenation at [https://3dom-fbk.github.io/deep-image-matching/](https://3dom-fbk.github.io/deep-image-matching/getting_started) or check the example notebooks.
 
-To run the GUI by using the following command:
+To run the GUI, you can use the following command:
 
 ```bash
 python main.py --gui

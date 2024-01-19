@@ -30,9 +30,9 @@ Install pycolmap:
 pip install pycolmap
 ```
 
-As [pycolmap](https://github.com/colmap/pycolmap) was released on PyPi only for Linux and macOS (up to version 0.4.0), it is not installed by default with deep-image-matching. 
-Therefore, it is not included in the dependencies of deep-image-matching.
-From version 0.5.0, pycolmap can be installed on Windows too, so we are considering to add it as a dependency of deep-image-matching.
+Up to version 0.4.0, [pycolmap](https://github.com/colmap/pycolmap) was released on PyPi only for Linux and macOS.
+Therefore, it was not included in the dependencies of deep-image-matching, so you need to install it manually.
+From [version 0.5.0](https://github.com/colmap/pycolmap/releases/tag/v0.5.0), pycolmap can be installed on Windows too, so we are considering to add it as a dependency of deep-image-matching.
 
 
 ## Notes and troubleshooting
@@ -40,7 +40,6 @@ From version 0.5.0, pycolmap can be installed on Windows too, so we are consider
 ### Pytorch
 
 If you run into any troubles installing Pytorch (and its related packages, such as Kornia), please check the official website ([https://pytorch.org/get-started/locally/](https://pytorch.org/get-started/locally/)) and follow the instructions for your system and CUDA architecture. Then, try to install again deep-image-matching.
-
 
 ### Pydegensac
 Deep-image-matching relies on [pydegensac](https://github.com/ducha-aiki/pydegensac) for the geometric verification of matches, which is only available for `Python <=3.9` on Windows. If you are using Windows, please, install `Python 3.9`, on Linux, you can also use `Python 3.10`.
