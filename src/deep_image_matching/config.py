@@ -242,13 +242,14 @@ class Config:
         "dir": None,
         "images": None,
         "outs": None,
-        "config": None,
+        "pipeline": None,
+        "config_file": None,
         "quality": "high",
         "tiling": "none",
         "strategy": "matching_lowres",
-        "pairs": None,
+        "pair_file": None,
         "overlap": None,
-        "retrieval": None,
+        "global_feature": None,
         "db_path": None,
         "upright": False,
         "skip_reconstruction": False,
@@ -281,15 +282,23 @@ class Config:
             args (dict): The input arguments provided by the user.
         """
         # Parse input arguments
-        user_conf = self.parse_user_config(args)
+        general = self.parse_general_config(args)
 
         # Build configuration dictionary
-        self.cfg["general"] = {**conf_general, **user_conf}
-        features_config = self.get_config(args["config"])
+        self.cfg["general"] = {**conf_general, **general}
+        features_config = self.get_config(args["pipeline"])
         self.cfg["extractor"] = features_config["extractor"]
         self.cfg["matcher"] = features_config["matcher"]
 
-        self._config_file = user_conf["output_dir"] / "config.json"
+        # If the user has provided a configuration file, update the configuration
+        if "config_file" in args and args["config_file"] is not None:
+            config_file = Path(args["config_file"]).resolve()
+            if not config_file.exists():
+                raise FileNotFoundError(f"Configuration file {config_file} not found.")
+            self.update_from_yaml(config_file)
+            self.print()
+
+        self._config_file = self.cfg["general"]["output_dir"] / "config.json"
         self.save(self._config_file)
 
     def as_dict(self) -> dict:
@@ -321,11 +330,11 @@ class Config:
             raise ValueError(f"Invalid configuration name: {name}")
 
     @staticmethod
-    def get_config_names() -> list:
+    def get_pipelines() -> list:
         return list(confs.keys())
 
     @staticmethod
-    def get_matching_strategy_names() -> list:
+    def get_matching_strategies() -> list:
         return opt_zoo["matching_strategy"]
 
     @staticmethod
@@ -341,7 +350,7 @@ class Config:
         return opt_zoo["retrieval"]
 
     @staticmethod
-    def parse_user_config(input_args: dict) -> dict:
+    def parse_general_config(input_args: dict) -> dict:
         """
         Parses the user configuration and performs checks on the input arguments.
 
@@ -351,16 +360,6 @@ class Config:
         Returns:
             dict: The configuration dictionary with the following keys: general, extractor, matcher.
 
-        Raises:
-            ValueError: If the project directory is invalid or does not exist.
-            ValueError: If the 'images' folder is not found in the project directory or is invalid.
-            ValueError: If the output folder already exists and the '--force' option is not used.
-            ValueError: If the configuration, extractor, or matcher options are invalid.
-            ValueError: If the matching strategy option is invalid.
-            ValueError: If the overlap option is invalid when the strategy is set to 'sequential'.
-            ValueError: If the retrieval option is invalid when the strategy is set to 'retrieval'.
-            ValueError: If the db_path option is invalid when the strategy is set to 'covisibility'.
-            ValueError: If the pairs option is invalid when the strategy is set to 'custom_pairs'.
         """
         args = {**Config.default_cli_opts, **input_args}
 
@@ -409,7 +408,7 @@ class Config:
         if args["outs"] is None:
             args["outs"] = (
                 args["dir"]
-                / f"results_{args['config']}_{args['strategy']}_quality_{args['quality']}"
+                / f"results_{args['pipeline']}_{args['strategy']}_quality_{args['quality']}"
             )
 
         if args["outs"].exists():
@@ -426,16 +425,17 @@ class Config:
         args["outs"].mkdir(parents=True, exist_ok=True)
 
         # Check extraction and matching configuration
-        if args["config"] is None or args["config"] not in confs:
+        if args["pipeline"] is None or args["pipeline"] not in confs:
             raise ValueError(
-                "Invalid config. --config option is required and must be a valid configuration. Check --help for details"
+                "Invalid config. --pipeline option is required and must be a valid pipeline. Check --help for details"
             )
-        extractor = confs[args["config"]]["extractor"]["name"]
+        pipeline = args["pipeline"]
+        extractor = confs[pipeline]["extractor"]["name"]
         if extractor not in opt_zoo["extractors"]:
             raise ValueError(
                 f"Invalid extractor option: {extractor}. Valid options are: {opt_zoo['extractors']}"
             )
-        matcher = confs[args["config"]]["matcher"]["name"]
+        matcher = confs[pipeline]["matcher"]["name"]
         if matcher not in opt_zoo["matchers"]:
             raise ValueError(
                 f"Invalid matcher option: {matcher}. Valid options are: {opt_zoo['matchers']}"
@@ -463,13 +463,13 @@ class Config:
                 )
 
         elif args["strategy"] == "retrieval":
-            if args["retrieval"] is None:
+            if args["global_feature"] is None:
                 raise ValueError(
-                    "--retrieval option is required when --strategy is set to retrieval"
+                    "--global_feature option is required when --strategy is set to retrieval"
                 )
-            elif args["retrieval"] not in opt_zoo["retrieval"]:
+            elif args["global_feature"] not in opt_zoo["retrieval"]:
                 raise ValueError(
-                    f"Invalid retrieval option: {args['retrieval']}. Valid options are: {opt_zoo['retrieval']}"
+                    f"Invalid global_feature option: {args['global_feature']}. Valid options are: {opt_zoo['retrieval']}"
                 )
 
         elif args["strategy"] == "covisibility":
@@ -482,16 +482,16 @@ class Config:
                 raise ValueError(f"File {args['db_path']} does not exist")
 
         elif args["strategy"] == "custom_pairs":
-            if args["pairs"] is None:
+            if args["pair_file"] is None:
                 raise ValueError(
-                    "--pairs option is required when --strategy is set to custom_pairs"
+                    "--pair_file option is required when --strategy is set to custom_pairs"
                 )
-            args["pairs"] = Path(args["pairs"])
-            if not args["pairs"].exists():
-                raise ValueError(f"File {args['pairs']} does not exist")
+            args["pair_file"] = Path(args["pair_file"])
+            if not args["pair_file"].exists():
+                raise ValueError(f"File {args['pair_file']} does not exist")
 
         if args["strategy"] != "custom_pairs":
-            args["pairs"] = args["outs"] / "pairs.txt"
+            args["pair_file"] = args["outs"] / "pairs.txt"
 
         if args["verbose"]:
             change_logger_level(logger.name, "debug")
@@ -503,8 +503,8 @@ class Config:
             "quality": Quality[args["quality"].upper()],
             "tile_selection": TileSelection[args["tiling"].upper()],
             "matching_strategy": args["strategy"],
-            "retrieval": args["retrieval"],
-            "pair_file": args["pairs"],
+            "retrieval": args["global_feature"],
+            "pair_file": args["pair_file"],
             "overlap": args["overlap"],
             "db_path": args["db_path"],
             "upright": args["upright"],
@@ -558,8 +558,8 @@ class Config:
                 )
                 exit(1)
             if cfg["extractor"]["name"] != self.cfg["extractor"]["name"]:
-                logger.error(
-                    f"Extractor name in configuration file {path} does not match with the extractor chosen from CLI or GUI. The custom configuration is not set, but running with the default options."
+                logger.warning(
+                    f"Extractor name in configuration file {path} does not match with the extractor chosen from CLI or GUI. The custom configuration is not set, but matching is run with the default options."
                 )
             self.cfg["extractor"].update(cfg["extractor"])
         if "matcher" in cfg:
@@ -569,8 +569,8 @@ class Config:
                 )
                 exit(1)
             if cfg["matcher"]["name"] != self.cfg["matcher"]["name"]:
-                logger.error(
-                    f"Matcher name in configuration file {path} does not match with the matcher chosen from CLI or GUI. The custom configuration is not set, but running with the default options."
+                logger.warning(
+                    f"Matcher name in configuration file {path} does not match with the matcher chosen from CLI or GUI. The custom configuration is not set, but matching is run with the default options."
                 )
             self.cfg["matcher"].update(cfg["matcher"])
 

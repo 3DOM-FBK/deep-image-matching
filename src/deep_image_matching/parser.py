@@ -35,15 +35,22 @@ def parse_cli() -> dict:
     #     default=None,
     # )
     parser.add_argument(
-        "-c",
-        "--config",
+        "-p",
+        "--pipeline",
         type=str,
-        help="Extractor and matcher configuration",
-        choices=Config.get_config_names(),
+        help="Define the pipeline (combination of local feature extractor and matcher) to use for the matching.",
+        choices=Config.get_pipelines(),
         required=True,
     )
     parser.add_argument(
-        "-Q",
+        "-c",
+        "--config_file",
+        type=str,
+        help="Path of a YAML configuration file that contains user-defined options. If not specified, the default configuration for the selected matching configuration is used.",
+        default=None,
+    )
+    parser.add_argument(
+        "-q",
         "--quality",
         type=str,
         choices=["lowest", "low", "medium", "high", "highest"],
@@ -59,7 +66,7 @@ def parse_cli() -> dict:
         help="Set the tiling strategy for the matching. Default is none.",
     )
     parser.add_argument(
-        "-m",
+        "-s",
         "--strategy",
         choices=[
             "matching_lowres",
@@ -73,18 +80,16 @@ def parse_cli() -> dict:
         help="Matching strategy",
     )
     parser.add_argument(
-        "-p", "--pairs", type=str, default=None, help="Specify pairs for matching"
+        "--pair_file", type=str, default=None, help="Specify pairs for matching"
     )
     parser.add_argument(
-        "-v",
         "--overlap",
         type=int,
         help="Image overlap, if using sequential overlap strategy",
         default=1,
     )
     parser.add_argument(
-        "-r",
-        "--retrieval",
+        "--global_feature",
         choices=Config.get_retrieval_names(),
         default="netvlad",
         help="Specify image retrieval method",
@@ -126,7 +131,8 @@ def parse_cli() -> dict:
         gui_out = gui()
         args.images = gui_out["image_dir"]
         args.outs = gui_out["out_dir"]
-        args.config = gui_out["config"]
+        args.matcher = gui_out["matcher"]
+        args.config_file = gui_out["config_file"]
         args.strategy = gui_out["strategy"]
         args.pairs = gui_out["pair_file"]
         args.overlap = gui_out["image_overlap"]

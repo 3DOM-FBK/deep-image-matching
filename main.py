@@ -1,5 +1,4 @@
 from importlib import import_module
-from pathlib import Path
 
 from deep_image_matching import logger, timer
 from deep_image_matching.config import Config
@@ -7,39 +6,23 @@ from deep_image_matching.image_matching import ImageMatching
 from deep_image_matching.io.h5_to_db import export_to_colmap
 from deep_image_matching.parser import parse_cli
 
-# User defined configuration file
-config_file = "config.yaml"
-
 # Parse arguments from command line
 args = parse_cli()
 
 # Build configuration
 config = Config(args)
 
-if config_file:
-    config_file = (Path(__file__).parent / config_file).resolve()
-    if not config_file.exists():
-        raise FileNotFoundError(f"Configuration file {config_file} not found.")
-    config.update_from_yaml(config_file)
-    config.print()
-
-# Save configuration to a json file in the output directory
-config.save()
-
 # For simplicity, save some of the configuration parameters in variables.
 imgs_dir = config.general["image_dir"]
 output_dir = config.general["output_dir"]
-matching_strategy = config.general["matching_strategy"]
-extractor = config.extractor["name"]
-matcher = config.matcher["name"]
 
 # Initialize ImageMatching class
 img_matching = ImageMatching(
     imgs_dir=imgs_dir,
     output_dir=output_dir,
-    matching_strategy=matching_strategy,
-    local_features=extractor,
-    matching_method=matcher,
+    matching_strategy=config.general["matching_strategy"],
+    local_features=config.extractor["name"],
+    matching_method=config.matcher["name"],
     pair_file=config.general["pair_file"],
     retrieval_option=config.general["retrieval"],
     overlap=config.general["overlap"],

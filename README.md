@@ -105,7 +105,7 @@ python main.py --help
 For example, to run the matching with SuperPoint and LightGlue on a dataset, you can use the following command:
 
 ```bash
-python main.py --dir assets/example_cyprus --config superpoint+lightglue
+python main.py --dir assets/example_cyprus --pipeline superpoint+lightglue
 ```
 
 For all the usage instructions and configurations, refer to the documenation at [https://3dom-fbk.github.io/deep-image-matching/](https://3dom-fbk.github.io/deep-image-matching/getting_started) or check the example notebooks.

@@ -8,7 +8,7 @@ general:
 
 extractor:
   name: "superpoint"
-  max_keypoints: 4096
+  max_keypoints: 20000
 
 matcher:
   name: "lightglue"
