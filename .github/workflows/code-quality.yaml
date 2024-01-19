@@ -1,12 +1,11 @@
 name: Format and Lint Checks
 on:
   push:
-    branches:
-      - master
+    branches: [master]
     paths:
       - "*.py"
   pull_request:
-    types: [assigned, opened, synchronize, reopened]
+    branches: [master]
 jobs:
   check:
     name: Format and Lint Checks
