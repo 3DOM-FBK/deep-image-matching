@@ -37,7 +37,7 @@ class AlikedExtractor(ExtractorBase):
 
         # Load extractor
         cfg = self._config.get("extractor")
-        if cfg["device"] == "cuda":
+        if cfg["device"] == "cuda" and torch.cuda.is_available():
             self._extractor = ALIKED(**cfg).cuda()
         else:
             self._extractor = ALIKED(**cfg)

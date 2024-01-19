@@ -42,7 +42,7 @@ def test_sp_lg_matching_lowres(data_dir, script):
 
 
 # Test using a custom configuration file
-def test_sp_lg_sequential(data_dir, script):
+def test_sp_lg_custom_config(data_dir, script):
     run_pipeline(
         f"python {script} --dir {data_dir} --pipeline superpoint+lightglue --config_file config.yaml --strategy sequential --overlap 1 --skip_reconstruction --force"
     )
