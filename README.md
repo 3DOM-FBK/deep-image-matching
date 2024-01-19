@@ -90,13 +90,13 @@ You can run deep-image-matching from the command line or from the GUI.
 Use the following command to see all the available options from the CLI:
 
 ```bash
-python -m deep_image_matching --help
+python main.py --help
 ```
 
 For example, to run the matching with SuperPoint and LightGlue on a dataset, you can use the following command:
 
 ```bash
-python -m deep_image_matching --dir assets/example_cyprus --config superpoint+lightglue
+python main.py --dir assets/example_cyprus --config superpoint+lightglue
 ```
 
 For all the usage instructions, refer to the documenation at [https://3dom-fbk.github.io/deep-image-matching/](https://3dom-fbk.github.io/deep-image-matching/getting_started) or check the example notebooks.
