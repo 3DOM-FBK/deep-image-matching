@@ -1,12 +1,15 @@
-# python ./main.py --help
+# Tests
+
+# bruteforce
+python ./main.py --config superpoint+lightglue --dir assets/pytest --strategy bruteforce --skip_reconstruction --force
+
 
 # SEQUENTIAL
-python ./main.py --config superpoint+lightglue --dir assets/example_cyprus --strategy sequential --overlap 1 --force
+python ./main.py --config superpoint+lightglue --dir assets/pytest --strategy sequential --skip_reconstruction --overlap 1 --force
 python ./main.py --config superpoint+lightglue --dir assets/example_cyprus --strategy sequential --overlap 1 --force
 
 ### BRUTEFORCE
 
-# example_cyprus
 python ./main.py --config superpoint+lightglue --dir assets/example_cyprus --strategy bruteforce --force --skip_reconstruction
 python ./main.py --config superpoint+lightglue --dir assets/example_cyprus --strategy bruteforce --force --skip_reconstruction --upright
 python ./main.py --config superpoint+lightglue_fast --dir assets/example_cyprus --strategy bruteforce --force --skip_reconstruction
