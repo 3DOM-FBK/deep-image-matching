@@ -15,7 +15,3 @@ def data_dir():
     shutil.copytree(assets, Path(tempdir) / "images")
 
     return tempdir
-
-
-if __name__ == "__main__":
-    print(Path(os.path.split(__file__)[0]).parents[0] / "assets")

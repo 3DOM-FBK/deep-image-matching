@@ -3,6 +3,7 @@
 ## Requirements
 
 Deep-image-matching is tested on Ubuntu 22.04 and Windows 10 with `Python 3.9`. It is strongly recommended to have a NVIDIA GPU with at least 8GB of memory.
+Due to dependencies issues, it is recommended to use `Python 3.9` on Windows and MacOS, while on Linux you can also use `Python 3.10` (see [pydegensac](#pydegensac).
 
 All the dependencies are listed in the `pyproject.toml` file.
 
@@ -42,7 +43,7 @@ From [version 0.5.0](https://github.com/colmap/pycolmap/releases/tag/v0.5.0), py
 If you run into any troubles installing Pytorch (and its related packages, such as Kornia), please check the official website ([https://pytorch.org/get-started/locally/](https://pytorch.org/get-started/locally/)) and follow the instructions for your system and CUDA architecture. Then, try to install again deep-image-matching.
 
 ### Pydegensac
-Deep-image-matching relies on [pydegensac](https://github.com/ducha-aiki/pydegensac) for the geometric verification of matches, which is only available for `Python <=3.9` on Windows. If you are using Windows, please, install `Python 3.9`, on Linux, you can also use `Python 3.10`.
+Deep-image-matching relies on [pydegensac](https://github.com/ducha-aiki/pydegensac) for the geometric verification of matches, which is only available for `Python <=3.9` on Windows. If you are using Windows or MacOS, please, use `Python 3.9`, on Linux, you can also use `Python 3.10`.
 
 ### Pycolmap
 
