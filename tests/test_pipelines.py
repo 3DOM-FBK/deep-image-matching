@@ -6,12 +6,12 @@ import pytest
 
 @pytest.fixture
 def data_dir():
-    return Path(__file__).parents[0].parents[0] / "assets/pytest"
+    return (Path(__file__).parents[0].parents[0] / "assets/pytest").resolve()
 
 
 @pytest.fixture
 def main():
-    return Path(__file__).parents[1] / "main.py"
+    return (Path(__file__).parents[1] / "main.py").resolve()
 
 
 def run_pipeline(cmd) -> None:
@@ -81,6 +81,20 @@ def test_sift(data_dir, main):
 def test_keynet(data_dir, main):
     run_pipeline(
         f"python {main} --dir {data_dir} --config keynetaffnethardnet+kornia_matcher --strategy sequential --overlap 1 --skip_reconstruction --force"
+    )
+
+
+# Test Quality
+def test_sp_lg_quality_medium(data_dir, main):
+    run_pipeline(
+        f"python {main} --dir {data_dir} --config superpoint+lightglue --strategy sequential --overlap 1 --quality medium --skip_reconstruction --force"
+    )
+
+
+# Test tiling
+def test_sp_lg_tiling(data_dir, main):
+    run_pipeline(
+        f"python {main} --dir {data_dir} --config superpoint+lightglue --strategy sequential --overlap 1 --tiling preselection --skip_reconstruction --force"
     )
 
 
