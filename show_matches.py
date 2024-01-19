@@ -16,13 +16,14 @@ class ShowPairMatches:
         database_path: Path,
         imgs_dict: dict,
         imgs_dir: Path,
-        out_dir: Path,
+        out_file: Path,
+        max_size: int,
     ):
-        self.max_out_img_size = 1500  # pixel
         self.db_path = database_path
         self.imgs_dict = imgs_dict
         self.imgs_dir = imgs_dir
-        self.out_dir = out_dir
+        self.out_file = out_file
+        self.max_out_img_size = max_size
         self.imgs = {}
         self.keypoints = {}
         self.matches = {}
@@ -152,7 +153,7 @@ class ShowPairMatches:
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
 
-        cv2.imwrite(str(self.out_dir / "matches.png"), img_matches_resized)
+        cv2.imwrite(str(self.out_file), img_matches_resized)
 
     def resize_image(self, img, max_side_length):
         height, width = img.shape[:2]
@@ -191,6 +192,9 @@ def parse_args():
     parser.add_argument(
         "-o", "--output", type=str, help="Path to output folder", required=True
     )
+    parser.add_argument(
+        "-m", "--max_size", type=int, help="Max size of the output image showing matches", required=False, default=1500,
+    )
     args = parser.parse_args()
 
     return args
@@ -199,10 +203,11 @@ def parse_args():
 def main():
     args = parse_args()
     database_path = Path(args.database)
-    out_dir = Path(args.output)
+    out_file = Path(args.output)
     imgs_dir = Path(args.imgsdir)
+    max_size = args.max_size
     print(f"database path: {database_path}")
-    print(f"output dir: {out_dir}")
+    print(f"output dir: {out_file}")
 
     i1, i2 = args.images.split()
     imgs = {
@@ -215,7 +220,8 @@ def main():
         database_path=database_path,
         imgs_dict=imgs,
         imgs_dir=imgs_dir,
-        out_dir=out_dir,
+        out_file=out_file,
+        max_size=max_size,
     )
 
     show_pair_matches.LoadDatabase()
