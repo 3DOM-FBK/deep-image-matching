@@ -17,12 +17,13 @@ class ShowPairMatches:
         imgs_dict: dict,
         imgs_dir: Path,
         out_dir: Path,
+        max_size: int,
     ):
-        self.max_out_img_size = 1500  # pixel
         self.db_path = database_path
         self.imgs_dict = imgs_dict
         self.imgs_dir = imgs_dir
         self.out_dir = out_dir
+        self.max_out_img_size = max_size
         self.imgs = {}
         self.keypoints = {}
         self.matches = {}
@@ -191,6 +192,9 @@ def parse_args():
     parser.add_argument(
         "-o", "--output", type=str, help="Path to output folder", required=True
     )
+    parser.add_argument(
+        "-m", "--max_size", type=int, help="Max size of the output image showing matches", required=False, default=1500,
+    )
     args = parser.parse_args()
 
     return args
@@ -201,6 +205,7 @@ def main():
     database_path = Path(args.database)
     out_dir = Path(args.output)
     imgs_dir = Path(args.imgsdir)
+    max_size = args.max_size
     print(f"database path: {database_path}")
     print(f"output dir: {out_dir}")
 
@@ -216,6 +221,7 @@ def main():
         imgs_dict=imgs,
         imgs_dir=imgs_dir,
         out_dir=out_dir,
+        max_size=max_size,
     )
 
     show_pair_matches.LoadDatabase()
