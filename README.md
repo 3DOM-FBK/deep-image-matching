@@ -148,6 +148,7 @@ Please, refer to the instructions at [https://github.com/franioli/metashape](htt
 - [ ] Check scripts
 - [ ] Integrate support for Pix4D [Open Photogrammetry Format](https://github.com/Pix4D/opf-spec)
 - [ ] Work with submodules
+- [ ] Automatically download weights for all the models
 - [x] Update README CLI options
 
 ## References
