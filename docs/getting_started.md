@@ -9,26 +9,27 @@ Before running the CLI, check the options with `python ./main.py --help`.
 The minimal required option are:
 
 - `--dir` `-d`: it is the path of the 'project directory', i.e., the directory containing a folder names 'images', with all the image to be processed, and where the output will be saved
-- `--config` `-c`: the name of the combination of local feature extractor and matcher to use (e.g., "superpoint+lightglue"). See the [Local feature extractor and matcher](#local-feature-extractor-and-matcher) section for more details.
+- `--pipeline` `-p`: the name of pipeline (i.e., the combination of local feature extractor and matcher) to use (e.g., "superpoint+lightglue"). See the [Local feature extractor and matcher](#local-feature-extractor-and-matcher) section for more details.
 
 Other optional parameters are:
 
-- `--strategy` `-m`: the strategy to use for matching the images. It can be `matching_lowres`, `bruteforce`, `sequential`, `retrieval`, `custom_pairs`. See [Matching strategies](#matching-strategies) section (default: `matching_lowres`)
-- `--quality` `-Q`: the quality of the images to be matched. It can be `lowest`, `low`, `medium`, `high` or `highest`. See [Quality](#quality) section (default: `high`).
+- `config_file` `-c`: the path to the YAML configuration file containing the custom configuration. See the [Advanced configuration](#advanced-configuration) section (default: `None`)
+- `--strategy` `-s`: the strategy to use for matching the images. It can be `matching_lowres`, `bruteforce`, `sequential`, `retrieval`, `custom_pairs`. See [Matching strategies](#matching-strategies) section (default: `matching_lowres`)
+- `--quality` `-q`: the quality of the images to be matched. It can be `lowest`, `low`, `medium`, `high` or `highest`. See [Quality](#quality) section (default: `high`).
 - `tiling` `-t`: if passed, the images are tiled in 4 parts and each part is matched separately. This is useful for high-resolution images if you do not want to resize them. See [Tiling](#tiling) section (default: `None`).
-<!-- - `--images` `-i`: if the folder containing the image is not located in the project directory, you can manually specify the path to the folder containing the images If nothing is passed, deep_image_matching will look for a folder named "image" inside the project directory (default: `None`).
-- `--outs` `-o`: if you want the outputs to be save to a specific folder, different than the one set with '--dir', the path to the folder where the matches will be saved. If nothing is passed, the output will e saved in a folder 'results' inside the project direcoty (default: `None`) -->
 - `--upright`: if passed, try to find the best image rotation before running the matching (default: `False`).
 - `--skip_reconstruction` : Skip reconstruction step carried out with pycolmap, but save the matched features into a Sqlite3 database that can be opened by COLMAP GUI for bundle adjustment. The reconstruction with pycolmap is necessary to export the solution in Bundler format for Agisoft Metashape (default: `False`)
 - `--force`: if the output folder already exists, overwrite it (default: `False`)
 - `-V`: enable verbose output (default: `False`)
 - `--help` `-h`: show the help message
+<!-- - `--images` `-i`: if the folder containing the image is not located in the project directory, you can manually specify the path to the folder containing the images If nothing is passed, deep_image_matching will look for a folder named "image" inside the project directory (default: `None`).
+- `--outs` `-o`: if you want the outputs to be save to a specific folder, different than the one set with '--dir', the path to the folder where the matches will be saved. If nothing is passed, the output will e saved in a folder 'results' inside the project direcoty (default: `None`) -->
 
 Finally, there are some 'strategy-dependent' options (i.e., options that are used only with specific strategies). See [Matching strategies](#matching-strategies) section for more information. These options are:
 
-- `--overlap` `-v`: if  'strategy' is set to 'sequential', set the number of images that are sequentially matched in the sequence (default: `1`)
-- `--retrieval` `-r`: if `strategy` is set to `retrieval`, set the global descriptor to use for image retrieval. Options are: "netvlad", "openibl", "cosplace", "dir" (default: `netvlad`).
-- `--pairs` `-p`: if `strategy` is set to `custom_pairs`, set the path to the text file containing the pairs of images to be matched. (default: `None`).
+- `--overlap`: if  'strategy' is set to 'sequential', set the number of images that are sequentially matched in the sequence (default: `1`)
+- `--global_feature`: if `strategy` is set to `retrieval`, set the global descriptor to use for image retrieval. Options are: "netvlad", "openibl", "cosplace", "dir" (default: `netvlad`).
+- `--pair_file`: if `strategy` is set to `custom_pairs`, set the path to the text file containing the pairs of images to be matched. (default: `None`).
 
 
 ## Graphical User Interface (GUI)
@@ -50,9 +51,9 @@ If you want to use Deep_Image_Matching from a Jupyter notebook, you can check th
 
 ## Basic configuration
 
-### Local feature extractor and matcher
+### Pipeline
 
-The combination of local feature extractor and matcher to be used for the matching is is defined by the `--config` option in the CLI.
+The `pipeline` defines the combination of local feature extractor and matcher to be used for the matching is is defined by the `--pipeline` option in the CLI.
 
 Possible configurations are:
 
@@ -154,8 +155,8 @@ general:
   tile_overlap: 20
 ```
 
-The `extractor` and `matcher` sections contain the parameters that control the local feature extractor and the matcher selected by the '--config' option from the CLI (or from GUI). 
-Both the sections **must contain the name** of the local feature extractor or the matcher that will be used for the matching (the name must be the same as the one used in the `--config` option in the CLI).
+The `extractor` and `matcher` sections contain the parameters that control the local feature extractor and the matcher selected by the '--pipeline' option from the CLI (or from GUI). 
+Both the sections **must contain the name** of the local feature extractor or the matcher that will be used for the matching (the name must be the same as the one used in the `--pipeline` option in the CLI).
 In addition, you can specify any other parameters for controlling the extractor and the matcher. 
 The default values of all the configuration parameters are defined in the [`config.py`](https://github.com/3DOM-FBK/deep-image-matching/blob/master/src/deep_image_matching/config.py) file located in `/src/deep_image_matching` directory. 
 Please, note that different extractors or matchers may have different parameters, so you need to check carefully 
