@@ -84,6 +84,27 @@ From version 0.5.0, pycolmap can be installed on Windows too, so we are consider
 
 For more information, check the [documentation](https://3dom-fbk.github.io/deep-image-matching/installation/).
 
+
+## Docker Installation
+
+First, build the image:
+
+```powershell
+  docker build --tag 'deep-image-matching' .
+```
+
+Then run the image (on Windows, please use Powershell):
+
+```powershell
+docker run --name running-deep-image-matching --mount type=bind,source=D:\data,target=/workspace/data --gpus all -it 'deep-image-matching'
+```
+
+replace `D:\data` with the desired path for mounting a volume. If you have more than one running container, you can remove `--name running_deep_pavements`
+
+include `--detach` to run in background and/or `--rm` to remove container on exit
+
+You can then open the repo directly in VSCode using `ctrl+alt+O` and selecting the option "attach to running container", then enjoy!
+
 ## Usage instructions
 
 You can run deep-image-matching from the command line or from the GUI.
