@@ -94,7 +94,7 @@ def test_sp_lg_quality_medium(data_dir, main):
 # Test tiling
 def test_sp_lg_tiling(data_dir, main):
     run_pipeline(
-        f"python {main} --dir {data_dir} --config superpoint+lightglue --strategy sequential --overlap 1 --tiling preselection --skip_reconstruction --force"
+        f"python {main} --dir {data_dir} --config superpoint+lightglue --strategy sequential --overlap 1 --quality highest --tiling preselection --skip_reconstruction --force"
     )
 
 
