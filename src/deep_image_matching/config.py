@@ -559,9 +559,8 @@ class Config:
                 exit(1)
             if cfg["extractor"]["name"] != self.cfg["extractor"]["name"]:
                 logger.error(
-                    f"Extractor name in configuration file {path} does not match with the extractor chosen from CLI or GUI. Please specify the correct extractor name for which you want to update the configuration."
+                    f"Extractor name in configuration file {path} does not match with the extractor chosen from CLI or GUI. The custom configuration is not set, but running with the default options."
                 )
-                exit(1)
             self.cfg["extractor"].update(cfg["extractor"])
         if "matcher" in cfg:
             if "name" not in cfg["matcher"]:
@@ -571,9 +570,8 @@ class Config:
                 exit(1)
             if cfg["matcher"]["name"] != self.cfg["matcher"]["name"]:
                 logger.error(
-                    f"Matcher name in configuration file {path} does not match with the matcher chosen from CLI or GUI. Please specify the correct matcher name for which you want to update the configuration."
+                    f"Matcher name in configuration file {path} does not match with the matcher chosen from CLI or GUI. The custom configuration is not set, but running with the default options."
                 )
-                exit(1)
             self.cfg["matcher"].update(cfg["matcher"])
 
     def print(self):

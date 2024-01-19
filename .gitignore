@@ -12,7 +12,7 @@ config.yaml
 run_casalbagliano.sh
 
 # VScode
-.vscode/
+.vscode_/
 *.~lock*
 
 # Byte-compiled / optimized / DLL files
