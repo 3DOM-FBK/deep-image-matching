@@ -16,15 +16,15 @@
       "console": "integratedTerminal",
       "args": [
         "--dir",
-        "datasets/easy_small",
+        "assets/example_cyprus",
         "--config",
         "superpoint+lightglue",
         "--strategy",
         "bruteforce",
         "--quality",
-        "medium",
+        "high",
         "--tiling",
-        "preselection",
+        "none",
         "-V",
         // "--skip_reconstruction",
         "--force"

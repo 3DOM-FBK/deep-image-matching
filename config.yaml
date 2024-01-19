@@ -1,16 +1,15 @@
 # User configuration file
 
 general:
-  tile_size: (3500, 2400)
-  geom_verification: none
+  tile_size: (2400, 2000)
+  geom_verification: pydegensac
   min_inliers_per_pair: 10
-  min_inlier_ratio_per_pair: 0.1
+  min_inlier_ratio_per_pair: 0.25
 
 extractor:
   name: "superpoint"
-  max_keypoints: 8000
+  max_keypoints: 4096
 
 matcher:
   name: "lightglue"
   filter_threshold: 0.1
-  flash: False
