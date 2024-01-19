@@ -8,7 +8,7 @@ import Metashape
 from .ms_utils import cameras_from_bundler, create_new_project, import_markers
 
 
-def export_to_metashape(
+def project_from_bundler(
     project_path: Path,
     images_dir: Path,
     bundler_file_path: Path,
@@ -107,7 +107,7 @@ if __name__ == "__main__":
         "b2": False,
         "tiepoint_covariance": True,
     }
-    export_to_metashape(
+    project_from_bundler(
         project_path=project_path,
         images_dir=images_dir,
         bundler_file_path=bundler_file_path,
