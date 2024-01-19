@@ -5,12 +5,15 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "deep_image_matching"
 version = "0.0.4"
-description = ""
+description = "Multiview matching with deep-learning and hand-crafted local features for COLMAP and other SfM software."
 readme = "README.md"
-authors = [{ name = "Francesco Ioli", email = "francesco.ioli@polimi.it" }]
+authors = [
+    { name = "Francesco Ioli", email = "francesco.ioli@polimi.it" },
+    { name = "Luca Morelli", email = "lmorelli@fbk.eu"}
+]
 license = { file = "LICENSE.txt" }
 classifiers = [
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: BSD-3-Clause license ",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
 ]
@@ -39,7 +42,7 @@ requires-python = ">=3.8"
 
 
 [project.optional-dependencies]
-dev = ["ruff", "black", "bumpver", "isort", "pip-tools", "pytest", "bumpver", "mkdocs", "mkdocs-material", "mkdocstrings[python]"]
+dev = ["flake8", "black", "bumpver", "isort", "pip-tools", "pytest", "mkdocs", "mkdocs-material", "mkdocstrings[python]", "pre-commit"]
 
 [project.urls]
 Homepage = "https://github.com/3DOM-FBK/deep-image-matching"
