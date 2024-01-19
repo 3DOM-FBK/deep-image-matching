@@ -139,7 +139,7 @@ def main(
     import_images(image_dir, database, camera_mode)
 
     # Update cameras intrinsics in the database
-    if cameras is not None:
+    if cameras:
         update_cameras(database, cameras)
 
     # Import features and matches
