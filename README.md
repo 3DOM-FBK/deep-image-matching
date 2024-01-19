@@ -50,9 +50,9 @@ Key features:
 
 ## Colab demo 
 
-Want to run on a sample dataset? ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/run_from_bash_example.ipynb)
+Want to run on a sample dataset? ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/colab_run_from_bash_example.ipynb)
 
-Want to run on your images? ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/run_from_bash_custom_images.ipynb)
+Want to run on your images? ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/colab_run_from_bash_custom_images.ipynb)
 
 ## Installation
 
@@ -143,12 +143,12 @@ Please, refer to the instructions at [https://github.com/franioli/metashape](htt
 - [ ] Add visualization for extracted features and matches
 - [ ] Improve speed
 - [ ] Autoselect tiling grid in order to fit images in GPU memory
-- [ ] Add tests, documentation and examples (e.g. colab, ..)
+- [x] Add tests, documentation and examples (e.g. colab, ..)
 - [ ] Apply masks during feature extraction
 - [ ] Check scripts
 - [ ] Integrate support for Pix4D [Open Photogrammetry Format](https://github.com/Pix4D/opf-spec)
 - [ ] Work with submodules
-- [ ] Update README CLI options
+- [x] Update README CLI options
 
 ## References
 
