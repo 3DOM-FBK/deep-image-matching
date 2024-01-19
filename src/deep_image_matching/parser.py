@@ -13,28 +13,34 @@ def parse_cli() -> dict:
     parser.add_argument(
         "--gui", action="store_true", help="Run GUI interface", default=False
     )
-    parser.add_argument("-d", "--dir", type=str, help="Project folder.", default=None)
     parser.add_argument(
-        "-i",
-        "--images",
+        "-d",
+        "--dir",
         type=str,
-        help="Folder containing images to process. If not specified, an 'images' folder inside the project folder is assumed.",
+        help="Project directoryt, containing a folder 'images', in which all the images are present and where the results will be saved.",
         default=None,
     )
-    parser.add_argument(
-        "-o",
-        "--outs",
-        type=str,
-        help="Output folder. If None, the output folder will be created inside the project folder.",
-        default=None,
-    )
+    # parser.add_argument(
+    #     "-i",
+    #     "--images",
+    #     type=str,
+    #     help="Folder containing images to process. If not specified, an 'images' folder inside the project folder is assumed.",
+    #     default=None,
+    # )
+    # parser.add_argument(
+    #     "-o",
+    #     "--outs",
+    #     type=str,
+    #     help="Output folder. If None, the output folder will be created inside the project folder.",
+    #     default=None,
+    # )
     parser.add_argument(
         "-c",
         "--config",
         type=str,
         help="Extractor and matcher configuration",
         choices=Config.get_config_names(),
-        default="superpoint+lightglue",
+        required=True,
     )
     parser.add_argument(
         "-Q",

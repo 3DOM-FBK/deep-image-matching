@@ -82,7 +82,7 @@ class Image:
     DATE_FORMATS = [DATETIME_FMT, DATE_FMT, TIME_FMT]
 
     def __init__(
-        self, path: Union[str, Path], id: int = None, skip_exif: bool = False
+        self, path: Union[str, Path], id: int = None, skip_exif: bool = True
     ) -> None:
         """
         __init__ Create Image object as a lazy loader for image data
