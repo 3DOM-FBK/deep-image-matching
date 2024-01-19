@@ -7,9 +7,6 @@ from deep_image_matching.image_matching import ImageMatching
 from deep_image_matching.io.h5_to_db import export_to_colmap
 from deep_image_matching.parser import parse_cli
 
-# Hard-coded flag for exporting the solution to Metashape (TODO: move to the configuration settings). Note that you need to install Metashape as module first.
-do_export_to_metashape = False
-
 # User defined configuration file
 config_file = "config.yaml"
 
@@ -172,46 +169,6 @@ if not config.general["skip_reconstruction"]:
 
     else:
         logger.warning("Reconstruction with COLMAP CLI is not implemented yet.")
-
-
-if model and do_export_to_metashape:
-    try:
-        from scripts.metashape.metashape_from_dim import export_to_metashape
-    except ImportError:
-        logger.error("Metashape module is not available. Cannot export to Metashape.")
-        exit()
-
-    # Hard-coded parameters for Metashape # TODO: improve this implementation.
-    # This is now given only as an example for how to use the export_to_metashape function.
-    project_dir = config.general["output_dir"] / "metashape"
-    project_name = config.general["output_dir"].name + ".psx"
-    project_path = project_dir / project_name
-
-    rec_dir = config.general["output_dir"] / "reconstruction"
-    bundler_file_path = rec_dir / "bundler.out"
-    bundler_im_list = rec_dir / "bundler_list.txt"
-
-    prm_to_optimize = {
-        "f": True,
-        "cx": True,
-        "cy": True,
-        "k1": True,
-        "k2": True,
-        "k3": True,
-        "k4": False,
-        "p1": True,
-        "p2": True,
-        "b1": False,
-        "b2": False,
-        "tiepoint_covariance": True,
-    }
-    export_to_metashape(
-        project_path=project_path,
-        images_dir=config.general["image_dir"],
-        bundler_file_path=bundler_file_path.resolve(),
-        bundler_im_list=bundler_im_list.resolve(),
-        prm_to_optimize=prm_to_optimize,
-    )
 
 
 timer.print("Deep Image Matching")
