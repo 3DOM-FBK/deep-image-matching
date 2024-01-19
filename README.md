@@ -1,6 +1,9 @@
 [![Static Badge](https://img.shields.io/badge/Matches_for-COLMAP-red)](https://github.com/colmap/colmap)
 ![Static Badge](https://img.shields.io/badge/Matches_for-Metashape-blue) [![Static Badge](https://img.shields.io/badge/Powered_by-Kornia-green)](https://github.com/kornia/kornia) [![Static Badge](https://img.shields.io/badge/Powered_by-hloc-blue)](https://github.com/kornia/kornia)
 
+ [![Static Badge](https://img.shields.io/github/v/release/:user/:repo)](https://3dom-fbk.github.io/) [![Static Badge](https://img.shields.io/readthedocs/:packageName/:version
+)](https://3dom-fbk.github.io/)
+
 ## DEEP-IMAGE-MATCHING
 
 | SIFT                                             | DISK                                               | IMAGES ORIENTATION                                   | DENSE WITH ROMA                                |
@@ -149,7 +152,9 @@ Please, refer to the instructions at [https://github.com/franioli/metashape](htt
 - [ ] Integrate support for Pix4D [Open Photogrammetry Format](https://github.com/Pix4D/opf-spec)
 - [ ] Work with submodules
 - [ ] Automatically download weights for all the models
+- [ ] Cleanup repository to removed large files from Git history
 - [x] Update README CLI options
+
 
 ## References
 
