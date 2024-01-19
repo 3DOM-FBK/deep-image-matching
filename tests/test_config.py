@@ -3,6 +3,15 @@ from pathlib import Path
 import pytest
 from deep_image_matching.config import Config
 
+import os
+from pathlib import Path
+
+import pytest
+
+
+@pytest.fixture
+def data_dir():
+    return Path(__file__).parents[0].parents[0] / "assets/pytest"
 
 @pytest.fixture
 def default_args():
