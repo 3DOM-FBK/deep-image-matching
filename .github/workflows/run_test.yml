@@ -1,4 +1,4 @@
-name: build-package
+name: run-test
 
 on:
   push:
