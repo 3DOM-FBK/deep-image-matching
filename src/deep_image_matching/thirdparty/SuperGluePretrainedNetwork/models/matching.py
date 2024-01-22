@@ -47,14 +47,15 @@ from .superglue import SuperGlue
 
 
 class Matching(torch.nn.Module):
-    """ Image Matching Frontend (SuperPoint + SuperGlue) """
+    """Image Matching Frontend (SuperPoint + SuperGlue)"""
+
     def __init__(self, config={}):
         super().__init__()
-        self.superpoint = SuperPoint(config.get('superpoint', {}))
-        self.superglue = SuperGlue(config.get('superglue', {}))
+        self.superpoint = SuperPoint(config.get("superpoint", {}))
+        self.superglue = SuperGlue(config.get("superglue", {}))
 
     def forward(self, data):
-        """ Run SuperPoint (optionally) and SuperGlue
+        """Run SuperPoint (optionally) and SuperGlue
         SuperPoint is skipped if ['keypoints0', 'keypoints1'] exist in input
         Args:
           data: dictionary with minimal keys: ['image0', 'image1']
@@ -62,12 +63,12 @@ class Matching(torch.nn.Module):
         pred = {}
 
         # Extract SuperPoint (keypoints, scores, descriptors) if not provided
-        if 'keypoints0' not in data:
-            pred0 = self.superpoint({'image': data['image0']})
-            pred = {**pred, **{k+'0': v for k, v in pred0.items()}}
-        if 'keypoints1' not in data:
-            pred1 = self.superpoint({'image': data['image1']})
-            pred = {**pred, **{k+'1': v for k, v in pred1.items()}}
+        if "keypoints0" not in data:
+            pred0 = self.superpoint({"image": data["image0"]})
+            pred = {**pred, **{k + "0": v for k, v in pred0.items()}}
+        if "keypoints1" not in data:
+            pred1 = self.superpoint({"image": data["image1"]})
+            pred = {**pred, **{k + "1": v for k, v in pred1.items()}}
 
         # Batch all features
         # We should either have i) one image per batch, or

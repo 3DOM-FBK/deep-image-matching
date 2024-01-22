@@ -5,9 +5,13 @@ from typing import Optional, Callable
 
 
 class ConvBlock(nn.Module):
-    def __init__(self, in_channels, out_channels,
-                 gate: Optional[Callable[..., nn.Module]] = None,
-                 norm_layer: Optional[Callable[..., nn.Module]] = None):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        gate: Optional[Callable[..., nn.Module]] = None,
+        norm_layer: Optional[Callable[..., nn.Module]] = None,
+    ):
         super().__init__()
         if gate is None:
             self.gate = nn.ReLU(inplace=True)
@@ -31,16 +35,16 @@ class ResBlock(nn.Module):
     expansion: int = 1
 
     def __init__(
-            self,
-            inplanes: int,
-            planes: int,
-            stride: int = 1,
-            downsample: Optional[nn.Module] = None,
-            groups: int = 1,
-            base_width: int = 64,
-            dilation: int = 1,
-            gate: Optional[Callable[..., nn.Module]] = None,
-            norm_layer: Optional[Callable[..., nn.Module]] = None
+        self,
+        inplanes: int,
+        planes: int,
+        stride: int = 1,
+        downsample: Optional[nn.Module] = None,
+        groups: int = 1,
+        base_width: int = 64,
+        dilation: int = 1,
+        gate: Optional[Callable[..., nn.Module]] = None,
+        norm_layer: Optional[Callable[..., nn.Module]] = None,
     ) -> None:
         super(ResBlock, self).__init__()
         if gate is None:
@@ -50,7 +54,7 @@ class ResBlock(nn.Module):
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
         if groups != 1 or base_width != 64:
-            raise ValueError('ResBlock only supports groups=1 and base_width=64')
+            raise ValueError("ResBlock only supports groups=1 and base_width=64")
         if dilation > 1:
             raise NotImplementedError("Dilation > 1 not supported in ResBlock")
         # Both self.conv1 and self.downsample layers downsample the input when stride != 1
@@ -81,9 +85,15 @@ class ResBlock(nn.Module):
 
 
 class ALNet(nn.Module):
-    def __init__(self, c1: int = 32, c2: int = 64, c3: int = 128, c4: int = 128, dim: int = 128,
-                 single_head: bool = True,
-                 ):
+    def __init__(
+        self,
+        c1: int = 32,
+        c2: int = 64,
+        c3: int = 128,
+        c4: int = 128,
+        dim: int = 128,
+        single_head: bool = True,
+    ):
         super().__init__()
 
         self.gate = nn.ReLU(inplace=True)
@@ -93,28 +103,48 @@ class ALNet(nn.Module):
 
         self.block1 = ConvBlock(3, c1, self.gate, nn.BatchNorm2d)
 
-        self.block2 = ResBlock(inplanes=c1, planes=c2, stride=1,
-                               downsample=nn.Conv2d(c1, c2, 1),
-                               gate=self.gate,
-                               norm_layer=nn.BatchNorm2d)
-        self.block3 = ResBlock(inplanes=c2, planes=c3, stride=1,
-                               downsample=nn.Conv2d(c2, c3, 1),
-                               gate=self.gate,
-                               norm_layer=nn.BatchNorm2d)
-        self.block4 = ResBlock(inplanes=c3, planes=c4, stride=1,
-                               downsample=nn.Conv2d(c3, c4, 1),
-                               gate=self.gate,
-                               norm_layer=nn.BatchNorm2d)
+        self.block2 = ResBlock(
+            inplanes=c1,
+            planes=c2,
+            stride=1,
+            downsample=nn.Conv2d(c1, c2, 1),
+            gate=self.gate,
+            norm_layer=nn.BatchNorm2d,
+        )
+        self.block3 = ResBlock(
+            inplanes=c2,
+            planes=c3,
+            stride=1,
+            downsample=nn.Conv2d(c2, c3, 1),
+            gate=self.gate,
+            norm_layer=nn.BatchNorm2d,
+        )
+        self.block4 = ResBlock(
+            inplanes=c3,
+            planes=c4,
+            stride=1,
+            downsample=nn.Conv2d(c3, c4, 1),
+            gate=self.gate,
+            norm_layer=nn.BatchNorm2d,
+        )
 
         # ================================== feature aggregation
         self.conv1 = resnet.conv1x1(c1, dim // 4)
         self.conv2 = resnet.conv1x1(c2, dim // 4)
         self.conv3 = resnet.conv1x1(c3, dim // 4)
         self.conv4 = resnet.conv1x1(dim, dim // 4)
-        self.upsample2 = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
-        self.upsample4 = nn.Upsample(scale_factor=4, mode='bilinear', align_corners=True)
-        self.upsample8 = nn.Upsample(scale_factor=8, mode='bilinear', align_corners=True)
-        self.upsample32 = nn.Upsample(scale_factor=32, mode='bilinear', align_corners=True)
+        self.upsample2 = nn.Upsample(
+            scale_factor=2, mode="bilinear", align_corners=True
+        )
+        self.upsample4 = nn.Upsample(
+            scale_factor=4, mode="bilinear", align_corners=True
+        )
+        self.upsample8 = nn.Upsample(
+            scale_factor=8, mode="bilinear", align_corners=True
+        )
+        self.upsample32 = nn.Upsample(
+            scale_factor=32, mode="bilinear", align_corners=True
+        )
 
         # ================================== detector and descriptor head
         self.single_head = single_head
@@ -153,12 +183,12 @@ class ALNet(nn.Module):
         return scores_map, descriptor_map
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from thop import profile
 
     net = ALNet(c1=16, c2=32, c3=64, c4=128, dim=128, single_head=True)
 
     image = torch.randn(1, 3, 640, 480)
     flops, params = profile(net, inputs=(image,), verbose=False)
-    print('{:<30}  {:<8} GFLops'.format('Computational complexity: ', flops / 1e9))
-    print('{:<30}  {:<8} KB'.format('Number of parameters: ', params / 1e3))
+    print("{:<30}  {:<8} GFLops".format("Computational complexity: ", flops / 1e9))
+    print("{:<30}  {:<8} KB".format("Number of parameters: ", params / 1e3))
