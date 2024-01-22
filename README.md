@@ -134,7 +134,7 @@ python ./join_databases.py --input assets/to_be_joined --output assets/to_be_joi
 To export the solution to Metashape, you can export the COLMAP database to Bundler format and then import it into Metashape.
 This can be done from Metashape GUI, by first importing the images and then use the function `Import Cameras` (File -> Import -> Import Cameras) to select Bundler file (e.g., bundler.out) and the image list file (e.g., bundler_list.txt).
 
-Alternatevely, you can the `export_to_metashape.py` script to automatically create a Metashape project from a reconstruction saved in Bundler format.
+Alternatevely, you can use the `export_to_metashape.py` script to automatically create a Metashape project from a reconstruction saved in Bundler format.
 The script `export_to_metashape.py` takes as input the solution in Bundler format and the images and it exports the solution to Metashape.
 It requires to install Metashape as a Python module in your environment and to have a valid license.
 Please, refer to the instructions at [https://github.com/franioli/metashape](https://github.com/franioli/metashape).
