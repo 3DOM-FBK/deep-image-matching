@@ -9,18 +9,12 @@ from e2cnn import gspaces
 
 def conv1x1(in_type, out_type, stride=1):
     """1x1 convolution without padding"""
-    return enn.R2Conv(in_type, out_type, 1,
-                      stride=stride,
-                      padding=0,
-                      bias=False)
+    return enn.R2Conv(in_type, out_type, 1, stride=stride, padding=0, bias=False)
 
 
 def conv3x3(in_type, out_type, stride=1):
     """3x3 convolution with padding"""
-    return enn.R2Conv(in_type, out_type, 3,
-                      stride=stride,
-                      padding=1,
-                      bias=False)
+    return enn.R2Conv(in_type, out_type, 3, stride=stride, padding=1, bias=False)
 
 
 # TODO: Change this to be implemented as an EquivariantModule
@@ -38,8 +32,7 @@ class BasicBlock(torch.nn.Module):
             self.downsample = None
         else:
             self.downsample = torch.nn.Sequential(
-                conv1x1(in_type, out_type, stride=stride),
-                enn.InnerBatchNorm(out_type)
+                conv1x1(in_type, out_type, stride=stride), enn.InnerBatchNorm(out_type)
             )
 
     def forward(self, x):
@@ -50,7 +43,7 @@ class BasicBlock(torch.nn.Module):
         if self.downsample is not None:
             x = self.downsample(x)
 
-        return self.relu2(x+y)
+        return self.relu2(x + y)
 
 
 # TODO: Change this to be implemented as an EquivariantModule
@@ -67,37 +60,46 @@ class E2_ResNetFPN_8_2(torch.nn.Module):
         block = BasicBlock
         # initial_dim should be same as block_dims[0] (TODO: why is it written like this?)
         # These should also ideally be divisible by nbr_rotations.
-        initial_dim = config['initial_dim']
-        block_dims = config['block_dims']
-        nbr_rotations = config['nbr_rotations']  # e.g. 8 for C8-symmetry
+        initial_dim = config["initial_dim"]
+        block_dims = config["block_dims"]
+        nbr_rotations = config["nbr_rotations"]  # e.g. 8 for C8-symmetry
 
         self.r2_act = gspaces.Rot2dOnR2(N=nbr_rotations)
-        self.triv_in_type = enn.FieldType(self.r2_act,
-                                          [self.r2_act.trivial_repr])
-        if config['e2_same_nbr_filters']:
+        self.triv_in_type = enn.FieldType(self.r2_act, [self.r2_act.trivial_repr])
+        if config["e2_same_nbr_filters"]:
             dim_reduction = nbr_rotations
         else:
             dim_reduction = 2
-        self.in_type = enn.FieldType(self.r2_act, 
-                                     (initial_dim // dim_reduction)*[self.r2_act.regular_repr])
+        self.in_type = enn.FieldType(
+            self.r2_act, (initial_dim // dim_reduction) * [self.r2_act.regular_repr]
+        )
         # dummy variable used to track input types to each block
-        self._in_type = enn.FieldType(self.r2_act, 
-                                     (initial_dim // dim_reduction)*[self.r2_act.regular_repr])
+        self._in_type = enn.FieldType(
+            self.r2_act, (initial_dim // dim_reduction) * [self.r2_act.regular_repr]
+        )
 
         reg_repr_blocks = [
-            enn.FieldType(self.r2_act,
-                          (bd // dim_reduction)*[self.r2_act.regular_repr])
+            enn.FieldType(
+                self.r2_act, (bd // dim_reduction) * [self.r2_act.regular_repr]
+            )
             for bd in block_dims
         ]
-        b1_triv_repr = enn.FieldType(self.r2_act,
-                                    block_dims[0]*[self.r2_act.trivial_repr])
-        b3_triv_repr = enn.FieldType(self.r2_act,
-                                    block_dims[2]*[self.r2_act.trivial_repr])
-
+        b1_triv_repr = enn.FieldType(
+            self.r2_act, block_dims[0] * [self.r2_act.trivial_repr]
+        )
+        b3_triv_repr = enn.FieldType(
+            self.r2_act, block_dims[2] * [self.r2_act.trivial_repr]
+        )
 
         # Networks
-        self.conv1 = enn.R2Conv(self.triv_in_type,
-            self.in_type, kernel_size=7, stride=2, padding=3, bias=False)
+        self.conv1 = enn.R2Conv(
+            self.triv_in_type,
+            self.in_type,
+            kernel_size=7,
+            stride=2,
+            padding=3,
+            bias=False,
+        )
         self.bn1 = enn.InnerBatchNorm(self.in_type)
         self.relu1 = enn.ReLU(self.in_type, inplace=True)
 
@@ -105,11 +107,16 @@ class E2_ResNetFPN_8_2(torch.nn.Module):
         self.layer2 = self._make_layer(block, reg_repr_blocks[1], stride=2)  # 1/4
         self.layer3 = self._make_layer(block, reg_repr_blocks[2], stride=2)  # 1/8
 
-
         # 3. FPN upsample
         self.layer3_outconv = conv1x1(reg_repr_blocks[2], reg_repr_blocks[2])
-        self.layer3triv = enn.R2Conv(reg_repr_blocks[2], b3_triv_repr,
-                                     kernel_size=3, stride=1, padding=1, bias=False)
+        self.layer3triv = enn.R2Conv(
+            reg_repr_blocks[2],
+            b3_triv_repr,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+            bias=False,
+        )
         self.up3to2 = enn.R2Upsampling(reg_repr_blocks[2], 2, align_corners=True)
         self.layer2_outconv = conv1x1(reg_repr_blocks[1], reg_repr_blocks[2])
         self.layer2_outconv2 = torch.nn.Sequential(
@@ -153,11 +160,11 @@ class E2_ResNetFPN_8_2(torch.nn.Module):
 
         x3_out_2x = self.up3to2(x3_out)
         x2_out = self.layer2_outconv(x2)
-        x2_out = self.layer2_outconv2(x2_out+x3_out_2x)
+        x2_out = self.layer2_outconv2(x2_out + x3_out_2x)
 
         x2_out_2x = self.up2to1(x2_out)
         x1_out = self.layer1_outconv(x1)
-        x1_out = self.layer1_outconv2(x1_out+x2_out_2x)
+        x1_out = self.layer1_outconv2(x1_out + x2_out_2x)
 
         # rotation invariarize
         x3_inv = self.layer3triv(x3_out)

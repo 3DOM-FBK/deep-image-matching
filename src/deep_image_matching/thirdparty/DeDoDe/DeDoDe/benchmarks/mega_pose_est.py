@@ -5,8 +5,9 @@ from PIL import Image
 from tqdm import tqdm
 import torch.nn.functional as F
 
+
 class MegaDepthPoseEstimationBenchmark:
-    def __init__(self, data_root="data/megadepth", scene_names = None) -> None:
+    def __init__(self, data_root="data/megadepth", scene_names=None) -> None:
         if scene_names is None:
             self.scene_names = [
                 "0015_0.1_0.3.npz",
@@ -23,14 +24,23 @@ class MegaDepthPoseEstimationBenchmark:
         ]
         self.data_root = data_root
 
-    def benchmark(self, keypoint_model, matching_model, model_name = None, resolution = None, scale_intrinsics = True, calibrated = True):
-        H,W = matching_model.get_output_resolution()
+    def benchmark(
+        self,
+        keypoint_model,
+        matching_model,
+        model_name=None,
+        resolution=None,
+        scale_intrinsics=True,
+        calibrated=True,
+    ):
+        H, W = matching_model.get_output_resolution()
         with torch.no_grad():
             data_root = self.data_root
             tot_e_t, tot_e_R, tot_e_pose = [], [], []
             thresholds = [5, 10, 20]
             for scene_ind in range(len(self.scenes)):
                 import os
+
                 scene_name = os.path.splitext(self.scene_names[scene_ind])[0]
                 scene = self.scenes[scene_ind]
                 pairs = scene["pair_infos"]
@@ -47,14 +57,20 @@ class MegaDepthPoseEstimationBenchmark:
                     T2 = poses[idx2].copy()
                     R2, t2 = T2[:3, :3], T2[:3, 3]
                     R, t = compute_relative_pose(R1, t1, R2, t2)
-                    T1_to_2 = np.concatenate((R,t[:,None]), axis=-1)
+                    T1_to_2 = np.concatenate((R, t[:, None]), axis=-1)
                     im_A_path = f"{data_root}/{im_paths[idx1]}"
                     im_B_path = f"{data_root}/{im_paths[idx2]}"
-                    
-                    keypoints_A = keypoint_model.detect_from_path(im_A_path, num_keypoints = 20_000)["keypoints"][0]
-                    keypoints_B = keypoint_model.detect_from_path(im_B_path, num_keypoints = 20_000)["keypoints"][0]
+
+                    keypoints_A = keypoint_model.detect_from_path(
+                        im_A_path, num_keypoints=20_000
+                    )["keypoints"][0]
+                    keypoints_B = keypoint_model.detect_from_path(
+                        im_B_path, num_keypoints=20_000
+                    )["keypoints"][0]
                     warp, certainty = matching_model.match(im_A_path, im_B_path)
-                    matches = matching_model.match_keypoints(keypoints_A, keypoints_B, warp, certainty, return_tuple = False)                    
+                    matches = matching_model.match_keypoints(
+                        keypoints_A, keypoints_B, warp, certainty, return_tuple=False
+                    )
                     im_A = Image.open(im_A_path)
                     w1, h1 = im_A.size
                     im_B = Image.open(im_B_path)
@@ -67,15 +83,20 @@ class MegaDepthPoseEstimationBenchmark:
                         K1, K2 = K1.copy(), K2.copy()
                         K1[:2] = K1[:2] * scale1
                         K2[:2] = K2[:2] * scale2
-                    kpts1, kpts2 = matching_model.to_pixel_coordinates(matches, h1, w1, h2, w2)
+                    kpts1, kpts2 = matching_model.to_pixel_coordinates(
+                        matches, h1, w1, h2, w2
+                    )
                     for _ in range(1):
                         shuffling = np.random.permutation(np.arange(len(kpts1)))
                         kpts1 = kpts1[shuffling]
                         kpts2 = kpts2[shuffling]
                         try:
-                            threshold = 0.5 
+                            threshold = 0.5
                             if calibrated:
-                                norm_threshold = threshold / (np.mean(np.abs(K1[:2, :2])) + np.mean(np.abs(K2[:2, :2])))
+                                norm_threshold = threshold / (
+                                    np.mean(np.abs(K1[:2, :2]))
+                                    + np.mean(np.abs(K2[:2, :2]))
+                                )
                                 R_est, t_est, mask = estimate_pose(
                                     kpts1.cpu().numpy(),
                                     kpts2.cpu().numpy(),

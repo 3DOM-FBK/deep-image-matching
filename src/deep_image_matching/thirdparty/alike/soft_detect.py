@@ -17,13 +17,15 @@ import torch.nn.functional as F
 #  v
 # [ y: range=-1.0~1.0; h: range=0~H ]
 
+
 def simple_nms(scores, nms_radius: int):
-    """ Fast Non-maximum suppression to remove nearby points """
-    assert (nms_radius >= 0)
+    """Fast Non-maximum suppression to remove nearby points"""
+    assert nms_radius >= 0
 
     def max_pool(x):
         return torch.nn.functional.max_pool2d(
-            x, kernel_size=nms_radius * 2 + 1, stride=1, padding=nms_radius)
+            x, kernel_size=nms_radius * 2 + 1, stride=1, padding=nms_radius
+        )
 
     zeros = torch.zeros_like(scores)
     max_mask = scores == max_pool(scores)
@@ -50,8 +52,14 @@ def sample_descriptor(descriptor_map, kpts, bilinear_interp=False):
         kptsi = kpts[index]  # Nx2,(x,y)
 
         if bilinear_interp:
-            descriptors_ = torch.nn.functional.grid_sample(descriptor_map[index].unsqueeze(0), kptsi.view(1, 1, -1, 2),
-                                                           mode='bilinear', align_corners=True)[0, :, 0, :]  # CxN
+            descriptors_ = torch.nn.functional.grid_sample(
+                descriptor_map[index].unsqueeze(0),
+                kptsi.view(1, 1, -1, 2),
+                mode="bilinear",
+                align_corners=True,
+            )[
+                0, :, 0, :
+            ]  # CxN
         else:
             kptsi = (kptsi + 1) / 2 * kptsi.new_tensor([[width - 1, height - 1]])
             kptsi = kptsi.long()
@@ -94,10 +102,10 @@ class DKD(nn.Module):
         nms_scores = simple_nms(scores_nograd, 2)
 
         # remove border
-        nms_scores[:, :, :self.radius + 1, :] = 0
-        nms_scores[:, :, :, :self.radius + 1] = 0
-        nms_scores[:, :, h - self.radius:, :] = 0
-        nms_scores[:, :, :, w - self.radius:] = 0
+        nms_scores[:, :, : self.radius + 1, :] = 0
+        nms_scores[:, :, :, : self.radius + 1] = 0
+        nms_scores[:, :, h - self.radius :, :] = 0
+        nms_scores[:, :, :, w - self.radius :] = 0
 
         # detect keypoints without grad
         if self.top_k > 0:
@@ -121,7 +129,7 @@ class DKD(nn.Module):
                 if len(indices) > self.n_limit:
                     kpts_sc = scores[indices]
                     sort_idx = kpts_sc.sort(descending=True)[1]
-                    sel_idx = sort_idx[:self.n_limit]
+                    sel_idx = sort_idx[: self.n_limit]
                     indices = indices[sel_idx]
                 indices_keypoints.append(indices)
 
@@ -134,42 +142,73 @@ class DKD(nn.Module):
             self.hw_grid = self.hw_grid.to(patches)  # to device
             for b_idx in range(b):
                 patch = patches[b_idx].t()  # (H*W) x (kernel**2)
-                indices_kpt = indices_keypoints[b_idx]  # one dimension vector, say its size is M
+                indices_kpt = indices_keypoints[
+                    b_idx
+                ]  # one dimension vector, say its size is M
                 patch_scores = patch[indices_kpt]  # M x (kernel**2)
 
                 # max is detached to prevent undesired backprop loops in the graph
                 max_v = patch_scores.max(dim=1).values.detach()[:, None]
-                x_exp = ((patch_scores - max_v) / self.temperature).exp()  # M * (kernel**2), in [0, 1]
+                x_exp = (
+                    (patch_scores - max_v) / self.temperature
+                ).exp()  # M * (kernel**2), in [0, 1]
 
                 # \frac{ \sum{(i,j) \times \exp(x/T)} }{ \sum{\exp(x/T)} }
-                xy_residual = x_exp @ self.hw_grid / x_exp.sum(dim=1)[:, None]  # Soft-argmax, Mx2
+                xy_residual = (
+                    x_exp @ self.hw_grid / x_exp.sum(dim=1)[:, None]
+                )  # Soft-argmax, Mx2
 
-                hw_grid_dist2 = torch.norm((self.hw_grid[None, :, :] - xy_residual[:, None, :]) / self.radius,
-                                           dim=-1) ** 2
+                hw_grid_dist2 = (
+                    torch.norm(
+                        (self.hw_grid[None, :, :] - xy_residual[:, None, :])
+                        / self.radius,
+                        dim=-1,
+                    )
+                    ** 2
+                )
                 scoredispersity = (x_exp * hw_grid_dist2).sum(dim=1) / x_exp.sum(dim=1)
 
                 # compute result keypoints
-                keypoints_xy_nms = torch.stack([indices_kpt % w, indices_kpt // w], dim=1)  # Mx2
+                keypoints_xy_nms = torch.stack(
+                    [indices_kpt % w, indices_kpt // w], dim=1
+                )  # Mx2
                 keypoints_xy = keypoints_xy_nms + xy_residual
-                keypoints_xy = keypoints_xy / keypoints_xy.new_tensor(
-                    [w - 1, h - 1]) * 2 - 1  # (w,h) -> (-1~1,-1~1)
+                keypoints_xy = (
+                    keypoints_xy / keypoints_xy.new_tensor([w - 1, h - 1]) * 2 - 1
+                )  # (w,h) -> (-1~1,-1~1)
 
-                kptscore = torch.nn.functional.grid_sample(scores_map[b_idx].unsqueeze(0),
-                                                           keypoints_xy.view(1, 1, -1, 2),
-                                                           mode='bilinear', align_corners=True)[0, 0, 0, :]  # CxN
+                kptscore = torch.nn.functional.grid_sample(
+                    scores_map[b_idx].unsqueeze(0),
+                    keypoints_xy.view(1, 1, -1, 2),
+                    mode="bilinear",
+                    align_corners=True,
+                )[
+                    0, 0, 0, :
+                ]  # CxN
 
                 keypoints.append(keypoints_xy)
                 scoredispersitys.append(scoredispersity)
                 kptscores.append(kptscore)
         else:
             for b_idx in range(b):
-                indices_kpt = indices_keypoints[b_idx]  # one dimension vector, say its size is M
-                keypoints_xy_nms = torch.stack([indices_kpt % w, indices_kpt // w], dim=1)  # Mx2
-                keypoints_xy = keypoints_xy_nms / keypoints_xy_nms.new_tensor(
-                    [w - 1, h - 1]) * 2 - 1  # (w,h) -> (-1~1,-1~1)
-                kptscore = torch.nn.functional.grid_sample(scores_map[b_idx].unsqueeze(0),
-                                                           keypoints_xy.view(1, 1, -1, 2),
-                                                           mode='bilinear', align_corners=True)[0, 0, 0, :]  # CxN
+                indices_kpt = indices_keypoints[
+                    b_idx
+                ]  # one dimension vector, say its size is M
+                keypoints_xy_nms = torch.stack(
+                    [indices_kpt % w, indices_kpt // w], dim=1
+                )  # Mx2
+                keypoints_xy = (
+                    keypoints_xy_nms / keypoints_xy_nms.new_tensor([w - 1, h - 1]) * 2
+                    - 1
+                )  # (w,h) -> (-1~1,-1~1)
+                kptscore = torch.nn.functional.grid_sample(
+                    scores_map[b_idx].unsqueeze(0),
+                    keypoints_xy.view(1, 1, -1, 2),
+                    mode="bilinear",
+                    align_corners=True,
+                )[
+                    0, 0, 0, :
+                ]  # CxN
                 keypoints.append(keypoints_xy)
                 scoredispersitys.append(None)
                 kptscores.append(kptscore)
@@ -183,8 +222,9 @@ class DKD(nn.Module):
         :param sub_pixel: whether to use sub-pixel keypoint detection
         :return: kpts: list[Nx2,...]; kptscores: list[N,....] normalised position: -1.0 ~ 1.0
         """
-        keypoints, scoredispersitys, kptscores = self.detect_keypoints(scores_map,
-                                                                       sub_pixel)
+        keypoints, scoredispersitys, kptscores = self.detect_keypoints(
+            scores_map, sub_pixel
+        )
 
         descriptors = sample_descriptor(descriptor_map, keypoints, sub_pixel)
 

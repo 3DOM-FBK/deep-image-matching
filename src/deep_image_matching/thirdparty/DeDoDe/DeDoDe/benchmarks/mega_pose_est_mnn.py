@@ -5,8 +5,9 @@ from PIL import Image
 from tqdm import tqdm
 import torch.nn.functional as F
 
+
 class MegaDepthPoseMNNBenchmark:
-    def __init__(self, data_root="data/megadepth", scene_names = None) -> None:
+    def __init__(self, data_root="data/megadepth", scene_names=None) -> None:
         if scene_names is None:
             self.scene_names = [
                 "0015_0.1_0.3.npz",
@@ -23,13 +24,23 @@ class MegaDepthPoseMNNBenchmark:
         ]
         self.data_root = data_root
 
-    def benchmark(self, detector_model, descriptor_model, matcher_model, model_name = None, resolution = None, scale_intrinsics = False, calibrated = True):
+    def benchmark(
+        self,
+        detector_model,
+        descriptor_model,
+        matcher_model,
+        model_name=None,
+        resolution=None,
+        scale_intrinsics=False,
+        calibrated=True,
+    ):
         with torch.no_grad():
             data_root = self.data_root
             tot_e_t, tot_e_R, tot_e_pose = [], [], []
             thresholds = [5, 10, 20]
             for scene_ind in range(len(self.scenes)):
                 import os
+
                 scene_name = os.path.splitext(self.scene_names[scene_ind])[0]
                 scene = self.scenes[scene_ind]
                 pairs = scene["pair_infos"]
@@ -46,19 +57,36 @@ class MegaDepthPoseMNNBenchmark:
                     T2 = poses[idx2].copy()
                     R2, t2 = T2[:3, :3], T2[:3, 3]
                     R, t = compute_relative_pose(R1, t1, R2, t2)
-                    T1_to_2 = np.concatenate((R,t[:,None]), axis=-1)
+                    T1_to_2 = np.concatenate((R, t[:, None]), axis=-1)
                     im_A_path = f"{data_root}/{im_paths[idx1]}"
                     im_B_path = f"{data_root}/{im_paths[idx2]}"
                     detections_A = detector_model.detect_from_path(im_A_path)
-                    keypoints_A, P_A = detections_A["keypoints"], detections_A["confidence"]
+                    keypoints_A, P_A = (
+                        detections_A["keypoints"],
+                        detections_A["confidence"],
+                    )
                     detections_B = detector_model.detect_from_path(im_B_path)
-                    keypoints_B, P_B = detections_B["keypoints"], detections_B["confidence"]
-                    description_A = descriptor_model.describe_keypoints_from_path(im_A_path, keypoints_A)["descriptions"]
-                    description_B = descriptor_model.describe_keypoints_from_path(im_B_path, keypoints_B)["descriptions"]
-                    matches_A, matches_B, batch_ids = matcher_model.match(keypoints_A, description_A,
-                        keypoints_B, description_B,
-                        P_A = P_A, P_B = P_B,
-                        normalize = True, inv_temp=20, threshold = 0.01)
+                    keypoints_B, P_B = (
+                        detections_B["keypoints"],
+                        detections_B["confidence"],
+                    )
+                    description_A = descriptor_model.describe_keypoints_from_path(
+                        im_A_path, keypoints_A
+                    )["descriptions"]
+                    description_B = descriptor_model.describe_keypoints_from_path(
+                        im_B_path, keypoints_B
+                    )["descriptions"]
+                    matches_A, matches_B, batch_ids = matcher_model.match(
+                        keypoints_A,
+                        description_A,
+                        keypoints_B,
+                        description_B,
+                        P_A=P_A,
+                        P_B=P_B,
+                        normalize=True,
+                        inv_temp=20,
+                        threshold=0.01,
+                    )
 
                     im_A = Image.open(im_A_path)
                     w1, h1 = im_A.size
@@ -72,15 +100,20 @@ class MegaDepthPoseMNNBenchmark:
                         K1, K2 = K1.copy(), K2.copy()
                         K1[:2] = K1[:2] * scale1
                         K2[:2] = K2[:2] * scale2
-                    kpts1, kpts2 = matcher_model.to_pixel_coords(matches_A, matches_B, h1, w1, h2, w2)
+                    kpts1, kpts2 = matcher_model.to_pixel_coords(
+                        matches_A, matches_B, h1, w1, h2, w2
+                    )
                     for _ in range(1):
                         shuffling = np.random.permutation(np.arange(len(kpts1)))
                         kpts1 = kpts1[shuffling]
                         kpts2 = kpts2[shuffling]
                         try:
-                            threshold = 0.5 
+                            threshold = 0.5
                             if calibrated:
-                                norm_threshold = threshold / (np.mean(np.abs(K1[:2, :2])) + np.mean(np.abs(K2[:2, :2])))
+                                norm_threshold = threshold / (
+                                    np.mean(np.abs(K1[:2, :2]))
+                                    + np.mean(np.abs(K2[:2, :2]))
+                                )
                                 R_est, t_est, mask = estimate_pose(
                                     kpts1.cpu().numpy(),
                                     kpts2.cpu().numpy(),

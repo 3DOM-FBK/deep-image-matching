@@ -1,11 +1,11 @@
 from ....src.config.default import _CN as cfg
 
-cfg.LOFTR.BACKBONE_TYPE = 'E2ResNetFPN'
+cfg.LOFTR.BACKBONE_TYPE = "E2ResNetFPN"
 cfg.LOFTR.RESNETFPN.NBR_ROTATIONS = 8
 
 # cfg.LOFTR.COARSE.D_MODEL = 64
 
-cfg.LOFTR.MATCH_COARSE.MATCH_TYPE = 'dual_softmax'
+cfg.LOFTR.MATCH_COARSE.MATCH_TYPE = "dual_softmax"
 cfg.LOFTR.MATCH_COARSE.SPARSE_SPVS = False
 
 cfg.TRAINER.CANONICAL_LR = 8e-3

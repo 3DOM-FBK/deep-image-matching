@@ -7,8 +7,9 @@ import torch.nn.functional as F
 import roma
 import kornia.geometry.epipolar as kepi
 
+
 class MegaDepthPoseEstimationBenchmark:
-    def __init__(self, data_root="data/megadepth", scene_names = None) -> None:
+    def __init__(self, data_root="data/megadepth", scene_names=None) -> None:
         if scene_names is None:
             self.scene_names = [
                 "0015_0.1_0.3.npz",
@@ -25,14 +26,22 @@ class MegaDepthPoseEstimationBenchmark:
         ]
         self.data_root = data_root
 
-    def benchmark(self, model, model_name = None, resolution = None, scale_intrinsics = True, calibrated = True):
-        H,W = model.get_output_resolution()
+    def benchmark(
+        self,
+        model,
+        model_name=None,
+        resolution=None,
+        scale_intrinsics=True,
+        calibrated=True,
+    ):
+        H, W = model.get_output_resolution()
         with torch.no_grad():
             data_root = self.data_root
             tot_e_t, tot_e_R, tot_e_pose = [], [], []
             thresholds = [5, 10, 20]
             for scene_ind in range(len(self.scenes)):
                 import os
+
                 scene_name = os.path.splitext(self.scene_names[scene_ind])[0]
                 scene = self.scenes[scene_ind]
                 pairs = scene["pair_infos"]
@@ -49,16 +58,16 @@ class MegaDepthPoseEstimationBenchmark:
                     T2 = poses[idx2].copy()
                     R2, t2 = T2[:3, :3], T2[:3, 3]
                     R, t = compute_relative_pose(R1, t1, R2, t2)
-                    T1_to_2 = np.concatenate((R,t[:,None]), axis=-1)
+                    T1_to_2 = np.concatenate((R, t[:, None]), axis=-1)
                     im_A_path = f"{data_root}/{im_paths[idx1]}"
                     im_B_path = f"{data_root}/{im_paths[idx2]}"
                     dense_matches, dense_certainty = model.match(
                         im_A_path, im_B_path, K1.copy(), K2.copy(), T1_to_2.copy()
                     )
-                    sparse_matches,_ = model.sample(
+                    sparse_matches, _ = model.sample(
                         dense_matches, dense_certainty, 5000
                     )
-                    
+
                     im_A = Image.open(im_A_path)
                     w1, h1 = im_A.size
                     im_B = Image.open(im_B_path)
@@ -74,24 +83,20 @@ class MegaDepthPoseEstimationBenchmark:
                         K2[:2] = K2[:2] * scale2
 
                     kpts1 = sparse_matches[:, :2]
-                    kpts1 = (
-                        np.stack(
-                            (
-                                w1 * (kpts1[:, 0] + 1) / 2,
-                                h1 * (kpts1[:, 1] + 1) / 2,
-                            ),
-                            axis=-1,
-                        )
+                    kpts1 = np.stack(
+                        (
+                            w1 * (kpts1[:, 0] + 1) / 2,
+                            h1 * (kpts1[:, 1] + 1) / 2,
+                        ),
+                        axis=-1,
                     )
                     kpts2 = sparse_matches[:, 2:]
-                    kpts2 = (
-                        np.stack(
-                            (
-                                w2 * (kpts2[:, 0] + 1) / 2,
-                                h2 * (kpts2[:, 1] + 1) / 2,
-                            ),
-                            axis=-1,
-                        )
+                    kpts2 = np.stack(
+                        (
+                            w2 * (kpts2[:, 0] + 1) / 2,
+                            h2 * (kpts2[:, 1] + 1) / 2,
+                        ),
+                        axis=-1,
                     )
 
                     for _ in range(5):
@@ -99,9 +104,12 @@ class MegaDepthPoseEstimationBenchmark:
                         kpts1 = kpts1[shuffling]
                         kpts2 = kpts2[shuffling]
                         try:
-                            threshold = 0.5 
+                            threshold = 0.5
                             if calibrated:
-                                norm_threshold = threshold / (np.mean(np.abs(K1[:2, :2])) + np.mean(np.abs(K2[:2, :2])))
+                                norm_threshold = threshold / (
+                                    np.mean(np.abs(K1[:2, :2]))
+                                    + np.mean(np.abs(K2[:2, :2]))
+                                )
                                 R_est, t_est, mask = estimate_pose(
                                     kpts1,
                                     kpts2,

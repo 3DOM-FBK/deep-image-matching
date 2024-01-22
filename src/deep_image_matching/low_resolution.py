@@ -273,4 +273,3 @@ if __name__ == "__main__":
     match_low_resolution(img_paths, resize_max=1000, min_matches=20)
 
     print("Done")
-  
