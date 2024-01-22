@@ -100,5 +100,18 @@ def test_sp_lg_quality_medium(data_dir, script):
 #     )
 
 
+# Test semi-dense matchers
+def test_loftr(data_dir, script):
+    run_pipeline(
+        f"python {script} --dir {data_dir} --pipeline loftr --strategy bruteforce --skip_reconstruction --force"
+    )
+
+
+def test_roma(data_dir, script):
+    run_pipeline(
+        f"python {script} --dir {data_dir} --pipeline roma --strategy bruteforce --skip_reconstruction --force"
+    )
+
+
 if __name__ == "__main__":
-    pytest.main()
+    pytest.main([f"{__file__}"])

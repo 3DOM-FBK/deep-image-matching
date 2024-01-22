@@ -5,6 +5,7 @@ from copy import deepcopy
 from enum import Enum
 from pathlib import Path
 from pprint import pprint
+from typing import Tuple
 
 import yaml
 
@@ -531,6 +532,8 @@ class Config:
         if not path.exists():
             raise FileNotFoundError(f"Configuration file {path} not found.")
 
+        print(f"Using a custom configuration file: {path}")
+
         with open(path, "r") as file:
             cfg = yaml.safe_load(file)
 
@@ -546,9 +549,19 @@ class Config:
                     cfg["general"]["geom_verification"].upper()
                 ]
             if "tile_size" in cfg["general"]:
-                cfg["general"]["tile_size"] = ast.literal_eval(
-                    cfg["general"]["tile_size"]
-                )
+                tile_sz = cfg["general"]["tile_size"]
+                if isinstance(tile_sz, Tuple):
+                    tile_sz = tuple([int(x) for x in tile_sz])
+                    cfg["general"]["tile_size"] = tile_sz
+                elif isinstance(tile_sz, str):
+                    cfg["general"]["tile_size"] = ast.literal_eval(tile_sz)
+                elif isinstance(tile_sz, list):
+                    cfg["general"]["tile_size"] = tuple(tile_sz)
+                else:
+                    raise ValueError(
+                        f"Invalid tile_size option: {tile_sz} in the configuration file {path}. Valid options are: Tuple[int, int], str, list"
+                    )
+
             self.cfg["general"].update(cfg["general"])
 
         if "extractor" in cfg:
@@ -588,6 +601,7 @@ class Config:
         print("\n")
         print("Config matcher:")
         pprint(self.matcher)
+        print("\n")
 
     def save(self, path: Path = None):
         """Save configuration to file.
