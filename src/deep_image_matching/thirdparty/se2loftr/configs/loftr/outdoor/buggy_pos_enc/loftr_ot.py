@@ -1,7 +1,7 @@
 from src.config.default import _CN as cfg
 
 cfg.LOFTR.COARSE.TEMP_BUG_FIX = False
-cfg.LOFTR.MATCH_COARSE.MATCH_TYPE = 'sinkhorn'
+cfg.LOFTR.MATCH_COARSE.MATCH_TYPE = "sinkhorn"
 
 cfg.TRAINER.CANONICAL_LR = 8e-3
 cfg.TRAINER.WARMUP_STEP = 1875  # 3 epochs

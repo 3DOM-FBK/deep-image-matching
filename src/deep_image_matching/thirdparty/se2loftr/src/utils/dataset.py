@@ -16,8 +16,11 @@ except Exception:
 
 # --- DATA IO ---
 
+
 def load_array_from_s3(
-    path, client, cv_type,
+    path,
+    client,
+    cv_type,
     use_h5py=False,
 ):
     byte_str = client.Get(path)
@@ -27,7 +30,7 @@ def load_array_from_s3(
             data = cv2.imdecode(raw_array, cv_type)
         else:
             f = io.BytesIO(byte_str)
-            data = np.array(h5py.File(f, 'r')['/depth'])
+            data = np.array(h5py.File(f, "r")["/depth"])
     except Exception as ex:
         print(f"==> Data loading failure: {path}")
         raise ex
@@ -37,9 +40,8 @@ def load_array_from_s3(
 
 
 def imread_gray(path, augment_fn=None, client=SCANNET_CLIENT):
-    cv_type = cv2.IMREAD_GRAYSCALE if augment_fn is None \
-                else cv2.IMREAD_COLOR
-    if str(path).startswith('s3://'):
+    cv_type = cv2.IMREAD_GRAYSCALE if augment_fn is None else cv2.IMREAD_COLOR
+    if str(path).startswith("s3://"):
         image = load_array_from_s3(str(path), client, cv_type)
     else:
         image = cv2.imread(str(path), cv_type)
@@ -55,7 +57,7 @@ def imread_gray(path, augment_fn=None, client=SCANNET_CLIENT):
 def get_resized_wh(w, h, resize=None):
     if resize is not None:  # resize the longer edge
         scale = resize / max(h, w)
-        w_new, h_new = int(round(w*scale)), int(round(h*scale))
+        w_new, h_new = int(round(w * scale)), int(round(h * scale))
     else:
         w_new, h_new = w, h
     return w_new, h_new
@@ -70,26 +72,29 @@ def get_divisible_wh(w, h, df=None):
 
 
 def pad_bottom_right(inp, pad_size, ret_mask=False):
-    assert isinstance(pad_size, int) and pad_size >= max(inp.shape[-2:]), f"{pad_size} < {max(inp.shape[-2:])}"
+    assert isinstance(pad_size, int) and pad_size >= max(
+        inp.shape[-2:]
+    ), f"{pad_size} < {max(inp.shape[-2:])}"
     mask = None
     if inp.ndim == 2:
         padded = np.zeros((pad_size, pad_size), dtype=inp.dtype)
-        padded[:inp.shape[0], :inp.shape[1]] = inp
+        padded[: inp.shape[0], : inp.shape[1]] = inp
         if ret_mask:
             mask = np.zeros((pad_size, pad_size), dtype=bool)
-            mask[:inp.shape[0], :inp.shape[1]] = True
+            mask[: inp.shape[0], : inp.shape[1]] = True
     elif inp.ndim == 3:
         padded = np.zeros((inp.shape[0], pad_size, pad_size), dtype=inp.dtype)
-        padded[:, :inp.shape[1], :inp.shape[2]] = inp
+        padded[:, : inp.shape[1], : inp.shape[2]] = inp
         if ret_mask:
             mask = np.zeros((inp.shape[0], pad_size, pad_size), dtype=bool)
-            mask[:, :inp.shape[1], :inp.shape[2]] = True
+            mask[:, : inp.shape[1], : inp.shape[2]] = True
     else:
         raise NotImplementedError()
     return padded, mask
 
 
 # --- MEGADEPTH ---
+
 
 def read_megadepth_gray(path, resize=None, df=None, padding=False, augment_fn=None):
     """
@@ -100,7 +105,7 @@ def read_megadepth_gray(path, resize=None, df=None, padding=False, augment_fn=No
     Returns:
         image (torch.tensor): (1, h, w)
         mask (torch.tensor): (h, w)
-        scale (torch.tensor): [w/w_new, h/h_new]        
+        scale (torch.tensor): [w/w_new, h/h_new]
     """
     # read image
     image = imread_gray(path, augment_fn, client=MEGADEPTH_CLIENT)
@@ -111,7 +116,7 @@ def read_megadepth_gray(path, resize=None, df=None, padding=False, augment_fn=No
     w_new, h_new = get_divisible_wh(w_new, h_new, df)
 
     image = cv2.resize(image, (w_new, h_new))
-    scale = torch.tensor([w/w_new, h/h_new], dtype=torch.float)
+    scale = torch.tensor([w / w_new, h / h_new], dtype=torch.float)
 
     if padding:  # padding
         pad_to = max(h_new, w_new)
@@ -119,17 +124,19 @@ def read_megadepth_gray(path, resize=None, df=None, padding=False, augment_fn=No
     else:
         mask = None
 
-    image = torch.from_numpy(image).float()[None] / 255  # (h, w) -> (1, h, w) and normalized
+    image = (
+        torch.from_numpy(image).float()[None] / 255
+    )  # (h, w) -> (1, h, w) and normalized
     mask = torch.from_numpy(mask)
 
     return image, mask, scale
 
 
 def read_megadepth_depth(path, pad_to=None):
-    if str(path).startswith('s3://'):
+    if str(path).startswith("s3://"):
         depth = load_array_from_s3(path, MEGADEPTH_CLIENT, None, use_h5py=True)
     else:
-        depth = np.array(h5py.File(path, 'r')['depth'])
+        depth = np.array(h5py.File(path, "r")["depth"])
     if pad_to is not None:
         depth, _ = pad_bottom_right(depth, pad_to, ret_mask=False)
     depth = torch.from_numpy(depth).float()  # (h, w)
@@ -137,6 +144,7 @@ def read_megadepth_depth(path, pad_to=None):
 
 
 # --- ScanNet ---
+
 
 def read_scannet_gray(path, resize=(640, 480), augment_fn=None):
     """
@@ -146,7 +154,7 @@ def read_scannet_gray(path, resize=(640, 480), augment_fn=None):
     Returns:
         image (torch.tensor): (1, h, w)
         mask (torch.tensor): (h, w)
-        scale (torch.tensor): [w/w_new, h/h_new]        
+        scale (torch.tensor): [w/w_new, h/h_new]
     """
     # read and resize image
     image = imread_gray(path, augment_fn)
@@ -158,7 +166,7 @@ def read_scannet_gray(path, resize=(640, 480), augment_fn=None):
 
 
 def read_scannet_depth(path):
-    if str(path).startswith('s3://'):
+    if str(path).startswith("s3://"):
         depth = load_array_from_s3(str(path), SCANNET_CLIENT, cv2.IMREAD_UNCHANGED)
     else:
         depth = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
@@ -168,18 +176,17 @@ def read_scannet_depth(path):
 
 
 def read_scannet_pose(path):
-    """ Read ScanNet's Camera2World pose and transform it to World2Camera.
-    
+    """Read ScanNet's Camera2World pose and transform it to World2Camera.
+
     Returns:
         pose_w2c (np.ndarray): (4, 4)
     """
-    cam2world = np.loadtxt(path, delimiter=' ')
+    cam2world = np.loadtxt(path, delimiter=" ")
     world2cam = inv(cam2world)
     return world2cam
 
 
 def read_scannet_intrinsic(path):
-    """ Read ScanNet's intrinsic matrix and return the 3x3 matrix.
-    """
-    intrinsic = np.loadtxt(path, delimiter=' ')
+    """Read ScanNet's intrinsic matrix and return the 3x3 matrix."""
+    intrinsic = np.loadtxt(path, delimiter=" ")
     return intrinsic[:-1, :-1]

@@ -1,9 +1,9 @@
 from src.config.default import _CN as cfg
 
-cfg.LOFTR.BACKBONE_TYPE = 'E2ResNetFPN'
+cfg.LOFTR.BACKBONE_TYPE = "E2ResNetFPN"
 cfg.LOFTR.RESNETFPN.NBR_ROTATIONS = 4
 
-cfg.LOFTR.MATCH_COARSE.MATCH_TYPE = 'dual_softmax'
+cfg.LOFTR.MATCH_COARSE.MATCH_TYPE = "dual_softmax"
 
 cfg.TRAINER.CANONICAL_LR = 8e-3
 cfg.TRAINER.WARMUP_STEP = 1875  # 3 epochs

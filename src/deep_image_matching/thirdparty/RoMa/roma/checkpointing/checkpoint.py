@@ -7,6 +7,7 @@ import gc
 
 import roma
 
+
 class CheckPoint:
     def __init__(self, dir=None, name="tmp"):
         self.name = name
@@ -19,7 +20,7 @@ class CheckPoint:
         optimizer,
         lr_scheduler,
         n,
-        ):
+    ):
         if roma.RANK == 0:
             assert model is not None
             if isinstance(model, (DataParallel, DistributedDataParallel)):
@@ -32,14 +33,14 @@ class CheckPoint:
             }
             torch.save(states, self.dir + self.name + f"_latest.pth")
             logger.info(f"Saved states {list(states.keys())}, at step {n}")
-    
+
     def load(
         self,
         model,
         optimizer,
         lr_scheduler,
         n,
-        ):
+    ):
         if os.path.exists(self.dir + self.name + f"_latest.pth") and roma.RANK == 0:
             states = torch.load(self.dir + self.name + f"_latest.pth")
             if "model" in states:

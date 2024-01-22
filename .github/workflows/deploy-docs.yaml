@@ -25,22 +25,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Setup Pages
-        uses: actions/configure-pages@v2
+        uses: actions/configure-pages@v4
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.8"
+          cache: "pip" # caching pip dependencies
       - name: Install MkDocs and Material for MkDocs
         run: pip install mkdocs-material mkdocstrings[python]
       - name: Install Pillow and CairoSVG (required for social card generation)
         run: pip install pillow cairosvg
-      - name: Setup caching
-        uses: actions/cache@v3
-        with:
-          key: ${{ github.sha }}
-          path: .cache
       - name: Build site (_site directory name is used for Jekyll compatiblity)
         run: mkdocs build --config-file ./mkdocs.yml --site-dir ./_site
       - name: Upload artifact

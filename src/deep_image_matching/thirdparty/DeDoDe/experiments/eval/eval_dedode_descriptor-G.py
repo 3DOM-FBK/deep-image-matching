@@ -27,12 +27,15 @@ import numpy as np
 
 if __name__ == "__main__":
     device = get_best_device()
-    detector = dedode_detector_L(weights = torch.load("dedode_detector_L.pth", map_location = device))
-    descriptor = dedode_descriptor_G(weights = torch.load("dedode_descriptor_G.pth", map_location = device))
+    detector = dedode_detector_L(
+        weights=torch.load("dedode_detector_L.pth", map_location=device)
+    )
+    descriptor = dedode_descriptor_G(
+        weights=torch.load("dedode_descriptor_G.pth", map_location=device)
+    )
     matcher = DualSoftMaxMatcher()
 
     mega_1500 = MegaDepthPoseMNNBenchmark()
     mega_1500.benchmark(
-        detector_model = detector,
-        descriptor_model = descriptor,
-        matcher_model = matcher)
+        detector_model=detector, descriptor_model=descriptor, matcher_model=matcher
+    )

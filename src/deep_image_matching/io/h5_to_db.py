@@ -95,13 +95,13 @@ def add_keypoints(db, h5_path, image_path, camera_model, single_camera=True):
             camera_id = create_camera(db, path, camera_model)
         image_id = db.add_image(filename, camera_id)
         fname_to_id[filename] = image_id
-        #print('keypoints')
-        #print(keypoints)
-        #print('image_id', image_id)
+        # print('keypoints')
+        # print(keypoints)
+        # print('image_id', image_id)
         if len(keypoints.shape) >= 2:
             db.add_keypoints(image_id, keypoints)
-        #else:
-        #    keypoints = 
+        # else:
+        #    keypoints =
         #    db.add_keypoints(image_id, keypoints)
 
     return fname_to_id
