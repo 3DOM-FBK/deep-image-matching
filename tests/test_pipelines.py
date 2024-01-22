@@ -115,18 +115,21 @@ def test_sp_lg_quality_medium(data_dir, script):
 def test_tiling_preselection(data_dir, script, config_file):
     run_pipeline(
         f"python {script} --dir {data_dir} --pipeline superpoint+lightglue --strategy bruteforce --tiling preselection --config {config_file} --skip_reconstruction --force",
+        verbose=True,
     )
 
 
 def test_tiling_grid(data_dir, script, config_file):
     run_pipeline(
         f"python {script} --dir {data_dir} --pipeline superpoint+lightglue --strategy bruteforce --tiling grid --config {config_file} --skip_reconstruction --force",
+        verbose=True,
     )
 
 
 def test_tiling_exhaustive(data_dir, script, config_file):
     run_pipeline(
         f"python {script} --dir {data_dir} --pipeline superpoint+lightglue --strategy bruteforce --tiling exhaustive --config {config_file} --skip_reconstruction --force",
+        verbose=True,
     )
 
 
@@ -141,6 +144,12 @@ def test_roma(data_dir, script):
     run_pipeline(
         f"python {script} --dir {data_dir} --pipeline roma --strategy bruteforce --skip_reconstruction --force"
     )
+
+
+# def test_roma_tiling(data_dir, script):
+#     run_pipeline(
+#         f"python {script} --dir {data_dir} --pipeline roma --strategy bruteforce --tiling preselection --skip_reconstruction --force"
+#     )
 
 
 if __name__ == "__main__":
