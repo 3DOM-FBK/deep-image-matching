@@ -159,7 +159,7 @@ The `extractor` and `matcher` sections contain the parameters that control the l
 Both the sections **must contain the name** of the local feature extractor or the matcher that will be used for the matching (the name must be the same as the one used in the `--pipeline` option in the CLI).
 In addition, you can specify any other parameters for controlling the extractor and the matcher. 
 The default values of all the configuration parameters are defined in the [`config.py`](https://github.com/3DOM-FBK/deep-image-matching/blob/master/src/deep_image_matching/config.py) file located in `/src/deep_image_matching` directory. 
-Please, note that different extractors or matchers may have different parameters, so you need to check carefully 
+Please, note that different extractors or matchers may have different parameters, so you need to check carefully the available parameters for each extractor/matcher in the file [`config.py`](https://github.com/3DOM-FBK/deep-image-matching/blob/master/src/deep_image_matching/config.py).
 
 
 ```yaml
@@ -172,27 +172,41 @@ matcher:
   filter_threshold: 0.1
 ```
 
+Note, that you can use an arbitrary number of parameters for each configuration section ("general", "extractor", "matcher"): you can set only one parameter or all of them, depending on your needs.
+Here is an example of `config.yaml` file for the `superpoint+lightglue` pipeline:
 
 <details>
 
-<summary>An example of `config.yaml` file </summary>
+<summary>config.yaml</summary>
 
 ```yaml
 general:
   tile_size: (2400, 2000)
-  tile_overlap: 20
+  tile_overlap: 10
+  tile_preselection_size: 1000,
+  min_matches_per_tile: 10,
+  geom_verification: "PYDEGENSAC", # or NONE, PYDEGENSAC, MAGSAC
+  gv_threshold: 4,
+  gv_confidence: 0.99999,
   min_inliers_per_pair: 10
   min_inlier_ratio_per_pair: 0.1
 
+
 extractor:
   name: "superpoint"
-  max_keypoints: 8000
-  keypoint_threshold: 0.0001
-  nms_radius: 4
+  max_keypoints: 4096
+  keypoint_threshold: 0.0005
+  nms_radius: 3
 
 matcher:
   name: "lightglue"
   filter_threshold: 0.1
+  n_layers: 9
+  mp: False # enable mixed precision
+  flash: True # enable FlashAttention if available.
+  depth_confidence: 0.95 # early stopping, disable with -1
+  width_confidence: 0.99 # point pruning, disable with -1
+  filter_threshold: 0.1 # match threshold
 
 ```
 
