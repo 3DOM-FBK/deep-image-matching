@@ -153,5 +153,5 @@ if not config.general["skip_reconstruction"]:
     else:
         logger.warning("Reconstruction with COLMAP CLI is not implemented yet.")
 
-
+# Print timing
 timer.print("Deep Image Matching")

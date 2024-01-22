@@ -11,19 +11,6 @@ def script():
     return (Path(__file__).parents[1] / "main.py").resolve()
 
 
-@pytest.fixture
-def config_file():
-    config = {"general": {"tile_size": (400, 400)}}
-
-    def tuple_representer(dumper, data):
-        return dumper.represent_sequence("tag:yaml.org,2002:seq", data, flow_style=True)
-
-    yaml.add_representer(tuple, tuple_representer)
-    with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False) as file:
-        yaml.dump(config, file)
-        return file.name
-
-
 def run_pipeline(cmd, verbose: bool = False) -> None:
     # Run the script using subprocess
     process = subprocess.Popen(
@@ -38,6 +25,22 @@ def run_pipeline(cmd, verbose: bool = False) -> None:
     assert (
         process.returncode == 0
     ), f"Script execution failed with error: {stderr.decode('utf-8')}"
+
+
+def create_config_file(config: dict, path: str, temporary: bool = False):
+    def tuple_representer(dumper, data):
+        return dumper.represent_sequence("tag:yaml.org,2002:seq", data, flow_style=True)
+
+    yaml.add_representer(tuple, tuple_representer)
+
+    if temporary:
+        with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False) as file:
+            yaml.dump(config, file)
+            return str(file.name)
+    else:
+        with open(path, "w") as f:
+            yaml.dump(config, f)
+            return str(path)
 
 
 # Test matching strategies
@@ -112,25 +115,36 @@ def test_sp_lg_quality_medium(data_dir, script):
 
 
 # Test tiling
-def test_tiling_preselection(data_dir, script, config_file):
+@pytest.fixture
+def config_file_tiling():
+    config = {"general": {"tile_size": (400, 400)}}
+    config_file = Path(__file__).parents[1] / "temp.yaml"
+    config_file = create_config_file(config, config_file, temporary=False)
+    return config_file
+
+
+def test_tiling_preselection(data_dir, script, config_file_tiling):
     run_pipeline(
-        f"python {script} --dir {data_dir} --pipeline superpoint+lightglue --strategy bruteforce --tiling preselection --config {config_file} --skip_reconstruction --force",
+        f"python {script} --dir {data_dir} --pipeline superpoint+lightglue --strategy bruteforce --tiling preselection --config {config_file_tiling} --skip_reconstruction --force",
         verbose=True,
     )
+    Path(config_file_tiling).unlink()
 
 
-def test_tiling_grid(data_dir, script, config_file):
+def test_tiling_grid(data_dir, script, config_file_tiling):
     run_pipeline(
-        f"python {script} --dir {data_dir} --pipeline superpoint+lightglue --strategy bruteforce --tiling grid --config {config_file} --skip_reconstruction --force",
+        f"python {script} --dir {data_dir} --pipeline superpoint+lightglue --strategy bruteforce --tiling grid --config {config_file_tiling} --skip_reconstruction --force",
         verbose=True,
     )
+    Path(config_file_tiling).unlink()
 
 
-def test_tiling_exhaustive(data_dir, script, config_file):
+def test_tiling_exhaustive(data_dir, script, config_file_tiling):
     run_pipeline(
-        f"python {script} --dir {data_dir} --pipeline superpoint+lightglue --strategy bruteforce --tiling exhaustive --config {config_file} --skip_reconstruction --force",
+        f"python {script} --dir {data_dir} --pipeline superpoint+lightglue --strategy bruteforce --tiling exhaustive --config {config_file_tiling} --skip_reconstruction --force",
         verbose=True,
     )
+    Path(config_file_tiling).unlink()
 
 
 # Test semi-dense matchers
@@ -146,10 +160,11 @@ def test_roma(data_dir, script):
     )
 
 
-# def test_roma_tiling(data_dir, script):
-#     run_pipeline(
-#         f"python {script} --dir {data_dir} --pipeline roma --strategy bruteforce --tiling preselection --skip_reconstruction --force"
-#     )
+def test_roma_tiling(data_dir, script, config_file_tiling):
+    run_pipeline(
+        f"python {script} --dir {data_dir} --pipeline roma --strategy bruteforce --tiling preselection --skip_reconstruction --force"
+    )
+    Path(config_file_tiling).unlink()
 
 
 if __name__ == "__main__":
