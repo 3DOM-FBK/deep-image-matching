@@ -82,7 +82,7 @@ class Image:
     DATE_FORMATS = [DATETIME_FMT, DATE_FMT, TIME_FMT]
 
     def __init__(
-        self, path: Union[str, Path], id: int = None, skip_exif: bool = True
+        self, path: Union[str, Path], id: int = None
     ) -> None:
         """
         __init__ Create Image object as a lazy loader for image data
@@ -102,8 +102,12 @@ class Image:
         self._date_time = None
         self._focal_length = None
 
-        if not skip_exif:
+        try:
             self.read_exif()
+        except:
+            logger.warning("Not possible to read exif data. Loading only image size..")
+            img = PIL.Image.open(path)
+            self._width, self._height = img.size
 
     def __repr__(self) -> str:
         """Returns a string representation of the image"""
