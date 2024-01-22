@@ -51,7 +51,7 @@ class NoExtractor(ExtractorBase):
         features["descriptors"] = np.array([])
         features["scores"] = np.array([])
         img_obj = Image(im_path)
-        #img_obj.read_exif()
+        # img_obj.read_exif()
         features["image_size"] = np.array(img_obj.size)
         features["tile_idx"] = np.array([])
         features["im_path"] = im_path
