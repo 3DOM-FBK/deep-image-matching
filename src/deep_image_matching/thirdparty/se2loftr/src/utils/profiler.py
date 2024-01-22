@@ -1,13 +1,14 @@
-import torch
-from pytorch_lightning.profiler import SimpleProfiler, PassThroughProfiler
 from contextlib import contextmanager
+
+import torch
+from pytorch_lightning.profiler import PassThroughProfiler, SimpleProfiler
 from pytorch_lightning.utilities import rank_zero_only
 
 
 class InferenceProfiler(SimpleProfiler):
     """
     This profiler records duration of actions with cuda.synchronize()
-    Use this in test time. 
+    Use this in test time.
     """
 
     def __init__(self):
@@ -28,12 +29,13 @@ class InferenceProfiler(SimpleProfiler):
 
 
 def build_profiler(name):
-    if name == 'inference':
+    if name == "inference":
         return InferenceProfiler()
-    elif name == 'pytorch':
+    elif name == "pytorch":
         from pytorch_lightning.profiler import PyTorchProfiler
+
         return PyTorchProfiler(use_cuda=True, profile_memory=True, row_limit=100)
     elif name is None:
         return PassThroughProfiler()
     else:
-        raise ValueError(f'Invalid profiler: {name}')
+        raise ValueError(f"Invalid profiler: {name}")

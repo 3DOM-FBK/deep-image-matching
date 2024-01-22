@@ -4,6 +4,7 @@ import torch
 import kornia.augmentation as K
 from kornia.geometry.transform import warp_perspective
 
+
 # Adapted from Kornia
 class GeometricSequential:
     def __init__(self, *transforms, align_corners=True) -> None:
@@ -16,7 +17,9 @@ class GeometricSequential:
         for t in self.transforms:
             if np.random.rand() < t.p:
                 M = M.matmul(
-                    t.compute_transformation(x, t.generate_parameters((b, c, h, w)), None)
+                    t.compute_transformation(
+                        x, t.generate_parameters((b, c, h, w)), None
+                    )
                 )
         return (
             warp_perspective(
@@ -104,15 +107,14 @@ class RandomPerspective(K.RandomPerspective):
         return dict(start_points=start_points, end_points=end_points)
 
 
-
 class RandomErasing:
-    def __init__(self, p = 0., scale = 0.) -> None:
+    def __init__(self, p=0.0, scale=0.0) -> None:
         self.p = p
         self.scale = scale
-        self.random_eraser = K.RandomErasing(scale = (0.02, scale), p = p)
+        self.random_eraser = K.RandomErasing(scale=(0.02, scale), p=p)
+
     def __call__(self, image, depth):
         if self.p > 0:
             image = self.random_eraser(image)
             depth = self.random_eraser(depth, params=self.random_eraser._params)
         return image, depth
-        

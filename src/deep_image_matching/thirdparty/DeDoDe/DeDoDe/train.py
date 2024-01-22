@@ -3,7 +3,7 @@ from tqdm import tqdm
 from DeDoDe.utils import to_cuda, to_best_device
 
 
-def train_step(train_batch, model, objective, optimizer, grad_scaler = None,**kwargs):
+def train_step(train_batch, model, objective, optimizer, grad_scaler=None, **kwargs):
     optimizer.zero_grad()
     out = model(train_batch)
     l = objective(out, train_batch)
@@ -20,9 +20,17 @@ def train_step(train_batch, model, objective, optimizer, grad_scaler = None,**kw
 
 
 def train_k_steps(
-    n_0, k, dataloader, model, objective, optimizer, lr_scheduler, grad_scaler = None, progress_bar=True
+    n_0,
+    k,
+    dataloader,
+    model,
+    objective,
+    optimizer,
+    lr_scheduler,
+    grad_scaler=None,
+    progress_bar=True,
 ):
-    for n in tqdm(range(n_0, n_0 + k), disable=not progress_bar, mininterval = 10.):
+    for n in tqdm(range(n_0, n_0 + k), disable=not progress_bar, mininterval=10.0):
         batch = next(dataloader)
         model.train(True)
         batch = to_best_device(batch)
@@ -33,7 +41,7 @@ def train_k_steps(
             optimizer=optimizer,
             lr_scheduler=lr_scheduler,
             n=n,
-            grad_scaler = grad_scaler,
+            grad_scaler=grad_scaler,
         )
         lr_scheduler.step()
 
