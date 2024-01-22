@@ -643,6 +643,7 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         matches_path: Path,
         img0: Path,
         img1: Path,
+        try_full_image: bool = False,
     ) -> np.ndarray:
         """
         Match features between two images.
@@ -652,6 +653,7 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
             matches_path (Path): Path to save the matches.
             img0 (Path): Path to the first image.
             img1 (Path): Path to the second image.
+            try_full_image (bool, optional): Flag to attempt matching on full images. Defaults to False.
 
         Raises:
             RuntimeError: If there are too many features to match on full images.
