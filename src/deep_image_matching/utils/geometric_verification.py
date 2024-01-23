@@ -103,4 +103,20 @@ def geometric_verification(
             )
             inlMask = np.ones(len(kpts0), dtype=bool)
 
+    if method == GeometricVerification.RANSAC:
+        try:
+            F, inliers = cv2.findFundamentalMat(
+                kpts0, kpts1, cv2.RANSAC, threshold, confidence, max_iters
+            )
+            inlMask = (inliers > 0).squeeze()
+            if not quiet:
+                logger.debug(
+                    f"RANSAC found {inlMask.sum()} inliers ({inlMask.sum()*100/len(kpts0):.2f}%)"
+                )
+        except Exception as err:
+            logger.error(
+                f"{err}. Unable to perform geometric verification with RANSAC."
+            )
+            inlMask = np.ones(len(kpts0), dtype=bool)
+
     return F, inlMask
