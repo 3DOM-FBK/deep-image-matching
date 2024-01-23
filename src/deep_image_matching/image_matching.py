@@ -164,8 +164,6 @@ class ImageMatching:
         logger.info(
             f"  Tile selection: {self.custom_config['general']['tile_selection']}"
         )
-        logger.info(f"  Retrieval option: {self.retrieval_option}")
-        logger.info(f"  Overlap: {self.overlap}")
         logger.info(f"  Feature extraction method: {self.local_features}")
         logger.info(f"  Matching method: {self.matching_method}")
 
