@@ -1,3 +1,2 @@
 - [ ] add steerers with DeDoDe
-- [ ] pass roma, loftr and se2loftr working on multi res
-- [ ] togliere export_bundler_format da config.py
+- [ ] open issue on pydegensac for pairs with many tie points (>10000). Quite random results with LoFTR and RoMa
