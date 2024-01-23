@@ -12,6 +12,18 @@ pydegesac_default_params = {
     "symmetric_error_check": True,
     "enable_degeneracy_check": True,
 }
+opencv_methods_mapping = {
+    "LMEDS": cv2.LMEDS,
+    "RANSAC": cv2.RANSAC,
+    "RHO": cv2.RHO,
+    "USAC_DEFAULT": cv2.USAC_DEFAULT,
+    "USAC_PARALLEL": cv2.USAC_PARALLEL,
+    "USAC_FM_8PTS": cv2.USAC_FM_8PTS,
+    "USAC_FAST": cv2.USAC_FAST,
+    "USAC_ACCURATE": cv2.USAC_ACCURATE,
+    "USAC_PROSAC": cv2.USAC_PROSAC,
+    "USAC_MAGSAC": cv2.USAC_MAGSAC,
+}
 
 
 def log_result(inlMask: np.ndarray, method: str) -> None:
@@ -111,19 +123,7 @@ def geometric_verification(
     # Use a generic OPENCV methods
     if method.name not in ["PYDEGENSAC", "MAGSAC", "RANSAC"]:
         logger.debug(f"Method was set to {method}, trying to use it from OPENCV...")
-        methods_mapping = {
-            "LMEDS": cv2.LMEDS,
-            "RANSAC": cv2.RANSAC,
-            "RHO": cv2.RHO,
-            "USAC_DEFAULT": cv2.USAC_DEFAULT,
-            "USAC_PARALLEL": cv2.USAC_PARALLEL,
-            "USAC_FM_8PTS": cv2.USAC_FM_8PTS,
-            "USAC_FAST": cv2.USAC_FAST,
-            "USAC_ACCURATE": cv2.USAC_ACCURATE,
-            "USAC_PROSAC": cv2.USAC_PROSAC,
-            "USAC_MAGSAC": cv2.USAC_MAGSAC,
-        }
-        met = methods_mapping[method.name]
+        met = opencv_methods_mapping[method.name]
         try:
             F, inliers = cv2.findFundamentalMat(
                 kpts0, kpts1, met, threshold, confidence, max_iters
