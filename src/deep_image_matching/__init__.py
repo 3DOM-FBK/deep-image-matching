@@ -26,6 +26,15 @@ class GeometricVerification(Enum):
     PYDEGENSAC = 1
     MAGSAC = 2
     RANSAC = 3
+    LMEDS = 4
+    RHO = 5
+    USAC_DEFAULT = 6
+    USAC_PARALLEL = 7
+    USAC_FM_8PTS = 8
+    USAC_FAST = 9
+    USAC_ACCURATE = 10
+    USAC_PROSAC = 11
+    USAC_MAGSAC = 12
 
 
 class Quality(Enum):
