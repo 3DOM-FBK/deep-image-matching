@@ -110,9 +110,7 @@ def geometric_verification(
 
     # Use a generic OPENCV methods
     if method.name not in ["PYDEGENSAC", "MAGSAC", "RANSAC"]:
-        logger.debug(
-            f"Method was set to {method}, trying to use a generic OPENCV method..."
-        )
+        logger.debug(f"Method was set to {method}, trying to use it from OPENCV...")
         methods_mapping = {
             "LMEDS": cv2.LMEDS,
             "RANSAC": cv2.RANSAC,
