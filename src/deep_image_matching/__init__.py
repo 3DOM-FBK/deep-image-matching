@@ -25,6 +25,7 @@ class GeometricVerification(Enum):
     NONE = 0
     PYDEGENSAC = 1
     MAGSAC = 2
+    RANSAC = 3
 
 
 class Quality(Enum):

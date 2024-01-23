@@ -1,0 +1,13 @@
+# User configuration file
+
+general:
+  tile_size: (2400, 2000)
+  geom_verification: ransac
+  min_inliers_per_pair: 10
+  min_inlier_ratio_per_pair: 0.25
+
+extractor:
+  name: "no_extractor"
+
+matcher:
+  name: "roma"
