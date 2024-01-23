@@ -27,7 +27,7 @@ def run_pipeline(cmd, verbose: bool = False) -> None:
     ), f"Script execution failed with error: {stderr.decode('utf-8')}"
 
 
-def create_config_file(config: dict, path: str, temporary: bool = False):
+def create_config_file(config: dict, path: str, temporary: bool = False) -> str:
     def tuple_representer(dumper, data):
         return dumper.represent_sequence("tag:yaml.org,2002:seq", data, flow_style=True)
 
@@ -64,9 +64,13 @@ def test_sp_lg_matching_lowres(data_dir, script):
 
 # Test using a custom configuration file
 def test_sp_lg_custom_config(data_dir, script):
+    config = {"extractor": {"superpoint": 2000}}
+    config_file = Path(__file__).parents[1] / "temp.yaml"
+    config_file = create_config_file(config, config_file, temporary=False)
     run_pipeline(
-        f"python {script} --dir {data_dir} --pipeline superpoint+lightglue --config_file config.yaml --strategy sequential --overlap 1 --skip_reconstruction --force"
+        f"python {script} --dir {data_dir} --pipeline superpoint+lightglue --config_file {config_file} --strategy sequential --overlap 1 --skip_reconstruction --force"
     )
+    config_file.unlink()
 
 
 # Test pycolmap reconstruction
