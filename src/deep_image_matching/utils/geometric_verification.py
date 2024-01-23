@@ -56,9 +56,9 @@ def geometric_verification(
     if method == GeometricVerification.PYDEGENSAC:
         try:
             pydegensac = importlib.import_module("pydegensac")
-        except:
+        except ImportError:
             logger.warning(
-                "Pydegensac not available. Using MAGSAC++ (OpenCV) for geometric verification."
+                "Pydegensac not available. Using RANSAC (OpenCV) for geometric verification."
             )
             fallback = True
 
@@ -80,14 +80,14 @@ def geometric_verification(
                     f"Pydegensac found {inlMask.sum()} inliers ({inlMask.sum()*100/len(kpts0):.2f}%)"
                 )
         except Exception as err:
-            # Fall back to MAGSAC++ if pydegensac fails
+            # Fall back to RANSAC if pydegensac fails
             if not quiet:
                 logger.warning(
-                    f"{err}. Unable to perform geometric verification with Pydegensac. Trying using MAGSAC++ (OpenCV) instead."
+                    f"{err}. Unable to perform geometric verification with Pydegensac. Trying using RANSAC (OpenCV) instead."
                 )
             fallback = True
 
-    if method == GeometricVerification.MAGSAC or fallback:
+    if method == GeometricVerification.MAGSAC:
         try:
             F, inliers = cv2.findFundamentalMat(
                 kpts0, kpts1, cv2.USAC_MAGSAC, threshold, confidence, max_iters
@@ -98,12 +98,13 @@ def geometric_verification(
                     f"MAGSAC++ found {inlMask.sum()} inliers ({inlMask.sum()*100/len(kpts0):.2f}%)"
                 )
         except Exception as err:
+            # Fall back to RANSAC if MAGSAC fails
             logger.error(
-                f"{err}. Unable to perform geometric verification with MAGSAC++."
+                f"{err}. Unable to perform geometric verification with MAGSAC++. Trying using RANSAC (OpenCV) instead."
             )
-            inlMask = np.ones(len(kpts0), dtype=bool)
+            fallback = True
 
-    if method == GeometricVerification.RANSAC:
+    if method == GeometricVerification.RANSAC or fallback:
         try:
             F, inliers = cv2.findFundamentalMat(
                 kpts0, kpts1, cv2.RANSAC, threshold, confidence, max_iters
