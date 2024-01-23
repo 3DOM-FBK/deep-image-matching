@@ -57,10 +57,12 @@ def geometric_verification(
         confidence (float): The required confidence level in the results.
         max_iters (int): The maximum number of iterations for estimating the fundamental matrix.
         quiet (bool): If True, disables logging.
-        kwargs: Additional parameters for the selected method. Check the documentation of the selected method for more information. For pydegensac: https://github.com/ducha-aiki/pydegensac, for MAGSAC++ and RUNSAC (OpenCV): https://docs.opencv.org/4.5.2/d9/d0c/group__calib3d.html#ga13f7e34de8fa516a686a56af1196247f
+        **kwargs: Additional parameters for the selected method. Check the documentation of the selected method for more information. For pydegensac: https://github.com/ducha-aiki/pydegensac, for all the other OPENCV methods: https://docs.opencv.org/4.5.2/d9/d0c/group__calib3d.html#ga13f7e34de8fa516a686a56af1196247f
 
     Returns:
-        np.ndarray: A Boolean array that masks the correspondences that were identified as inliers.
+        [np.ndarray, np.ndarray]: A tuple containing:
+            - F: The estimated fundamental matrix.
+            - inlMask: a Boolean array that masks the correspondences that were identified as inliers.
 
     """
 
