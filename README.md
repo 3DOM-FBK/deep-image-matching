@@ -12,11 +12,11 @@
 
 | SIFT                                             | DISK                                               | IMAGES ORIENTATION                                   | DENSE WITH ROMA                                |
 | ------------------------------------------------ | -------------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------- |
-| <img src='assets/matches_sift.gif' height="100"> | <img src='assets/matches_joined.gif' height="100"> | <img src='assets/orientation_deep.gif' height="100"> | <img src='assets/roma_dense.gif' height="100"> |
+| <img src='docs/assets/matches_sift.gif' height="100"> | <img src='docs/assets/matches_joined.gif' height="100"> | <img src='docs/assets/orientation_deep.gif' height="100"> | <img src='docs/assets/roma_dense.gif' height="100"> |
 
 | SIFT                                             | SUPERGLUE                                            |
 | ------------------------------------------------ | ---------------------------------------------------- |
-| <img src='assets/temple_rsift.gif' height="165"> | <img src='assets/temple_superglue.gif' height="165"> |
+| <img src='docs/assets/temple_rsift.gif' height="165"> | <img src='docs/assets/temple_superglue.gif' height="165"> |
 
 
 Multivew matcher for SfM software. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI. Feel free to collaborate!
@@ -56,9 +56,9 @@ Key features:
 
 ## Colab demo 
 
-Want to run on a sample dataset? ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/colab_run_from_bash_example.ipynb)
+Want to run on a sample dataset? ➡️ [![Open In Colab](https://colab.research.google.com/docs/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/colab_run_from_bash_example.ipynb)
 
-Want to run on your images? ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/colab_run_from_bash_custom_images.ipynb)
+Want to run on your images? ➡️ [![Open In Colab](https://colab.research.google.com/docs/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/colab_run_from_bash_custom_images.ipynb)
 
 ## Installation
 
@@ -104,7 +104,7 @@ python main.py --help
 For example, to run the matching with SuperPoint and LightGlue on a dataset, you can use the following command:
 
 ```bash
-python main.py --dir assets/example_cyprus --pipeline superpoint+lightglue
+python main.py --dir docs/assets/example_cyprus --pipeline superpoint+lightglue
 ```
 
 For all the usage instructions and configurations, refer to the documenation at [https://3dom-fbk.github.io/deep-image-matching/](https://3dom-fbk.github.io/deep-image-matching/getting_started) or check the example notebooks.
@@ -125,7 +125,7 @@ To run the matching with different local features and/or matchers and marging to
 
 ```bash
 python ./join_databases.py --help
-python ./join_databases.py --input assets/to_be_joined --output assets/to_be_joined
+python ./join_databases.py --input docs/assets/to_be_joined --output docs/assets/to_be_joined
 ```
 
 ### Exporting the solution to Metashape
