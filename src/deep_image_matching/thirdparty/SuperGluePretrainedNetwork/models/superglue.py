@@ -211,7 +211,7 @@ class SuperGlue(nn.Module):
 
     default_config = {
         "descriptor_dim": 256,
-        "weights": "indoor",
+        "weights": "outdoor",
         "keypoint_encoder": [32, 64, 128, 256],
         "GNN_layers": ["self", "cross"] * 9,
         "sinkhorn_iterations": 100,
