@@ -10,7 +10,7 @@
 
 2. Initialize the pre-commit hooks
 
-    Please initialize the pre-commit hooks, which will automatically run the linters (check for code errors) and formatting (with blakc) before each commit.
+    Please initialize the pre-commit hooks, which will automatically run the flake8 linter (check for code errors) and formatting (with blakc) before each commit.
 
     ```bash
     pre-commit install
@@ -24,17 +24,20 @@
     git checkout -b <branch-name>
     ```
 
-4. Make your changes
+4. Make your changes, format your code, and run the tests
 
-    Make your changes.
+    Make your changes (VSCode is strongly recommended as an editor)
     Please, format your code with a formatter (e.g. black).
     If you are using VSCode as your editor, you can install the Python extension, and set the formatter to black ([https://code.visualstudio.com/docs/python/formatting](https://code.visualstudio.com/docs/python/formatting)).
-    The pre-commit hooks will automatically run the linters and formatters before each commit, but better to already have the code well formatted before committing.
+    The pre-commit hooks will automatically run the linter and formatter before each commit.
+    If some code needs to be formatted, the pre-commit hooks stop the commit and format the code. You can then commit again (so better to already have the code well formatted before committing to avoid re-doing the commit).
     Then, make sure that the tests are passing. You can manually run the tests with pytest:
 
     ```bash
     python -m pytest
     ```
+
+    If you are using VSCode as your editor, you can also install the [Python extension](https://code.visualstudio.com/docs/python/testing), and run the tests from the editor.
 
 5. Push your changes to the remote repository
 

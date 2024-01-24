@@ -37,6 +37,7 @@ dependencies = [
     "exifread",
     "joblib",
     "pyyaml",
+    "packaging",    
 ]
 requires-python = ">=3.8"
 
