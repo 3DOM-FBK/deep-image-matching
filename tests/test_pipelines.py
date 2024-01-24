@@ -1,8 +1,10 @@
+import platform
 import subprocess
 import tempfile
 from pathlib import Path
 
 import pytest
+import torch
 import yaml
 
 
@@ -86,6 +88,10 @@ def test_sp_lg_custom_config(data_dir, script):
 
 # Test pycolmap reconstruction
 def test_pycolmap(data_dir, script):
+    if platform.system() == "Windows":
+        pytest.skip(
+            "Pycolmap is not available on Windows. Please use WSL or Docker to run this test."
+        )
     run_pipeline(
         f"python {script} --dir {data_dir} --pipeline superpoint+lightglue --strategy matching_lowres --force"
     )
@@ -170,6 +176,10 @@ def test_loftr(data_dir, script):
 
 
 def test_roma(data_dir, script):
+    if platform.system() == "Windows" and not torch.cuda.is_available():
+        pytest.skip(
+            "Due to some bugs in ROMA code, ROMA is not available on Windows without CUDA GPU."
+        )
     run_pipeline(
         f"python {script} --dir {data_dir} --pipeline roma --strategy bruteforce --skip_reconstruction --force"
     )
