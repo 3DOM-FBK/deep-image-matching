@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [windows-latest]
         python-version: ["3.9"]
     steps:
       - uses: actions/checkout@v4
@@ -28,8 +28,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .
-          pip install pycolmap
-          pip install einops
       - name: Test with pytest
         run: |
           pytest
