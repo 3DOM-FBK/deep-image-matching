@@ -176,9 +176,9 @@ def test_loftr(data_dir, script):
 
 
 def test_roma(data_dir, script):
-    if platform.system() == "Windows" and not torch.cuda.is_available():
+    if torch.cuda.is_available():
         pytest.skip(
-            "Due to some bugs in ROMA code, ROMA is not available on Windows without CUDA GPU."
+            "Due to some bugs in ROMA code, ROMA is not available without CUDA GPU."
         )
     run_pipeline(
         f"python {script} --dir {data_dir} --pipeline roma --strategy bruteforce --skip_reconstruction --force"
