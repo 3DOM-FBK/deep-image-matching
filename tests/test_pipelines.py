@@ -147,7 +147,6 @@ def config_file_tiling():
 def test_tiling_preselection(data_dir, script, config_file_tiling):
     run_pipeline(
         f"python {script} --dir {data_dir} --pipeline superpoint+lightglue --strategy bruteforce --tiling preselection --config {config_file_tiling} --skip_reconstruction --force",
-        verbose=True,
     )
     config_file_tiling.unlink()
 
@@ -155,7 +154,6 @@ def test_tiling_preselection(data_dir, script, config_file_tiling):
 def test_tiling_grid(data_dir, script, config_file_tiling):
     run_pipeline(
         f"python {script} --dir {data_dir} --pipeline superpoint+lightglue --strategy bruteforce --tiling grid --config {config_file_tiling} --skip_reconstruction --force",
-        verbose=True,
     )
     config_file_tiling.unlink()
 
@@ -163,7 +161,6 @@ def test_tiling_grid(data_dir, script, config_file_tiling):
 def test_tiling_exhaustive(data_dir, script, config_file_tiling):
     run_pipeline(
         f"python {script} --dir {data_dir} --pipeline superpoint+lightglue --strategy bruteforce --tiling exhaustive --config {config_file_tiling} --skip_reconstruction --force",
-        verbose=True,
     )
     config_file_tiling.unlink()
 
@@ -185,11 +182,15 @@ def test_roma(data_dir, script):
     )
 
 
-# def test_roma_tiling(data_dir, script, config_file_tiling):
-#     run_pipeline(
-#         f"python {script} --dir {data_dir} --pipeline roma --strategy bruteforce --tiling preselection --skip_reconstruction --force"
-#     )
-#     Path(config_file_tiling).unlink()
+def test_roma_tiling(data_dir, script, config_file_tiling):
+    if torch.cuda.is_available():
+        pytest.skip(
+            "Due to some bugs in ROMA code, ROMA is not available without CUDA GPU."
+        )
+    run_pipeline(
+        f"python {script} --dir {data_dir} --pipeline roma --strategy bruteforce --config {config_file_tiling} --tiling preselection --skip_reconstruction --force"
+    )
+    config_file_tiling.unlink()
 
 
 if __name__ == "__main__":
