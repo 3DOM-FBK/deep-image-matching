@@ -2,7 +2,7 @@
 
 1. Install the 'dev' dependencies
 
-    Please install the 'dev' dependencies, which contains the tools for linting, testing, and building the project (see pyproject.toml for details).
+    Please install the 'dev' dependencies, which contains the tools for linting (check for code errors), testing, and building the project (see pyproject.toml for details).
 
     ```bash
     pip install -e ".[dev]"
@@ -10,7 +10,7 @@
 
 2. Initialize the pre-commit hooks
 
-    Please initialize the pre-commit hooks, which will automatically run the flake8 linter (check for code errors) and formatting (with blakc) before each commit.
+    Please initialize the pre-commit hooks, which will automatically run black formatter before each commit.
 
     ```bash
     pre-commit install
@@ -29,7 +29,7 @@
     Make your changes (VSCode is strongly recommended as an editor)
     Please, format your code with a formatter (e.g. black).
     If you are using VSCode as your editor, you can install the Python extension, and set the formatter to black ([https://code.visualstudio.com/docs/python/formatting](https://code.visualstudio.com/docs/python/formatting)).
-    The pre-commit hooks will automatically run the linter and formatter before each commit.
+    The pre-commit hooks will automatically run the formatter before each commit.
     If some code needs to be formatted, the pre-commit hooks stop the commit and format the code. You can then commit again (so better to already have the code well formatted before committing to avoid re-doing the commit).
     Then, make sure that the tests are passing. You can manually run the tests with pytest:
 
