@@ -100,7 +100,7 @@ def parse_cli():
         "--graph",
         action="store_true",
         default=False,
-        help="Show view graph of matches (currently supported for small networks)"
+        help="Show view graph of matches. Saves 'graph.html' in the out dir (currently supported for small networks)"
     )
     args = parser.parse_args()
 
