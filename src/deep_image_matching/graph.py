@@ -67,7 +67,7 @@ def view_graph(db, output_dir, imgs_dir):
     out = os.path.join(output_dir,"graph.html")
 
     nt.write_html("graph.html", notebook=False, open_browser=False)
-    print("View graph saved in {}".format(os.abspath(out)))
+    print("View graph saved in {}".format(os.path.abspath(out)))
     os.chdir(cwd)
 
     return
