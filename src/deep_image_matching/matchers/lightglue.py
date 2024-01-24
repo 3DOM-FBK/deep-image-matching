@@ -54,7 +54,7 @@ class LightGlueMatcher(MatcherBase):
         super().__init__(config)
 
         # load the matcher
-        cfg = {**self.default_conf, **self._config.get("LightGlue", {})}
+        cfg = {**self.default_conf, **self._config.get("matcher", {})}
         self._matcher = LightGlue(self._localfeatures, **cfg).eval().to(self._device)
 
         if self._localfeatures == "disk":
