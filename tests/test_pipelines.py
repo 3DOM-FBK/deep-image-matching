@@ -173,7 +173,7 @@ def test_loftr(data_dir, script):
 
 
 def test_roma(data_dir, script):
-    if torch.cuda.is_available():
+    if not torch.cuda.is_available():
         pytest.skip(
             "Due to some bugs in ROMA code, ROMA is not available without CUDA GPU."
         )
@@ -183,7 +183,7 @@ def test_roma(data_dir, script):
 
 
 def test_roma_tiling(data_dir, script, config_file_tiling):
-    if torch.cuda.is_available():
+    if not torch.cuda.is_available():
         pytest.skip(
             "Due to some bugs in ROMA code, ROMA is not available without CUDA GPU."
         )
