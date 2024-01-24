@@ -139,6 +139,11 @@ The script `export_to_metashape.py` takes as input the solution in Bundler forma
 It requires to install Metashape as a Python module in your environment and to have a valid license.
 Please, refer to the instructions at [https://github.com/franioli/metashape](https://github.com/franioli/metashape).
 
+## How to contribute
+
+Any contribution to this repo is really welcome!
+If you want to contribute to the project, please, check the [contributing guidelines](./CONTRIBUTING.md).
+
 ## TODO:
 
 - [x] Tile processing for high resolution images
