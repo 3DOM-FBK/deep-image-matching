@@ -8,7 +8,11 @@ general:
 
 extractor:
   name: "superpoint"
-  max_keypoints: 20000
+  max_keypoints: 8000 # -1 no limits
+  nms_radius: 4
+  keypoint_threshold: 0.005
+  remove_borders: 4
+  fix_sampling: False
 
 matcher:
   name: "lightglue"
