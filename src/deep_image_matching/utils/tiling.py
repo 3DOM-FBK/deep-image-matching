@@ -89,6 +89,9 @@ class Tiler:
 
         if isinstance(overlap, int):
             overlap = (overlap, overlap)
+        elif isinstance(overlap, tuple) or isinstance(window_size, List):
+            # transpose to be (H, W)
+            overlap = (overlap[1], overlap[0])
         elif not isinstance(overlap, tuple) or isinstance(window_size, List):
             raise TypeError("overlap must be an integer or a tuple of integers")
         overlap = overlap
