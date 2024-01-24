@@ -105,7 +105,9 @@ confs = {
         },
         "matcher": {
             "name": "superglue",
+            "weights": "outdoor",
             "match_threshold": 0.3,
+            "sinkhorn_iterations": 100,
         },
     },
     "disk+lightglue": {
