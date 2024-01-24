@@ -50,7 +50,7 @@ Key features:
 | Supported SfM software                        |
 | --------------------------------------------- |
 | &check; COLMAP                                |
-| &check; OpenMVG                               |
+| &#x2610; OpenMVG                               |
 | &check; Agisoft Metashape                     |
 | &check; Software that supports bundler format |
 
