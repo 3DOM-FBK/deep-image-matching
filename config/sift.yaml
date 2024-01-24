@@ -1,0 +1,20 @@
+# User configuration file
+
+general:
+  tile_size: (2400, 2000)
+  geom_verification: pydegensac
+  min_inliers_per_pair: 10
+  min_inlier_ratio_per_pair: 0.25
+
+extractor:
+  name: "sift"
+  n_features: 8000
+  nOctaveLayers: 3
+  contrastThreshold: 0.04
+  edgeThreshold: 10
+  sigma: 1.6
+
+matcher:
+  name: "kornia_matcher"
+  match_mode: "smnn"
+  th: 0.99
