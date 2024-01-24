@@ -110,10 +110,10 @@ class Tiler:
 
         H, W = input.shape[2:]
 
-        # Compute padding to make the image divisible by the window size
-        # This returns a tuple of 4 int (top, bottom, left, right)
+        # Compute padding to make the image divisible by the window size.
+        # This returns a tuple of 2 int (vertical, horizontal)
+        # Note: from version 0.7.1 compute_padding() returns a tuple of 2 int and not 4 ints (top, bottom, left, right) anymore.
         padding = K.contrib.compute_padding((H, W), window_size)
-
         stride = [w - o for w, o in zip(window_size, overlap)]
         patches = K.contrib.extract_tensor_patches(
             input, window_size, stride=stride, padding=padding
@@ -122,15 +122,25 @@ class Tiler:
         # Remove batch dimension
         patches = patches.squeeze(0)
 
+        # Compute number of rows and columns (fallback if padding is not a tuple of 2 int)
+        if len(padding) == 2:
+            n_rows = (H + padding[0] + padding[1] - window_size[0]) // stride[0] + 1
+            n_cols = (W + padding[0] + padding[1] - window_size[1]) // stride[1] + 1
+        elif len(padding) == 4:
+            n_rows = (H + padding[0] + padding[1] - window_size[0]) // stride[0] + 1
+            n_cols = (W + padding[2] + padding[3] - window_size[1]) // stride[1] + 1
+
         # compute x,y coordinates of the top-left corner of each tile in the original image (before padding)
         origins = {}
-        n_rows = (H + padding[0] + padding[1] - window_size[0]) // stride[0] + 1
-        n_cols = (W + padding[2] + padding[3] - window_size[1]) // stride[1] + 1
         for row in range(n_rows):
             for col in range(n_cols):
                 tile_idx = np.ravel_multi_index((row, col), (n_rows, n_cols), order="C")
-                x = -padding[2] + col * stride[1]
-                y = -padding[0] + row * stride[0]
+                if len(padding) == 2:
+                    x = -padding[1] + col * stride[1]
+                    y = -padding[0] + row * stride[0]
+                elif len(padding) == 4:
+                    x = -padding[2] + col * stride[1]
+                    y = -padding[0] + row * stride[0]
                 origins[tile_idx] = (x, y)
 
         # Convert patches to numpy array (H, W, C)
@@ -205,15 +215,5 @@ if __name__ == "__main__":
         input=img, window_size=tile_size, overlap=overlap
     )
     print(origins)
-
-    img_path = Path("data/belv_lingua_easy/DJI_20220728115852_0003.JPG")
-    img = cv2.imread(str(img_path))
-
-    tile_size = (2048, 2730)
-    overlap = 50
-    tiler = Tiler()
-    tiles, origins, padding = tiler.compute_tiles_by_size(
-        input=img, window_size=tile_size, overlap=overlap
-    )
 
     print("done")
