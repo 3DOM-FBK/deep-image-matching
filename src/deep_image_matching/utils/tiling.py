@@ -5,6 +5,15 @@ import kornia as K
 import numpy as np
 import torch
 
+
+def recent_konria_version(base_version: str = "0.7.1"):
+    try:
+        from packaging import version
+    except ImportError:
+        return False
+    return version.parse(K.__version__) >= version.parse(base_version)
+
+
 # TODO: add possibility to specify the number of rows and columns in the grid
 # TODO: add auto tiling mode
 # TODO: add possibility to export tensors directly
@@ -89,9 +98,11 @@ class Tiler:
 
         if isinstance(overlap, int):
             overlap = (overlap, overlap)
+        elif isinstance(overlap, tuple) or isinstance(window_size, List):
+            # transpose to be (H, W)
+            overlap = (overlap[1], overlap[0])
         elif not isinstance(overlap, tuple) or isinstance(window_size, List):
             raise TypeError("overlap must be an integer or a tuple of integers")
-        overlap = overlap
 
         if isinstance(input, np.ndarray):
             input = torch.from_numpy(input)
@@ -107,10 +118,10 @@ class Tiler:
 
         H, W = input.shape[2:]
 
-        # Compute padding to make the image divisible by the window size
-        # This returns a tuple of 4 int (top, bottom, left, right)
+        # Compute padding to make the image divisible by the window size.
+        # This returns a tuple of 2 int (vertical, horizontal)
+        # NOTE: from version 0.7.1 compute_padding() returns a tuple of 2 int and not 4 ints (top, bottom, left, right) anymore.
         padding = K.contrib.compute_padding((H, W), window_size)
-
         stride = [w - o for w, o in zip(window_size, overlap)]
         patches = K.contrib.extract_tensor_patches(
             input, window_size, stride=stride, padding=padding
@@ -119,15 +130,25 @@ class Tiler:
         # Remove batch dimension
         patches = patches.squeeze(0)
 
+        # Compute number of rows and columns
+        if recent_konria_version():
+            n_rows = (H + 2 * padding[0] - window_size[0]) // stride[0] + 1
+            n_cols = (W + 2 * padding[1] - window_size[1]) // stride[1] + 1
+        else:
+            n_rows = (H + padding[0] + padding[1] - window_size[0]) // stride[0] + 1
+            n_cols = (W + padding[2] + padding[3] - window_size[1]) // stride[1] + 1
+
         # compute x,y coordinates of the top-left corner of each tile in the original image (before padding)
         origins = {}
-        n_rows = (H + padding[0] + padding[1] - window_size[0]) // stride[0] + 1
-        n_cols = (W + padding[2] + padding[3] - window_size[1]) // stride[1] + 1
         for row in range(n_rows):
             for col in range(n_cols):
                 tile_idx = np.ravel_multi_index((row, col), (n_rows, n_cols), order="C")
-                x = -padding[2] + col * stride[1]
-                y = -padding[0] + row * stride[0]
+                if recent_konria_version():
+                    x = -padding[1] + col * stride[1]
+                    y = -padding[0] + row * stride[0]
+                else:
+                    x = -padding[2] + col * stride[1]
+                    y = -padding[0] + row * stride[0]
                 origins[tile_idx] = (x, y)
 
         # Convert patches to numpy array (H, W, C)
@@ -186,10 +207,6 @@ class Tiler:
 
 
 if __name__ == "__main__":
-    from pathlib import Path
-
-    import cv2
-
     c, w, h = 1, 10, 8
     img = torch.arange(0, h * w).reshape(1, h, w).float()
     img = img.repeat(1, c, 1, 1)
@@ -202,15 +219,5 @@ if __name__ == "__main__":
         input=img, window_size=tile_size, overlap=overlap
     )
     print(origins)
-
-    img_path = Path("data/belv_lingua_easy/DJI_20220728115852_0003.JPG")
-    img = cv2.imread(str(img_path))
-
-    tile_size = (2048, 2730)
-    overlap = 50
-    tiler = Tiler()
-    tiles, origins, padding = tiler.compute_tiles_by_size(
-        input=img, window_size=tile_size, overlap=overlap
-    )
 
     print("done")

@@ -40,7 +40,6 @@
 # --------------------------------------------------------------------*/
 # %BANNER_END%
 
-from pathlib import Path
 import torch
 from torch import nn
 
@@ -141,8 +140,10 @@ class SuperPoint(nn.Module):
             c5, self.config["descriptor_dim"], kernel_size=1, stride=1, padding=0
         )
 
-        path = Path(__file__).parent / "weights/superpoint_v1.pth"
-        self.load_state_dict(torch.load(str(path)))
+        # path = Path(__file__).parent / "weights/superpoint_v1.pth"
+        # self.load_state_dict(torch.load(str(path)))
+        url = "https://github.com/cvg/LightGlue/releases/download/v0.1_arxiv/superpoint_v1.pth"  # noqa
+        self.load_state_dict(torch.hub.load_state_dict_from_url(url))
 
         mk = self.config["max_keypoints"]
         if mk == 0 or mk < -1:

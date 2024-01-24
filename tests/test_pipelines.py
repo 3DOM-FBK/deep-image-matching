@@ -1,8 +1,10 @@
+import platform
 import subprocess
 import tempfile
 from pathlib import Path
 
 import pytest
+import torch
 import yaml
 
 
@@ -11,14 +13,10 @@ def script():
     return (Path(__file__).parents[1] / "main.py").resolve()
 
 
-# Create a temporary directory with the test images for each test
-@pytest.fixture
-def data_dir():
-    assets = (Path(__file__).parents[0].parents[0] / "assets/pytest").resolve()
-
-    tempdir = assets
-
-    return tempdir
+# # Create a temporary directory with the test images for each test
+# @pytest.fixture
+# def data_dir():
+#     return (Path(__file__).parents[0].parents[0] / "assets/pytest").resolve()
 
 
 def run_pipeline(cmd, verbose: bool = False) -> None:
@@ -90,6 +88,10 @@ def test_sp_lg_custom_config(data_dir, script):
 
 # Test pycolmap reconstruction
 def test_pycolmap(data_dir, script):
+    if platform.system() == "Windows":
+        pytest.skip(
+            "Pycolmap is not available on Windows. Please use WSL or Docker to run this test."
+        )
     run_pipeline(
         f"python {script} --dir {data_dir} --pipeline superpoint+lightglue --strategy matching_lowres --force"
     )
@@ -136,7 +138,7 @@ def test_sp_lg_quality_medium(data_dir, script):
 # Test tiling
 @pytest.fixture
 def config_file_tiling():
-    config = {"general": {"tile_size": (400, 400)}}
+    config = {"general": {"tile_size": (200, 200)}}
     config_file = Path(__file__).parents[1] / "temp.yaml"
     config_file = create_config_file(config, config_file, temporary=False)
     return config_file
@@ -145,7 +147,6 @@ def config_file_tiling():
 def test_tiling_preselection(data_dir, script, config_file_tiling):
     run_pipeline(
         f"python {script} --dir {data_dir} --pipeline superpoint+lightglue --strategy bruteforce --tiling preselection --config {config_file_tiling} --skip_reconstruction --force",
-        verbose=True,
     )
     config_file_tiling.unlink()
 
@@ -153,7 +154,6 @@ def test_tiling_preselection(data_dir, script, config_file_tiling):
 def test_tiling_grid(data_dir, script, config_file_tiling):
     run_pipeline(
         f"python {script} --dir {data_dir} --pipeline superpoint+lightglue --strategy bruteforce --tiling grid --config {config_file_tiling} --skip_reconstruction --force",
-        verbose=True,
     )
     config_file_tiling.unlink()
 
@@ -161,7 +161,6 @@ def test_tiling_grid(data_dir, script, config_file_tiling):
 def test_tiling_exhaustive(data_dir, script, config_file_tiling):
     run_pipeline(
         f"python {script} --dir {data_dir} --pipeline superpoint+lightglue --strategy bruteforce --tiling exhaustive --config {config_file_tiling} --skip_reconstruction --force",
-        verbose=True,
     )
     config_file_tiling.unlink()
 
@@ -173,17 +172,25 @@ def test_loftr(data_dir, script):
     )
 
 
-# def test_roma(data_dir, script):
-#     run_pipeline(
-#         f"python {script} --dir {data_dir} --pipeline roma --strategy bruteforce --skip_reconstruction --force"
-#     )
+def test_roma(data_dir, script):
+    if not torch.cuda.is_available():
+        pytest.skip(
+            "Due to some bugs in ROMA code, ROMA is not available without CUDA GPU."
+        )
+    run_pipeline(
+        f"python {script} --dir {data_dir} --pipeline roma --strategy bruteforce --skip_reconstruction --force"
+    )
 
 
-# def test_roma_tiling(data_dir, script, config_file_tiling):
-#     run_pipeline(
-#         f"python {script} --dir {data_dir} --pipeline roma --strategy bruteforce --tiling preselection --skip_reconstruction --force"
-#     )
-#     Path(config_file_tiling).unlink()
+def test_roma_tiling(data_dir, script, config_file_tiling):
+    if not torch.cuda.is_available():
+        pytest.skip(
+            "Due to some bugs in ROMA code, ROMA is not available without CUDA GPU."
+        )
+    run_pipeline(
+        f"python {script} --dir {data_dir} --pipeline roma --strategy bruteforce --config {config_file_tiling} --tiling preselection --skip_reconstruction --force"
+    )
+    config_file_tiling.unlink()
 
 
 if __name__ == "__main__":

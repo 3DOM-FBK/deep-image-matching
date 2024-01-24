@@ -16,8 +16,8 @@ extractor:
 
 matcher:
   name: "lightglue"
-  flash: True              # enable FlashAttention if available
-  mp: False                # enable mixed precision
-  depth_confidence: 0.95   # early stopping, disable with -1
-  width_confidence: 0.99   # point pruning, disable with -1
-  filter_threshold: 0.10   # match threshold
+  flash: True # enable FlashAttention if available
+  mp: False # enable mixed precision
+  depth_confidence: 0.95 # early stopping, disable with -1
+  width_confidence: 0.99 # point pruning, disable with -1
+  filter_threshold: 0.10 # match threshold
