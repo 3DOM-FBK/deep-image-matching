@@ -1,33 +1,37 @@
+import shutil
 from importlib import import_module
 
-from deep_image_matching import logger, timer
-from deep_image_matching.config import Config
-from deep_image_matching.image_matching import ImageMatching
-from deep_image_matching.io.h5_to_db import export_to_colmap
-from deep_image_matching.parser import parse_cli
+from src.deep_image_matching import logger, timer
+from src.deep_image_matching.image_matching import ImageMatching
+from src.deep_image_matching.io.h5_to_db import export_to_colmap
+from src.deep_image_matching.parser import parse_config
 
-# Parse arguments from command line
-args = parse_cli()
+from src.deep_image_matching.graph import view_graph
 
-# Build configuration
-config = Config(args)
-
-# For simplicity, save some of the configuration parameters in variables.
-imgs_dir = config.general["image_dir"]
-output_dir = config.general["output_dir"]
+# Parse arguments
+config = parse_config()
+imgs_dir = config["general"]["image_dir"]
+output_dir = config["general"]["output_dir"]
+matching_strategy = config["general"]["matching_strategy"]
+retrieval_option = config["general"]["retrieval"]
+pair_file = config["general"]["pair_file"]
+overlap = config["general"]["overlap"]
+upright = config["general"]["upright"]
+extractor = config["extractor"]["name"]
+matcher = config["matcher"]["name"]
+graph = config["general"]["graph"]
 
 # Initialize ImageMatching class
 img_matching = ImageMatching(
     imgs_dir=imgs_dir,
     output_dir=output_dir,
-    matching_strategy=config.general["matching_strategy"],
-    local_features=config.extractor["name"],
-    matching_method=config.matcher["name"],
-    pair_file=config.general["pair_file"],
-    retrieval_option=config.general["retrieval"],
-    overlap=config.general["overlap"],
-    existing_colmap_model=config.general["db_path"],
-    custom_config=config.as_dict(),
+    matching_strategy=matching_strategy,
+    retrieval_option=retrieval_option,
+    local_features=extractor,
+    matching_method=matcher,
+    pair_file=pair_file,
+    custom_config=config,
+    overlap=overlap,
 )
 
 # Generate pairs to be matched
@@ -35,7 +39,7 @@ pair_path = img_matching.generate_pairs()
 timer.update("generate_pairs")
 
 # Try to rotate images so they will be all "upright", useful for deep-learning approaches that usually are not rotation invariant
-if config.general["upright"]:
+if upright:
     img_matching.rotate_upright_images()
     timer.update("rotate_upright_images")
 
@@ -47,8 +51,8 @@ timer.update("extract_features")
 match_path = img_matching.match_pairs(feature_path)
 timer.update("matching")
 
-# If features have been extracted on "upright" images, this function bring features back to their original image orientation
-if config.general["upright"]:
+# Features are extracted on "upright" images, this function report back images on their original orientation
+if upright:
     img_matching.rotate_back_features(feature_path)
     timer.update("rotate_back_features")
 
@@ -64,8 +68,16 @@ export_to_colmap(
 )
 timer.update("export_to_colmap")
 
+if (config["general"]["graph"]):
+    view_graph(database_path,output_dir, imgs_dir)
+    timer.update("show view graph")
+
 # If --skip_reconstruction is not specified, run reconstruction
-if not config.general["skip_reconstruction"]:
+if not config["general"]["skip_reconstruction"]:
+    # For debugging purposes, copy images to output folder
+    if config["general"]["verbose"]:
+        shutil.copytree(imgs_dir, output_dir / "images", dirs_exist_ok=True)
+
     use_pycolmap = True
     try:
         pycolmap = import_module("pycolmap")
@@ -77,7 +89,7 @@ if not config.general["skip_reconstruction"]:
         # import reconstruction module
         reconstruction = import_module("src.deep_image_matching.reconstruction")
 
-        # Define database path
+        # Define database path and camera mode
         database = output_dir / "database_pycolmap.db"
 
         # Define how pycolmap create the cameras. Possible CameraMode are:
@@ -105,28 +117,32 @@ if not config.general["skip_reconstruction"]:
         #    SIMPLE_RADIAL_FISHEYE: f, cx, cy, k
         #    RADIAL_FISHEYE: f, cx, cy, k1, k2
         #    THIN_PRISM_FISHEYE: fx, fy, cx, cy, k1, k2, p1, p2, k3, k4, sx1, sy1
-        # NOTE: Use the SIMPLE-PINHOLE camera model if you want to export the solution to Metashape, as there are some bugs in COLMAP (or pycolamp) when exporting the solution in the Bundler format.
-        # e.g., using FULL-OPENCV camera model, the principal point is not exported correctly and the tie points are wrong in Metashape.
         #
         # cam0 = pycolmap.Camera(
         #    model="PINHOLE",
         #    width=1500,
         #    height=1000,
         #    params=[1500, 1500, 750, 500],
-        # )
+        #)
         # cam1 = pycolmap.Camera(
         #     model="SIMPLE_PINHOLE",
         #     width=6012,
         #     height=4008,
         #     params=[9.267, 3.053, 1.948],
         # )
-        # cameras = [cam0] # or cameras = [cam0, cam1]
-        cameras = []
+        # cam2 = pycolmap.Camera(
+        #     model="SIMPLE_PINHOLE",
+        #     width=6012,
+        #     height=4008,
+        #     params=[6.621, 3.013, 1.943],
+        # )
+        # cameras = [cam0] # or cameras = [cam1, cam2]
+        cameras = None
 
         # Optional - You can specify some reconstruction configuration
         # reconst_opts = (
         #     {
-        #         "ba_refine_focal_length": True,
+        #         "ba_refine_focal_length": False,
         #         "ba_refine_principal_point": False,
         #         "ba_refine_extra_params": False,
         #     },
@@ -145,7 +161,7 @@ if not config.general["skip_reconstruction"]:
             cameras=cameras,
             skip_geometric_verification=True,
             reconst_opts=reconst_opts,
-            verbose=config.general["verbose"],
+            verbose=config["general"]["verbose"],
         )
 
         timer.update("pycolmap reconstruction")
@@ -153,5 +169,4 @@ if not config.general["skip_reconstruction"]:
     else:
         logger.warning("Reconstruction with COLMAP CLI is not implemented yet.")
 
-# Print timing
 timer.print("Deep Image Matching")
