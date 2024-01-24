@@ -147,7 +147,7 @@ class MatcherBase(metaclass=ABCMeta):
         logger.debug(f"Running inference on device {self._device}")
 
         # Load extractor and matcher for the preselction
-        if self._config["general"]["tile_selection"] == TileSelection.PRESELECTION:
+        if self._config["general"]["tile_selection"] != TileSelection.NONE:
             self._preselction_extractor = (
                 SuperPoint(
                     {

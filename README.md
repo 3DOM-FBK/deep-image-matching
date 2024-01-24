@@ -8,7 +8,7 @@
  
 </div>
 
-## DEEP-IMAGE-MATCHING
+# DEEP-IMAGE-MATCHING
 
 | SIFT                                             | DISK                                               | IMAGES ORIENTATION                                   | DENSE WITH ROMA                                |
 | ------------------------------------------------ | -------------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------- |
@@ -18,7 +18,7 @@
 | ------------------------------------------------ | ---------------------------------------------------- |
 | <img src='assets/temple_rsift.gif' height="165"> | <img src='assets/temple_superglue.gif' height="165"> |
 
-**Note: We are carrying out some major updates in deep-image-matching, so the program may collapse. We will release a new fully working version soon. Thanks for you patience.**
+## **Note: We are carrying out some major updates in deep-image-matching, so the program may collapse. We will release a new fully working version soon. Thanks for you patience.**
 
 Multivew matcher for SfM software. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI. Feel free to collaborate!
 
@@ -134,7 +134,7 @@ python ./join_databases.py --input assets/to_be_joined --output assets/to_be_joi
 To export the solution to Metashape, you can export the COLMAP database to Bundler format and then import it into Metashape.
 This can be done from Metashape GUI, by first importing the images and then use the function `Import Cameras` (File -> Import -> Import Cameras) to select Bundler file (e.g., bundler.out) and the image list file (e.g., bundler_list.txt).
 
-Alternatevely, you can the `export_to_metashape.py` script to automatically create a Metashape project from a reconstruction saved in Bundler format.
+Alternatevely, you can use the `export_to_metashape.py` script to automatically create a Metashape project from a reconstruction saved in Bundler format.
 The script `export_to_metashape.py` takes as input the solution in Bundler format and the images and it exports the solution to Metashape.
 It requires to install Metashape as a Python module in your environment and to have a valid license.
 Please, refer to the instructions at [https://github.com/franioli/metashape](https://github.com/franioli/metashape).
