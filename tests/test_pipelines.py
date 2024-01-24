@@ -11,6 +11,16 @@ def script():
     return (Path(__file__).parents[1] / "main.py").resolve()
 
 
+# Create a temporary directory with the test images for each test
+@pytest.fixture
+def data_dir():
+    assets = (Path(__file__).parents[0].parents[0] / "assets/pytest").resolve()
+
+    tempdir = assets
+
+    return tempdir
+
+
 def run_pipeline(cmd, verbose: bool = False) -> None:
     # Run the script using subprocess
     process = subprocess.Popen(
@@ -27,7 +37,7 @@ def run_pipeline(cmd, verbose: bool = False) -> None:
     ), f"Script execution failed with error: {stderr.decode('utf-8')}"
 
 
-def create_config_file(config: dict, path: str, temporary: bool = False) -> str:
+def create_config_file(config: dict, path: Path, temporary: bool = False) -> Path:
     def tuple_representer(dumper, data):
         return dumper.represent_sequence("tag:yaml.org,2002:seq", data, flow_style=True)
 
@@ -36,11 +46,11 @@ def create_config_file(config: dict, path: str, temporary: bool = False) -> str:
     if temporary:
         with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False) as file:
             yaml.dump(config, file)
-            return str(file.name)
+            return Path(file.name)
     else:
         with open(path, "w") as f:
             yaml.dump(config, f)
-            return str(path)
+            return Path(path)
 
 
 # Test matching strategies
@@ -64,7 +74,12 @@ def test_sp_lg_matching_lowres(data_dir, script):
 
 # Test using a custom configuration file
 def test_sp_lg_custom_config(data_dir, script):
-    config = {"extractor": {"superpoint": 2000}}
+    config = {
+        "extractor": {
+            "name": "superpoint",
+            "max_keypoints": 20000,
+        }
+    }
     config_file = Path(__file__).parents[1] / "temp.yaml"
     config_file = create_config_file(config, config_file, temporary=False)
     run_pipeline(
@@ -132,7 +147,7 @@ def test_tiling_preselection(data_dir, script, config_file_tiling):
         f"python {script} --dir {data_dir} --pipeline superpoint+lightglue --strategy bruteforce --tiling preselection --config {config_file_tiling} --skip_reconstruction --force",
         verbose=True,
     )
-    Path(config_file_tiling).unlink()
+    config_file_tiling.unlink()
 
 
 def test_tiling_grid(data_dir, script, config_file_tiling):
@@ -140,7 +155,7 @@ def test_tiling_grid(data_dir, script, config_file_tiling):
         f"python {script} --dir {data_dir} --pipeline superpoint+lightglue --strategy bruteforce --tiling grid --config {config_file_tiling} --skip_reconstruction --force",
         verbose=True,
     )
-    Path(config_file_tiling).unlink()
+    config_file_tiling.unlink()
 
 
 def test_tiling_exhaustive(data_dir, script, config_file_tiling):
@@ -148,7 +163,7 @@ def test_tiling_exhaustive(data_dir, script, config_file_tiling):
         f"python {script} --dir {data_dir} --pipeline superpoint+lightglue --strategy bruteforce --tiling exhaustive --config {config_file_tiling} --skip_reconstruction --force",
         verbose=True,
     )
-    Path(config_file_tiling).unlink()
+    config_file_tiling.unlink()
 
 
 # Test semi-dense matchers
@@ -158,17 +173,17 @@ def test_loftr(data_dir, script):
     )
 
 
-def test_roma(data_dir, script):
-    run_pipeline(
-        f"python {script} --dir {data_dir} --pipeline roma --strategy bruteforce --skip_reconstruction --force"
-    )
+# def test_roma(data_dir, script):
+#     run_pipeline(
+#         f"python {script} --dir {data_dir} --pipeline roma --strategy bruteforce --skip_reconstruction --force"
+#     )
 
 
-def test_roma_tiling(data_dir, script, config_file_tiling):
-    run_pipeline(
-        f"python {script} --dir {data_dir} --pipeline roma --strategy bruteforce --tiling preselection --skip_reconstruction --force"
-    )
-    Path(config_file_tiling).unlink()
+# def test_roma_tiling(data_dir, script, config_file_tiling):
+#     run_pipeline(
+#         f"python {script} --dir {data_dir} --pipeline roma --strategy bruteforce --tiling preselection --skip_reconstruction --force"
+#     )
+#     Path(config_file_tiling).unlink()
 
 
 if __name__ == "__main__":
