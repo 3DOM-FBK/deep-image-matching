@@ -68,7 +68,7 @@ class SuperGlueMatcher(MatcherBase):
         super().__init__(config)
 
         # initialize the Matching object with given configuration
-        cfg = {**self.default_conf, **self._config.get("superglue", {})}
+        cfg = {**self.default_conf, **self._config.get("matcher", {})}
         self._matcher = SuperGlue(cfg).eval().to(self._device)
 
     @torch.no_grad()
