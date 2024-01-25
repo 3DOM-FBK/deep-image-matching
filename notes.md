@@ -1,13 +1,2 @@
-- [ ] Close the 2 pull request
-- [ ] Issues open for very large datasets!
-- [ ] finish extending compatibility to OpenMVG
-- [ ] extend compatibility to other software
-- [ ] add steerers + DeDoDe
-- [ ] add Silk features
-- [ ] use Github submodules instead of copying thirdpary code inside the repo
-- [ ] SE2-LoFTR
-- [ ] more hand-crafted local features from kornia and opencv
-- [ ] extend documentation
+- [ ] add steerers with DeDoDe
 - [ ] open issue on pydegensac for pairs with many tie points (>10000). Quite random results with LoFTR and RoMa
-- [ ] script run from scripts folder are not able to import modules!
-- [ ] scripts/delete_static_matches.py not ready

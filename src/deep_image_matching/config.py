@@ -258,6 +258,7 @@ class Config:
         "skip_reconstruction": False,
         "force": True,
         "verbose": False,
+        "graph": True,
     }
     cfg = {
         "general": {},
@@ -512,6 +513,7 @@ class Config:
             "db_path": args["db_path"],
             "upright": args["upright"],
             "verbose": args["verbose"],
+            "graph": args["graph"],
             "skip_reconstruction": args["skip_reconstruction"],
         }
 

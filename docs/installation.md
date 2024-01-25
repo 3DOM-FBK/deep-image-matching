@@ -33,8 +33,7 @@ pip install pycolmap
 
 Up to version 0.4.0, [pycolmap](https://github.com/colmap/pycolmap) was released on PyPi only for Linux and macOS.
 Therefore, it was not included in the dependencies of deep-image-matching, so you need to install it manually.
-From [version 0.5.0](https://github.com/colmap/pycolmap/releases/tag/v0.5.0), pycolmap can be installed on Windows too, so we are considering to add it as a dependency of deep-image-matching.
-
+From [version 0.5.0](https://github.com/colmap/pycolmap/releases/tag/v0.5.0), pycolmap can be installed on Windows too. However, it needs some testing before including in dependencies of deep-image-matching, as there are some errors on Windows that are blocking deep_image_matching pipeline (while it works completely fine on Linux).
 
 ## Notes and troubleshooting
 
