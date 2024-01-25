@@ -125,13 +125,6 @@ def parse_cli() -> dict:
         action="store_true",
         default=False,
     )
-    parser.add_argument(
-        "-g",
-        "--graph",
-        action="store_true",
-        default=False,
-        help="Show view graph of matches (currently supported for small networks).",
-    )
     args = parser.parse_args()
 
     if args.gui is True:

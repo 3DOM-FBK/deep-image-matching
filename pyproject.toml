@@ -38,8 +38,7 @@ dependencies = [
     "joblib",
     "pyyaml",
     "packaging",
-    "einops",
-    "pyvis>=0.3.2",    
+    "einops",    
 ]
 requires-python = ">=3.8"
 
