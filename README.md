@@ -125,7 +125,7 @@ To run the matching with different local features and/or matchers and marging to
 
 ```bash
 python ./join_databases.py --help
-python ./join_databases.py --input docs/assets/to_be_joined --output docs/assets/to_be_joined
+python ./join_databases.py --input assets/to_be_joined --output docs/assets/to_be_joined
 ```
 
 ### Exporting the solution to Metashape
