@@ -156,11 +156,10 @@ If you want to contribute to the project, please, check the [contributing guidel
 - [ ] Autoselect tiling grid in order to fit images in GPU memory
 - [x] Add tests, documentation and examples (e.g. colab, ..)
 - [ ] Apply masks during feature extraction
-- [ ] Check scripts
 - [ ] Integrate support for Pix4D [Open Photogrammetry Format](https://github.com/Pix4D/opf-spec)
 - [ ] Work with submodules
 - [ ] Automatically download weights for all the models
-- [ ] Cleanup repository to removed large files from Git history
+- [x] Cleanup repository to removed large files from Git history
 - [x] Update README CLI options
 
 
