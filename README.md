@@ -3,7 +3,7 @@
  [![Static Badge](https://img.shields.io/badge/Matches_for-COLMAP-red)](https://github.com/colmap/colmap)
  ![Static Badge](https://img.shields.io/badge/Matches_for-Metashape-blue) [![Static Badge](https://img.shields.io/badge/Powered_by-Kornia-green)](https://github.com/kornia/kornia) [![Static Badge](https://img.shields.io/badge/Powered_by-hloc-blue)](https://github.com/kornia/kornia)
  
-  [![Static Badge](https://img.shields.io/github/v/release/:user/:repo)](https://3dom-fbk.github.io/) [![Static Badge](https://img.shields.io/badge/docs-DeepImageMatching-blue
+  [![GitHub Release](https://img.shields.io/github/v/release/3DOM-FBK/deep-image-matching)](https://github.com/3DOM-FBK/deep-image-matching/releases) [![Static Badge](https://img.shields.io/badge/docs-DeepImageMatching-blue
  )](https://3dom-fbk.github.io/deep-image-matching/)
  
 </div>
@@ -12,11 +12,11 @@
 
 | SIFT                                             | DISK                                               | IMAGES ORIENTATION                                   | DENSE WITH ROMA                                |
 | ------------------------------------------------ | -------------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------- |
-| <img src='assets/matches_sift.gif' height="100"> | <img src='assets/matches_joined.gif' height="100"> | <img src='assets/orientation_deep.gif' height="100"> | <img src='assets/roma_dense.gif' height="100"> |
+| <img src='docs/assets/matches_sift.gif' height="100"> | <img src='docs/assets/matches_joined.gif' height="100"> | <img src='docs/assets/orientation_deep.gif' height="100"> | <img src='docs/assets/roma_dense.gif' height="100"> |
 
 | SIFT                                             | SUPERGLUE                                            |
 | ------------------------------------------------ | ---------------------------------------------------- |
-| <img src='assets/temple_rsift.gif' height="165"> | <img src='assets/temple_superglue.gif' height="165"> |
+| <img src='docs/assets/temple_rsift.gif' height="165"> | <img src='docs/assets/temple_superglue.gif' height="165"> |
 
 
 Multivew matcher for SfM software. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI. Feel free to collaborate!
@@ -50,7 +50,7 @@ Key features:
 | Supported SfM software                        |
 | --------------------------------------------- |
 | &check; COLMAP                                |
-| &check; OpenMVG                               |
+| &#x2610; OpenMVG                               |
 | &check; Agisoft Metashape                     |
 | &check; Software that supports bundler format |
 
@@ -125,7 +125,7 @@ To run the matching with different local features and/or matchers and marging to
 
 ```bash
 python ./join_databases.py --help
-python ./join_databases.py --input assets/to_be_joined --output assets/to_be_joined
+python ./join_databases.py --input assets/to_be_joined --output docs/assets/to_be_joined
 ```
 
 ### Exporting the solution to Metashape
@@ -159,7 +159,7 @@ If you want to contribute to the project, please, check the [contributing guidel
 - [ ] Integrate support for Pix4D [Open Photogrammetry Format](https://github.com/Pix4D/opf-spec)
 - [ ] Work with submodules
 - [ ] Automatically download weights for all the models
-- [ ] Cleanup repository to removed large files from Git history
+- [x] Cleanup repository to removed large files from Git history
 - [x] Update README CLI options
 
 

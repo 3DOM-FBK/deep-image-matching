@@ -49,4 +49,4 @@
 
 6. Open a pull request
 
-    Please open a pull request on GitHub, and make sure that the tests are passing.
+    Please open a pull request on GitHub to the `dev` branch, and make sure that the tests are passing.
