@@ -57,6 +57,7 @@ Key features:
 ## Colab demo 
 
 Want to run on a sample dataset? ➡️ [![Open In Colab](https://colab.research.google.com/docs/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/colab_run_from_bash_example.ipynb)
+Want to run on a sample dataset? ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/colab_run_from_bash_example.ipynb)
 
 Want to run on your images? ➡️ [![Open In Colab](https://colab.research.google.com/docs/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/colab_run_from_bash_custom_images.ipynb)
 
