@@ -7,9 +7,10 @@ from deep_image_matching.utils.database import pair_id_to_image_ids
 
 def view_graph(db, output_dir, imgs_dir):
     print("Creating view graph visualization")
+    print(db, output_dir, imgs_dir)
+    imgs_dir = os.path.abspath(imgs_dir)
     con = sqlite3.connect(db)
     cur = con.cursor()
-
     nt = Network(height="50vw")
     # Load matches table as graph
     res = cur.execute("SELECT pair_id, rows FROM matches")
@@ -40,8 +41,12 @@ def view_graph(db, output_dir, imgs_dir):
     # Load images for small networks
     if G.number_of_nodes() <= 30:
         for n in G.nodes():
+            print(n)
             G.nodes[n]["shape"] = "image"
             G.nodes[n]["image"] = os.path.join(imgs_dir, G.nodes[n]["label"])
+            print(os.path.join(imgs_dir, G.nodes[n]["label"]))
+
+    print(G.nodes(data=True))
 
     for e in G.edges():
         G.edges[e]["weight"] = G.edges[e]["matches"] / avg_weight
@@ -68,9 +73,9 @@ def view_graph(db, output_dir, imgs_dir):
 
     cwd = os.getcwd()
     os.chdir(output_dir)
-    out = os.path.join(output_dir,"graph.html")
+    out = os.path.join(output_dir, "graph.html")
     nt.write_html("graph.html", notebook=False, open_browser=False)
     print("View graph written at {}".format(out))
     os.chdir(cwd)
-    
+
     return
