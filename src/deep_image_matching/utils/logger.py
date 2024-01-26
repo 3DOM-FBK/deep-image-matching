@@ -138,9 +138,9 @@ def configure_logging(
         console_handler.setLevel(
             console_log_level.upper()
         )  # only accepts uppercase level names
-    except:
+    except Exception as exception:
         print(
-            "Failed to set console log level: invalid level: '%s'" % console_log_level
+            f"Failed to set console log level: invalid level: {console_log_level}. {exception}"
         )
         return False
 
@@ -157,7 +157,7 @@ def configure_logging(
         try:
             logfile_handler = logging.FileHandler(logfile_file)
         except Exception as exception:
-            print("Failed to set up log file: %s" % str(exception))
+            print(f"Failed to set up log file: {exception}")
             return False
 
         # Set log file log level
@@ -165,10 +165,9 @@ def configure_logging(
             logfile_handler.setLevel(
                 logfile_log_level.upper()
             )  # only accepts uppercase level names
-        except:
+        except Exception as exception:
             print(
-                "Failed to set log file log level: invalid level: '%s'"
-                % logfile_log_level
+                f"Failed to set log file log level: invalid level: '{ logfile_log_level}. {exception}"
             )
             return False
 
