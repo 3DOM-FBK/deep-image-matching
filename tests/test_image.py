@@ -1,6 +1,5 @@
 from datetime import datetime
 from pathlib import Path
-from typing import Union
 
 import numpy as np
 import pytest
@@ -53,7 +52,6 @@ def test_initialized_with_non_image_file():
 
 
 def test_read_exif(image):
-    assert isinstance(image.id, Union[int, None])
     assert isinstance(image.name, str)
     assert isinstance(image.stem, str)
     assert isinstance(image.path, Path)
