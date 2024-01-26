@@ -1,4 +1,4 @@
-- [ ] Close the 2 pull request
+- [ ] Seems there is a bug in kornia when matching more than 1000 images
 - [ ] Issues open for very large datasets!
 - [ ] finish extending compatibility to OpenMVG
 - [ ] extend compatibility to other software
