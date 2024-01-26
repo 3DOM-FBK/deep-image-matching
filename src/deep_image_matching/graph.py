@@ -6,11 +6,11 @@ from deep_image_matching.utils.database import pair_id_to_image_ids
 
 
 def view_graph(db, output_dir, imgs_dir):
-    os.chdir(output_dir)
+    print("Creating view graph visualization")
     con = sqlite3.connect(db)
     cur = con.cursor()
 
-    nt = Network(select_menu=True)
+    nt = Network(height="50vw")
     # Load matches table as graph
     res = cur.execute("SELECT pair_id, rows FROM matches")
     G = nx.Graph()
@@ -38,7 +38,7 @@ def view_graph(db, output_dir, imgs_dir):
     avg_weight = weight_sum / len(G.edges())
 
     # Load images for small networks
-    if G.number_of_nodes() <= 20:
+    if G.number_of_nodes() <= 30:
         for n in G.nodes():
             G.nodes[n]["shape"] = "image"
             G.nodes[n]["image"] = os.path.join(imgs_dir, G.nodes[n]["label"])
@@ -66,10 +66,11 @@ def view_graph(db, output_dir, imgs_dir):
     nt.from_nx(G)
     nt.toggle_physics(False)
 
-    #   if(pyvis.__version__ > "0.3.1"):
+    cwd = os.getcwd()
+    os.chdir(output_dir)
+    out = os.path.join(output_dir,"graph.html")
     nt.write_html("graph.html", notebook=False, open_browser=False)
-    print("View graph written at {}".format(os.path.join(output_dir, "graph.html")))
-    #   else:
-    #        nt.write_html("graph.html", notebook=False)
-
+    print("View graph written at {}".format(out))
+    os.chdir(cwd)
+    
     return
