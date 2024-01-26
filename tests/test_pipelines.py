@@ -7,18 +7,6 @@ import torch
 import yaml
 
 
-@pytest.fixture
-def script():
-    return (Path(__file__).parents[1] / "main.py").resolve()
-
-
-@pytest.fixture
-def config_file_tiling(data_dir):
-    config = {"general": {"tile_size": (200, 200)}}
-    config_file = Path(data_dir) / "temp.yaml"
-    return create_config_file(config, config_file)
-
-
 def run_pipeline(cmd, verbose: bool = False) -> None:
     # Run the script using subprocess
     process = subprocess.Popen(
@@ -44,6 +32,18 @@ def create_config_file(config: dict, path: Path) -> Path:
     with open(path, "w") as f:
         yaml.dump(config, f)
         return Path(path)
+
+
+@pytest.fixture
+def script():
+    return (Path(__file__).parents[1] / "main.py").resolve()
+
+
+@pytest.fixture
+def config_file_tiling(data_dir):
+    config = {"general": {"tile_size": (200, 200)}}
+    config_file = Path(data_dir) / "config.yaml"
+    return create_config_file(config, config_file)
 
 
 # Test matching strategies
