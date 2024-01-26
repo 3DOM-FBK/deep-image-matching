@@ -150,7 +150,7 @@ If you want to contribute to the project, please, check the [contributing guidel
 - [x] add GUI
 - [x] Add pycolmap compatibility
 - [x] Add exporting to Bundler format ready for importing into Metashape (only on Linux and MacOS by using pycolmap)
-- [ ] Add visualization for extracted features and matches
+- [x] Add visualization for extracted features and matches
 - [ ] Improve speed
 - [ ] Autoselect tiling grid in order to fit images in GPU memory
 - [x] Add tests, documentation and examples (e.g. colab, ..)
