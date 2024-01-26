@@ -5,6 +5,7 @@ from deep_image_matching.config import Config
 from deep_image_matching.image_matching import ImageMatching
 from deep_image_matching.io.h5_to_db import export_to_colmap
 from deep_image_matching.parser import parse_cli
+from deep_image_matching.graph import view_graph
 
 # Parse arguments from command line
 args = parse_cli()
@@ -63,6 +64,11 @@ export_to_colmap(
     single_camera=True,
 )
 timer.update("export_to_colmap")
+
+# Visualize view graph
+if config.general["graph"]:
+    view_graph(database_path, output_dir, imgs_dir)
+    timer.update("show view graph")
 
 # If --skip_reconstruction is not specified, run reconstruction
 if not config.general["skip_reconstruction"]:
