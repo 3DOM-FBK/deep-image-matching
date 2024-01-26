@@ -513,6 +513,7 @@ class Config:
             "upright": args["upright"],
             "verbose": args["verbose"],
             "skip_reconstruction": args["skip_reconstruction"],
+            "openmvg_dir": args["openmvg"],
         }
 
         return cfg

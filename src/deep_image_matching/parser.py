@@ -125,6 +125,10 @@ def parse_cli() -> dict:
         action="store_true",
         default=False,
     )
+    parser.add_argument(
+        "--openmvg",
+        help="Path to directory containing exe OpenMVG. E.g. './ReleaseV1.6.Halibut.WindowsBinaries_VS2017'",
+    )
     args = parser.parse_args()
 
     if args.gui is True:
