@@ -1,5 +1,6 @@
-- [ ] Seems there is a bug in kornia when matching more than 1000 images
-- [ ] Issues open for very large datasets!
+- [ ] prepare pycolmap.yaml and calibration.yaml (for both colmap and openmvg)
+- [ ] seems there is a bug in kornia when matching more than 1000 images
+- [ ] issues open for very large datasets!
 - [ ] finish extending compatibility to OpenMVG
 - [ ] extend compatibility to other software
 - [ ] add steerers + DeDoDe
