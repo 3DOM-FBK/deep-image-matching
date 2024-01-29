@@ -292,6 +292,15 @@ class MatcherBase(metaclass=ABCMeta):
             )
             timer_match.update("tile matching")
 
+        # Save to h5 file
+        raw_matches_path = matches_path.parent / "raw_matches.h5"
+        with h5py.File(str(raw_matches_path), "a", libver="latest") as fd:
+            group = fd.require_group(img0_name)
+            group.create_dataset(img1_name, data=matches)
+
+        timer_match.update("save to h5")
+        timer_match.print(f"{__class__.__name__} match")
+
         # Do Geometric verification
         # Rescale threshold according the image qualit
         if len(matches) < 8:
@@ -343,7 +352,7 @@ class MatcherBase(metaclass=ABCMeta):
             group.create_dataset(img1_name, data=matches)
 
         timer_match.update("save to h5")
-        timer_match.print(f"{__class__.__name__} match")
+        timer_match.print(f"{__class__.__name__} raw match")
 
         logger.debug(f"Matching {img0_name}-{img1_name} done!")
 

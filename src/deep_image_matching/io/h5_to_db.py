@@ -107,7 +107,7 @@ def add_keypoints(db, h5_path, image_path, camera_model, single_camera=True):
     return fname_to_id
 
 
-def add_matches(db, h5_path, fname_to_id):
+def add_raw_matches(db, h5_path, fname_to_id):
     match_file = h5py.File(str(h5_path), "r")
 
     added = set()
@@ -128,6 +128,35 @@ def add_matches(db, h5_path, fname_to_id):
 
                 matches = group[key_2][()]
                 db.add_matches(id_1, id_2, matches)
+                #db.add_two_view_geometry(id_1, id_2, matches)
+
+                added.add(pair_id)
+
+                pbar.update(1)
+    match_file.close()
+
+
+def add_matches(db, h5_path, fname_to_id):
+    match_file = h5py.File(str(h5_path), "r")
+
+    added = set()
+    n_keys = len(match_file.keys())
+    n_total = (n_keys * (n_keys - 1)) // 2
+
+    with tqdm(total=n_total) as pbar:
+        for key_1 in match_file.keys():
+            group = match_file[key_1]
+            for key_2 in group.keys():
+                id_1 = fname_to_id[key_1]
+                id_2 = fname_to_id[key_2]
+
+                pair_id = image_ids_to_pair_id(id_1, id_2)
+                if pair_id in added:
+                    warnings.warn(f"Pair {pair_id} ({id_1}, {id_2}) already added!")
+                    continue
+
+                matches = group[key_2][()]
+                #db.add_matches(id_1, id_2, matches)
                 db.add_two_view_geometry(id_1, id_2, matches)
 
                 added.add(pair_id)
@@ -151,11 +180,19 @@ def export_to_colmap(
     db = COLMAPDatabase.connect(database_path)
     db.create_tables()
     fname_to_id = add_keypoints(db, feature_path, img_dir, camera_model, single_camera)
-    add_matches(
-        db,
-        match_path,
-        fname_to_id,
-    )
+    raw_match_path = match_path.parent / "raw_matches.h5"
+    if raw_match_path.exists():
+        add_raw_matches(
+            db,
+            raw_match_path,
+            fname_to_id,
+        )
+    if match_path.exists():
+        add_matches(
+            db,
+            match_path,
+            fname_to_id,
+        )
 
     db.commit()
     return
