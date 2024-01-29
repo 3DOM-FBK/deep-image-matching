@@ -251,17 +251,17 @@ class Image:
                 exif = exifread.process_file(f, details=False, debug=False)
         except IOError as e:
             logger.warning(f"{e}. Unable to read exif data for image {self.name}.")
-            return None
+            raise ValueError("Exif error")
         except InvalidExif as e:
             logger.warning(f"Unable to read exif data for image {self.name}. {e}")
-            return None
+            raise ValueError("Exif error")
         except ExifNotFound as e:
             logger.warning(f"Unable to read exif data for image {self.name}. {e}")
-            return None
+            raise ValueError("Exif error")
 
         if len(exif) == 0:
             logger.warning(f"No exif data available for image {self.name}")
-            return None
+            raise ValueError("Exif error")
 
         # Get image size
         if "Image ImageWidth" in exif.keys() and "Image ImageLength" in exif.keys():
