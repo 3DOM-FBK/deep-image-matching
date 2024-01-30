@@ -1,17 +1,21 @@
+import os
 import sys
 import sqlite3
 import numpy as np
-import os
+import argparse
+
+from pathlib import Path
 
 
 IS_PYTHON3 = sys.version_info[0] >= 3
 
 
-#def array_to_blob(array):
+# def array_to_blob(array):
 #    if IS_PYTHON3:
 #        return array.tostring()
 #    else:
 #        return np.getbuffer(array)
+
 
 def pair_id_to_image_ids(pair_id):
     image_id2 = pair_id % 2147483647
@@ -33,7 +37,10 @@ def dbReturnMatches(database_path, min_num_matches):
             image_name = row[2]
             images[image_id] = image_name
 
-        cursor.execute("SELECT pair_id, data FROM two_view_geometries WHERE rows>=?;", (min_num_matches,))
+        cursor.execute(
+            "SELECT pair_id, data FROM two_view_geometries WHERE rows>=?;",
+            (min_num_matches,),
+        )
 
         for row in cursor:
             pair_id = row[0]
@@ -54,7 +61,6 @@ def dbReturnMatches(database_path, min_num_matches):
 
 
 def dbReturnKeypoints(database_path):
-    print(database_path)
     if os.path.exists(database_path):
         connection = sqlite3.connect(database_path)
         cursor = connection.cursor()
@@ -66,36 +72,45 @@ def dbReturnKeypoints(database_path):
             image_id = row[0]
             image_name = row[2]
             images[image_id] = image_name
-        
+
         cursor.execute("SELECT image_id, rows, cols, data FROM keypoints")
         for row in cursor:
             image_id = row[0]
-            #kpts = np.fromstring(row[3], np.float32).reshape(-1, 6)
+            # kpts = np.fromstring(row[3], np.float32).reshape(-1, 6)
             kpts = np.fromstring(row[3], np.float32).reshape(-1, 2)
             keypoints[image_id] = kpts
-    
+
     return images, keypoints
 
 
-
 if __name__ == "__main__":
-    database_path = r"D:\mapping\2023-10-05\Seq3\sglue+rsift\ransac1px\raw.db"
-    out_kpts_dir = r"./kpts"
-    matches_file = r"./matches.txt"
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(
+        description="Export keypoints and matches from a COLMAP database."
+    )
+    parser.add_argument("database", help="Path to COLMAP database.")
+    parser.add_argument("output_folder", help="Path to output folder.")
+    args = parser.parse_args()
+
+    database_path = Path(args.database)
+    out_dir = Path(args.output_folder)
+    out_kpts_dir = out_dir / "keypoints"
+    out_kpts_dir.mkdir(parents=True, exist_ok=False)
+    matches_file = out_dir / "matches.txt"
+
     images, keypoints = dbReturnKeypoints(database_path)
-    images, matches = dbReturnMatches(database_path, min_num_matches=15)
+    images, matches = dbReturnMatches(database_path, min_num_matches=1)
 
     for id in keypoints:
-        print('id', id)
         kpts = keypoints[id]
-        kpt_file = open(f"{out_kpts_dir}/{images[id]}.txt", 'w')
+        kpt_file = open(f"{out_kpts_dir}/{images[id]}.txt", "w")
         kpt_file.write(f"{kpts.shape[0]} 128\n")
         for row in range(kpts.shape[0]):
-            #kpt_file.write(f"{kpts[row][0]} {kpts[row][1]} {kpts[row][2]} {kpts[row][3]}\n")
+            # kpt_file.write(f"{kpts[row][0]} {kpts[row][1]} {kpts[row][2]} {kpts[row][3]}\n")
             kpt_file.write(f"{kpts[row][0]} {kpts[row][1]} 1.0 0.0\n")
         kpt_file.close()
-    
-    out_matches_file = open(matches_file, 'w')
+
+    out_matches_file = open(matches_file, "w")
     for pair in matches:
         out_matches_file.write(f"{pair}\n")
         tie_points = matches[pair]
