@@ -1,0 +1,441 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        {% if cdn_resources=="local" %}
+            <script src="lib/bindings/utils.js"></script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            {% if select_menu or filter_menu %}
+                <link href="lib/tom-select/tom-select.css" rel="stylesheet">
+                <script src="lib/tom-select/tom-select.complete.min.js"></script>
+            {%  endif %}
+        {% elif cdn_resources=="in_line" %}
+            <script>{%  include 'lib/bindings/utils.js' %}</script>
+            <style>{%  include 'lib/vis-9.1.2/vis-network.css' %}</style>
+            <script>{%  include 'lib/vis-9.1.2/vis-network.min.js' %}</script>
+            {% if select_menu or filter_menu %}
+                <style>{%  include 'lib/tom-select/tom-select.css' %}</style>
+                <script>{%  include 'lib/tom-select/tom-select.complete.min.js' %}</script>
+            {%  endif %}
+        {%  elif cdn_resources=="remote" %}
+            <script>{%  include 'lib/bindings/utils.js' %}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            {#            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.0.4/dist/dist/vis-network.min.css" integrity="sha512-+5tJeVsSE2tSnmKB5SWOD0GsYA5dOP0B/FSv7I2GYhdOcyjJq81Q1St3qgJgInwreAdNuw0KGJ0FOaxOJ0E4yw==" crossorigin="anonymous" referrerpolicy="no-referrer" />#}
+            {#            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.0.4/dist/vis-network.js"#}
+            {#                integrity="sha512-CEbUhbSq35hCqBH8ckfAkH1Tcua5NEywtEzwiJ+BUC4EIZkC7vyta3ivZu/WqJhK1qHTurO3hwHsErU3HHjwIA=="#}
+            {#                crossorigin="anonymous"#}
+            {#                referrerpolicy="no-referrer"></script>#}
+            {% if select_menu or filter_menu %}
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            {%  endif %}
+
+        {% endif %}
+<center>
+<h1>{{heading}}</h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1>{{heading}}</h1>
+        </center>
+        <style type="text/css">
+
+            body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            /* Prevents scrolling when side panel is open */
+        }
+        
+        #container {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+        }
+        /* Toggable Side Panel Styles */
+        
+        #sidePanel {
+            width: 20%;
+            height: 100%;
+            background-color: #e0e0e057;
+            overflow-x: auto;
+            overflow-y: auto;
+            transition: 0.2s;
+        }
+        
+        #sideButton {
+            padding: 10px;
+            cursor: pointer;
+            background-color: #7059f785;
+            color: white;
+            font-size: x-large;
+            font-weight: bolder;
+        }
+        
+        #mynetwork {
+            flex-grow: 1;
+            padding: 20px;
+            transition: 0.2s;
+        }
+        
+        table {
+            width: 100%;
+            color: rgb(22, 22, 22);
+            margin-top: 20px;
+            overflow: auto;
+        }
+        
+        th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        tr.inforow {
+            font-size: larger;
+            font-weight: bold;
+            border: none !important;
+        }
+
+        tr.na {
+            color:rgba(182, 22, 22, 0.829);
+            font-size:smaller;
+            display: none;
+        }
+
+
+        th,
+        td {
+            padding: 10px;
+            font-size: large;
+        }
+        
+        #reopenButton {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            padding: 10px;
+            cursor: pointer;
+            background-color: #7059f785;
+            color: white;
+            display: none;
+        }
+        
+        {% if tooltip_link %}
+        /* position absolute is important and the container has to be relative or absolute as well. */
+        
+        div.popup {
+            position: absolute;
+            top: 0px;
+            left: 0px;
+            display: none;
+            background-color: #f5f4ed;
+            -moz-border-radius: 3px;
+            -webkit-border-radius: 3px;
+            border-radius: 3px;
+            border: 1px solid #808074;
+            box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.2);
+        }
+        /* hide the original tooltip */
+        
+        .vis-tooltip {
+            display: none;
+        }
+
+        {% endif %}
+        </style>
+    </head>
+
+
+    <body>
+        <div id="container">
+        <div id="sidePanel">
+            <div id="sideButton" onclick="toggleSidePanel()">☰ View graph details</div>
+            <table>
+                <thead>
+                </thead>
+                <tbody>
+                    <tr class="inforow"> <td>Edges: </td></tr>
+                    <tr class="inforow"> <td>Communities: </td></tr>
+                    <tr class="inforow"> <td>Aligned images: </td></tr>
+                    <tr class="inforow" onclick="toggleRows(this)"> <td>Not aligned images: </td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="mynetwork">
+        </div>
+
+        <div id="reopenButton" onclick="reopenSidePanel()">☰ Graph info</div>
+    </div>
+
+        {% if nodes|length > 100 and physics_enabled %}
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        {% endif %}
+        {% if conf %}
+            <div id="config"></div>
+        {% endif %}
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var net;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet({{nodes|tojson}});
+                  edges = new vis.DataSet({{edges|tojson}});
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {{options|safe}};
+                  net = options
+                  options = {
+  "configure": {
+    "enabled": false
+  },
+  "edges": {
+    "color": {
+      "inherit": true
+    },
+    "smooth": {
+      "enabled": true,
+      "type": "dynamic"
+    }
+  },
+  "interaction": {
+    "dragNodes": true,
+    "hideEdgesOnDrag": false,
+    "hideNodesOnDrag": false
+  },
+  "physics": {
+    "enabled": false,
+    "stabilization": {
+      "enabled": true,
+      "fit": true,
+      "iterations": 1000,
+      "onlyDynamicEdges": false,
+      "updateInterval": 50
+    }
+  }
+}
+
+                  {% if conf %}
+                  // if this network requires displaying the configure window,
+                  // put it in its div
+                  options.configure["container"] = document.getElementById("config");
+                  {% endif %}
+
+                  network = new vis.Network(container, data, options);
+
+                  {% if neighborhood_highlight %}
+                    network.on("click", neighbourhoodHighlight);
+                  {% endif %}
+
+                  {% if select_menu %}
+                    network.on("selectNode", neighbourhoodHighlight);
+                  {% endif %}
+
+                  {% if tooltip_link %}
+                  // make a custom popup
+                      var popup = document.createElement("div");
+                      popup.className = 'popup';
+                      popupTimeout = null;
+                      popup.addEventListener('mouseover', function () {
+                          console.log(popup)
+                          if (popupTimeout !== null) {
+                              clearTimeout(popupTimeout);
+                              popupTimeout = null;
+                          }
+                      });
+                      popup.addEventListener('mouseout', function () {
+                          if (popupTimeout === null) {
+                              hidePopup();
+                          }
+                      });
+                      container.appendChild(popup);
+
+
+                      // use the popup event to show
+                      network.on("showPopup", function (params) {
+                          showPopup(params);
+                      });
+
+                      // use the hide event to hide it
+                      network.on("hidePopup", function (params) {
+                          hidePopup();
+                      });
+
+                      // hiding the popup through css
+                      function hidePopup() {
+                          popupTimeout = setTimeout(function () { popup.style.display = 'none'; }, 500);
+                      }
+
+                      // showing the popup
+                      function showPopup(nodeId) {
+                          // get the data from the vis.DataSet
+                          var nodeData = nodes.get([nodeId]);
+                          popup.innerHTML = nodeData[0].title;
+
+                          // get the position of the node
+                          var posCanvas = network.getPositions([nodeId])[nodeId];
+
+                          // get the bounding box of the node
+                          var boundingBox = network.getBoundingBox(nodeId);
+
+                          //position tooltip:
+                          posCanvas.x = posCanvas.x + 0.5 * (boundingBox.right - boundingBox.left);
+
+                          // convert coordinates to the DOM space
+                          var posDOM = network.canvasToDOM(posCanvas);
+
+                          // Give it an offset
+                          posDOM.x += 10;
+                          posDOM.y -= 20;
+
+                          // show and place the tooltip.
+                          popup.style.display = 'block';
+                          popup.style.top = posDOM.y + 'px';
+                          popup.style.left = posDOM.x + 'px';
+                      }
+                  {% endif %}
+
+
+                  {% if nodes|length > 100 and physics_enabled %}
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  {% endif %}
+
+                  return network;
+              }
+            
+              function toggleSidePanel() {
+                const sidePanel = document.getElementById('sidePanel');
+                const mainContent = document.getElementById('mynetwork');
+                const reopenButton = document.getElementById('reopenButton');
+
+                if (sidePanel.style.width === '20%') {
+                    sidePanel.style.width = '0%';
+                    mainContent.style.flexGrow = '1';
+                    reopenButton.style.display = 'block';
+                } else {
+                    sidePanel.style.width = '20%';
+                    mainContent.style.flexGrow = '0';
+                    reopenButton.style.display = 'none';
+                }
+            }
+
+            function reopenSidePanel() {
+                const sidePanel = document.getElementById('sidePanel');
+                const reopenButton = document.getElementById('reopenButton');
+
+                sidePanel.style.width = '20%';
+                reopenButton.style.display = 'none';
+            }
+
+            function populateSidePanel(){
+                const sidePanel = document.getElementById('sidePanel');
+                const table = sidePanel.children[1];
+                const tbody = table.getElementsByTagName('tbody')[0];
+                tbody.rows[0].cells[0].innerHTML += net["properties"]["edges"];
+                tbody.rows[1].cells[0].innerHTML += net["properties"]["communities"];
+                tbody.rows[2].cells[0].innerHTML += net["properties"]["aligned"];
+                tbody.rows[3].cells[0].innerHTML += net["properties"]["not_aligned"];
+
+                if (net["properties"]["not_aligned"] != 0){
+                    tbody.rows[3].cells[0].innerHTML +="    ▼"
+                    tbody.rows[3].cells[0].style.cursor = "pointer";
+                }
+
+                var i = 0;
+                for (nodeId in allNodes) {
+                    if( !allNodes[nodeId].aligned ){
+                        newrow = tbody.insertRow(i + 4)
+                        newrow.className = "na"
+                        newrow.insertCell(0).innerHTML = allNodes[nodeId].title;
+                        i += 1;
+                    }
+                }
+            }
+
+            function toggleRows(clickedRow) {
+                var rowsToToggle = clickedRow.nextElementSibling;
+
+                // Toggle the display property of all rows with class 'na' below the clicked row
+                while (rowsToToggle && rowsToToggle.classList.contains('na')) {
+                    if (rowsToToggle.style.display === 'none' || rowsToToggle.style.display === '') {
+                        rowsToToggle.style.display = 'table-row';
+                    } else {
+                        rowsToToggle.style.display = 'none';
+                    }
+
+                    rowsToToggle = rowsToToggle.nextElementSibling;
+                }
+            }
+              drawGraph();
+              populateSidePanel();
+        </script>
+    </body>
+</html>
