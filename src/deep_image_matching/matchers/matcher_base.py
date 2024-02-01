@@ -84,7 +84,7 @@ class MatcherBase(metaclass=ABCMeta):
     default_conf = {}
     required_inputs = []
     min_inliers_per_pair = 15
-    min_inliers_ratio = 0.2
+    min_inlier_ratio_per_pair = 0.2
     min_matches_per_tile = 5
     tile_preselection_size = 1000
     max_feat_no_tiling = 20000
@@ -118,6 +118,10 @@ class MatcherBase(metaclass=ABCMeta):
 
         if "min_inliers_per_pair" in custom_config["general"]:
             self.min_inliers_per_pair = custom_config["general"]["min_inliers_per_pair"]
+        if "min_inlier_ratio_per_pair" in custom_config["general"]:
+            self.min_inlier_ratio_per_pair = custom_config["general"][
+                "min_inlier_ratio_per_pair"
+            ]
         if "min_matches_per_tile" in custom_config["general"]:
             self.min_matches_per_tile = custom_config["general"]["min_matches_per_tile"]
         if "tile_preselection_size" in custom_config["general"]:
@@ -332,13 +336,14 @@ class MatcherBase(metaclass=ABCMeta):
         num_inliers = np.sum(inlMask)
         inliers_ratio = num_inliers / len(matches)
         matches = matches[inlMask]
+
         if num_inliers < self.min_inliers_per_pair:
             logger.debug(
                 f"Too few inliers matches found ({num_inliers}). Skipping image pair {img0.name}-{img1.name}"
             )
             timer_match.print(f"{__class__.__name__} match")
             return None
-        elif inliers_ratio < self.min_inliers_ratio:
+        elif inliers_ratio < self.min_inlier_ratio_per_pair:
             logger.debug(
                 f"Too small inlier ratio ({inliers_ratio*100:.2f}%). Skipping image pair {img0.name}-{img1.name}"
             )
@@ -352,7 +357,7 @@ class MatcherBase(metaclass=ABCMeta):
             group.create_dataset(img1_name, data=matches)
 
         timer_match.update("save to h5")
-        timer_match.print(f"{__class__.__name__} raw match")
+        timer_match.print(f"{__class__.__name__} match")
 
         logger.debug(f"Matching {img0_name}-{img1_name} done!")
 
