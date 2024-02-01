@@ -1,23 +1,17 @@
-<div align="center">
- 
- [![Static Badge](https://img.shields.io/badge/Matches_for-COLMAP-red)](https://github.com/colmap/colmap)
- ![Static Badge](https://img.shields.io/badge/Matches_for-Metashape-blue) [![Static Badge](https://img.shields.io/badge/Powered_by-Kornia-green)](https://github.com/kornia/kornia) [![Static Badge](https://img.shields.io/badge/Powered_by-hloc-blue)](https://github.com/kornia/kornia)
- 
-  [![GitHub Release](https://img.shields.io/github/v/release/3DOM-FBK/deep-image-matching)](https://github.com/3DOM-FBK/deep-image-matching/releases) [![Static Badge](https://img.shields.io/badge/docs-DeepImageMatching-blue
- )](https://3dom-fbk.github.io/deep-image-matching/)
- 
-</div>
+[![Static Badge](https://img.shields.io/badge/Matches_for-COLMAP-red)](https://github.com/colmap/colmap)
+![Static Badge](https://img.shields.io/badge/Matches_for-Metashape-blue) [![Static Badge](https://img.shields.io/badge/Powered_by-Kornia-green)](https://github.com/kornia/kornia) [![Static Badge](https://img.shields.io/badge/Powered_by-hloc-blue)](https://github.com/kornia/kornia)
 
-# DEEP-IMAGE-MATCHING
+## DEEP-IMAGE-MATCHING
 
 | SIFT                                             | DISK                                               | IMAGES ORIENTATION                                   | DENSE WITH ROMA                                |
 | ------------------------------------------------ | -------------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------- |
-| <img src='docs/assets/matches_sift.gif' height="100"> | <img src='docs/assets/matches_joined.gif' height="100"> | <img src='docs/assets/orientation_deep.gif' height="100"> | <img src='docs/assets/roma_dense.gif' height="100"> |
+| <img src='assets/matches_sift.gif' height="100"> | <img src='assets/matches_joined.gif' height="100"> | <img src='assets/orientation_deep.gif' height="100"> | <img src='assets/roma_dense.gif' height="100"> |
 
 | SIFT                                             | SUPERGLUE                                            |
 | ------------------------------------------------ | ---------------------------------------------------- |
-| <img src='docs/assets/temple_rsift.gif' height="165"> | <img src='docs/assets/temple_superglue.gif' height="165"> |
+| <img src='assets/temple_rsift.gif' height="165"> | <img src='assets/temple_superglue.gif' height="165"> |
 
+**Note: We are carrying out some major updates in deep-image-matching, so the program may collapse. We will release a new fully working version soon. Thanks for you patience.**
 
 Multivew matcher for SfM software. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI. Feel free to collaborate!
 
@@ -50,15 +44,15 @@ Key features:
 | Supported SfM software                        |
 | --------------------------------------------- |
 | &check; COLMAP                                |
-| &#x2610; OpenMVG                               |
+| &check; OpenMVG                               |
 | &check; Agisoft Metashape                     |
 | &check; Software that supports bundler format |
 
 ## Colab demo 
 
-Want to run on a sample dataset? ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/colab_run_from_bash_example.ipynb)
+Want to run on a sample dataset? ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/run_from_bash_example.ipynb)
 
-Want to run on your images? ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/colab_run_from_bash_custom_images.ipynb)
+Want to run on your images? ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/run_from_bash_custom_images.ipynb)
 
 ## Installation
 
@@ -85,9 +79,31 @@ pip install pycolmap
 ```
 
 As [pycolmap](https://github.com/colmap/pycolmap) was released on PyPi only for Linux and macOS (up to version 0.4.0), it is not installed by default with deep-image-matching. 
-From version 0.5.0, pycolmap can be installed on Windows too. However, it needs some testing before including in dependencies of deep-image-matching, as there are some errors on Windows that are blocking deep_image_matching pipeline (while it works completely fine on Linux).
+Therefore, it is not included in the dependencies of deep-image-matching.
+From version 0.5.0, pycolmap can be installed on Windows too, so we are considering to add it as a dependency of deep-image-matching.
 
 For more information, check the [documentation](https://3dom-fbk.github.io/deep-image-matching/installation/).
+
+
+## Docker Installation
+
+First, build the image:
+
+```powershell
+  docker build --tag 'deep-image-matching' .
+```
+
+Then run the image (on Windows, please use Powershell):
+
+```powershell
+docker run --name running-deep-image-matching --mount type=bind,source=D:\data,target=/workspace/data --gpus all -it 'deep-image-matching'
+```
+
+replace `D:\data` with the desired path for mounting a volume. If you have more than one running container, you can remove `--name running_deep_pavements`
+
+include `--detach` to run in background and/or `--rm` to remove container on exit
+
+You can then open the repo directly in VSCode using `ctrl+alt+O` and selecting the option "attach to running container", then enjoy!
 
 ## Usage instructions
 
@@ -103,7 +119,7 @@ python main.py --help
 For example, to run the matching with SuperPoint and LightGlue on a dataset, you can use the following command:
 
 ```bash
-python main.py --dir assets/example_cyprus --pipeline superpoint+lightglue
+python main.py --dir assets/example_cyprus --config superpoint+lightglue
 ```
 
 For all the usage instructions and configurations, refer to the documenation at [https://3dom-fbk.github.io/deep-image-matching/](https://3dom-fbk.github.io/deep-image-matching/getting_started) or check the example notebooks.
@@ -124,7 +140,7 @@ To run the matching with different local features and/or matchers and marging to
 
 ```bash
 python ./join_databases.py --help
-python ./join_databases.py --input assets/to_be_joined --output docs/assets/to_be_joined
+python ./join_databases.py --input assets/to_be_joined --output assets/to_be_joined
 ```
 
 ### Exporting the solution to Metashape
@@ -132,15 +148,10 @@ python ./join_databases.py --input assets/to_be_joined --output docs/assets/to_b
 To export the solution to Metashape, you can export the COLMAP database to Bundler format and then import it into Metashape.
 This can be done from Metashape GUI, by first importing the images and then use the function `Import Cameras` (File -> Import -> Import Cameras) to select Bundler file (e.g., bundler.out) and the image list file (e.g., bundler_list.txt).
 
-Alternatevely, you can use the `export_to_metashape.py` script to automatically create a Metashape project from a reconstruction saved in Bundler format.
+Alternatevely, you can the `export_to_metashape.py` script to automatically create a Metashape project from a reconstruction saved in Bundler format.
 The script `export_to_metashape.py` takes as input the solution in Bundler format and the images and it exports the solution to Metashape.
 It requires to install Metashape as a Python module in your environment and to have a valid license.
 Please, refer to the instructions at [https://github.com/franioli/metashape](https://github.com/franioli/metashape).
-
-## How to contribute
-
-Any contribution to this repo is really welcome!
-If you want to contribute to the project, please, check the [contributing guidelines](./CONTRIBUTING.md).
 
 ## TODO:
 
@@ -153,14 +164,12 @@ If you want to contribute to the project, please, check the [contributing guidel
 - [ ] Add visualization for extracted features and matches
 - [ ] Improve speed
 - [ ] Autoselect tiling grid in order to fit images in GPU memory
-- [x] Add tests, documentation and examples (e.g. colab, ..)
+- [ ] Add tests, documentation and examples (e.g. colab, ..)
 - [ ] Apply masks during feature extraction
+- [ ] Check scripts
 - [ ] Integrate support for Pix4D [Open Photogrammetry Format](https://github.com/Pix4D/opf-spec)
 - [ ] Work with submodules
-- [ ] Automatically download weights for all the models
-- [x] Cleanup repository to removed large files from Git history
-- [x] Update README CLI options
-
+- [ ] Update README CLI options
 
 ## References
 
