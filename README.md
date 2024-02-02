@@ -10,14 +10,13 @@
 
 # DEEP-IMAGE-MATCHING
 
-| SIFT                                             | DISK                                               | IMAGES ORIENTATION                                   | DENSE WITH ROMA                                |
-| ------------------------------------------------ | -------------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------- |
+| SIFT                                                  | DISK                                                    | IMAGES ORIENTATION                                        | DENSE WITH ROMA                                     |
+| ----------------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------- |
 | <img src='docs/assets/matches_sift.gif' height="100"> | <img src='docs/assets/matches_joined.gif' height="100"> | <img src='docs/assets/orientation_deep.gif' height="100"> | <img src='docs/assets/roma_dense.gif' height="100"> |
 
-| SIFT                                             | SUPERGLUE                                            |
-| ------------------------------------------------ | ---------------------------------------------------- |
+| SIFT                                                  | SUPERGLUE                                                 |
+| ----------------------------------------------------- | --------------------------------------------------------- |
 | <img src='docs/assets/temple_rsift.gif' height="165"> | <img src='docs/assets/temple_superglue.gif' height="165"> |
-
 
 Multivew matcher for SfM software. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI. Feel free to collaborate!
 
@@ -50,17 +49,17 @@ Key features:
 | Supported SfM software                        |
 | --------------------------------------------- |
 | &check; COLMAP                                |
-| &#x2610; OpenMVG                               |
+| &#x2610; OpenMVG                              |
 | &check; Agisoft Metashape                     |
 | &check; Software that supports bundler format |
 
-## Colab demo 
+## Colab demo
 
 Want to run on a sample dataset? ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/colab_run_from_bash_example.ipynb)
 
 Want to run on your images? ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/colab_run_from_bash_custom_images.ipynb)
 
-## Installation
+## Local Installation
 
 For installing deep-image-matching, first create a conda environment:
 
@@ -84,11 +83,10 @@ Install pycolmap:
 pip install pycolmap
 ```
 
-As [pycolmap](https://github.com/colmap/pycolmap) was released on PyPi only for Linux and macOS (up to version 0.4.0), it is not installed by default with deep-image-matching. 
+As [pycolmap](https://github.com/colmap/pycolmap) was released on PyPi only for Linux and macOS (up to version 0.4.0), it is not installed by default with deep-image-matching.
 From version 0.5.0, pycolmap can be installed on Windows too. However, it will demand some testing before being added to the dependencies of deep-image-matching, as there are some errors on Windows that are blocking deep_image_matching pipeline (while it works completely fine on Linux).
 
 For more information, check the [documentation](https://3dom-fbk.github.io/deep-image-matching/installation/).
-
 
 ## Docker Installation
 
@@ -114,7 +112,6 @@ You can then open the repo directly in VSCode using `ctrl+alt+O` and selecting t
 
 You can run deep-image-matching from the command line or from the GUI.
 
-
 Use the following command to see all the available options from the CLI:
 
 ```bash
@@ -135,6 +132,7 @@ To run the GUI, you can use the following command:
 python main.py --gui
 
 ```
+
 ## Advanced usage
 
 For advanced usage, you can check the `scripts` directory.
@@ -183,7 +181,6 @@ If you want to contribute to the project, please, check the [contributing guidel
 - [ ] Automatically download weights for all the models
 - [x] Cleanup repository to removed large files from Git history
 - [x] Update README CLI options
-
 
 ## References
 

@@ -193,7 +193,12 @@ def parse_args():
         "-o", "--output", type=str, help="Path to output folder", required=True
     )
     parser.add_argument(
-        "-m", "--max_size", type=int, help="Max size of the output image showing matches", required=False, default=1500,
+        "-m",
+        "--max_size",
+        type=int,
+        help="Max size of the output image showing matches",
+        required=False,
+        default=1500,
     )
     args = parser.parse_args()
 
