@@ -14,5 +14,5 @@ RUN pip install pycolmap
 RUN git clone https://github.com/3DOM-FBK/deep-image-matching.git /workspace/deep-image-matching
 WORKDIR /workspace/deep-image-matching
 
-# A small test to assure that is everything ok:
-# RUN python docker_build_test.py
+# Running the tests:
+RUN pytest
