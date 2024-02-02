@@ -366,7 +366,7 @@ class MatcherBase(metaclass=ABCMeta):
         if self._config["general"]["verbose"]:
 
             def debug_viz():
-                viz_dir = self._output_dir / "viz"
+                viz_dir = self._output_dir / "debug"
                 viz_dir.mkdir(parents=True, exist_ok=True)
                 self.viz_matches(
                     feature_path,
@@ -375,6 +375,7 @@ class MatcherBase(metaclass=ABCMeta):
                     img1,
                     save_path=viz_dir / f"{img0_name}_{img1_name}.png",
                 )
+
             threading.Thread(target=debug_viz()).start()
 
         return matches
