@@ -68,9 +68,8 @@ timer.update("export_to_colmap")
 if config.general["graph"]:
 
     try:
-        from deep_image_matching.graph import view_graph
-
-        view_graph(database_path, output_dir, imgs_dir)
+        graph = import_module("deep_image_matching.graph")
+        graph.view_graph(database_path, output_dir, imgs_dir)
         timer.update("show view graph")
     except ImportError:
         logger.error("pyvis is not available. Unable to visualize view graph.")
