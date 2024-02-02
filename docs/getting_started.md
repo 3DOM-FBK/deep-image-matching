@@ -108,11 +108,13 @@ For example:
 
 The `Quality` parameter define the resolution at which the images are matched. The available options are:
 
+- `highest`: each image size is upsampled by a factor of 2 by using a bicubic interpolation.
 - `high`: the images are matched at the original resolution (default)
-- `highest`: the images are upsampled by a factor of 2 by using a bicubic interpolation.
-- `medium`: the images are downsampled by a factor of 2 by using the OpenCV pixel-area approach ([cv2.INTER_AREA](https://docs.opencv.org/4.x/da/d54/group__imgproc__transform.html#gga5bb5a1fea74ea38e1a5445ca803ff121acf959dca2480cc694ca016b81b442ceb)).
-- `low`: the images are downsampled by a factor of 4 by using the OpenCV pixel-area approach.
-- `lowest`: the images are downsampled by a factor of 8 by using the OpenCV pixel-area approach.
+- `medium`: each image size is downsampled by a factor of 2 by using the OpenCV pixel-area approach.
+- `low`: each image size is downsampled by a factor of 4 by using the OpenCV pixel-area approach.
+- `lowest`: each image size is downsampled by a factor of 8 by using the OpenCV pixel-area approach.
+
+OpenCV pixel-area approach ([cv2.INTER_AREA](https://docs.opencv.org/4.x/da/d54/group__imgproc__transform.html#gga5bb5a1fea74ea38e1a5445ca803ff121acf959dca2480cc694ca016b81b442ceb)).
 
 ### Tiling
 
