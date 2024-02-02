@@ -51,6 +51,7 @@ Key features:
 | --------------------------------------------- |
 | &check; COLMAP                                |
 | &#x2610; OpenMVG                               |
+| &#x2610; MICMAC                               |
 | &check; Agisoft Metashape                     |
 | &check; Software that supports bundler format |
 
