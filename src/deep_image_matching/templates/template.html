@@ -1,3 +1,5 @@
+<!DOCTYPE html>
+
 <html>
     <head>
         <meta charset="utf-8">
@@ -78,6 +80,8 @@
             overflow-x: auto;
             overflow-y: auto;
             transition: 0.2s;
+            border-right-style: solid;
+            border-right-color: #53505017;
         }
         
         #sideButton {
@@ -111,15 +115,19 @@
         tr.inforow {
             font-size: larger;
             font-weight: bold;
-            border: none !important;
+            border: none !important;  
+            color: #404040;
         }
 
         tr.na {
             color:rgba(182, 22, 22, 0.829);
-            font-size:smaller;
             display: none;
         }
 
+        .na td{
+            padding-left: 20px;
+            font-size: small;
+        }
 
         th,
         td {
@@ -127,6 +135,14 @@
             font-size: large;
         }
         
+        p {
+            font-size: smaller;
+            text-align: justify;
+            color: #3f3e3eb6;
+            border-color: black;
+            padding: 10px;
+        }
+
         #reopenButton {
             position: fixed;
             top: 15px;
@@ -168,8 +184,17 @@
         <div id="container">
         <div id="sidePanel">
             <div id="sideButton" onclick="toggleSidePanel()">☰ View graph details</div>
+            <p>
+                    ⓘ </br>
+                    Hover on edges to show the number of <b>matches</b> between a pair of images.</br>
+                    Hover on nodes to show the <b>image name</b>.</br>
+                    Click a node to highlight connections.</br>
+                    Nodes are positioned using the <b>Fruchterman-Reingold</b> force-directed algorithm, the closer the nodes, the stronger the connection.
+                    Images are grouped into <b>communities</b>. Nodes share more matches with other nodes inside the community and fewer with nodes outside.</br>  
+                    <b>Not aligned images</b> (if available) are shown in the list below and on the side of the graph. 
+            </p>
             <table>
-                <thead>
+                <thead> 
                 </thead>
                 <tbody>
                     <tr class="inforow"> <td>Edges: </td></tr>
@@ -379,7 +404,9 @@
                 if (sidePanel.style.width === '20%') {
                     sidePanel.style.width = '0%';
                     mainContent.style.flexGrow = '1';
-                    reopenButton.style.display = 'block';
+                    setTimeout(function(){
+                        reopenButton.style.display = 'block';
+                    }, 250);
                 } else {
                     sidePanel.style.width = '20%';
                     mainContent.style.flexGrow = '0';
@@ -397,7 +424,7 @@
 
             function populateSidePanel(){
                 const sidePanel = document.getElementById('sidePanel');
-                const table = sidePanel.children[1];
+                const table = sidePanel.children[2];
                 const tbody = table.getElementsByTagName('tbody')[0];
                 tbody.rows[0].cells[0].innerHTML += net["properties"]["edges"];
                 tbody.rows[1].cells[0].innerHTML += net["properties"]["communities"];

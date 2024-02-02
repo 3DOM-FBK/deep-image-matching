@@ -101,7 +101,7 @@ def view_graph(db, output_dir, imgs_dir):
             G.nodes[n]["y"] = -pos[1]
 
     # Compute communities using modularity
-    C = nx.community.greedy_modularity_communities(G, "matches")
+    C = nx.community.greedy_modularity_communities(AG, "matches")
     i = 0
     for c in C:
         Cg = G.subgraph(c)  # Draw communities with different colors
