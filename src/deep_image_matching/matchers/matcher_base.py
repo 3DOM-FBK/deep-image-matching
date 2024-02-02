@@ -1,4 +1,5 @@
 import inspect
+import threading
 from abc import ABCMeta, abstractmethod
 from itertools import product
 from pathlib import Path
@@ -362,16 +363,19 @@ class MatcherBase(metaclass=ABCMeta):
         logger.debug(f"Matching {img0_name}-{img1_name} done!")
 
         # For debugging
-        viz_dir = self._output_dir / "debug"
-        viz_dir.mkdir(parents=True, exist_ok=True)
-        self.viz_matches(
-            feature_path,
-            matches_path,
-            img0,
-            img1,
-            save_path=viz_dir / f"{img0_name}_{img1_name}.png",
-            hide_matching_track=True,
-        )
+        if self._config["general"]["verbose"]:
+
+            def debug_viz():
+                viz_dir = self._output_dir / "viz"
+                viz_dir.mkdir(parents=True, exist_ok=True)
+                self.viz_matches(
+                    feature_path,
+                    matches_path,
+                    img0,
+                    img1,
+                    save_path=viz_dir / f"{img0_name}_{img1_name}.png",
+                )
+            threading.Thread(target=debug_viz()).start()
 
         return matches
 
