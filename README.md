@@ -85,9 +85,30 @@ pip install pycolmap
 ```
 
 As [pycolmap](https://github.com/colmap/pycolmap) was released on PyPi only for Linux and macOS (up to version 0.4.0), it is not installed by default with deep-image-matching. 
-From version 0.5.0, pycolmap can be installed on Windows too. However, it needs some testing before including in dependencies of deep-image-matching, as there are some errors on Windows that are blocking deep_image_matching pipeline (while it works completely fine on Linux).
+From version 0.5.0, pycolmap can be installed on Windows too. However, it will demand some testing before being added to the dependencies of deep-image-matching, as there are some errors on Windows that are blocking deep_image_matching pipeline (while it works completely fine on Linux).
 
 For more information, check the [documentation](https://3dom-fbk.github.io/deep-image-matching/installation/).
+
+
+## Docker Installation
+
+First, build the image:
+
+```powershell
+  docker build --tag 'deep-image-matching' .
+```
+
+Then run the image (on Windows, please use Powershell):
+
+```powershell
+docker run --name running-deep-image-matching --mount type=bind,source=D:\data,target=/workspace/data --gpus all -it 'deep-image-matching'
+```
+
+replace `D:\data` with the desired path for mounting a volume. If you have more than one running container, you can remove `--name running_deep_pavements`
+
+include `--detach` to run in background and/or `--rm` to remove container on exit
+
+You can then open the repo directly in VSCode using `ctrl+alt+O` and selecting the option "attach to running container", then enjoy!
 
 ## Usage instructions
 
@@ -150,7 +171,9 @@ If you want to contribute to the project, please, check the [contributing guidel
 - [x] add GUI
 - [x] Add pycolmap compatibility
 - [x] Add exporting to Bundler format ready for importing into Metashape (only on Linux and MacOS by using pycolmap)
-- [x] Add visualization for extracted features and matches
+- [x] Dockerization
+- [ ] Workflow to rebuild & publish image to Docker Hub
+- [ ] Add visualization for extracted features and matches
 - [ ] Improve speed
 - [ ] Autoselect tiling grid in order to fit images in GPU memory
 - [x] Add tests, documentation and examples (e.g. colab, ..)
