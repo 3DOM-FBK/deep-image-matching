@@ -1,8 +1,11 @@
-import sqlite3
 import os
+import sqlite3
+
 import networkx as nx
 from pyvis.network import Network
+
 from deep_image_matching.utils.database import pair_id_to_image_ids
+
 from . import logger
 
 

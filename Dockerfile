@@ -2,9 +2,8 @@ FROM pytorch/pytorch:latest
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-RUN apt update
-RUN apt install -y git
-
+# Install dependencies
+RUN apt update && apt install -y git
 RUN apt-get update && apt-get install ffmpeg libsm6 libxext6  -y
 
 # Clone repo

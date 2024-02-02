@@ -93,7 +93,7 @@ For more information, check the [documentation](https://3dom-fbk.github.io/deep-
 First, build the image:
 
 ```bash
-  docker build --tag 'deep-image-matching' .
+  docker build --tag deep-image-matching .
 ```
 
 Note that the first time you run the command, it will take a while to download the base image and install all the dependencies.
@@ -102,13 +102,13 @@ Once the image is built, you can run it with the following commands.
 On Linux:
 
 ```bash
-docker run --name running-deep-image-matching --mount type=bind,source=/home/username/data,target=/workspace/data --gpus all -it 'deep-image-matching'
+docker run --name running-deep-image-matching --mount type=bind,source=/home/username/data,target=/workspace/data --gpus all -it deep-image-matching
 ```
 
 On Windows (please use Powershell):
 
 ```powershell
-docker run --name running-deep-image-matching --mount type=bind,source=D:\data,target=/workspace/data --gpus all -it 'deep-image-matching'
+docker run --name running-deep-image-matching --mount type=bind,source=D:\data,target=/workspace/data --gpus all -it deep-image-matching
 ```
 
 **replace** `/home/username/data` (on Linux) or `D:\data` (on Winows) with the desired path for mounting a shared volume between the local OS and the docker container. Make sure to use absolute paths. This folder will be used to store alll the input data (images) and outputs.
