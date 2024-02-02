@@ -29,7 +29,7 @@ def view_graph(db, output_dir, imgs_dir):
         G.add_node(int(id), label=str(id), shape="circle", title=name)
 
     # Add edges
-    res = cur.execute("SELECT pair_id, rows FROM matches")
+    res = cur.execute("SELECT pair_id, rows FROM two_view_geometries")
     weight_sum = 0
     for pair_id, rows in res.fetchall():
         if rows != 0:
