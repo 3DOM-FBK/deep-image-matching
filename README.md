@@ -171,6 +171,8 @@ If you want to contribute to the project, please, check the [contributing guidel
 - [x] add GUI
 - [x] Add pycolmap compatibility
 - [x] Add exporting to Bundler format ready for importing into Metashape (only on Linux and MacOS by using pycolmap)
+- [x] Dockerization
+- [ ] Workflow to rebuild & publish image to Docker Hub
 - [ ] Add visualization for extracted features and matches
 - [ ] Improve speed
 - [ ] Autoselect tiling grid in order to fit images in GPU memory
