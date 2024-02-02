@@ -86,7 +86,7 @@ if not config.general["skip_reconstruction"]:
 
     if use_pycolmap:
         # import reconstruction module
-        reconstruction = import_module("src.deep_image_matching.reconstruction")
+        reconstruction = import_module("deep_image_matching.reconstruction")
 
         # Define database path
         database = output_dir / "database_pycolmap.db"
