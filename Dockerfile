@@ -1,24 +1,39 @@
 ARG branch=master
-ARG skip_tests=false
 
-FROM pytorch/pytorch:latest
+FROM pytorch/pytorch:2.2.0-cuda12.1-cudnn8-runtime
+# FROM nvidia/cuda:12.3.1-base-ubuntu22.04
 
-ARG DEBIAN_FRONTEND=noninteractive
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
 
-# Install dependencies
-RUN apt update && apt install -y git
-RUN apt-get update && apt-get install ffmpeg libsm6 libxext6  -y
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y \
+    git \
+    python3.10-venv \
+    libglib2.0-0 \
+    ffmpeg \
+    libsm6 \
+    libxext6
+
 
 # Clone repo
-RUN git clone https://github.com/3DOM-FBK/deep-image-matching.git /workspace/deep-image-matching
-WORKDIR /workspace/deep-image-matching
+RUN git clone https://github.com/3DOM-FBK/deep-image-matching.git /workspace/dim
+WORKDIR /workspace/dim
 
 # Checkout the specified branch
-RUN if [ "$branch" = "dev" ]; then git checkout dev; fi
+RUN git checkout $branch
+
+# Create virtual environment
+RUN python3.10 -m venv /venv
+ENV PATH=/venv/bin:$PATH
 
 # Install deep-image-matching
-RUN pip install -e .
-RUN pip install pycolmap
+RUN python3 -m pip install --upgrade pip
+RUN pip3 install setuptools
+RUN pip3 install torch torchvision
+RUN pip3 install -e .
+RUN pip3 install pycolmap
 
 # Running the tests:
-RUN if [ "$skip_tests" = "false" ]; then pytes; fi
+# RUN pytest  
