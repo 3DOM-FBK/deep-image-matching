@@ -90,7 +90,7 @@ For more information, check the [documentation](https://3dom-fbk.github.io/deep-
 
 ## Docker Installation
 
-First, build the image:
+If you prefer using Docker, first, build the image:
 
 ```bash
   docker build --tag deep-image-matching .
@@ -116,6 +116,8 @@ docker run --name running-deep-image-matching --mount type=bind,source=D:\data,t
 Include the `--detach` option to run the container in background and/or `--rm` to remove container on exit. If you have more than one running container, you can remove `--name running-deep-image-matching`.
 
 Once the container is running, you can then open the repo cloned inside the container directly in VSCode using `ctrl+alt+O` and selecting the option "attach to running container" (make sure to have the Docker extension installed in VSCode), then enjoy!
+
+If you face any issues, especially on Linux when using the `gpus all` setting, please refer to the [documentation](https://3dom-fbk.github.io/deep-image-matching/installation/).
 
 ## Usage instructions
 
