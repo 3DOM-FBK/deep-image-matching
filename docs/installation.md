@@ -73,7 +73,7 @@ Once the image is built, you can run it with the following commands.
 On Linux:
 
 ```bash
-docker run --name running-deep-image-matching --mount type=bind,source=/home/username/data,target=/workspace/data --gpus all -it deep-image-matching
+sudo docker run --name running-deep-image-matching --mount type=bind,source=/home/username/data,target=/workspace/data --gpus all -it deep-image-matching
 ```
 
 On Windows (please, use Powershell):
@@ -87,13 +87,13 @@ docker run --name running-deep-image-matching --mount type=bind,source=D:\data,t
 If you want to run the container in background, you can use the `--detach` option:
 
 ```bash
-docker run --name running-deep-image-matching --mount type=bind,source=/home/username/data,target=/workspace/data --gpus all --detach deep-image-matching
+docker run --name run-deep-image-matching --mount type=bind,source=/home/username/data,target=/workspace/data --gpus all --detach deep-image-matching
 ```
 
 You can also remove the container on exit using the `--rm` option:
 
 ```bash
-docker run --name running-deep-image-matching --mount type=bind,source=/home/username/data,target=/workspace/data --gpus all --rm -it deep-image-matching
+docker run --name run-deep-image-matching --mount type=bind,source=/home/username/data,target=/workspace/data --gpus all --rm -it deep-image-matching
 ```
 
 Once the container is running, you can then open the repo cloned inside the container directly in VSCode using `ctrl+alt+O` and selecting the option "attach to running container" (make sure to have the Docker extension installed in VSCode), then enjoy!
