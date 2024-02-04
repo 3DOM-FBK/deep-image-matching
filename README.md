@@ -113,7 +113,7 @@ docker run --name running-deep-image-matching --mount type=bind,source=D:\data,t
 
 **replace** `/home/username/data` (on Linux) or `D:\data` (on Winows) with the desired path for mounting a shared volume between the local OS and the docker container. Make sure to use absolute paths. This folder will be used to store alll the input data (images) and outputs.
 
-Include the `--detach` option to run the container in background and/or `--rm` to remove container on exit. If you have more than one running container, you can remove `--name running-deep-image-matching`.
+Include the `--detach` option to run the container in background and/or `--rm` to remove container on exit.
 
 Once the container is running, you can then open the repo cloned inside the container directly in VSCode using `ctrl+alt+O` and selecting the option "attach to running container" (make sure to have the Docker extension installed in VSCode), then enjoy!
 

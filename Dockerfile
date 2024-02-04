@@ -1,7 +1,6 @@
-ARG branch=master
-
 FROM pytorch/pytorch:2.2.0-cuda12.1-cudnn8-runtime
-# FROM nvidia/cuda:12.3.1-base-ubuntu22.04
+
+ARG BRANCH=master
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
@@ -22,7 +21,7 @@ RUN git clone https://github.com/3DOM-FBK/deep-image-matching.git /workspace/dim
 WORKDIR /workspace/dim
 
 # Checkout the specified branch
-RUN git checkout $branch
+RUN git checkout ${BRANCH}
 
 # Create virtual environment
 RUN python3.10 -m venv /venv
@@ -36,4 +35,4 @@ RUN pip3 install -e .
 RUN pip3 install pycolmap
 
 # Running the tests:
-# RUN pytest  
+RUN python -m pytest  

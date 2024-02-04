@@ -76,7 +76,7 @@ On Linux:
 docker run --name running-deep-image-matching --mount type=bind,source=/home/username/data,target=/workspace/data --gpus all -it deep-image-matching
 ```
 
-On Windows (please use Powershell):
+On Windows (please, use Powershell):
 
 ```powershell
 docker run --name running-deep-image-matching --mount type=bind,source=D:\data,target=/workspace/data --gpus all -it deep-image-matching
@@ -84,9 +84,25 @@ docker run --name running-deep-image-matching --mount type=bind,source=D:\data,t
 
 **Replace** `/home/username/data` (on Linux) or `D:\data` (on Winows) with the desired path for mounting a shared volume between the local OS and the docker container. Make sure to use absolute paths. This folder will be used to store alll the input data (images) and outputs.
 
-Include the `--detach` option to run the container in background and/or `--rm` to remove container on exit. If you have more than one running container, you can remove `--name running-deep-image-matching`.
+If you want to run the container in background, you can use the `--detach` option:
+
+```bash
+docker run --name running-deep-image-matching --mount type=bind,source=/home/username/data,target=/workspace/data --gpus all --detach deep-image-matching
+```
+
+You can also remove the container on exit using the `--rm` option:
+
+```bash
+docker run --name running-deep-image-matching --mount type=bind,source=/home/username/data,target=/workspace/data --gpus all --rm -it deep-image-matching
+```
 
 Once the container is running, you can then open the repo cloned inside the container directly in VSCode using `ctrl+alt+O` and selecting the option "attach to running container" (make sure to have the Docker extension installed in VSCode), then enjoy!
+
+If you want to build the docker image with deep-image-matching and pycolmap from a branch different from `master`, you can use the following command:
+
+```bash
+sudo docker build --tag deep-image-matching --build-arg BRANCH=dev .
+```
 
 ### Docker troubleshooting
 
