@@ -64,7 +64,7 @@ However, now you can also try installing it with pip, it should work fine.
 If you prefer to use Docker, first, build the image:
 
 ```bash
-  docker build --tag deep-image-matching .
+docker build --tag deep-image-matching .
 ```
 
 Note that the first time you run the command, it will take a while to download the base image and install all the dependencies.
@@ -73,7 +73,7 @@ Once the image is built, you can run it with the following commands.
 On Linux:
 
 ```bash
-sudo docker run --name running-deep-image-matching --mount type=bind,source=/home/username/data,target=/workspace/data --gpus all -it deep-image-matching
+docker run --name running-deep-image-matching --mount type=bind,source=/home/username/data,target=/workspace/data --gpus all -it deep-image-matching
 ```
 
 On Windows (please, use Powershell):
@@ -101,7 +101,7 @@ Once the container is running, you can then open the repo cloned inside the cont
 If you want to build the docker image with deep-image-matching and pycolmap from a branch different from `master`, you can use the following command:
 
 ```bash
-sudo docker build --tag deep-image-matching --build-arg BRANCH=dev .
+docker build --tag deep-image-matching --build-arg BRANCH=dev .
 ```
 
 ### Docker troubleshooting

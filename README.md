@@ -93,7 +93,7 @@ For more information, check the [documentation](https://3dom-fbk.github.io/deep-
 If you prefer using Docker, first, build the image:
 
 ```bash
-  docker build --tag deep-image-matching .
+docker build --tag deep-image-matching .
 ```
 
 Note that the first time you run the command, it will take a while to download the base image and install all the dependencies.
