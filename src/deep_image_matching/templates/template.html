@@ -441,7 +441,7 @@
                     if( !allNodes[nodeId].aligned ){
                         newrow = tbody.insertRow(i + 4)
                         newrow.className = "na"
-                        newrow.insertCell(0).innerHTML = allNodes[nodeId].title;
+                        newrow.insertCell(0).innerHTML = "[" + nodeId + "]  " + allNodes[nodeId].title;
                         i += 1;
                     }
                 }
