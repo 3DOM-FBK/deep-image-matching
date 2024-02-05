@@ -1,4 +1,3 @@
-import threading
 from itertools import permutations
 from pathlib import Path
 
@@ -41,7 +40,6 @@ def export_tie_points(
     feature_path: Path,
     match_path: Path,
     out_dir: Path,
-    match_figure_dir: Path = None,
 ):
 
     feature_path = Path(feature_path)
@@ -79,17 +77,8 @@ def export_tie_points(
                     ):
                         f.write(f"{x0:6f} {y0:6f} {x1:6f} {y1:6f} 1.000000\n")
 
-            threading.Thread(target=lambda: write_matches(file, x0y0, x1y1)).start()
-
-            # make match figures
-            if match_figure_dir is not None:
-                match_figure_dir = Path(match_figure_dir)
-                match_figure_dir.mkdir(exist_ok=True, parents=True)
-                file = project_path / "Homol" / f"Pastis{i0}" / f"{i1}.txt"
-                matches_fig = match_figure_dir / f"{Path(i0).stem}_{Path(i1).stem}.png"
-                threading.Thread(
-                    target=lambda: show_micmac_matches(file, project_path, matches_fig)
-                ).start()
+            # threading.Thread(target=lambda: write_matches(file, x0y0, x1y1)).start()
+            write_matches(file, x0y0, x1y1)
 
 
 def show_micmac_matches(file: Path, image_dir: Path, out: Path = None) -> np.ndarray:
@@ -118,13 +107,23 @@ def show_micmac_matches(file: Path, image_dir: Path, out: Path = None) -> np.nda
 
 if __name__ == "__main__":
 
-    project_path = Path("datasets/micmac")
+    project_path = Path("datasets/cyprus_micmac")
 
     feature_path = project_path / "features.h5"
     match_path = project_path / "matches.h5"
 
     out_feats_dir = project_path / "Homol"
-    match_figure_dir = project_path / "matches"
-    export_tie_points(feature_path, match_path, out_feats_dir, match_figure_dir)
+    export_tie_points(feature_path, match_path, out_feats_dir)
+
+    # make match figures
+    # match_figure_dir = project_path / "matches"
+    # if match_figure_dir is not None:
+    #     match_figure_dir = Path(match_figure_dir)
+    #     match_figure_dir.mkdir(exist_ok=True, parents=True)
+    #     file = project_path / "Homol" / f"Pastis{i0}" / f"{i1}.txt"
+    #     matches_fig = match_figure_dir / f"{Path(i0).stem}_{Path(i1).stem}.png"
+    #     threading.Thread(
+    #         target=lambda: show_micmac_matches(file, project_path, matches_fig)
+    #     ).start()
 
     print("Done!")
