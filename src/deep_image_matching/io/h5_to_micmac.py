@@ -1,5 +1,6 @@
 from itertools import permutations
 from pathlib import Path
+from typing import Tuple
 
 import cv2
 import h5py
@@ -7,7 +8,21 @@ import numpy as np
 from deep_image_matching.visualization import viz_matches_cv2
 
 
-def get_matches(matches, features, key0, key1):
+def get_matches(matches, features, key0, key1) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Retrieve the matches between two images based on the given keys.
+
+    Args:
+        matches (h5py.File): The HDF5 file containing the matches.
+        features (h5py.File): The HDF5 file containing the features.
+        key0 (str): Name of the first image.
+        key1 (str): Name of the second image.
+
+    Returns:
+        tuple: A tuple containing the coordinates of the matches in both images.
+               The first element corresponds to the coordinates in the first image, and the second element corresponds to the coordinates in the second image.
+               If the matches are not present, None is returned for both elements.
+    """
 
     with h5py.File(str(feature_path), "r") as features, h5py.File(
         str(match_path), "r"
@@ -40,7 +55,21 @@ def export_tie_points(
     feature_path: Path,
     match_path: Path,
     out_dir: Path,
-):
+) -> None:
+    """
+    Export tie points from h5 databases containing the features on each images and the index of the matched features to text files in MicMac format.
+
+    Args:
+        feature_path (Path): Path to the features.h5 file.
+        match_path (Path): Path to the matches.h5 file.
+        out_dir (Path): Path to the output directory.
+
+    Raises:
+        FileNotFoundError: If the feature file or match file does not exist.
+
+    Returns:
+        None
+    """
 
     feature_path = Path(feature_path)
     match_path = Path(match_path)
@@ -82,6 +111,17 @@ def export_tie_points(
 
 
 def show_micmac_matches(file: Path, image_dir: Path, out: Path = None) -> np.ndarray:
+    """
+    Display the tie points between two images matched by a MicMac from the matches text file.
+
+    Args:
+        file (Path): The path to the file containing the matches.
+        image_dir (Path): The directory containing the images.
+        out (Path, optional): The path to save the output image. Defaults to None.
+
+    Returns:
+        np.ndarray: The output image with the matches visualized.
+    """
 
     file = Path(file)
     if not file.exists():
