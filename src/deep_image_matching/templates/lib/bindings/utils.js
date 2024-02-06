@@ -1,5 +1,5 @@
 function neighbourhoodHighlight(params) {
-  // console.log("in nieghbourhoodhighlight");
+  // console.log("git local folder");
   allNodes = nodes.get({ returnType: "Object" });
   // originalNodes = JSON.parse(JSON.stringify(allNodes));
   // if something is selected:
