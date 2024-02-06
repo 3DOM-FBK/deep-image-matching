@@ -145,7 +145,7 @@ confs = {
         "extractor": {
             "name": "sift",
         },
-        "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.99},
+        "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.85},
     },
     "loftr": {
         "extractor": {"name": "no_extractor"},

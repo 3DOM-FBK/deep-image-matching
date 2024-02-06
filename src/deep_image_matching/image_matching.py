@@ -166,6 +166,7 @@ class ImageMatching:
         )
         logger.info(f"  Feature extraction method: {self.local_features}")
         logger.info(f"  Matching method: {self.matching_method}")
+        logger.info(f"  CUDA available: {torch.cuda.is_available()}")
 
     @property
     def img_names(self):

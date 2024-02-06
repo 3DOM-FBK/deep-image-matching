@@ -10,14 +10,13 @@
 
 # DEEP-IMAGE-MATCHING
 
-| SIFT                                             | DISK                                               | IMAGES ORIENTATION                                   | DENSE WITH ROMA                                |
-| ------------------------------------------------ | -------------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------- |
+| SIFT                                                  | DISK                                                    | IMAGES ORIENTATION                                        | DENSE WITH ROMA                                     |
+| ----------------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------- |
 | <img src='docs/assets/matches_sift.gif' height="100"> | <img src='docs/assets/matches_joined.gif' height="100"> | <img src='docs/assets/orientation_deep.gif' height="100"> | <img src='docs/assets/roma_dense.gif' height="100"> |
 
-| SIFT                                             | SUPERGLUE                                            |
-| ------------------------------------------------ | ---------------------------------------------------- |
+| SIFT                                                  | SUPERGLUE                                                 |
+| ----------------------------------------------------- | --------------------------------------------------------- |
 | <img src='docs/assets/temple_rsift.gif' height="165"> | <img src='docs/assets/temple_superglue.gif' height="165"> |
-
 
 Multivew matcher for SfM software. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI. Feel free to collaborate!
 
@@ -50,17 +49,17 @@ Key features:
 | Supported SfM software                        |
 | --------------------------------------------- |
 | &check; COLMAP                                |
-| &#x2610; OpenMVG                               |
+| &#x2610; OpenMVG                              |
 | &check; Agisoft Metashape                     |
 | &check; Software that supports bundler format |
 
-## Colab demo 
+## Colab demo
 
 Want to run on a sample dataset? ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/colab_run_from_bash_example.ipynb)
 
 Want to run on your images? ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/colab_run_from_bash_custom_images.ipynb)
 
-## Installation
+## Local Installation
 
 For installing deep-image-matching, first create a conda environment:
 
@@ -84,15 +83,45 @@ Install pycolmap:
 pip install pycolmap
 ```
 
-As [pycolmap](https://github.com/colmap/pycolmap) was released on PyPi only for Linux and macOS (up to version 0.4.0), it is not installed by default with deep-image-matching. 
-From version 0.5.0, pycolmap can be installed on Windows too. However, it needs some testing before including in dependencies of deep-image-matching, as there are some errors on Windows that are blocking deep_image_matching pipeline (while it works completely fine on Linux).
+As [pycolmap](https://github.com/colmap/pycolmap) was released on PyPi only for Linux and macOS (up to version 0.4.0), it is not installed by default with deep-image-matching.
+From version 0.5.0, pycolmap can be installed on Windows too. However, it will demand some testing before being added to the dependencies of deep-image-matching, as there are some errors on Windows that are blocking deep_image_matching pipeline (while it works completely fine on Linux).
 
 For more information, check the [documentation](https://3dom-fbk.github.io/deep-image-matching/installation/).
+
+## Docker Installation
+
+If you prefer using Docker, first, build the image:
+
+```bash
+docker build --tag deep-image-matching .
+```
+
+Note that the first time you run the command, it will take a while to download the base image and install all the dependencies.
+
+Once the image is built, you can run it with the following commands.
+On Linux:
+
+```bash
+docker run --name run-deep-image-matching --mount type=bind,source=/home/username/data,target=/workspace/data --gpus all -it deep-image-matching
+```
+
+On Windows (please use Powershell):
+
+```powershell
+docker run --name run-deep-image-matching --mount type=bind,source=D:\data,target=/workspace/data --gpus all -it deep-image-matching
+```
+
+**replace** `/home/username/data` (on Linux) or `D:\data` (on Winows) with the desired path for mounting a shared volume between the local OS and the docker container. Make sure to use absolute paths. This folder will be used to store alll the input data (images) and outputs.
+
+Include the `--detach` option to run the container in background and/or `--rm` to remove container on exit.
+
+Once the container is running, you can then open the repo cloned inside the container directly in VSCode using `ctrl+alt+O` and selecting the option "attach to running container" (make sure to have the Docker extension installed in VSCode), then enjoy!
+
+If you face any issues, especially on Linux when using the `gpus all` setting, please refer to the [documentation](https://3dom-fbk.github.io/deep-image-matching/installation/).
 
 ## Usage instructions
 
 You can run deep-image-matching from the command line or from the GUI.
-
 
 Use the following command to see all the available options from the CLI:
 
@@ -114,6 +143,7 @@ To run the GUI, you can use the following command:
 python main.py --gui
 
 ```
+
 ## Advanced usage
 
 For advanced usage, you can check the `scripts` directory.
@@ -150,7 +180,9 @@ If you want to contribute to the project, please, check the [contributing guidel
 - [x] add GUI
 - [x] Add pycolmap compatibility
 - [x] Add exporting to Bundler format ready for importing into Metashape (only on Linux and MacOS by using pycolmap)
-- [x] Add visualization for extracted features and matches
+- [x] Dockerization
+- [ ] Workflow to rebuild & publish image to Docker Hub
+- [ ] Add visualization for extracted features and matches
 - [ ] Improve speed
 - [ ] Autoselect tiling grid in order to fit images in GPU memory
 - [x] Add tests, documentation and examples (e.g. colab, ..)
@@ -160,7 +192,6 @@ If you want to contribute to the project, please, check the [contributing guidel
 - [ ] Automatically download weights for all the models
 - [x] Cleanup repository to removed large files from Git history
 - [x] Update README CLI options
-
 
 ## References
 

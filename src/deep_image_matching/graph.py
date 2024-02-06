@@ -16,7 +16,7 @@ def view_graph(db, output_dir, imgs_dir):
     cur = con.cursor()
 
     # Create network
-    nt = Network(height="50vw")
+    nt = Network()
 
     # HTML template for view graph details panel
     current_directory = os.path.dirname(os.path.realpath(__file__))

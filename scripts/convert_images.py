@@ -11,7 +11,7 @@ def load_img(
     path_to_img: str,
 ):
     img = cv2.imread(path_to_img, cv2.IMREAD_ANYDEPTH)
-    if img == None:
+    if img.all() == None:
         logger.warning(
             "It was not possible to load the image with opencv module. Trying with pillow .."
         )

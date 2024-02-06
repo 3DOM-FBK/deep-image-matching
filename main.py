@@ -5,7 +5,6 @@ from deep_image_matching.config import Config
 from deep_image_matching.image_matching import ImageMatching
 from deep_image_matching.io.h5_to_db import export_to_colmap
 from deep_image_matching.parser import parse_cli
-from deep_image_matching.graph import view_graph
 
 # Parse arguments from command line
 args = parse_cli()
@@ -67,8 +66,13 @@ timer.update("export_to_colmap")
 
 # Visualize view graph
 if config.general["graph"]:
-    view_graph(database_path, output_dir, imgs_dir)
-    timer.update("show view graph")
+
+    try:
+        graph = import_module("deep_image_matching.graph")
+        graph.view_graph(database_path, output_dir, imgs_dir)
+        timer.update("show view graph")
+    except ImportError:
+        logger.error("pyvis is not available. Unable to visualize view graph.")
 
 # If --skip_reconstruction is not specified, run reconstruction
 if not config.general["skip_reconstruction"]:
@@ -81,7 +85,7 @@ if not config.general["skip_reconstruction"]:
 
     if use_pycolmap:
         # import reconstruction module
-        reconstruction = import_module("src.deep_image_matching.reconstruction")
+        reconstruction = import_module("deep_image_matching.reconstruction")
 
         # Define database path
         database = output_dir / "database_pycolmap.db"
