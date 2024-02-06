@@ -41,7 +41,7 @@
                 </br>
 
                 Nodes are positioned using the <b>Fruchterman-Reingold</b> force-directed algorithm, the closer the nodes, the stronger the connection. Images are grouped into <b>communities</b>. Nodes share more matches with other nodes inside the community
-                and fewer with nodes outside.</br>
+                than with nodes outside.</br>
                 <b>Not aligned images</b> (if available) are shown in the list below and on the side of the graph.
 
             </p>
@@ -130,6 +130,13 @@
                 "configure": {
                     "enabled": false
                 },
+                    "nodes": {
+                        "borderWidth": 1,
+                        "borderWidthSelected": 2,
+                        "font": {
+                            "size": 6
+                        }
+                    },
                 "edges": {
                     "color": {
                         "inherit": true
@@ -182,6 +189,18 @@
                 if (document.getElementById("imagePopup") != null)
                     imagePopup.style.transform = "scale(" + params.scale + ")";
             });
+
+                //   network.once("stabilizationIterationsDone", function() {
+                //     network.setOptions( { physics: false } );
+                    
+                //     });
+                {% if nodes|length > 30 %}
+                network.setOptions( {
+                                nodes: {
+                                     opacity: 0.5
+                                    }
+                                });
+                {% endif %}
 
             // showing the popup
             function showImagePopup(params) {
