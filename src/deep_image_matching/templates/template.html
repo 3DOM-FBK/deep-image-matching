@@ -108,12 +108,8 @@
             var container = document.getElementById('mynetwork');
 
             // parsing and collecting nodes and edges from the python
-            nodes = new vis.DataSet({
-                {nodes|tojson}
-            });
-            edges = new vis.DataSet({
-                {edges|tojson}
-            });
+            nodes = new vis.DataSet({{nodes|tojson}});
+            edges = new vis.DataSet({{edges|tojson}});
 
             nodeColors = {};
             allNodes = nodes.get({
@@ -126,15 +122,10 @@
                 returnType: "Object"
             });
             // adding nodes and edges to the graph
-            data = {
-                nodes: nodes,
-                edges: edges
-            };
+            data = {nodes: nodes,edges: edges};
 
-            var options = {
-                {options|safe}
-            };
-            net = options
+            var options = {{options|safe}};
+            net = options;
             options = {
                 "configure": {
                     "enabled": false
@@ -193,7 +184,7 @@
             });
 
             // showing the popup
-            function showPopup(params) {
+            function showImagePopup(params) {
                 // get the data from the vis.DataSet
                 nodeId = params.nodes[0];
                 var nodeData = nodes.get(nodeId);
