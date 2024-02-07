@@ -51,6 +51,12 @@ def get_matches(matches, features, key0, key1) -> Tuple[np.ndarray, np.ndarray]:
     return x0y0, x1y1
 
 
+def write_matches(file, x0y0, x1y1):
+    with open(file, "w") as f:
+        for x0, y0, x1, y1 in zip(x0y0[:, 0], x0y0[:, 1], x1y1[:, 0], x1y1[:, 1]):
+            f.write(f"{x0:6f} {y0:6f} {x1:6f} {y1:6f} 1.000000\n")
+
+
 def export_tie_points(
     feature_path: Path,
     match_path: Path,
@@ -89,8 +95,10 @@ def export_tie_points(
             i0_dir = out_dir / f"Pastis{i0}"
             i0_dir.mkdir(exist_ok=True, parents=True)
 
+            # Define the file to write the matches
             file = i0_dir / (i1 + ".txt")
 
+            # Get the matches between the two images
             if i0 in matches.keys() and i1 in matches[i0].keys():
                 x0y0, x1y1 = get_matches(features, matches, i0, i1)
             else:
@@ -98,13 +106,6 @@ def export_tie_points(
 
             if x0y0 is None or x1y1 is None:
                 continue
-
-            def write_matches(file, x0y0, x1y1):
-                with open(file, "w") as f:
-                    for x0, y0, x1, y1 in zip(
-                        x0y0[:, 0], x0y0[:, 1], x1y1[:, 0], x1y1[:, 1]
-                    ):
-                        f.write(f"{x0:6f} {y0:6f} {x1:6f} {y1:6f} 1.000000\n")
 
             # threading.Thread(target=lambda: write_matches(file, x0y0, x1y1)).start()
             write_matches(file, x0y0, x1y1)
@@ -147,7 +148,7 @@ def show_micmac_matches(file: Path, image_dir: Path, out: Path = None) -> np.nda
 
 if __name__ == "__main__":
 
-    project_path = Path("datasets/cyprus_micmac")
+    project_path = Path("datasets/cyprus_micmac2")
 
     feature_path = project_path / "features.h5"
     match_path = project_path / "matches.h5"
