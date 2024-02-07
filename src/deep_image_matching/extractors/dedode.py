@@ -4,7 +4,6 @@ import torch
 import torchvision.transforms as transforms
 
 from ..thirdparty.DeDoDe.DeDoDe import dedode_descriptor_G, dedode_detector_L
-from ..thirdparty.DeDoDe.DeDoDe.utils import *
 from .extractor_base import ExtractorBase, FeaturesDict
 
 
