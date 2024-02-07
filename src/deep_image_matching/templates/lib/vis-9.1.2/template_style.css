@@ -64,6 +64,15 @@ tr.na {
     display: none;
 }
 
+tr.comm {
+    display: none;
+}
+
+.comm td {
+    padding-left: 20px;
+    font-size:small;
+    cursor: pointer;
+}
 .na td{
     padding-left: 20px;
     font-size: small;
