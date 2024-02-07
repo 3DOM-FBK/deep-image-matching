@@ -107,6 +107,8 @@ class SuperPoint(nn.Module):
 
     """
 
+    weights_url = "https://github.com/cvg/LightGlue/releases/download/v0.1_arxiv/superpoint_v1.pth"  # noqa
+
     default_config = {
         "descriptor_dim": 256,
         "nms_radius": 4,
@@ -142,8 +144,11 @@ class SuperPoint(nn.Module):
 
         # path = Path(__file__).parent / "weights/superpoint_v1.pth"
         # self.load_state_dict(torch.load(str(path)))
-        url = "https://github.com/cvg/LightGlue/releases/download/v0.1_arxiv/superpoint_v1.pth"  # noqa
-        self.load_state_dict(torch.hub.load_state_dict_from_url(url))
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.load_state_dict(
+            torch.hub.load_state_dict_from_url(self.weights_url),
+            map_location=device,
+        )
 
         mk = self.config["max_keypoints"]
         if mk == 0 or mk < -1:

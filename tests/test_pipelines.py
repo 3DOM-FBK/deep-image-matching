@@ -105,6 +105,12 @@ def test_aliked_lg(data_dir, script):
     )
 
 
+def test_dedode_nn(data_dir, script):
+    run_pipeline(
+        f"python {script} --dir {data_dir} --pipeline dedode+kornia_matcher --strategy sequential --overlap 1 --skip_reconstruction --force"
+    )
+
+
 def test_orb(data_dir, script):
     run_pipeline(
         f"python {script} --dir {data_dir} --pipeline orb+kornia_matcher --strategy sequential --overlap 1 --skip_reconstruction --force"
