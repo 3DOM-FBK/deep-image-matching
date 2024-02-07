@@ -52,13 +52,13 @@
                     <tr class="inforow">
                         <td>Edges: </td>
                     </tr>
-                    <tr class="inforow">
+                    <tr class="inforow"  onclick="toggleRows(this, 'comm')">
                         <td>Communities: </td>
                     </tr>
                     <tr class="inforow">
                         <td>Aligned images: </td>
                     </tr>
-                    <tr class="inforow" onclick="toggleRows(this)">
+                    <tr class="inforow" onclick="toggleRows(this, 'na')">
                         <td>Not aligned images: </td>
                     </tr>
                 </tbody>
@@ -283,15 +283,27 @@
             tbody.rows[2].cells[0].innerHTML += net["properties"]["aligned"];
             tbody.rows[3].cells[0].innerHTML += net["properties"]["not_aligned"];
 
+            j = 0
+                if (net["properties"]["communities"].length > 1){
+                    tbody.rows[1].cells[0].innerHTML +="    ▼"
+                    tbody.rows[1].cells[0].style.cursor = "pointer";
+                    for ( c in net["properties"]["communities"]) {
+                        newrow = tbody.insertRow(j + 2);
+                        newrow.className = "comm";
+                        newrow.style.color = network.groups.get(j).color.border;
+                        newrow.insertCell(0).innerHTML = "#" + (j+1) + " size: " + net["properties"]["communities"][c];
+                        j += 1;
+                    }
+                }
             if (net["properties"]["not_aligned"] != 0) {
-                tbody.rows[3].cells[0].innerHTML += "    ▼"
-                tbody.rows[3].cells[0].style.cursor = "pointer";
+                tbody.rows[3 + j].cells[0].innerHTML += "    ▼"
+                tbody.rows[3 + j].cells[0].style.cursor = "pointer";
             }
 
             var i = 0;
             for (nodeId in allNodes) {
                 if (!allNodes[nodeId].aligned) {
-                    newrow = tbody.insertRow(i + 4)
+                    newrow = tbody.insertRow(i + j + 4)
                     newrow.className = "na"
                     newrow.insertCell(0).innerHTML = "[" + nodeId + "]  " + allNodes[nodeId].title;
                     i += 1;
@@ -299,11 +311,11 @@
             }
         }
 
-        function toggleRows(clickedRow) {
+        function toggleRows(clickedRow, className) {
             var rowsToToggle = clickedRow.nextElementSibling;
 
             // Toggle the display property of all rows with class 'na' below the clicked row
-            while (rowsToToggle && rowsToToggle.classList.contains('na')) {
+            while (rowsToToggle && rowsToToggle.classList.contains(className)) {
                 if (rowsToToggle.style.display === 'none' || rowsToToggle.style.display === '') {
                     rowsToToggle.style.display = 'table-row';
                 } else {
