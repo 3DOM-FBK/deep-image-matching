@@ -3,7 +3,7 @@
 ## Requirements
 
 Deep-image-matching is tested on Ubuntu 22.04 and Windows 10 with `Python 3.9`. It is strongly recommended to have a NVIDIA GPU with at least 8GB of memory.
-Due to dependencies issues, it is recommended to use `Python 3.9` on Windows and MacOS, while on Linux you can also use `Python 3.10` (see [pydegensac](#pydegensac).
+Due to dependencies issues, it is recommended to use `Python 3.9` on Windows and MacOS, while on Linux you can also use `Python 3.10` (see [pydegensac](#pydegensac)).
 
 All the dependencies are listed in the `pyproject.toml` file.
 
