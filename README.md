@@ -8,9 +8,10 @@
 
 
 <h3>
-  <img align="center" height="100" src="docs/assets/DIM3.1.png">
-  <span style="font-size: 24px;">DEEP-IMAGE-MATCHING</span>
+  <img align="center" height="140" src="docs/assets/DIM3.1.png">
+  <span style="font-size: 75px;">DEEP-IMAGE-MATCHING</span>
 </h3>
+<div align="left">
 
 | SIFT                                                  | DISK                                                    | IMAGES ORIENTATION                                        | DENSE WITH ROMA                                     |
 | ----------------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------- |
