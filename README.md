@@ -8,6 +8,12 @@
  
 </div>
 
+<p align="center">
+  <img src="docs/assets/DIM3.1.png" alt="Logo" width="80" height="80">
+</p>
+
+<h1 align="center">DEEP-IMAGE-MATCHING</h1>
+
 # DEEP-IMAGE-MATCHING
 
 | SIFT                                                  | DISK                                                    | IMAGES ORIENTATION                                        | DENSE WITH ROMA                                     |
