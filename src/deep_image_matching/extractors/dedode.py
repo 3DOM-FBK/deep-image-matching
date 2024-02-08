@@ -27,14 +27,15 @@ class DeDoDe(ExtractorBase):
         cfg = self._config.get("extractor")
 
         # Load extractor and descriptor
+        device = torch.device(self._device if torch.cuda.is_available() else "cpu")
         self.detector = dedode_detector_L(
             weights=torch.hub.load_state_dict_from_url(
-                self.dedode_detector_L_url, map_location=self._device
+                self.dedode_detector_L_url, map_location=device
             )
         )
         self.descriptor = dedode_descriptor_G(
             weights=torch.hub.load_state_dict_from_url(
-                self.dedode_descriptor_G_url, map_location=self._device
+                self.dedode_descriptor_G_url, map_location=device
             )
         )
 
