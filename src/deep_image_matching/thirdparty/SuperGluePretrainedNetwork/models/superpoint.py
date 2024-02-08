@@ -146,8 +146,7 @@ class SuperPoint(nn.Module):
         # self.load_state_dict(torch.load(str(path)))
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.load_state_dict(
-            torch.hub.load_state_dict_from_url(self.weights_url),
-            map_location=device,
+            torch.hub.load_state_dict_from_url(self.weights_url, map_location=device),
         )
 
         mk = self.config["max_keypoints"]
