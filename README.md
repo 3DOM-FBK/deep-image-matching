@@ -7,7 +7,8 @@
  )](https://3dom-fbk.github.io/deep-image-matching/)
 
 
-<h3><img align="center" height="30" src="docs/assets/DIM3.1.png"> DEEP-IMAGE-MATCHING</h3>
+<h3><img align="center" height="100" src="docs/assets/DIM3.1.png"> DEEP-IMAGE-MATCHING</h3>
+<div align="left">
 
 | SIFT                                                  | DISK                                                    | IMAGES ORIENTATION                                        | DENSE WITH ROMA                                     |
 | ----------------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------- |
