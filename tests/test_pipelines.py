@@ -126,7 +126,7 @@ def test_keynet(data_dir, script):
 def test_dedode_nn(data_dir, script):
     if not torch.cuda.is_available():
         pytest.skip(
-            "Due to some bugs in ROMA code, ROMA is not available without CUDA GPU."
+            "Due to some bugs in DeDoDe code, DeDoDe is not available without CUDA GPU."
         )
     run_pipeline(
         f"python {script} --dir {data_dir} --pipeline dedode+kornia_matcher --strategy sequential --overlap 1 --skip_reconstruction --force"
