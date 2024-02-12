@@ -32,21 +32,20 @@ def view_graph(db, output_dir, imgs_dir):
     res = cur.execute("SELECT pair_id, rows FROM two_view_geometries")
     weight_sum = 0
     for pair_id, rows in res.fetchall():
-        if rows != 0:
-            img1, img2 = pair_id_to_image_ids(pair_id)
-            img1 = int(img1)
-            img2 = int(img2)
-            G.add_edge(img1, img2, matches=rows)
-            weight_sum += rows
+        img1, img2 = pair_id_to_image_ids(pair_id)
+        img1 = int(img1)
+        img2 = int(img2)
+        G.add_edge(img1, img2, matches=rows)
+        weight_sum += rows
 
-    avg_weight = weight_sum / len(G.edges())
+    # avg_weight = weight_sum / len(G.edges())
 
-    # Load images for small networks
-    if G.number_of_nodes() <= 30:
-        for n in G.nodes():
-            G.nodes[n]["shape"] = "image"
-            G.nodes[n]["label"] = G.nodes[n]["title"]
-            G.nodes[n]["image"] = os.path.join(imgs_dir, G.nodes[n]["label"])
+    # # Load images for small networks
+    # if G.number_of_nodes() <= 30:
+    #     for n in G.nodes():
+    #         G.nodes[n]["shape"] = "image"
+    #         G.nodes[n]["label"] = G.nodes[n]["title"]
+    #         G.nodes[n]["image"] = os.path.join(imgs_dir, G.nodes[n]["label"])
 
     # Create list of aligned images and
     # add NA prefix for not aligned images
@@ -103,11 +102,13 @@ def view_graph(db, output_dir, imgs_dir):
     # Compute communities using modularity
     C = nx.community.greedy_modularity_communities(AG, "matches")
     i = 0
+    Cs = []
     for c in C:
         Cg = G.subgraph(c)  # Draw communities with different colors
         for n in Cg.nodes():
             G.nodes[n]["group"] = i
         i += 1
+        Cs.append(Cg.number_of_nodes())
 
     nt.from_nx(G)
     nt.toggle_physics(False)
@@ -124,7 +125,7 @@ def view_graph(db, output_dir, imgs_dir):
       }}
     }}
     """.format(
-            G.number_of_edges(), len(aligned_nodes), len(na_nodes), i
+            G.number_of_edges(), len(aligned_nodes), len(na_nodes), Cs
         )
     )
 

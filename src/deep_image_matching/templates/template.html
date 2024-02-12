@@ -37,11 +37,12 @@
                 ⓘ </br>
                 Hover on nodes to show the <b>image name</b>.</br>
                 Click on nodes to show the <b>image preview</b> and to highlight connections.</br>
-                Hover on edges to show the number of <b>matches</b> between a pair of images.</br>
-                </br>
+                Hover on edges to show the number of <b>matches</b> between a pair of images.</br></br>
 
-                Nodes are positioned using the <b>Fruchterman-Reingold</b> force-directed algorithm, the closer the nodes, the stronger the connection. Images are grouped into <b>communities</b>. Nodes share more matches with other nodes inside the community
-                than with nodes outside.</br>
+                Nodes are positioned using the <b>Fruchterman-Reingold</b> force-directed algorithm, the closer the nodes, the stronger the connection.
+                Images are grouped into <b>communities</b>. Nodes share more matches with other nodes inside the community and fewer with nodes outside.</br></br>
+                Click on a community in the list to <b>cluster</b> the graph.</br>
+                Click on the cluster to <b>reopen</b> the community. </br> </br> 
                 <b>Not aligned images</b> (if available) are shown in the list below and on the side of the graph.
 
             </p>
@@ -96,6 +97,7 @@
         var network;
         var container;
         var options, data;
+        var positions;
         var net;
         var filter = {
             item: '',
@@ -166,10 +168,18 @@
 
             network = new vis.Network(container, data, options);
 
-            network.on("selectNode", function(params) {
-                showImagePopup(params);
+            positions = network.getPositions();
+
+            network.on("selectNode", function (params){
+                if (network.isCluster(params.nodes[0]) == true) {
+                    network.openCluster(params.nodes[0], {releaseFunction: releaseFunction});
+                }else
+                    showImagePopup(params);
             });
 
+            function releaseFunction(){
+                return positions;
+            }
 
             network.on("dragStart", function() {
                 if (document.getElementById("imagePopup") != null)
@@ -212,16 +222,12 @@
                 imagePopup.id = 'imagePopup';
                 container.appendChild(imagePopup);
 
-                {% if nodes | length > 30 %}
                 const path = document.baseURI;
                 path_array = path.split('/');
                 path_array.splice(0, 2);
                 path_array.splice(-2);
                 img_path = path_array.join('/').concat('/images/');
                 imagePopup.style.backgroundImage = "url(" + img_path.concat(nodeData.title) + ")"; 
-                {% else %}
-                imagePopup.style.backgroundImage = "url(" + nodeData.image + ")"; 
-                {% endif %}
 
                 // get the position of the node
                 var posCanvas = network.getPositions([nodeId])[nodeId];
@@ -279,19 +285,23 @@
             const table = sidePanel.children[2];
             const tbody = table.getElementsByTagName('tbody')[0];
             tbody.rows[0].cells[0].innerHTML += net["properties"]["edges"];
-            tbody.rows[1].cells[0].innerHTML += net["properties"]["communities"];
+            tbody.rows[1].cells[0].innerHTML += net["properties"]["communities"].length;
             tbody.rows[2].cells[0].innerHTML += net["properties"]["aligned"];
             tbody.rows[3].cells[0].innerHTML += net["properties"]["not_aligned"];
 
             j = 0
                 if (net["properties"]["communities"].length > 1){
+                    //document.getElementById("cluster").innerHTML += "<input class='comm_button' type='button' onclick='clusterByCommunity()' value='Cluster by community' />";
                     tbody.rows[1].cells[0].innerHTML +="    ▼"
                     tbody.rows[1].cells[0].style.cursor = "pointer";
-                    for ( c in net["properties"]["communities"]) {
+                    for (let index=0; index< net["properties"]["communities"].length; index++) {
                         newrow = tbody.insertRow(j + 2);
                         newrow.className = "comm";
-                        newrow.style.color = network.groups.get(j).color.border;
-                        newrow.insertCell(0).innerHTML = "#" + (j+1) + " size: " + net["properties"]["communities"][c];
+                        newcell = newrow.insertCell(0);
+                        newcell.innerHTML = "<input type='button' id='btn_" + index + "' class='comm_button' style='color:" + network.groups.get(index).color.border + ";' value='#" + (j+1) +  " size: "+ net['properties']['communities'][index] + "'/>";
+                        document.getElementById("btn_" + index).addEventListener("click", function() {
+                            clusterByCommunity(index, network.groups.get(index).color);
+                        }, false);
                         j += 1;
                     }
                 }
