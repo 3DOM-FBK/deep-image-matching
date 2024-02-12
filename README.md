@@ -5,10 +5,13 @@
  
   [![GitHub Release](https://img.shields.io/github/v/release/3DOM-FBK/deep-image-matching)](https://github.com/3DOM-FBK/deep-image-matching/releases) [![Static Badge](https://img.shields.io/badge/docs-DeepImageMatching-blue
  )](https://3dom-fbk.github.io/deep-image-matching/)
- 
-</div>
 
-# DEEP-IMAGE-MATCHING
+
+<h3>
+  <img align="center" height="140" src="docs/assets/DIM3.1.png">
+  <span style="font-size: 75px;">DEEP-IMAGE-MATCHING</span>
+</h3>
+<div align="left">
 
 | SIFT                                                  | DISK                                                    | IMAGES ORIENTATION                                        | DENSE WITH ROMA                                     |
 | ----------------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------- |
