@@ -1,0 +1,53 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: "Morelli"
+    given-names: "Luca"
+    orcid: "0000-0001-7180-2279"
+  - family-names: "Ioli"
+    given-names: "Francesco"
+    orcid: "0000-0001-7429-891X"
+  - family-names: "Maiwald"
+    given-names: "Ferdinand"
+    orcid: "0000-0002-2456-9731"
+  - family-names: "Mazzacca"
+    given-names: "Gabriele"
+  - family-names: "Menna"
+    given-names: "Fabio"
+    orcid: "0000-0002-5365-8813"
+  - family-names: "Remondino"
+    given-names: "Fabio"
+    orcid: "0000-0001-6097-5342"
+title: "DEEP-IMAGE-MATCHING: A TOOLBOX FOR MULTIVIEW IMAGE MATCHING OF COMPLEX SCENARIOS"
+version: 0.1.0
+doi: 10.5194/isprs-archives-XLVIII-2-W4-2024-309-2024
+date-released: 2024-02-15
+url: "https://isprs-archives.copernicus.org/articles/XLVIII-2-W4-2024/309/2024"
+
+preferred-citation:
+  type: article
+  authors:
+    - family-names: "Morelli"
+      given-names: "Luca"
+      orcid: "0000-0001-7180-2279"
+    - family-names: "Ioli"
+      given-names: "Francesco"
+      orcid: "0000-0001-7429-891X"
+    - family-names: "Maiwald"
+      given-names: "Ferdinand"
+      orcid: "0000-0002-2456-9731"
+    - family-names: "Mazzacca"
+      given-names: "Gabriele"
+    - family-names: "Menna"
+      given-names: "Fabio"
+      orcid: "0000-0002-5365-8813"
+    - family-names: "Remondino"
+      given-names: "Fabio"
+      orcid: "0000-0001-6097-5342"
+  doi: "10.1007/s41064-023-00272-w"
+  journal: "The International Archives of the Photogrammetry, Remote Sensing and Spatial Information Sciences"
+  start: 309 # First page number
+  end: 316 # Last page number
+  title: "DEEP-IMAGE-MATCHING: A TOOLBOX FOR MULTIVIEW IMAGE MATCHING OF COMPLEX SCENARIOS"
+  volume: XLVIII-2/W4-2024
+  year: 2024

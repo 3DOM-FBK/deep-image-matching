@@ -6,7 +6,6 @@
   [![GitHub Release](https://img.shields.io/github/v/release/3DOM-FBK/deep-image-matching)](https://github.com/3DOM-FBK/deep-image-matching/releases) [![Static Badge](https://img.shields.io/badge/docs-DeepImageMatching-blue
  )](https://3dom-fbk.github.io/deep-image-matching/)
 
-
 <h3>
   <img align="center" height="140" src="docs/assets/DIM3.1.png">
   <span style="font-size: 75px;">DEEP-IMAGE-MATCHING</span>
@@ -53,6 +52,7 @@ Key features:
 | --------------------------------------------- |
 | &check; COLMAP                                |
 | &#x2610; OpenMVG                              |
+| &check; MICMAC                                |
 | &check; Agisoft Metashape                     |
 | &check; Software that supports bundler format |
 
@@ -201,6 +201,18 @@ If you want to contribute to the project, please, check the [contributing guidel
 If you find the repository useful for your work consider citing the papers:
 
 ```bibtex
+@Article{morelli2024_deep_image_matching,
+AUTHOR = {Morelli, L. and Ioli, F. and Maiwald, F. and Mazzacca, G. and Menna, F. and Remondino, F.},
+TITLE = {DEEP-IMAGE-MATCHING: A TOOLBOX FOR MULTIVIEW IMAGE MATCHING OF COMPLEX SCENARIOS},
+JOURNAL = {The International Archives of the Photogrammetry, Remote Sensing and Spatial Information Sciences},
+VOLUME = {XLVIII-2/W4-2024},
+YEAR = {2024},
+PAGES = {309--316},
+DOI = {10.5194/isprs-archives-XLVIII-2-W4-2024-309-2024}
+}
+```
+
+```bibtex
 @article{morelli2022photogrammetry,
   title={PHOTOGRAMMETRY NOW AND THEN--FROM HAND-CRAFTED TO DEEP-LEARNING TIE POINTS--},
   author={Morelli, Luca and Bellavia, Fabio and Menna, Fabio and Remondino, Fabio},
@@ -213,14 +225,13 @@ If you find the repository useful for your work consider citing the papers:
 ```
 
 ```bibtex
-@article{ioli2023replicable,
-  title={A Replicable Open-Source Multi-Camera System for Low-Cost 4d Glacier Monitoring},
-  author={Ioli, F and Bruno, E and Calzolari, D and Galbiati, M and Mannocchi, A and Manzoni, P and Martini, M and Bianchi, A and Cina, A and De Michele, C and others},
-  journal={The International Archives of the Photogrammetry, Remote Sensing and Spatial Information Sciences},
-  volume={48},
-  pages={137--144},
-  year={2023},
-  publisher={Copernicus GmbH}
+@article{ioli2024,
+  title={Deep Learning Low-cost Photogrammetry for 4D Short-term Glacier
+Dynamics Monitoring},
+  author={Ioli, Francesco and Dematteis, Nicolò and Giordan, Daniele and Nex, Francesco and Pinto Livio},
+  journal={PFG – Journal of Photogrammetry, Remote Sensing and Geoinformation Science},
+  year={2024},
+  DOI = {10.1007/s41064-023-00272-w}
 }
 ```
 
