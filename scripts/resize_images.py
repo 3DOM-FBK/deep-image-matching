@@ -16,11 +16,10 @@ def resize_images(input_folder, output_folder, new_resolution):
 
             # Open image and resize
             with Image.open(input_path) as img:
-                resized_img = img.resize(new_resolution, Image.ANTIALIAS)
+                resized_img = img.resize(new_resolution, Image.Resampling.LANCZOS)
 
                 # Save the resized image to the output folder
                 resized_img.save(output_path)
-
 
 def main():
     parser = argparse.ArgumentParser(description="Resize images in a folder.")
