@@ -8,10 +8,9 @@ import numpy as np
 import PIL
 from PIL import Image
 
-from .. import logger
+from .. import IMAGE_EXT, logger
 from .sensor_width_database import SensorWidthDatabase
 
-valid_image_ext = [".jpg", ".JPG", ".png", ".PNG", ".tif", "TIF"]
 Image.MAX_IMAGE_PIXELS = None
 
 
@@ -80,7 +79,7 @@ class Image:
 
     """
 
-    IMAGE_EXT = valid_image_ext
+    IMAGE_EXT = IMAGE_EXT
     DATE_FMT = "%Y-%m-%d"
     TIME_FMT = "%H:%M:%S"
     DATETIME_FMT = "%Y:%m:%d %H:%M:%S"
@@ -359,7 +358,7 @@ class Image:
 
 
 class ImageList:
-    IMAGE_EXT = valid_image_ext
+    IMAGE_EXT = IMAGE_EXT
 
     def __init__(self, img_dir: Path):
         if not img_dir.exists():
