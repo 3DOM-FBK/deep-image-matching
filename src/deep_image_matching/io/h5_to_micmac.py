@@ -1,7 +1,7 @@
+import argparse
 import shutil
 import subprocess
-from itertools import combinations, permutations
-from multiprocessing import Pool
+from itertools import permutations
 from pathlib import Path
 from typing import Tuple
 
@@ -29,13 +29,13 @@ def execute(cmd, cwd=None):
         raise subprocess.CalledProcessError(return_code, cmd)
 
 
-def get_matches(matches, features, key0, key1) -> Tuple[np.ndarray, np.ndarray]:
+def get_matches(feature_path, match_path, key0, key1) -> Tuple[np.ndarray, np.ndarray]:
     """
     Retrieve the matches between two images based on the given keys.
 
     Args:
-        matches (h5py.File): The HDF5 file containing the matches.
-        features (h5py.File): The HDF5 file containing the features.
+        match_path (Path): Path to the HDF5 file containing the matches.
+        features (Path): Path to the HDF5 file containing the features.
         key0 (str): Name of the first image.
         key1 (str): Name of the second image.
 
@@ -76,158 +76,6 @@ def write_matches(file, x0y0, x1y1):
     with open(file, "w") as f:
         for x0, y0, x1, y1 in zip(x0y0[:, 0], x0y0[:, 1], x1y1[:, 0], x1y1[:, 1]):
             f.write(f"{x0:6f} {y0:6f} {x1:6f} {y1:6f} 1.000000\n")
-
-
-def export_tie_points(
-    feature_path: Path,
-    match_path: Path,
-    out_dir: Path,
-) -> None:
-    """
-    Export tie points from h5 databases containing the features on each images and the index of the matched features to text files in MicMac format.
-
-    Args:
-        feature_path (Path): Path to the features.h5 file.
-        match_path (Path): Path to the matches.h5 file.
-        out_dir (Path): Path to the output directory.
-
-    Raises:
-        FileNotFoundError: If the feature file or match file does not exist.
-
-    Returns:
-        None
-    """
-
-    feature_path = Path(feature_path)
-    match_path = Path(match_path)
-    out_dir = Path(out_dir)
-
-    if not feature_path.exists():
-        raise FileNotFoundError(f"File {feature_path} does not exist")
-    if not match_path.exists():
-        raise FileNotFoundError(f"File {match_path} does not exist")
-    out_dir.mkdir(exist_ok=True, parents=True)
-
-    with h5py.File(feature_path, "r") as features:
-        keys = permutations(features.keys(), 2)
-
-    with h5py.File(match_path, "r") as matches:
-        for i0, i1 in keys:
-            i0_dir = out_dir / f"Pastis{i0}"
-            i0_dir.mkdir(exist_ok=True, parents=True)
-
-            # Define the file to write the matches
-            file = i0_dir / (i1 + ".txt")
-
-            # Get the matches between the two images
-            if i0 in matches.keys() and i1 in matches[i0].keys():
-                x0y0, x1y1 = get_matches(features, matches, i0, i1)
-            else:
-                x1y1, x0y0 = get_matches(features, matches, i1, i0)
-
-            if x0y0 is None or x1y1 is None:
-                continue
-                # If no matches are found, write a file with a single fake match with zeros image coordinates
-                # NOTE: This is a workaround to avoid MicMac from crashing when no matches are found, these matches should be discarded as outliers during the bundle adjustment
-                # x0y0 = np.zeros((1, 2))
-                # x1y1 = np.zeros((1, 2))
-
-            # threading.Thread(target=lambda: write_matches(file, x0y0, x1y1)).start()
-            write_matches(file, x0y0, x1y1)
-
-    logger.info(f"Exported tie points to {out_dir}")
-
-
-def export_to_micmac(
-    image_dir: Path,
-    features_h5: Path,
-    matches_h5: Path,
-    out_dir: Path = "micmac",
-    img_ext: str = IMAGE_EXT,
-    run_Tapas: bool = False,
-    micmac_path: Path = None,
-):
-    image_dir = Path(image_dir)
-    feature_path = Path(features_h5)
-    match_path = Path(matches_h5)
-    out_dir = Path(out_dir)
-
-    if not image_dir.exists():
-        raise FileNotFoundError(f"Image directory {image_dir} does not exist")
-    if not feature_path.exists():
-        raise FileNotFoundError(f"Feature file {feature_path} does not exist")
-    if not match_path.exists():
-        raise FileNotFoundError(f"Matches file {match_path} does not exist")
-    out_dir.mkdir(exist_ok=True, parents=True)
-
-    # Export the tie points
-    homol_dir = out_dir / "Homol"
-    export_tie_points(feature_path, match_path, homol_dir)
-
-    # Check if some images have no matches and remove them
-    images = sorted([e for e in image_dir.glob("*") if e.suffix in img_ext])
-    for img in images:
-        mtch_dir = homol_dir / f"Pastis{img.name}"
-        if list(mtch_dir.glob("*.txt")):
-            shutil.copyfile(img, out_dir / img.name)
-        else:
-            logger.info(f"No matches found for image {img.name}, removing it")
-            shutil.rmtree(mtch_dir)
-
-    # Check that the number of images is consistent with the number of matches
-    images = sorted([e for e in out_dir.glob("*") if e.suffix in img_ext])
-    matches = sorted([e for e in homol_dir.glob("*") if e.is_dir()])
-    if len(images) != len(matches):
-        raise Exception(
-            f"The number of images ({len(images)}) is different from the number of matches ({len(matches)})"
-        )
-
-    logger.info(
-        f"Succesfully exported images and tie points ready for MICMAC processing to {out_dir}"
-    )
-
-    if run_Tapas:
-        # Try to run MicMac
-        logger.info("Try to run relative orientation with MicMac...")
-        try:
-            # Try to find the MicMac executable
-            if micmac_path is None:
-                logger.info("MicMac path not specified, trying to find it...")
-                micmac_path = shutil.which("mm3d")
-                if not micmac_path:
-                    raise FileNotFoundError("MicMac path not found")
-                logger.info(f"Found MicMac executable at {micmac_path}")
-                # Check if the executable is found and can be run
-                subprocess.run(
-                    [micmac_path],
-                    check=True,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.STDOUT,
-                )
-        except FileNotFoundError as e:
-            logger.error(
-                f"Unable to find MicMac executable, skipping reconstruction.Please manually specify the path to the MicMac executable. {e}"
-            )
-        except subprocess.CalledProcessError as e:
-            logger.error(f"Error running MicMac Tapas, skipping reconstruction.\n{e}")
-
-        # If micmac can be run correctly, try to run Tapas
-        logger.info("Running MicMac Tapas...")
-        img_list = " ".join([str(e) for e in images])
-        cmd = [
-            micmac_path,
-            "Tapas",
-            "RadialStd",
-            ".*JPG",
-            "Out=Calib",
-            "ExpTxt=1",
-        ]
-
-        execution = execute(cmd, out_dir)
-        for line in execution:
-            print(line, end="")
-
-        logger.info("Relative orientation with MicMac done!")
 
 
 def show_micmac_matches(
@@ -278,33 +126,265 @@ def show_micmac_matches(
     return out
 
 
+def export_tie_points(
+    feature_path: Path,
+    match_path: Path,
+    out_dir: Path,
+) -> None:
+    """
+    Export tie points from h5 databases containing the features on each images and the index of the matched features to text files in MicMac format.
+
+    Args:
+        feature_path (Path): Path to the features.h5 file.
+        match_path (Path): Path to the matches.h5 file.
+        out_dir (Path): Path to the output directory.
+
+    Raises:
+        FileNotFoundError: If the feature file or match file does not exist.
+
+    Returns:
+        None
+    """
+
+    feature_path = Path(feature_path)
+    match_path = Path(match_path)
+    out_dir = Path(out_dir)
+
+    if not feature_path.exists():
+        raise FileNotFoundError(f"File {feature_path} does not exist")
+    if not match_path.exists():
+        raise FileNotFoundError(f"File {match_path} does not exist")
+    out_dir.mkdir(exist_ok=True, parents=True)
+
+    with h5py.File(feature_path, "r") as features:
+        keys = permutations(features.keys(), 2)
+
+    with h5py.File(match_path, "r") as matches:
+        for i0, i1 in keys:
+            i0_dir = out_dir / f"Pastis{i0}"
+            i0_dir.mkdir(exist_ok=True, parents=True)
+
+            # Define the file to write the matches
+            file = i0_dir / (i1 + ".txt")
+
+            # Get the matches between the two images
+            if i0 in matches.keys() and i1 in matches[i0].keys():
+                x0y0, x1y1 = get_matches(feature_path, match_path, i0, i1)
+            else:
+                x1y1, x0y0 = get_matches(feature_path, match_path, i1, i0)
+
+            if x0y0 is None or x1y1 is None:
+                continue
+                # If no matches are found, write a file with a single fake match with zeros image coordinates
+                # NOTE: This is a workaround to avoid MicMac from crashing when no matches are found, these matches should be discarded as outliers during the bundle adjustment
+                # x0y0 = np.zeros((1, 2))
+                # x1y1 = np.zeros((1, 2))
+
+            # threading.Thread(target=lambda: write_matches(file, x0y0, x1y1)).start()
+            write_matches(file, x0y0, x1y1)
+
+    logger.info(f"Exported tie points to {out_dir}")
+
+
+def export_to_micmac(
+    image_dir: Path,
+    features_h5: Path,
+    matches_h5: Path,
+    out_dir: Path = "micmac",
+    img_ext: str = IMAGE_EXT,
+    run_Tapas: bool = False,
+    micmac_path: Path = None,
+):
+    """
+    Exports image features and matches to a specified directory in a format suitable for MicMac processing. Optionally, it can also run the Tapas tool from MicMac for relative orientation.
+
+    Args:
+        image_dir (Path): Directory containing the images.
+        features_h5 (Path): Path to the HDF5 file containing the features.
+        matches_h5 (Path): Path to the HDF5 file containing the matches.
+        out_dir (Path, optional): Output directory. Defaults to "micmac".
+        img_ext (str, optional): Image file extension. Defaults to IMAGE_EXT.
+        run_Tapas (bool, optional): Whether to run Tapas for relative orientation. Defaults to False.
+        micmac_path (Path, optional): Path to the MicMac executable. If not provided, the function will try to find it. Defaults to None.
+
+    Raises:
+        FileNotFoundError: If the image directory, feature file, or match file does not exist.
+        Exception: If the number of images is not consistent with the number of matches.
+
+    Returns:
+        None
+    """
+    image_dir = Path(image_dir)
+    feature_path = Path(features_h5)
+    match_path = Path(matches_h5)
+    out_dir = Path(out_dir)
+
+    if not image_dir.exists():
+        raise FileNotFoundError(f"Image directory {image_dir} does not exist")
+    if not feature_path.exists():
+        raise FileNotFoundError(f"Feature file {feature_path} does not exist")
+    if not match_path.exists():
+        raise FileNotFoundError(f"Matches file {match_path} does not exist")
+    out_dir.mkdir(exist_ok=True, parents=True)
+
+    # Export the tie points
+    homol_dir = out_dir / "Homol"
+    export_tie_points(feature_path, match_path, homol_dir)
+
+    # Check if some images have no matches and remove them
+    images = sorted([e for e in image_dir.glob("*") if e.suffix in img_ext])
+    for img in images:
+        mtch_dir = homol_dir / f"Pastis{img.name}"
+        if list(mtch_dir.glob("*.txt")):
+            shutil.copyfile(img, out_dir / img.name)
+        else:
+            logger.info(f"No matches found for image {img.name}, removing it")
+            shutil.rmtree(mtch_dir)
+
+    # Check that the number of images is consistent with the number of matches
+    images = sorted([e for e in out_dir.glob("*") if e.suffix in img_ext])
+    matches = sorted([e for e in homol_dir.glob("*") if e.is_dir()])
+    if len(images) != len(matches):
+        raise Exception(
+            f"The number of images ({len(images)}) is different from the number of matches ({len(matches)})"
+        )
+
+    # logger.info(
+    #     f"Succesfully exported images and tie points ready for MICMAC processing to {out_dir}"
+    # )
+
+    if run_Tapas:
+        # Try to run MicMac
+        logger.info("Try to run relative orientation with MicMac...")
+        try:
+            # Try to find the MicMac executable
+            if micmac_path is None:
+                logger.info("MicMac path not specified, trying to find it...")
+                micmac_path = shutil.which("mm3d")
+                if not micmac_path:
+                    raise FileNotFoundError("MicMac path not found")
+                logger.info(f"Found MicMac executable at {micmac_path}")
+                # Check if the executable is found and can be run
+                subprocess.run(
+                    [micmac_path],
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.STDOUT,
+                )
+        except FileNotFoundError as e:
+            logger.error(
+                f"Unable to find MicMac executable, skipping reconstruction.Please manually specify the path to the MicMac executable. {e}"
+            )
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Error running MicMac Tapas, skipping reconstruction.\n{e}")
+
+        # If micmac can be run correctly, try to run Tapas
+        logger.info("Running MicMac Tapas...")
+        # img_list = " ".join([str(e) for e in images])
+        cmd = [
+            micmac_path,
+            "Tapas",
+            "RadialStd",
+            ".*JPG",
+            "Out=Calib",
+            "ExpTxt=1",
+        ]
+
+        execution = execute(cmd, out_dir)
+        for line in execution:
+            print(line, end="")
+
+        logger.info("Relative orientation with MicMac done!")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Export to MicMac.")
+    parser.add_argument(
+        "--image_dir", type=str, required=True, help="Path to the image directory."
+    )
+    parser.add_argument(
+        "--features_h5", type=str, required=True, help="Path to the features.h5 file."
+    )
+    parser.add_argument(
+        "--matches_h5", type=str, required=True, help="Path to the matches.h5 file."
+    )
+    parser.add_argument(
+        "--out_dir", type=str, default="micmac", help="Path to the output directory."
+    )
+    parser.add_argument(
+        "--img_ext", type=str, default=IMAGE_EXT, help="Image extension."
+    )
+    parser.add_argument(
+        "--run_Tapas",
+        action="store_true",
+        help="Run MicMac for estimating the relative orientation with Tapas.",
+    )
+    parser.add_argument(
+        "--micmac_path", type=str, default=None, help="Path to the MicMac executable."
+    )
+
+    args = parser.parse_args()
+
+    # Convert to Path objects and check if they exist
+    image_dir = Path(args.image_dir)
+    features_h5 = Path(args.features_h5)
+    matches_h5 = Path(args.matches_h5)
+    out_dir = Path(args.out_dir)
+    micmac_path = None if args.micmac_path is None else Path(args.micmac_path)
+
+    if not image_dir.exists():
+        raise FileNotFoundError(f"Image directory {image_dir} does not exist")
+    images = sorted([e for e in image_dir.glob("*") if e.suffix in args.img_ext])
+    if not images:
+        raise FileNotFoundError(f"No images found in {image_dir}")
+    if not features_h5.exists():
+        raise FileNotFoundError(f"Feature file {features_h5} does not exist")
+    if not matches_h5.exists():
+        raise FileNotFoundError(f"Matches file {matches_h5} does not exist")
+    if micmac_path and not micmac_path.exists():
+        raise FileNotFoundError(f"MicMac path {micmac_path} does not exist")
+
+    # Call the export function
+    export_to_micmac(
+        image_dir,
+        features_h5,
+        matches_h5,
+        out_dir,
+        args.img_ext,
+        args.run_Tapas,
+        micmac_path,
+    )
+
+
 if __name__ == "__main__":
 
-    project_path = Path("datasets/cyprus_micmac2")
-    img_dir = project_path / "images"
-    feature_path = project_path / "features.h5"
-    match_path = project_path / "matches.h5"
+    main()
 
-    out_micmac = project_path / "micmac"
-    if out_micmac.exists():
-        shutil.rmtree(out_micmac, ignore_errors=True)
-    export_to_micmac(img_dir, feature_path, match_path, out_micmac, run_Tapas=True)
+    # project_path = Path("datasets/cyprus_micmac2")
+    # img_dir = project_path / "images"
+    # feature_path = project_path / "features.h5"
+    # match_path = project_path / "matches.h5"
 
-    # Plot the matches
-    images = sorted(out_micmac.glob("*.JPG"))
-    matches_dir = out_micmac / "match_figs"
-    matches_dir.mkdir(exist_ok=True, parents=True)
-    with Pool() as p:
-        p.starmap(
-            show_micmac_matches,
-            [
-                (
-                    out_micmac / "Homol" / f"Pastis{i0.name}" / f"{i1.name}.txt",
-                    out_micmac,
-                    matches_dir / f"matches_{i0.name}-{i1.name}.png",
-                )
-                for i0, i1 in combinations(images, 2)
-            ],
-        )
+    # out_micmac = project_path / "micmac"
+    # if out_micmac.exists():
+    #     shutil.rmtree(out_micmac, ignore_errors=True)
+    # export_to_micmac(img_dir, feature_path, match_path, out_micmac, run_Tapas=False)
+
+    # # Plot the matches
+    # images = sorted(out_micmac.glob("*.JPG"))
+    # matches_dir = out_micmac / "match_figs"
+    # matches_dir.mkdir(exist_ok=True, parents=True)
+    # with Pool() as p:
+    #     p.starmap(
+    #         show_micmac_matches,
+    #         [
+    #             (
+    #                 out_micmac / "Homol" / f"Pastis{i0.name}" / f"{i1.name}.txt",
+    #                 out_micmac,
+    #                 matches_dir / f"matches_{i0.name}-{i1.name}.png",
+    #             )
+    #             for i0, i1 in combinations(images, 2)
+    #         ],
+    #     )
 
     print("Done!")
