@@ -11,3 +11,4 @@
 - [ ] open issue on pydegensac for pairs with many tie points (>10000). Quite random results with LoFTR and RoMa
 - [ ] script run from scripts folder are not able to import modules!
 - [ ] scripts/delete_static_matches.py not ready
+- [ ] DeDoDe and RoMa are not working without CUDA
