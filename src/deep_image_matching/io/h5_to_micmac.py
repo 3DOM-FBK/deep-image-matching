@@ -1,11 +1,32 @@
-from itertools import permutations
+import shutil
+import subprocess
+from itertools import combinations, permutations
+from multiprocessing import Pool
 from pathlib import Path
 from typing import Tuple
 
 import cv2
 import h5py
 import numpy as np
+from deep_image_matching import IMAGE_EXT, logger
 from deep_image_matching.visualization import viz_matches_cv2
+
+
+def execute(cmd, cwd=None):
+    if cwd is not None:
+        cwd = Path(cwd).resolve()
+        if not cwd.exists():
+            raise FileNotFoundError(f"Directory {cwd} does not exist")
+    print(" ".join(cmd))
+    popen = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, universal_newlines=True, cwd=cwd
+    )
+    for stdout_line in iter(popen.stdout.readline, ""):
+        yield stdout_line
+    popen.stdout.close()
+    return_code = popen.wait()
+    if return_code:
+        raise subprocess.CalledProcessError(return_code, cmd)
 
 
 def get_matches(matches, features, key0, key1) -> Tuple[np.ndarray, np.ndarray]:
@@ -106,12 +127,112 @@ def export_tie_points(
 
             if x0y0 is None or x1y1 is None:
                 continue
+                # If no matches are found, write a file with a single fake match with zeros image coordinates
+                # NOTE: This is a workaround to avoid MicMac from crashing when no matches are found, these matches should be discarded as outliers during the bundle adjustment
+                # x0y0 = np.zeros((1, 2))
+                # x1y1 = np.zeros((1, 2))
 
             # threading.Thread(target=lambda: write_matches(file, x0y0, x1y1)).start()
             write_matches(file, x0y0, x1y1)
 
+    logger.info(f"Exported tie points to {out_dir}")
 
-def show_micmac_matches(file: Path, image_dir: Path, out: Path = None) -> np.ndarray:
+
+def export_to_micmac(
+    image_dir: Path,
+    features_h5: Path,
+    matches_h5: Path,
+    out_dir: Path = "micmac",
+    img_ext: str = IMAGE_EXT,
+    run_Tapas: bool = False,
+    micmac_path: Path = None,
+):
+    image_dir = Path(image_dir)
+    feature_path = Path(features_h5)
+    match_path = Path(matches_h5)
+    out_dir = Path(out_dir)
+
+    if not image_dir.exists():
+        raise FileNotFoundError(f"Image directory {image_dir} does not exist")
+    if not feature_path.exists():
+        raise FileNotFoundError(f"Feature file {feature_path} does not exist")
+    if not match_path.exists():
+        raise FileNotFoundError(f"Matches file {match_path} does not exist")
+    out_dir.mkdir(exist_ok=True, parents=True)
+
+    # Export the tie points
+    homol_dir = out_dir / "Homol"
+    export_tie_points(feature_path, match_path, homol_dir)
+
+    # Check if some images have no matches and remove them
+    images = sorted([e for e in image_dir.glob("*") if e.suffix in img_ext])
+    for img in images:
+        mtch_dir = homol_dir / f"Pastis{img.name}"
+        if list(mtch_dir.glob("*.txt")):
+            shutil.copyfile(img, out_dir / img.name)
+        else:
+            logger.info(f"No matches found for image {img.name}, removing it")
+            shutil.rmtree(mtch_dir)
+
+    # Check that the number of images is consistent with the number of matches
+    images = sorted([e for e in out_dir.glob("*") if e.suffix in img_ext])
+    matches = sorted([e for e in homol_dir.glob("*") if e.is_dir()])
+    if len(images) != len(matches):
+        raise Exception(
+            f"The number of images ({len(images)}) is different from the number of matches ({len(matches)})"
+        )
+
+    logger.info(
+        f"Succesfully exported images and tie points ready for MICMAC processing to {out_dir}"
+    )
+
+    if run_Tapas:
+        # Try to run MicMac
+        logger.info("Try to run relative orientation with MicMac...")
+        try:
+            # Try to find the MicMac executable
+            if micmac_path is None:
+                logger.info("MicMac path not specified, trying to find it...")
+                micmac_path = shutil.which("mm3d")
+                if not micmac_path:
+                    raise FileNotFoundError("MicMac path not found")
+                logger.info(f"Found MicMac executable at {micmac_path}")
+                # Check if the executable is found and can be run
+                subprocess.run(
+                    [micmac_path],
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.STDOUT,
+                )
+        except FileNotFoundError as e:
+            logger.error(
+                f"Unable to find MicMac executable, skipping reconstruction.Please manually specify the path to the MicMac executable. {e}"
+            )
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Error running MicMac Tapas, skipping reconstruction.\n{e}")
+
+        # If micmac can be run correctly, try to run Tapas
+        logger.info("Running MicMac Tapas...")
+        img_list = " ".join([str(e) for e in images])
+        cmd = [
+            micmac_path,
+            "Tapas",
+            "RadialStd",
+            ".*JPG",
+            "Out=Calib",
+            "ExpTxt=1",
+        ]
+
+        execution = execute(cmd, out_dir)
+        for line in execution:
+            print(line, end="")
+
+        logger.info("Relative orientation with MicMac done!")
+
+
+def show_micmac_matches(
+    file: Path, image_dir: Path, out: Path = None, **kwargs
+) -> np.ndarray:
     """
     Display the tie points between two images matched by a MicMac from the matches text file.
 
@@ -133,15 +254,26 @@ def show_micmac_matches(file: Path, image_dir: Path, out: Path = None) -> np.nda
     i1 = file.name.replace(".txt", "")
 
     # Read the matches
+    # x0y0 = []
+    # x1y1 = []
+    # with open(file, "r") as f:
+    #     for line in f:
+    #         line = line.split()
+    #         x0y0.append(np.array([line[0],line[1]], dtype=np.float32))
+    #         x1y1.append(np.array([line[2],line[3]], dtype=np.float32))
+
+    # x0y0 = np.asarray(x0y0)
+    # x1y1 = np.asarray(x1y1)
+
     data = np.loadtxt(file, dtype=np.float32)
-    pts0 = data[:, :2]
-    pts1 = data[:, 2:4]
+    x0y0 = data[:, :2]
+    x1y1 = data[:, 2:4]
 
     # Read the images
     image0 = cv2.imread(str(image_dir / i0))
     image1 = cv2.imread(str(image_dir / i1))
 
-    out = viz_matches_cv2(image0, image1, pts0, pts1, out)
+    out = viz_matches_cv2(image0, image1, x0y0, x1y1, out, **kwargs)
 
     return out
 
@@ -149,22 +281,30 @@ def show_micmac_matches(file: Path, image_dir: Path, out: Path = None) -> np.nda
 if __name__ == "__main__":
 
     project_path = Path("datasets/cyprus_micmac2")
-
+    img_dir = project_path / "images"
     feature_path = project_path / "features.h5"
     match_path = project_path / "matches.h5"
 
-    out_feats_dir = project_path / "Homol"
-    export_tie_points(feature_path, match_path, out_feats_dir)
+    out_micmac = project_path / "micmac"
+    if out_micmac.exists():
+        shutil.rmtree(out_micmac, ignore_errors=True)
+    export_to_micmac(img_dir, feature_path, match_path, out_micmac, run_Tapas=True)
 
-    # make match figures
-    # match_figure_dir = project_path / "matches"
-    # if match_figure_dir is not None:
-    #     match_figure_dir = Path(match_figure_dir)
-    #     match_figure_dir.mkdir(exist_ok=True, parents=True)
-    #     file = project_path / "Homol" / f"Pastis{i0}" / f"{i1}.txt"
-    #     matches_fig = match_figure_dir / f"{Path(i0).stem}_{Path(i1).stem}.png"
-    #     threading.Thread(
-    #         target=lambda: show_micmac_matches(file, project_path, matches_fig)
-    #     ).start()
+    # Plot the matches
+    images = sorted(out_micmac.glob("*.JPG"))
+    matches_dir = out_micmac / "match_figs"
+    matches_dir.mkdir(exist_ok=True, parents=True)
+    with Pool() as p:
+        p.starmap(
+            show_micmac_matches,
+            [
+                (
+                    out_micmac / "Homol" / f"Pastis{i0.name}" / f"{i1.name}.txt",
+                    out_micmac,
+                    matches_dir / f"matches_{i0.name}-{i1.name}.png",
+                )
+                for i0, i1 in combinations(images, 2)
+            ],
+        )
 
     print("Done!")
