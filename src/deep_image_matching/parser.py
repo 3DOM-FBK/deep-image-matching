@@ -132,6 +132,10 @@ def parse_cli() -> dict:
         default=False,
         help="Show view graph of matches (currently supported for small networks).",
     )
+    parser.add_argument(
+        "--openmvg",
+        help="Path to directory containing exe OpenMVG. E.g. './ReleaseV1.6.Halibut.WindowsBinaries_VS2017'",
+    )
     args = parser.parse_args()
 
     if args.gui is True:
