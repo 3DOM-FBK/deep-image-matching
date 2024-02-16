@@ -91,7 +91,8 @@ def export_to_openmvg(
         os.rmdir(openmvg_out_path)
     os.makedirs(openmvg_out_path)
 
-    camera_file_params = openmvg_sfm_bin / "sensor_width_database" / "sensor_width_camera_database.txt"
+    #camera_file_params = openmvg_sfm_bin / "sensor_width_database" / "sensor_width_camera_database.txt"
+    camera_file_params = "/home/threedom/Desktop/prova/sensor_width_database/sensor_width_camera_database.txt"
     matches_dir = openmvg_out_path / "matches"
 
     pIntrisics = subprocess.Popen( [os.path.join(openmvg_sfm_bin, "openMVG_main_SfMInit_ImageListing"),  "-i", img_dir, "-o", matches_dir, "-d", camera_file_params] )
