@@ -97,13 +97,27 @@ if config.general["openmvg_dir"]:
     )
     openmvg_matches_dir = str(openmvg_out_path / "matches")
     if not config.general["skip_reconstruction"]:
-        print("here")
         if not os.path.exists(openmvg_reconstruction_dir):
             os.mkdir(openmvg_reconstruction_dir)
-        print("OpenMVG Sequential/Incremental reconstruction")
+        logger.debug("OpenMVG Sequential/Incremental reconstruction")
+        ## For Windows
+        #pRecons = subprocess.Popen(
+        #    [
+        #        os.path.join(openmvg_sfm_bin, "openMVG_main_IncrementalSfM"),
+        #        "-i",
+        #        openmvg_matches_dir + "/sfm_data.json",
+        #        "-m",
+        #        openmvg_matches_dir,
+        #        "-o",
+        #        openmvg_reconstruction_dir,
+        #    ]
+        #)
+        # For Linux
         pRecons = subprocess.Popen(
             [
-                os.path.join(openmvg_sfm_bin, "openMVG_main_IncrementalSfM"),
+                os.path.join(openmvg_sfm_bin, "openMVG_main_SfM"),
+                "--sfm_engine",
+                "INCREMENTAL",
                 "-i",
                 openmvg_matches_dir + "/sfm_data.json",
                 "-m",
