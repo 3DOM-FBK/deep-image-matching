@@ -515,7 +515,7 @@ class Config:
             "verbose": args["verbose"],
             "graph": args["graph"],
             "skip_reconstruction": args["skip_reconstruction"],
-            "openmvg_dir": args["openmvg"],
+            "openmvg_conf": args["openmvg"],
         }
 
         return cfg

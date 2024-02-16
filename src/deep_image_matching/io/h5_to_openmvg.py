@@ -85,6 +85,7 @@ def export_to_openmvg(
     match_path: Path,
     openmvg_out_path: Path,
     openmvg_sfm_bin: Path,
+    openmvg_database: Path,
 ):
     if openmvg_out_path.exists():
         logger.warning(f"OpenMVG output folder {openmvg_out_path} already exists - deleting it")

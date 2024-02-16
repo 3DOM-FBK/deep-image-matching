@@ -134,7 +134,7 @@ def parse_cli() -> dict:
     )
     parser.add_argument(
         "--openmvg",
-        help="Path to directory containing exe OpenMVG. E.g. './ReleaseV1.6.Halibut.WindowsBinaries_VS2017'",
+        help="Path to openmvg config file'",
     )
     args = parser.parse_args()
 

@@ -79,8 +79,14 @@ if config.general["graph"]:
 
 # If --skip_reconstruction is not specified, run reconstruction
 # Export in openMVG format
-if config.general["openmvg_dir"]:
-    openmvg_sfm_bin = Path(config.general["openmvg_dir"])
+if config.general["openmvg_conf"]:
+    import yaml
+    with open(config.general["openmvg_conf"], "r") as file:
+        openmvgcfg = yaml.safe_load(file)
+    system_OS = openmvgcfg["general"]["OS"]
+    openmvg_sfm_bin = Path(openmvgcfg["general"]["path_to_binaries"])
+    openmvg_database = Path(openmvgcfg["general"]["openmvg_database"])
+
     openmvg_out_path = output_dir / "openmvg"
     export_to_openmvg(
         img_dir=imgs_dir,
@@ -88,6 +94,7 @@ if config.general["openmvg_dir"]:
         match_path=match_path,
         openmvg_out_path=openmvg_out_path,
         openmvg_sfm_bin=openmvg_sfm_bin,
+        openmvg_database=openmvg_database,
     )
     timer.update("export_to_openMVG")
 
@@ -100,32 +107,33 @@ if config.general["openmvg_dir"]:
         if not os.path.exists(openmvg_reconstruction_dir):
             os.mkdir(openmvg_reconstruction_dir)
         logger.debug("OpenMVG Sequential/Incremental reconstruction")
-        ## For Windows
-        #pRecons = subprocess.Popen(
-        #    [
-        #        os.path.join(openmvg_sfm_bin, "openMVG_main_IncrementalSfM"),
-        #        "-i",
-        #        openmvg_matches_dir + "/sfm_data.json",
-        #        "-m",
-        #        openmvg_matches_dir,
-        #        "-o",
-        #        openmvg_reconstruction_dir,
-        #    ]
-        #)
-        # For Linux
-        pRecons = subprocess.Popen(
-            [
-                os.path.join(openmvg_sfm_bin, "openMVG_main_SfM"),
-                "--sfm_engine",
-                "INCREMENTAL",
-                "-i",
-                openmvg_matches_dir + "/sfm_data.json",
-                "-m",
-                openmvg_matches_dir,
-                "-o",
-                openmvg_reconstruction_dir,
-            ]
-        )
+        
+        if system_OS == "windows":
+            pRecons = subprocess.Popen(
+                [
+                    os.path.join(openmvg_sfm_bin, "openMVG_main_IncrementalSfM"),
+                    "-i",
+                    openmvg_matches_dir + "/sfm_data.json",
+                    "-m",
+                    openmvg_matches_dir,
+                    "-o",
+                    openmvg_reconstruction_dir,
+                ]
+            )
+        if system_OS == "linux":
+            pRecons = subprocess.Popen(
+                [
+                    os.path.join(openmvg_sfm_bin, "openMVG_main_SfM"),
+                    "--sfm_engine",
+                    "INCREMENTAL",
+                    "-i",
+                    openmvg_matches_dir + "/sfm_data.json",
+                    "-m",
+                    openmvg_matches_dir,
+                    "-o",
+                    openmvg_reconstruction_dir,
+                ]
+            )
         pRecons.wait()
         timer.update("SfM with openMVG")
 
