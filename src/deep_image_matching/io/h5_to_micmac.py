@@ -93,7 +93,12 @@ def get_matches(feature_path, match_path, key0, key1) -> Tuple[np.ndarray, np.nd
 
 
 def show_micmac_matches(
-    file: Path, image_dir: Path, out: Path = None, **kwargs
+    file: Path,
+    image_dir: Path,
+    i0_name: Path = None,
+    i1_name: Path = None,
+    out: Path = None,
+    **kwargs,
 ) -> np.ndarray:
     """
     Display the tie points between two images matched by a MicMac from the matches text file.
@@ -110,17 +115,28 @@ def show_micmac_matches(
     file = Path(file)
     if not file.exists():
         raise FileNotFoundError(f"File {file} does not exist")
+    if not image_dir.exists():
+        raise FileNotFoundError(f"Image directory {image_dir} does not exist")
 
     # Get the image names
-    i0 = file.parent.name.replace("Pastis", "")
-    i1 = file.name.replace(".txt", "")
+    if i0_name is None or i1_name is None:
+        i0_name = file.parent.name.replace("Pastis", "")
+        i1_name = file.name.replace(".txt", "")
+    if not (image_dir / i0_name).exists():
+        raise FileNotFoundError(f"Image {i0_name} does not exist in {image_dir}")
+    if not (image_dir / i1_name).exists():
+        raise FileNotFoundError(f"Image {i1_name} does not exist in {image_dir}")
 
     # Read the matches
     x0y0, x1y1 = read_Homol_matches(file)
 
     # Read the images
-    image0 = cv2.imread(str(image_dir / i0))
-    image1 = cv2.imread(str(image_dir / i1))
+    image0 = cv2.imread(str(image_dir / i0_name))
+    image1 = cv2.imread(str(image_dir / i1_name))
+    if image0 is None:
+        raise OSError(f"Unable to read image {i0_name}")
+    if image1 is None:
+        raise OSError(f"Unable to read image {i1_name}")
 
     out = viz_matches_cv2(image0, image1, x0y0, x1y1, out, **kwargs)
 
