@@ -135,6 +135,7 @@ def parse_cli() -> dict:
     parser.add_argument(
         "--openmvg",
         help="Path to openmvg config file'",
+        default=None,
     )
     args = parser.parse_args()
 

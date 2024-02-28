@@ -1,7 +1,8 @@
 import os
 import subprocess
-from pathlib import Path
 from importlib import import_module
+from pathlib import Path
+
 from deep_image_matching import logger, timer
 from deep_image_matching.config import Config
 from deep_image_matching.image_matching import ImageMatching
@@ -81,6 +82,7 @@ if config.general["graph"]:
 # Export in openMVG format
 if config.general["openmvg_conf"]:
     import yaml
+
     with open(config.general["openmvg_conf"], "r") as file:
         openmvgcfg = yaml.safe_load(file)
     system_OS = openmvgcfg["general"]["OS"]
@@ -107,7 +109,7 @@ if config.general["openmvg_conf"]:
         if not os.path.exists(openmvg_reconstruction_dir):
             os.mkdir(openmvg_reconstruction_dir)
         logger.debug("OpenMVG Sequential/Incremental reconstruction")
-        
+
         if system_OS == "windows":
             pRecons = subprocess.Popen(
                 [
