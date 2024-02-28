@@ -41,6 +41,9 @@
 - [ ] keep matching score/confidence (if available) (Issue [[#22](https://github.com/3DOM-FBK/deep-image-matching/issues/22)])
 - [ ] Allow to read images from different folders (e.g., subfolders)
 - [ ] Support for exporting matches in COLMAP database with different camera calibration based on the input images (e.g., on exif or on subfolder structure) (Issue [[#45](https://github.com/3DOM-FBK/deep-image-matching/issues/45)])
+- [ ] Apply masks during feature extraction
+- [ ] Automatically download weights for all the models
+- [ ] Autoselect tiling grid in order to fit images in GPU memory
 
 ## Completed
 
@@ -51,10 +54,6 @@
 - [x] Add pycolmap compatibility
 - [x] Add exporting to Bundler format ready for importing into Metashape (only on Linux and MacOS by using pycolmap)
 - [x] Dockerization
-- [ ] Autoselect tiling grid in order to fit images in GPU memory
 - [x] Add tests, documentation and examples (e.g. colab, ..)
-- [ ] Apply masks during feature extraction
-- [ ] Work with submodules
-- [ ] Automatically download weights for all the models
 - [x] Cleanup repository to removed large files from Git history
 - [x] Update README CLI options
