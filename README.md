@@ -118,8 +118,10 @@ To run the GUI, you can use the following command:
 
 ```bash
 python main.py --gui
-
 ```
+
+Please note that the GUI is currently out of date and should be upgraded to the latest version of Deep-Image-Matching. We will update it soon, thank you for your patience.
+
 ## Advanced usage
 
 For advanced usage, please refer to the [documentation](https://3dom-fbk.github.io/deep-image-matching/) and/or check the `scripts` directory.
