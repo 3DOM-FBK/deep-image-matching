@@ -108,6 +108,10 @@ For example, to run the matching with SuperPoint and LightGlue on a dataset, you
 python main.py --dir assets/example_cyprus --pipeline superpoint+lightglue
 ```
 
+The `--dir` parameter specify the processing directory. This directory must constain a subfolder named **images** in which all the images must be stored. We currentely do not support the image retrieval from multiple directories or subdirectories, but we may add this feature in the future. 
+
+The `--pipeline` parameter defines the combaination of local feature extractor and matcher. 
+
 For all the usage instructions and configurations, refer to the documenation at [https://3dom-fbk.github.io/deep-image-matching/](https://3dom-fbk.github.io/deep-image-matching/getting_started) or check the example notebooks.
 
 To run the GUI, you can use the following command:
@@ -118,7 +122,7 @@ python main.py --gui
 ```
 ## Advanced usage
 
-For advanced usage, you can check the `scripts` directory.
+For advanced usage, please refer to the [documentation](https://3dom-fbk.github.io/deep-image-matching/) and/or check the `scripts` directory.
 
 ### Merging databases with different local features
 
