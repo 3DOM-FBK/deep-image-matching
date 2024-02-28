@@ -112,7 +112,7 @@ The `--dir` parameter defines the processing directory, where all the results wi
 
 The `--pipeline` parameter defines the combaination of local feature extractor and matcher. 
 
-For all the usage instructions and configurations, refer to the documenation at [https://3dom-fbk.github.io/deep-image-matching/](https://3dom-fbk.github.io/deep-image-matching/getting_started) or check the example notebooks.
+For all the usage instructions and configurations, refer to the [documenation](https://3dom-fbk.github.io/deep-image-matching/getting_started) or check the example notebooks.
 
 To run the GUI, you can use the following command:
 
