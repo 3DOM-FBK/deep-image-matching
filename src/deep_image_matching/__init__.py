@@ -9,6 +9,8 @@ __version__ = "0.1.0"
 logger = setup_logger(name="deep-image-matching", log_level="info")
 timer = Timer(logger=logger)
 
+IMAGE_EXT = [".jpg", ".JPG", ".png", ".PNG", ".tif", "TIF"]
+
 
 class TileSelection(Enum):
     """Enumeration for tile selection methods."""

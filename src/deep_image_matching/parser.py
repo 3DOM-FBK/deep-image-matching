@@ -132,6 +132,11 @@ def parse_cli() -> dict:
         default=False,
         help="Show view graph of matches (currently supported for small networks).",
     )
+    parser.add_argument(
+        "--openmvg",
+        help="Path to openmvg config file'",
+        default=None,
+    )
     args = parser.parse_args()
 
     if args.gui is True:

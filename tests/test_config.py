@@ -59,11 +59,13 @@ def test_valid_basic_arguments(data_dir):
         "min_inlier_ratio_per_pair": 0.25,
         "try_match_full_images": False,
     }
-    assert all(
-        key in config.general and config.general[key] == expected_general[key]
-        for key in expected_general
-    )
+    # Check that the config object contains the expected keys
+    assert all(key in config.general for key in expected_general)
 
+    # Check that the default values are as expected
+    assert all(config.general[key] == expected_general[key] for key in expected_general)
+
+    # Check the extractor parameters
     expected_extractor = {
         "name": "superpoint",
         "nms_radius": 3,
@@ -75,6 +77,7 @@ def test_valid_basic_arguments(data_dir):
         for key in expected_extractor
     )
 
+    # Check the matcher parameters
     expected_matcher = {
         "name": "lightglue",
         "n_layers": 9,

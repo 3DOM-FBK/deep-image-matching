@@ -1,9 +1,13 @@
+import os
+import subprocess
 from importlib import import_module
+from pathlib import Path
 
 from deep_image_matching import logger, timer
 from deep_image_matching.config import Config
 from deep_image_matching.image_matching import ImageMatching
 from deep_image_matching.io.h5_to_db import export_to_colmap
+from deep_image_matching.io.h5_to_openmvg import export_to_openmvg
 from deep_image_matching.parser import parse_cli
 
 # Parse arguments from command line
@@ -75,6 +79,67 @@ if config.general["graph"]:
         logger.error("pyvis is not available. Unable to visualize view graph.")
 
 # If --skip_reconstruction is not specified, run reconstruction
+# Export in openMVG format
+if config.general["openmvg_conf"]:
+    import yaml
+
+    with open(config.general["openmvg_conf"], "r") as file:
+        openmvgcfg = yaml.safe_load(file)
+    system_OS = openmvgcfg["general"]["OS"]
+    openmvg_sfm_bin = Path(openmvgcfg["general"]["path_to_binaries"])
+    openmvg_database = Path(openmvgcfg["general"]["openmvg_database"])
+
+    openmvg_out_path = output_dir / "openmvg"
+    export_to_openmvg(
+        img_dir=imgs_dir,
+        feature_path=feature_path,
+        match_path=match_path,
+        openmvg_out_path=openmvg_out_path,
+        openmvg_sfm_bin=openmvg_sfm_bin,
+        openmvg_database=openmvg_database,
+    )
+    timer.update("export_to_openMVG")
+
+    # Reconstruction with OpenMVG
+    openmvg_reconstruction_dir = os.path.join(
+        openmvg_out_path, "reconstruction_sequential"
+    )
+    openmvg_matches_dir = str(openmvg_out_path / "matches")
+    if not config.general["skip_reconstruction"]:
+        if not os.path.exists(openmvg_reconstruction_dir):
+            os.mkdir(openmvg_reconstruction_dir)
+        logger.debug("OpenMVG Sequential/Incremental reconstruction")
+
+        if system_OS == "windows":
+            pRecons = subprocess.Popen(
+                [
+                    os.path.join(openmvg_sfm_bin, "openMVG_main_IncrementalSfM"),
+                    "-i",
+                    openmvg_matches_dir + "/sfm_data.json",
+                    "-m",
+                    openmvg_matches_dir,
+                    "-o",
+                    openmvg_reconstruction_dir,
+                ]
+            )
+        if system_OS == "linux":
+            pRecons = subprocess.Popen(
+                [
+                    os.path.join(openmvg_sfm_bin, "openMVG_main_SfM"),
+                    "--sfm_engine",
+                    "INCREMENTAL",
+                    "-i",
+                    openmvg_matches_dir + "/sfm_data.json",
+                    "-m",
+                    openmvg_matches_dir,
+                    "-o",
+                    openmvg_reconstruction_dir,
+                ]
+            )
+        pRecons.wait()
+        timer.update("SfM with openMVG")
+
+# Reconstruction with pycolmap
 if not config.general["skip_reconstruction"]:
     use_pycolmap = True
     try:

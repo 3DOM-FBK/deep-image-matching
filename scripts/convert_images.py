@@ -10,18 +10,15 @@ from deep_image_matching import logger
 def load_img(
     path_to_img: str,
 ):
-    img = cv2.imread(path_to_img, cv2.IMREAD_ANYDEPTH)
-    
-    if True: # if img.all() == None:
-        logger.warning(
-            "It was not possible to load the image with opencv module. Trying with pillow .."
-        )
-        img = Image.open(path_to_img)
-        logger.info(f"Image mode: {img.mode}")
-        img = np.array(img)
-        logger.info(f"Image mode: {img.dtype}")
-    else:
-        logger.info(f"Image mode: {img.dtype}")
+    #img = cv2.imread(path_to_img, cv2.IMREAD_ANYDEPTH)
+    logger.debug(
+        "Image loaded with pillow .."
+    )
+    img = Image.open(path_to_img)
+    img = img.convert("L")
+    logger.info(f"Image mode: {img.mode}")
+    img = np.array(img)
+    logger.info(f"Image mode: {img.dtype}")
 
     return img
 
@@ -130,7 +127,7 @@ if __name__ == "__main__":
         "output_folder", help="Path to the folder where converted images will be saved."
     )
     parser.add_argument(
-        "target_format", help="Target image format (e.g., 'png', 'jpg', 'jpeg')."
+        "target_format", help="Target image format (e.g., 'png', 'jpg', 'jpeg', 'tiff')."
     )
     parser.add_argument(
         "--normalize",

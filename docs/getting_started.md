@@ -1,8 +1,10 @@
 # Getting started with Deep-Image-Matching
 
-Deep-Image-Matching can be launched from the Command Line (CLI), from the GUI (note that the GUI is still under development) or use Deep_Image_Matching as a Python library. 
+Deep-Image-Matching can be launched from the Command Line (CLI), from the GUI (note that the GUI is still under development) or use Deep_Image_Matching as a Python library.
 
-## Command Line Interface (CLI)
+## Run Deep-Image-Matching
+
+### Command Line Interface (CLI)
 
 Before running the CLI, check the options with `python ./main.py --help`.
 
@@ -27,12 +29,11 @@ Other optional parameters are:
 
 Finally, there are some 'strategy-dependent' options (i.e., options that are used only with specific strategies). See [Matching strategies](#matching-strategies) section for more information. These options are:
 
-- `--overlap`: if  'strategy' is set to 'sequential', set the number of images that are sequentially matched in the sequence (default: `1`)
+- `--overlap`: if 'strategy' is set to 'sequential', set the number of images that are sequentially matched in the sequence (default: `1`)
 - `--global_feature`: if `strategy` is set to `retrieval`, set the global descriptor to use for image retrieval. Options are: "netvlad", "openibl", "cosplace", "dir" (default: `netvlad`).
 - `--pair_file`: if `strategy` is set to `custom_pairs`, set the path to the text file containing the pairs of images to be matched. (default: `None`).
 
-
-## Graphical User Interface (GUI)
+### Graphical User Interface (GUI)
 
 **Note that the GUI is still under development and it may have some bugs**
 
@@ -45,15 +46,15 @@ python ./main.py --gui
 In the GUI, you can define the same parameters that are available in the CLI.
 The GUI loads the available configurations from [`config.py`](https://github.com/3DOM-FBK/deep-image-matching/blob/master/src/deep_image_matching/config.py) located in `/src/deep_image_matching`.
 
-## From a Jupyter notebooks
+### From Jupyter notebooks
 
 If you want to use Deep_Image_Matching from a Jupyter notebook, you can check the examples in the [`notebooks`](https://github.com/3DOM-FBK/deep-image-matching/tree/master/notebooks) folder.
 
 ## Basic configuration
 
-### Pipeline
+### Pipelines
 
-The `pipeline` defines the combination of local feature extractor and matcher to be used for the matching is is defined by the `--pipeline` option in the CLI.
+The `pipeline` parameter defines the combination of local feature extractor and matcher to be used for the matching is is defined by the `--pipeline` option in the CLI.
 
 Possible configurations are:
 
@@ -93,11 +94,11 @@ More information can be obtained looking to the code in [`config.py`](https://gi
 The matching strategy defines how the pairs of images to be matches are selected. Available matching strategies are:
 
 - `matching_lowres`: the images are first matched at low resolution (resizing images with the longest edge to 1000 px) and candidates are selected based on the number of matches (the minimum number of matches is 20). Once the candidate pairs are selected, the images are matched at the desired resolution, specified by the `Quality` parameter in the configuration. This is the default option and the recommended strategy, especially for large datasets.
-- `bruteforce`: all the possible pairs of images are matched. This is is useful in case of very challenging datasets, where some image pairs may be rejected by the previous strategies, but it can take significantly more time for large datasets. 
+- `bruteforce`: all the possible pairs of images are matched. This is is useful in case of very challenging datasets, where some image pairs may be rejected by the previous strategies, but it can take significantly more time for large datasets.
 - `sequential`: the images are matched sequentially, i.e., the first image is matched with the second, the second with the third, and so on. The number of images to be matched sequentially is defined by the `--overlap` option in the CLI. This strategy is useful for datasets where the images are taken sequentially, e.g., from a drone or a car.
 - `retrieval`: the images are first matched based with a global descriptor to select the pairs. The global descriptor to be used is defined by the `--retrieval` option in the CLI. Available global descriptors are: "netvlad", "openibl", "cosplace", "dir".
-- `custom_pairs`: the pairs of images to be matched are defined in a text file. The path to the text file is defined by the `--pairs` option in the CLI. The text file must contain one pair of images per line, separated by a space. The images must be identified by their full name (i.e., the name of the image file with the extension). 
-For example:
+- `custom_pairs`: the pairs of images to be matched are defined in a text file. The path to the text file is defined by the `--pairs` option in the CLI. The text file must contain one pair of images per line, separated by a space. The images must be identified by their full name (i.e., the name of the image file with the extension).
+  For example:
 
 ```text
     image_1.jpg image_2.jpg
@@ -108,18 +109,16 @@ For example:
 
 The `Quality` parameter define the resolution at which the images are matched. The available options are:
 
-- `highest`: each image size is upsampled by a factor of 2 by using a bicubic interpolation.
-- `high`: the images are matched at the original resolution (default)
-- `medium`: each image size is downsampled by a factor of 2 by using the OpenCV pixel-area approach.
-- `low`: each image size is downsampled by a factor of 4 by using the OpenCV pixel-area approach.
-- `lowest`: each image size is downsampled by a factor of 8 by using the OpenCV pixel-area approach.
-
-OpenCV pixel-area approach ([cv2.INTER_AREA](https://docs.opencv.org/4.x/da/d54/group__imgproc__transform.html#gga5bb5a1fea74ea38e1a5445ca803ff121acf959dca2480cc694ca016b81b442ceb)).
+- `highest`: each image size is upsampled by a factor of 2 by using a bicubic interpolation ([cv2.INTER_CUBIC](https://docs.opencv.org/4.x/da/d54/group__imgproc__transform.html#gga5bb5a1fea74ea38e1a5445ca803ff121a55e404e7fa9684af79fe9827f36a5dc1)).
+- `high`: images are matched at the original resolution (default)
+- `medium`: images are downsampled by a factor of 2 by using the OpenCV pixel-area approach ([cv2.INTER_AREA](https://docs.opencv.org/4.x/da/d54/group__imgproc__transform.html#gga5bb5a1fea74ea38e1a5445ca803ff121acf959dca2480cc694ca016b81b442ceb)).
+- `low`: images are downsampled by a factor of 4 by using the OpenCV pixel-area approach ([cv2.INTER_AREA](https://docs.opencv.org/4.x/da/d54/group__imgproc__transform.html#gga5bb5a1fea74ea38e1a5445ca803ff121acf959dca2480cc694ca016b81b442ceb)).
+- `lowest`: images are downsampled by a factor of 8 by using the OpenCV pixel-area approach ([cv2.INTER_AREA](https://docs.opencv.org/4.x/da/d54/group__imgproc__transform.html#gga5bb5a1fea74ea38e1a5445ca803ff121acf959dca2480cc694ca016b81b442ceb)).
 
 ### Tiling
 
 If images have a high resolution (e.g., larger than 3000 px, but this limit depends on the memory of your GPU) and you do not want to downsample them (e.g., to avoid loosing accuracy in feature detection), it may be useful to carry out the matching by dividing the images into regular tiles.
-This can be done by specifying the tiling approach with the `--tiling` option in the CLI. 
+This can be done by specifying the tiling approach with the `--tiling` option in the CLI.
 If you want to run the matching by tile, you can choose different approaches for selecting the tiles to be matched. Available options are:
 
 - `None`: no tiling is applied (default)
@@ -128,7 +127,6 @@ If you want to run the matching by tile, you can choose different approaches for
 - `exhaustive`: the images are divided into a regular grid of size 2400x2000 px to extract the features. The matching is carried out by matching all the possible combinations of tiles (brute-force). This method can be very slow for large images or in combination with the `highest` quality option and, in some cases, it may lead to error in the geometric verification if too many wrong matches are detected.
 
 To control the tile size and the tile overlap, refer to the [Advanced configuration](#advanced-configuration) section.
-
 
 ## Advanced configuration
 
@@ -157,12 +155,11 @@ general:
   tile_overlap: 20
 ```
 
-The `extractor` and `matcher` sections contain the parameters that control the local feature extractor and the matcher selected by the '--pipeline' option from the CLI (or from GUI). 
+The `extractor` and `matcher` sections contain the parameters that control the local feature extractor and the matcher selected by the '--pipeline' option from the CLI (or from GUI).
 Both the sections **must contain the name** of the local feature extractor or the matcher that will be used for the matching (the name must be the same as the one used in the `--pipeline` option in the CLI).
-In addition, you can specify any other parameters for controlling the extractor and the matcher. 
-The default values of all the configuration parameters are defined in the [`config.py`](https://github.com/3DOM-FBK/deep-image-matching/blob/master/src/deep_image_matching/config.py) file located in `/src/deep_image_matching` directory. 
+In addition, you can specify any other parameters for controlling the extractor and the matcher.
+The default values of all the configuration parameters are defined in the [`config.py`](https://github.com/3DOM-FBK/deep-image-matching/blob/master/src/deep_image_matching/config.py) file located in `/src/deep_image_matching` directory.
 Please, note that different extractors or matchers may have different parameters, so you need to check carefully the available parameters for each extractor/matcher in the file [`config.py`](https://github.com/3DOM-FBK/deep-image-matching/blob/master/src/deep_image_matching/config.py).
-
 
 ```yaml
 extractor:

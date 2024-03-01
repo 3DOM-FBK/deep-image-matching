@@ -1,3 +1,4 @@
+import os
 import argparse
 from pathlib import Path
 
@@ -9,6 +10,13 @@ from deep_image_matching.utils.database import (
     pair_id_to_image_ids,
 )
 
+def generate_pairs(imgs_dir):
+    pairs = []
+    n_images = len(os.listdir(imgs_dir))
+    for i in range(n_images-1):
+        if i%2 == 0:
+            pairs.append((i+1, i+2))
+    return pairs
 
 class ShowPairMatches:
     def __init__(
@@ -140,11 +148,11 @@ class ShowPairMatches:
             pt2 = tuple(np.array(kpts1_int[match[1]]) + np.array([img0.shape[1], 0]))
 
             # Draw a line connecting the keypoints
-            cv2.line(img_matches, pt1, pt2, (0, 255, 0), 2)
+            cv2.line(img_matches, pt1, pt2, (0, 255, 0), 1)
 
             # Draw circles around keypoints
-            cv2.circle(img_matches, pt1, 5, (255, 0, 0), -1)
-            cv2.circle(img_matches, pt2, 5, (255, 0, 0), -1)
+            cv2.circle(img_matches, pt1, 3, (255, 0, 0), -1)
+            cv2.circle(img_matches, pt2, 3, (255, 0, 0), -1)
 
         img_matches_resized = self.resize_image(img_matches, self.max_out_img_size)
 
@@ -180,17 +188,20 @@ def parse_args():
         "-f", "--imgsdir", type=str, help="Path to images directory", required=True
     )
     parser.add_argument(
+        "-o", "--output", type=str, help="Path to output folder", required=True
+    )
+    parser.add_argument(
+        "--all", action='store_true', help="Export matches for all pairs", required=False
+    )
+    parser.add_argument(
         "-i",
         "--images",
         type=str,
         help="Images IDs or names. E.g.: 'img1.jpg img2.jpg' or '37 98'. Max two images.",
-        required=True,
+        required=False,
     )
     parser.add_argument(
-        "-t", "--type", type=str, choices=["names", "ids"], required=True
-    )
-    parser.add_argument(
-        "-o", "--output", type=str, help="Path to output folder", required=True
+        "-t", "--type", type=str, choices=["names", "ids"], required=False
     )
     parser.add_argument(
         "-m",
@@ -208,29 +219,59 @@ def parse_args():
 def main():
     args = parse_args()
     database_path = Path(args.database)
-    out_file = Path(args.output)
+    out_dir = Path(args.output)
     imgs_dir = Path(args.imgsdir)
     max_size = args.max_size
+
     print(f"database path: {database_path}")
-    print(f"output dir: {out_file}")
+    print(f"output dir: {out_dir}")
 
-    i1, i2 = args.images.split()
-    imgs = {
-        "type": args.type,
-        "data": (i1, i2),
-    }
-    print("images: ", imgs)
+    if args.all == False:
+        i1, i2 = args.images.split()
+        out_file = out_dir / f"{i1}_{i2}.png"
+        imgs = {
+            "type": args.type,
+            "data": (i1, i2),
+        }
+        print("images: ", imgs)
 
-    show_pair_matches = ShowPairMatches(
-        database_path=database_path,
-        imgs_dict=imgs,
-        imgs_dir=imgs_dir,
-        out_file=out_file,
-        max_size=max_size,
-    )
+        show_pair_matches = ShowPairMatches(
+            database_path=database_path,
+            imgs_dict=imgs,
+            imgs_dir=imgs_dir,
+            out_file=out_file,
+            max_size=max_size,
+        )
 
-    show_pair_matches.LoadDatabase()
-    show_pair_matches.ShowMatches()
+        show_pair_matches.LoadDatabase()
+        show_pair_matches.ShowMatches()
+    
+    else:
+        pairs = generate_pairs(imgs_dir)
+        print(pairs)
+        for pair in pairs:
+            i1, i2 = pair[0], pair[1]
+            out_file = out_dir / f"{i1}_{i2}.png"
+            imgs = {
+                "type": "ids",
+                "data": (i1, i2),
+            }
+            print("images: ", imgs)
+
+            show_pair_matches = ShowPairMatches(
+                database_path=database_path,
+                imgs_dict=imgs,
+                imgs_dir=imgs_dir,
+                out_file=out_file,
+                max_size=max_size,
+            )
+
+            show_pair_matches.LoadDatabase()
+
+            try:
+                show_pair_matches.ShowMatches()
+            except:
+                print("No verified matches found")
 
 
 if __name__ == "__main__":
