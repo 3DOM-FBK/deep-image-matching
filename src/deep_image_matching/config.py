@@ -500,6 +500,11 @@ class Config:
         if args["verbose"]:
             change_logger_level(logger.name, "debug")
 
+        if args["openmvg"] is not None:
+            args["openmvg"] = Path(args["openmvg"])
+            if not args["openmvg"].exists():
+                raise ValueError(f"File {args['openmvg']} does not exist")
+
         # Build configuration dictionary
         cfg = {
             "image_dir": args["images"],

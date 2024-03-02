@@ -6,7 +6,6 @@
   [![GitHub Release](https://img.shields.io/github/v/release/3DOM-FBK/deep-image-matching)](https://github.com/3DOM-FBK/deep-image-matching/releases) [![Static Badge](https://img.shields.io/badge/docs-DeepImageMatching-blue
  )](https://3dom-fbk.github.io/deep-image-matching/)
 
-
 </div>
 
 # DEEP-IMAGE-MATCHING
@@ -50,7 +49,7 @@ Key features:
 | Supported SfM software                        |
 | --------------------------------------------- |
 | &check; COLMAP                                |
-| &check; OpenMVG                              |
+| &check; OpenMVG                               |
 | &check; MICMAC                                |
 | &check; Agisoft Metashape                     |
 | &check; Software that supports bundler format |
@@ -174,26 +173,9 @@ Please, refer to the instructions at [https://github.com/franioli/metashape](htt
 Any contribution to this repo is really welcome!
 If you want to contribute to the project, please, check the [contributing guidelines](./CONTRIBUTING.md).
 
-## TODO:
+## To Do List:
 
-- [x] Tile processing for high resolution images
-- [x] Manage image rotations
-- [x] Add image retrieval with global descriptors
-- [x] add GUI
-- [x] Add pycolmap compatibility
-- [x] Add exporting to Bundler format ready for importing into Metashape (only on Linux and MacOS by using pycolmap)
-- [x] Dockerization
-- [ ] Workflow to rebuild & publish image to Docker Hub
-- [ ] Add visualization for extracted features and matches
-- [ ] Improve speed
-- [ ] Autoselect tiling grid in order to fit images in GPU memory
-- [x] Add tests, documentation and examples (e.g. colab, ..)
-- [ ] Apply masks during feature extraction
-- [ ] Integrate support for Pix4D [Open Photogrammetry Format](https://github.com/Pix4D/opf-spec)
-- [ ] Work with submodules
-- [ ] Automatically download weights for all the models
-- [x] Cleanup repository to removed large files from Git history
-- [x] Update README CLI options
+See the [TODO list](notes.md) for the list of features and improvements that are planned for the future.
 
 ## References
 

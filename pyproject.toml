@@ -54,7 +54,7 @@ Homepage = "https://github.com/3DOM-FBK/deep-image-matching"
 addopts = [
     "--import-mode=importlib",
 ]
-
+    
 [tool.isort]
 profile = "black"
 
