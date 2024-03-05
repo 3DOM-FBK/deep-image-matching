@@ -1,0 +1,7 @@
+general:
+  camera_model: "simple-radial"
+  single_camera: True
+
+cam0:
+  camera_model: "simple-radial"
+  images : "DSC_6466.jpg,DSC_6467.jpg"

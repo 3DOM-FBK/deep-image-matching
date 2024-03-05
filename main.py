@@ -1,4 +1,5 @@
 import os
+import yaml
 import subprocess
 from importlib import import_module
 from pathlib import Path
@@ -57,6 +58,8 @@ if config.general["upright"]:
     timer.update("rotate_back_features")
 
 # Export in colmap format
+with open(config.general["camera_options"], "r") as file:
+    camera_options = yaml.safe_load(file)
 database_path = output_dir / "database.db"
 export_to_colmap(
     img_dir=imgs_dir,
@@ -64,7 +67,7 @@ export_to_colmap(
     match_path=match_path,
     database_path=database_path,
     camera_model="simple-radial",
-    single_camera=True,
+    camera_options=camera_options,
 )
 timer.update("export_to_colmap")
 
@@ -81,7 +84,6 @@ if config.general["graph"]:
 # If --skip_reconstruction is not specified, run reconstruction
 # Export in openMVG format
 if config.general["openmvg_conf"]:
-    import yaml
 
     with open(config.general["openmvg_conf"], "r") as file:
         openmvgcfg = yaml.safe_load(file)

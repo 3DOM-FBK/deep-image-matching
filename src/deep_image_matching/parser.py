@@ -137,6 +137,11 @@ def parse_cli() -> dict:
         help="Path to openmvg config file'",
         default=None,
     )
+    parser.add_argument(
+        "--camera_options",
+        help="Path to camera options yaml file, e.g. config/cameras.yaml",
+        default=None,
+    )
     args = parser.parse_args()
 
     if args.gui is True:

@@ -504,6 +504,10 @@ class Config:
             args["openmvg"] = Path(args["openmvg"])
             if not args["openmvg"].exists():
                 raise ValueError(f"File {args['openmvg']} does not exist")
+        
+        if args["camera_options"] is not None:
+            if Path(args["camera_options"]).suffix != '.yaml':
+                raise ValueError(f"File passed to --camera_options must be .yaml file")
 
         # Build configuration dictionary
         cfg = {
@@ -521,6 +525,7 @@ class Config:
             "graph": args["graph"],
             "skip_reconstruction": args["skip_reconstruction"],
             "openmvg_conf": args["openmvg"],
+            "camera_options": args["camera_options"],
         }
 
         return cfg

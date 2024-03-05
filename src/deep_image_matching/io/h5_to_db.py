@@ -12,8 +12,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import argparse
 import os
+import yaml
+import argparse
 import warnings
 from pathlib import Path
 
@@ -78,11 +79,28 @@ def create_camera(db, image_path, camera_model):
 
     return db.add_camera(model, width, height, param_arr)
 
+def parse_camera_options(camera_options: dict, db, image_path):
+    grouped_images = {}
+    n_cameras = len(camera_options.keys())-1
+    for camera in range(n_cameras):
+        cam_opt = camera_options[f"cam{camera}"]
+        images = cam_opt['images'].split(',')
+        for i,img in enumerate(images):
+            grouped_images[img] = {
+                'camera_id' : camera + 1
+            }
+            if i == 0:
+                path = os.path.join(image_path, img)
+                create_camera(db, path, cam_opt['camera_model'])
+    return grouped_images
 
-def add_keypoints(db, h5_path, image_path, camera_model, single_camera=True):
+def add_keypoints(db, h5_path, image_path, camera_options):
+
+    grouped_images = parse_camera_options(camera_options, db, image_path)
+
     keypoint_f = h5py.File(str(h5_path), "r")
 
-    camera_id = None
+    #camera_id = None
     fname_to_id = {}
     for filename in tqdm(list(keypoint_f.keys())):
         keypoints = keypoint_f[filename]["keypoints"].__array__()
@@ -91,8 +109,10 @@ def add_keypoints(db, h5_path, image_path, camera_model, single_camera=True):
         if not os.path.isfile(path):
             raise IOError(f"Invalid image path {path}")
 
-        if camera_id is None or not single_camera:
-            camera_id = create_camera(db, path, camera_model)
+        if filename not in list(grouped_images.keys()):
+            camera_id = create_camera(db, path, camera_options['general']['camera_model'])
+        else:
+            camera_id = grouped_images[filename]['camera_id']
         image_id = db.add_image(filename, camera_id)
         fname_to_id[filename] = image_id
         # print('keypoints')
@@ -171,7 +191,7 @@ def export_to_colmap(
     match_path: Path,
     database_path="colmap.db",
     camera_model="simple-radial",
-    single_camera=True,
+    camera_options=False,
 ):
     if database_path.exists():
         logger.warning(f"Database path {database_path} already exists - deleting it")
@@ -179,7 +199,7 @@ def export_to_colmap(
 
     db = COLMAPDatabase.connect(database_path)
     db.create_tables()
-    fname_to_id = add_keypoints(db, feature_path, img_dir, camera_model, single_camera)
+    fname_to_id = add_keypoints(db, feature_path, img_dir, camera_options)
     raw_match_path = match_path.parent / "raw_matches.h5"
     if raw_match_path.exists():
         add_raw_matches(
