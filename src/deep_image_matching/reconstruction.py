@@ -63,7 +63,7 @@ def update_cameras(database_path: Path, cameras: [List[pycolmap.Camera]]):
 
     for camera_id, cam in enumerate(cameras, start=1):
         db.update_camera(
-            camera_id, cam.model_id, cam.width, cam.height, cam.params, True
+            camera_id, cam.model.value, cam.width, cam.height, cam.params, True
         )
     db.commit()
     db.close()
