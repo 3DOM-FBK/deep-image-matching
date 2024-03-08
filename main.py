@@ -66,7 +66,6 @@ export_to_colmap(
     feature_path=feature_path,
     match_path=match_path,
     database_path=database_path,
-    camera_model="simple-radial",
     camera_options=camera_options,
 )
 timer.update("export_to_colmap")

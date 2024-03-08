@@ -140,7 +140,7 @@ def parse_cli() -> dict:
     parser.add_argument(
         "--camera_options",
         help="Path to camera options yaml file, e.g. config/cameras.yaml",
-        default=None,
+        default="./config/cameras.yaml",
     )
     args = parser.parse_args()
 
