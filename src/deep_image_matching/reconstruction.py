@@ -134,27 +134,27 @@ def main(
     reconst_opts: Optional[Dict[str, Any]] = None,
     verbose: bool = True,
 ) -> pycolmap.Reconstruction:
-    # Create empty database
-    create_empty_db(database)
-    import_images(image_dir, database, camera_mode)
-
-    # Update cameras intrinsics in the database
-    if cameras:
-        update_cameras(database, cameras)
-
-    # Import features and matches
-    image_ids = get_image_ids(database)
-    import_features(image_ids, database, feature_path)
-    import_matches(
-        image_ids,
-        database,
-        match_path,
-        skip_geometric_verification=skip_geometric_verification,
-    )
-
-    # Run geometric verification
-    if not skip_geometric_verification:
-        estimation_and_geometric_verification(database, pair_path, verbose=verbose)
+    ## Create empty database
+    #create_empty_db(database)
+    #import_images(image_dir, database, camera_mode)
+#
+    ## Update cameras intrinsics in the database
+    #if cameras:
+    #    update_cameras(database, cameras)
+#
+    ## Import features and matches
+    #image_ids = get_image_ids(database)
+    #import_features(image_ids, database, feature_path)
+    #import_matches(
+    #    image_ids,
+    #    database,
+    #    match_path,
+    #    skip_geometric_verification=skip_geometric_verification,
+    #)
+#
+    ## Run geometric verification
+    #if not skip_geometric_verification:
+    #    estimation_and_geometric_verification(database, pair_path, verbose=verbose)
 
     # Run reconstruction
     model = pycolmap_reconstruction(
@@ -165,10 +165,10 @@ def main(
         options=reconst_opts,
     )
     if model is not None:
-        logger.info(
-            f"Reconstruction statistics:\n{model.summary()}"
-            + f"\n\tnum_input_images = {len(image_ids)}"
-        )
+        #logger.info(
+        #    f"Reconstruction statistics:\n{model.summary()}"
+        #    + f"\n\tnum_input_images = {len(image_ids)}"
+        #)
 
         # Copy images to sfm_dir (for debugging)
         # shutil.copytree(image_dir, sfm_dir / "images", dirs_exist_ok=True)

@@ -154,7 +154,8 @@ if not config.general["skip_reconstruction"]:
         reconstruction = import_module("deep_image_matching.reconstruction")
 
         # Define database path
-        database = output_dir / "database_pycolmap.db"
+        #database = output_dir / "database_pycolmap.db"
+        database = output_dir / "database.db"
 
         # Define how pycolmap create the cameras. Possible CameraMode are:
         # CameraMode.AUTO: infer the camera model based on the image exif
