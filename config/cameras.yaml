@@ -1,10 +1,11 @@
 general:
-  camera_model: "simple-pinhole" # ["simple-pinhole", "pinhole", "simple-radial", "opencv"]
+  camera_model: "pinhole" # ["simple-pinhole", "pinhole", "simple-radial", "opencv"]
   single_camera: False
+  images: ""
 
 cam0:
   camera_model: "pinhole"
-  images : "DSC_6466.JPG,DSC_6467.JPG"
+  images : "DSC_6466.jpg,DSC_6467.jpg"
 
 cam1:
   camera_model: "pinhole"

@@ -98,6 +98,7 @@ if config.general["openmvg_conf"]:
         openmvg_out_path=openmvg_out_path,
         openmvg_sfm_bin=openmvg_sfm_bin,
         openmvg_database=openmvg_database,
+        camera_options=camera_options,
     )
     timer.update("export_to_openMVG")
 
