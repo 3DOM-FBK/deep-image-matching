@@ -1,24 +1,22 @@
-import threading
-import shutil
-import json
 import os
-import warnings
-import subprocess
-from pathlib import Path
-from PIL import Image
-
+import json
 import h5py
+import shutil
+import warnings
+import threading
 import numpy as np
-from tqdm import tqdm
 
 from .. import logger
+from PIL import Image
+from tqdm import tqdm
+from pathlib import Path
+
 
 __OPENMVG_INTRINSIC_NAME_MAP = {
     'pinhole': 'pinhole',
     'to_do': 'pinhole_radial_k3',
     'to_do': 'pinhole_brown_t2'
 }
-
 
 def loadJSON(sfm_data):
   with open(sfm_data) as file:
@@ -87,7 +85,7 @@ def add_matches(h5_path, sfm_data, matches_dir):
     match_file.close()
     saveMatchesOpenMVG(putative_matches, matches_dir)
 
-def update_scene_with_camera_options(images_dir : Path, camera_options : dict):
+def generate_sfm_data(images_dir : Path, camera_options : dict):
     """
     Inspired by PySfMUtils https://gitlab.com/educelab/sfm-utils/-/blob/develop/sfm_utils/openmvg.py?ref_type=heads
     images_dir : path to directory containing all the images
@@ -209,32 +207,18 @@ def export_to_openmvg(
     if openmvg_out_path.exists():
         logger.warning(f"OpenMVG output folder {openmvg_out_path} already exists - deleting it")
         os.rmdir(openmvg_out_path)
+
     os.makedirs(openmvg_out_path)
-
-    #camera_file_params = openmvg_sfm_bin / "sensor_width_database" / "sensor_width_camera_database.txt"
-    #camera_file_params = "/home/threedom/Desktop/prova/sensor_width_database/sensor_width_camera_database.txt"
-    camera_file_params = openmvg_database
+    #camera_file_params = openmvg_database # Path to sensor_width_camera_database.txt file
     matches_dir = openmvg_out_path / "matches"
+    os.makedirs(matches_dir)
 
-    pIntrisics = subprocess.Popen( [os.path.join(openmvg_sfm_bin, "openMVG_main_SfMInit_ImageListing"),  "-i", img_dir, "-o", matches_dir, "-d", camera_file_params] )
-    pIntrisics.wait()
-
-    print(camera_options)
-    prova = update_scene_with_camera_options(img_dir, camera_options)
-
-
-    import json
-    #with open(matches_dir / "sfm_data.json", 'r') as file:
-    #  data = json.load(file)
-    #  print(data)
-    #  quit()
-
-    #prova = {'sfm_data_version': '0.3', 'root_path': 'assets\\pytest\\images', 'views': [{'key': 0, 'value': {'polymorphic_id': 1073741824, 'ptr_wrapper': {'id': 2147483649, 'data': {'local_path': '', 'filename': 'DSC_6466.jpg', 'width': 800, 'height': 533, 'id_view': 0, 'id_intrinsic': 0, 'id_pose': 0}}}}, {'key': 1, 'value': {'polymorphic_id': 1073741824, 'ptr_wrapper': {'id': 2147483650, 'data': {'local_path': '', 'filename': 'DSC_6467.jpg', 'width': 800, 'height': 533, 'id_view': 1, 'id_intrinsic': 0, 'id_pose': 1}}}}, {'key': 2, 'value': {'polymorphic_id': 1073741824, 'ptr_wrapper': {'id': 2147483651, 'data': {'local_path': '', 'filename': 'DSC_6468.jpg', 'width': 800, 'height': 533, 'id_view': 2, 'id_intrinsic': 0, 'id_pose': 2}}}}], 'intrinsics': [{'key': 0, 'value': {'polymorphic_id': 2147483649, 'polymorphic_name': 'pinhole_radial_k3', 'ptr_wrapper': {'id': 2147483652, 'data': {'width': 800, 'height': 533, 'focal_length': 623.9554317548747, 'principal_point': [400.0, 266.5], 'disto_k3': [0.0, 0.0, 0.0]}}}}], 'extrinsics': [], 'structure': [], 'control_points': []}
-    #prova = {'sfm_data_version': '0.3', 'root_path': 'assets\\pytest\\images', 'views': [{'key': 0, 'value': {'polymorphic_id': 1073741824, 'ptr_wrapper': {'id': 2147483649, 'data': {'local_path': '', 'filename': 'DSC_6466.jpg', 'width': 800, 'height': 533, 'id_view': 0, 'id_intrinsic': 1, 'id_pose': 0}}}}, {'key': 1, 'value': {'polymorphic_id': 1073741824, 'ptr_wrapper': {'id': 2147483650, 'data': {'local_path': '', 'filename': 'DSC_6467.jpg', 'width': 800, 'height': 533, 'id_view': 1, 'id_intrinsic': 0, 'id_pose': 1}}}}, {'key': 2, 'value': {'polymorphic_id': 1073741824, 'ptr_wrapper': {'id': 2147483651, 'data': {'local_path': '', 'filename': 'DSC_6468.jpg', 'width': 800, 'height': 533, 'id_view': 2, 'id_intrinsic': 0, 'id_pose': 2}}}}], 'intrinsics': [{'key': 0, 'value': {'polymorphic_id': 2147483649, 'polymorphic_name': 'pinhole_radial_k3', 'ptr_wrapper': {'id': 2147483652, 'data': {'width': 800, 'height': 533, 'focal_length': 623.9554317548747, 'principal_point': [400.0, 266.5], 'disto_k3': [0.0, 0.0, 0.0]}}}}, {'key': 1, 'value': {'polymorphic_id': 2147483650, 'polymorphic_name': 'pinhole_radial_k3', 'ptr_wrapper': {'id': 2147483653, 'data': {'width': 800, 'height': 533, 'focal_length': 623.9554317548747, 'principal_point': [400.0, 266.5], 'disto_k3': [0.0, 0.0, 0.0]}}}}], 'extrinsics': [], 'structure': [], 'control_points': []}
-
+    #pIntrisics = subprocess.Popen( [os.path.join(openmvg_sfm_bin, "openMVG_main_SfMInit_ImageListing"),  "-i", img_dir, "-o", matches_dir, "-d", camera_file_params] )
+    #pIntrisics.wait()
+    sfm_data = generate_sfm_data(img_dir, camera_options)
 
     with open(matches_dir / "sfm_data.json", 'w') as json_file:
-      json.dump(prova, json_file, indent=2) 
+      json.dump(sfm_data, json_file, indent=2) 
 
     add_keypoints(feature_path, img_dir, matches_dir)
     add_matches(match_path, openmvg_out_path / "matches" / "sfm_data.json", matches_dir)
