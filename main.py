@@ -83,14 +83,13 @@ if config.general["graph"]:
 # If --skip_reconstruction is not specified, run reconstruction
 # Export in openMVG format
 if config.general["openmvg_conf"]:
-
     with open(config.general["openmvg_conf"], "r") as file:
         openmvgcfg = yaml.safe_load(file)
     system_OS = openmvgcfg["general"]["OS"]
     openmvg_sfm_bin = Path(openmvgcfg["general"]["path_to_binaries"])
     openmvg_database = Path(openmvgcfg["general"]["openmvg_database"])
-
     openmvg_out_path = output_dir / "openmvg"
+
     export_to_openmvg(
         img_dir=imgs_dir,
         feature_path=feature_path,
@@ -103,43 +102,15 @@ if config.general["openmvg_conf"]:
     timer.update("export_to_openMVG")
 
     # Reconstruction with OpenMVG
-    openmvg_reconstruction_dir = os.path.join(
-        openmvg_out_path, "reconstruction_sequential"
+    reconstruction = import_module("deep_image_matching.openmvg_reconstruction")
+    reconstruction.main(
+        openmvg_out_path=openmvg_out_path,
+        skip_reconstruction=config.general["skip_reconstruction"],
+        system_OS=system_OS,
+        openmvg_sfm_bin=openmvg_sfm_bin,
     )
-    openmvg_matches_dir = str(openmvg_out_path / "matches")
-    if not config.general["skip_reconstruction"]:
-        if not os.path.exists(openmvg_reconstruction_dir):
-            os.mkdir(openmvg_reconstruction_dir)
-        logger.debug("OpenMVG Sequential/Incremental reconstruction")
 
-        if system_OS == "windows":
-            pRecons = subprocess.Popen(
-                [
-                    os.path.join(openmvg_sfm_bin, "openMVG_main_IncrementalSfM"),
-                    "-i",
-                    openmvg_matches_dir + "/sfm_data.json",
-                    "-m",
-                    openmvg_matches_dir,
-                    "-o",
-                    openmvg_reconstruction_dir,
-                ]
-            )
-        if system_OS == "linux":
-            pRecons = subprocess.Popen(
-                [
-                    os.path.join(openmvg_sfm_bin, "openMVG_main_SfM"),
-                    "--sfm_engine",
-                    "INCREMENTAL",
-                    "-i",
-                    openmvg_matches_dir + "/sfm_data.json",
-                    "-m",
-                    openmvg_matches_dir,
-                    "-o",
-                    openmvg_reconstruction_dir,
-                ]
-            )
-        pRecons.wait()
-        timer.update("SfM with openMVG")
+    timer.update("SfM with openMVG")
 
 # Reconstruction with pycolmap
 if not config.general["skip_reconstruction"]:
