@@ -39,6 +39,8 @@ def test_valid_basic_arguments(data_dir):
         "skip_reconstruction": False,
         "force": True,
         "verbose": False,
+        "openmvg": None,
+        "camera_options": None,
     }
     config = Config(args)
 
