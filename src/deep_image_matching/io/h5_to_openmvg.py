@@ -10,14 +10,12 @@ from .. import logger
 from PIL import Image
 from tqdm import tqdm
 from pathlib import Path
+from deep_image_matching.io.h5_to_db import get_focal
 
-
-__OPENMVG_INTRINSIC_NAME_MAP = {
-    "pinhole": "pinhole",
-    "to_do": "pinhole_radial_k3",
-    "to_do": "pinhole_brown_t2",
+__OPENMVG_DIST_NAME_MAP = {
+    "pinhole_radial_k3": 'disto_k3',
+    "pinhole_brown_t2": 'disto_t2',
 }
-
 
 def loadJSON(sfm_data):
     with open(sfm_data) as file:
@@ -152,35 +150,56 @@ def generate_sfm_data(images_dir: Path, camera_options: dict):
         """
         OpenMVG Intrinsic struct
         """
-        print(intrinsic)
         nonlocal __ptr_cnt
         d = {
             "key": intrinsic["cam_id"],
             "value": {
                 "polymorphic_id": 2147483649,
-                "polymorphic_name": __OPENMVG_INTRINSIC_NAME_MAP[
-                    intrinsic["camera_model"]
-                ],
+                "polymorphic_name": intrinsic["camera_model"],
                 "ptr_wrapper": {
                     "id": __ptr_cnt,
                     "data": {
-                        "width": 800,
-                        "height": 533,
-                        "focal_length": 623,
-                        "principal_point": [400.0, 266.5],
+                        "width": intrinsic["width"],
+                        "height": intrinsic["height"],
+                        "focal_length": intrinsic["focal"],
+                        "principal_point": [intrinsic["width"]/2.0, intrinsic["height"]/2.0],
                     },
                 },
             },
         }
         __ptr_cnt += 1
-        #
-        #        if intrinsic.dist_params is not None:
-        #            dist_name = __OPENMVG_DIST_NAME_MAP[intrinsic.type]
-        #            d['value']['ptr_wrapper']['data'][dist_name] = intrinsic.dist_params
-        #
+        
+        if intrinsic['dist_params'] is not None:
+            dist_name = __OPENMVG_DIST_NAME_MAP[intrinsic['camera_model']]
+            d['value']['ptr_wrapper']['data'][dist_name] = intrinsic['dist_params']
+        
         return d
 
-    def parse_camera_options(images: list, camera_options: dict):
+    def assign_intrinsics(images_dir: Path, img: str, cam: int, camera_model: str):
+        image_path = images_dir / img
+        focal = get_focal(image_path)
+        image = Image.open(image_path)
+        width, height = image.size
+
+        if camera_model == 'pinhole':
+            params = None
+        elif camera_model == 'pinhole_radial_k3':
+            params = [0.0, 0.0, 0.0]
+        elif camera_model == 'pinhole_brown_t2':
+            params = [0.0, 0.0, 0.0, 0.0, 0.0]
+
+        d = {
+            "cam_id": cam,
+            "camera_model": camera_model,
+            "width" : width,
+            "height" : height,
+            "focal" : focal,
+            "dist_params" : params,
+        }
+
+        return d
+
+    def parse_camera_options(images_dir : Path, images: list, camera_options: dict):
         single_camera = camera_options["general"]["single_camera"]
         views_and_cameras = {}
         intrinsics = {}
@@ -201,10 +220,11 @@ def generate_sfm_data(images_dir: Path, camera_options: dict):
             # Assign camera defined in 'general' to all images
             for img in images:
                 views_and_cameras[img] = cam
-            intrinsics[cam] = {
-                "cam_id": cam,
-                "camera_model": camera_options["general"]["camera_model"],
-            }
+            #intrinsics[cam] = {
+            #    "cam_id": cam,
+            #    "camera_model": camera_options["general"]["camera_model"],
+            #}
+            intrinsics[cam] = assign_intrinsics(images_dir, img, cam, camera_options["general"]["openmvg_camera_model"])
             # Assign a camera to images defined in 'camx'
             other_cam = 1
             for key in list(camera_options.keys()):
@@ -214,10 +234,11 @@ def generate_sfm_data(images_dir: Path, camera_options: dict):
                   if imgs[0] != "":
                     for img in imgs:
                         views_and_cameras[img] = other_cam
-                        intrinsics[other_cam] = {
-                            "cam_id": other_cam,
-                            "camera_model": camera_options[key]["camera_model"],
-                        }
+                        #intrinsics[other_cam] = {
+                        #    "cam_id": other_cam,
+                        #    "camera_model": camera_options[key]["camera_model"],
+                        #}
+                        intrinsics[other_cam] = assign_intrinsics(images_dir, img, other_cam, camera_options["general"]["openmvg_camera_model"])
                     other_cam += 1
                     
             return intrinsics, views_and_cameras
@@ -232,10 +253,11 @@ def generate_sfm_data(images_dir: Path, camera_options: dict):
                   if imgs[0] != "":
                       for img in imgs:
                           views_and_cameras[img] = cam
-                          intrinsics[cam] = {
-                              "cam_id": cam,
-                              "camera_model": camera_options[key]["camera_model"],
-                          }
+                          #intrinsics[cam] = {
+                          #    "cam_id": cam,
+                          #    "camera_model": camera_options[key]["camera_model"],
+                          #}
+                          intrinsics[cam] = assign_intrinsics(images_dir, img, cam, camera_options["general"]["openmvg_camera_model"])
                       cam += 1
             
             # For images not defined in 'camx' assign the camera defined in 'general'
@@ -243,10 +265,11 @@ def generate_sfm_data(images_dir: Path, camera_options: dict):
             for img in images:
                 if img not in grouped_imgs:
                     views_and_cameras[img] = cam
-                    intrinsics[cam] = {
-                        "cam_id": cam,
-                        "camera_model": camera_options["general"]["camera_model"],
-                    }
+                    #intrinsics[cam] = {
+                    #    "cam_id": cam,
+                    #    "camera_model": camera_options["general"]["camera_model"],
+                    #}
+                    intrinsics[cam] = assign_intrinsics(images_dir, img, cam, camera_options["general"]["openmvg_camera_model"])
                     cam += 1
             return intrinsics, views_and_cameras
 
@@ -259,7 +282,7 @@ def generate_sfm_data(images_dir: Path, camera_options: dict):
 
     # Construct OpenMVG struct
     images = os.listdir(images_dir)
-    intrinsics, views_and_cameras = parse_camera_options(images, camera_options)
+    intrinsics, views_and_cameras = parse_camera_options(images_dir, images, camera_options)
 
     data = {
         "sfm_data_version": "0.3",
