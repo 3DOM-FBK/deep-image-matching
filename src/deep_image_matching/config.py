@@ -508,6 +508,10 @@ class Config:
         if args["camera_options"] is not None:
             if Path(args["camera_options"]).suffix != '.yaml':
                 raise ValueError(f"File passed to --camera_options must be .yaml file")
+        
+        if args["upright"] == True:
+            if args["strategy"] == "matching_lowres":
+                raise ValueError(f"With option '--upright' is not possible to use '--strategy matching_lowres', since pairs are chosen with superpoint+lightglue that is not rotation invariant. Use another strategy, e.g. 'bruteforce'.")
 
         # Build configuration dictionary
         cfg = {
