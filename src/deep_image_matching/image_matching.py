@@ -6,6 +6,7 @@ from pprint import pprint
 import cv2
 import h5py
 import numpy as np
+import pycolmap
 import torch
 from tqdm import tqdm
 
