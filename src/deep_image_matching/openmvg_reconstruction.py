@@ -1,18 +1,17 @@
 import os
+import shutil
 import subprocess
-
+import sys
 from pathlib import Path
+
 from deep_image_matching import logger
-from typing import Union
 
 
 def main(
-        openmvg_out_path : Path,
-        skip_reconstruction : bool,
-        system_OS : str,
-        openmvg_sfm_bin : Path,
-        ):
-    
+    openmvg_out_path: Path,
+    skip_reconstruction: bool,
+    openmvg_sfm_bin: Path = None,
+):
     openmvg_reconstruction_dir = openmvg_out_path / "reconstruction_sequential"
     openmvg_matches_dir = str(openmvg_out_path / "matches")
 
@@ -22,7 +21,11 @@ def main(
 
         logger.debug("OpenMVG Sequential/Incremental reconstruction")
 
-        if system_OS == "windows":
+        if sys.platform == "windows":
+            if openmvg_sfm_bin is None:
+                raise ValueError(
+                    "openMVG binaries path is not provided. Please provide the path to openMVG binaries."
+                )
             pRecons = subprocess.Popen(
                 [
                     openmvg_sfm_bin / "openMVG_main_IncrementalSfM",
@@ -34,7 +37,14 @@ def main(
                     openmvg_reconstruction_dir,
                 ]
             )
-        if system_OS == "linux":
+        if sys.platform == "linux":
+            if openmvg_sfm_bin is None:
+                openmvg_sfm_bin = shutil.which("openMVG_main_SfM")
+                if openmvg_sfm_bin is None:
+                    raise FileNotFoundError(
+                        "openMVG binaries path is not provided and DIM is not able to find it automatically. Please provide the path to openMVG binaries."
+                    )
+
             pRecons = subprocess.Popen(
                 [
                     openmvg_sfm_bin / "openMVG_main_SfM",
