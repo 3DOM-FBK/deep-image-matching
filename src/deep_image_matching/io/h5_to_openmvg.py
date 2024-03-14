@@ -1,21 +1,25 @@
-import os
 import json
-import h5py
+import os
 import shutil
-import warnings
+import sys
 import threading
-import numpy as np
+import urllib.request
+import warnings
+from pathlib import Path
 
-from .. import logger
+import h5py
+import numpy as np
+from deep_image_matching.io.h5_to_db import get_focal
 from PIL import Image
 from tqdm import tqdm
-from pathlib import Path
-from deep_image_matching.io.h5_to_db import get_focal
+
+from .. import logger
 
 __OPENMVG_DIST_NAME_MAP = {
-    "pinhole_radial_k3": 'disto_k3',
-    "pinhole_brown_t2": 'disto_t2',
+    "pinhole_radial_k3": "disto_k3",
+    "pinhole_brown_t2": "disto_t2",
 }
+
 
 def loadJSON(sfm_data):
     with open(sfm_data) as file:
@@ -162,17 +166,20 @@ def generate_sfm_data(images_dir: Path, camera_options: dict):
                         "width": intrinsic["width"],
                         "height": intrinsic["height"],
                         "focal_length": intrinsic["focal"],
-                        "principal_point": [intrinsic["width"]/2.0, intrinsic["height"]/2.0],
+                        "principal_point": [
+                            intrinsic["width"] / 2.0,
+                            intrinsic["height"] / 2.0,
+                        ],
                     },
                 },
             },
         }
         __ptr_cnt += 1
-        
-        if intrinsic['dist_params'] is not None:
-            dist_name = __OPENMVG_DIST_NAME_MAP[intrinsic['camera_model']]
-            d['value']['ptr_wrapper']['data'][dist_name] = intrinsic['dist_params']
-        
+
+        if intrinsic["dist_params"] is not None:
+            dist_name = __OPENMVG_DIST_NAME_MAP[intrinsic["camera_model"]]
+            d["value"]["ptr_wrapper"]["data"][dist_name] = intrinsic["dist_params"]
+
         return d
 
     def assign_intrinsics(images_dir: Path, img: str, cam: int, camera_model: str):
@@ -181,108 +188,129 @@ def generate_sfm_data(images_dir: Path, camera_options: dict):
         image = Image.open(image_path)
         width, height = image.size
 
-        if camera_model == 'pinhole':
+        if camera_model == "pinhole":
             params = None
-        elif camera_model == 'pinhole_radial_k3':
+        elif camera_model == "pinhole_radial_k3":
             params = [0.0, 0.0, 0.0]
-        elif camera_model == 'pinhole_brown_t2':
+        elif camera_model == "pinhole_brown_t2":
             params = [0.0, 0.0, 0.0, 0.0, 0.0]
 
         d = {
             "cam_id": cam,
             "camera_model": camera_model,
-            "width" : width,
-            "height" : height,
-            "focal" : focal,
-            "dist_params" : params,
+            "width": width,
+            "height": height,
+            "focal": focal,
+            "dist_params": params,
         }
 
         return d
 
-    def parse_camera_options(images_dir : Path, images: list, camera_options: dict):
+    def parse_camera_options(images_dir: Path, images: list, camera_options: dict):
         single_camera = camera_options["general"]["single_camera"]
         views_and_cameras = {}
         intrinsics = {}
-        
+
         # Check assigned images exists
         for key in list(camera_options.keys()):
-            if key != 'general':
-              imgs = camera_options[key]["images"]
-              imgs = imgs.split(",")
-              if imgs[0] != "":
-                  for img in imgs:
-                      if img not in images:
-                        logger.error("Check images assigned to cameras in config/cameras.yaml. Image names or extensions are wrong.")
-                        quit()
+            if key != "general":
+                imgs = camera_options[key]["images"]
+                imgs = imgs.split(",")
+                if imgs[0] != "":
+                    for img in imgs:
+                        if img not in images:
+                            logger.error(
+                                "Check images assigned to cameras in config/cameras.yaml. Image names or extensions are wrong."
+                            )
+                            quit()
 
         def single_main_camera():
             cam = 0
             # Assign camera defined in 'general' to all images
             for img in images:
                 views_and_cameras[img] = cam
-            #intrinsics[cam] = {
+            # intrinsics[cam] = {
             #    "cam_id": cam,
             #    "camera_model": camera_options["general"]["camera_model"],
-            #}
-            intrinsics[cam] = assign_intrinsics(images_dir, img, cam, camera_options["general"]["openmvg_camera_model"])
+            # }
+            intrinsics[cam] = assign_intrinsics(
+                images_dir, img, cam, camera_options["general"]["openmvg_camera_model"]
+            )
             # Assign a camera to images defined in 'camx'
             other_cam = 1
             for key in list(camera_options.keys()):
-                if key != 'general':
-                  imgs = camera_options[key]["images"]
-                  imgs = imgs.split(",")
-                  if imgs[0] != "":
-                    for img in imgs:
-                        views_and_cameras[img] = other_cam
-                        #intrinsics[other_cam] = {
-                        #    "cam_id": other_cam,
-                        #    "camera_model": camera_options[key]["camera_model"],
-                        #}
-                        intrinsics[other_cam] = assign_intrinsics(images_dir, img, other_cam, camera_options["general"]["openmvg_camera_model"])
-                    other_cam += 1
-                    
+                if key != "general":
+                    imgs = camera_options[key]["images"]
+                    imgs = imgs.split(",")
+                    if imgs[0] != "":
+                        for img in imgs:
+                            views_and_cameras[img] = other_cam
+                            # intrinsics[other_cam] = {
+                            #    "cam_id": other_cam,
+                            #    "camera_model": camera_options[key]["camera_model"],
+                            # }
+                            intrinsics[other_cam] = assign_intrinsics(
+                                images_dir,
+                                img,
+                                other_cam,
+                                camera_options["general"]["openmvg_camera_model"],
+                            )
+                        other_cam += 1
+
             return intrinsics, views_and_cameras
-        
+
         def no_main_camera():
             cam = 0
             # Assign a camera to images defined in 'camx'
             for key in list(camera_options.keys()):
-                if key != 'general':
-                  imgs = camera_options[key]["images"]
-                  imgs = imgs.split(",")
-                  if imgs[0] != "":
-                      for img in imgs:
-                          views_and_cameras[img] = cam
-                          #intrinsics[cam] = {
-                          #    "cam_id": cam,
-                          #    "camera_model": camera_options[key]["camera_model"],
-                          #}
-                          intrinsics[cam] = assign_intrinsics(images_dir, img, cam, camera_options["general"]["openmvg_camera_model"])
-                      cam += 1
-            
+                if key != "general":
+                    imgs = camera_options[key]["images"]
+                    imgs = imgs.split(",")
+                    if imgs[0] != "":
+                        for img in imgs:
+                            views_and_cameras[img] = cam
+                            # intrinsics[cam] = {
+                            #    "cam_id": cam,
+                            #    "camera_model": camera_options[key]["camera_model"],
+                            # }
+                            intrinsics[cam] = assign_intrinsics(
+                                images_dir,
+                                img,
+                                cam,
+                                camera_options["general"]["openmvg_camera_model"],
+                            )
+                        cam += 1
+
             # For images not defined in 'camx' assign the camera defined in 'general'
             grouped_imgs = list(views_and_cameras.keys())
             for img in images:
                 if img not in grouped_imgs:
                     views_and_cameras[img] = cam
-                    #intrinsics[cam] = {
+                    # intrinsics[cam] = {
                     #    "cam_id": cam,
                     #    "camera_model": camera_options["general"]["camera_model"],
-                    #}
-                    intrinsics[cam] = assign_intrinsics(images_dir, img, cam, camera_options["general"]["openmvg_camera_model"])
+                    # }
+                    intrinsics[cam] = assign_intrinsics(
+                        images_dir,
+                        img,
+                        cam,
+                        camera_options["general"]["openmvg_camera_model"],
+                    )
                     cam += 1
             return intrinsics, views_and_cameras
 
-        if single_camera == True:
+        if single_camera is True:
             intrinsics, views_and_cameras = single_main_camera()
-        elif single_camera == False:
+        elif single_camera is False:
             intrinsics, views_and_cameras = no_main_camera()
-        
+
         return intrinsics, views_and_cameras
 
     # Construct OpenMVG struct
     images = os.listdir(images_dir)
-    intrinsics, views_and_cameras = parse_camera_options(images_dir, images, camera_options)
+    intrinsics, views_and_cameras = parse_camera_options(
+        images_dir, images, camera_options
+    )
 
     data = {
         "sfm_data_version": "0.3",
@@ -307,20 +335,48 @@ def export_to_openmvg(
     feature_path: Path,
     match_path: Path,
     openmvg_out_path: Path,
-    openmvg_sfm_bin: Path,
-    openmvg_database: Path,
     camera_options: dict,
+    openmvg_sfm_bin: Path = None,
+    openmvg_database: Path = None,
 ):
+    openmvg_out_path = Path(openmvg_out_path)
     if openmvg_out_path.exists():
         logger.warning(
             f"OpenMVG output folder {openmvg_out_path} already exists - deleting it"
         )
         os.rmdir(openmvg_out_path)
+    openmvg_out_path.mkdir(parents=True)
 
-    os.makedirs(openmvg_out_path)
+    # NOTE: this part meybe is not needed here...
+    if openmvg_sfm_bin is None:
+        # Try to find openMVG binaries (only on linux)
+        if sys.platform == "linux":
+            openmvg_sfm_bin = shutil.which("openMVG_main_SfM")
+        else:
+            raise FileNotFoundError(
+                "openMVG binaries path is not provided and DIM is not able to find it automatically. Please provide the path to openMVG binaries."
+            )
+    openmvg_sfm_bin = Path(openmvg_sfm_bin)
+    if not openmvg_sfm_bin.exists():
+        raise FileNotFoundError(
+            f"openMVG binaries path {openmvg_sfm_bin} does not exist."
+        )
+
+    if openmvg_database is not None:
+        openmvg_database = Path(openmvg_database)
+        if not openmvg_database.exists():
+            raise FileNotFoundError(
+                f"openMVG database path {openmvg_database} does not exist."
+            )
+    else:
+        # Download openMVG sensor_width_camera_database to the openMVG output folder
+        url = "https://github.com/openMVG/openMVG/blob/develop/src/openMVG/exif/sensor_width_database/sensor_width_camera_database.txt"
+        openmvg_database = openmvg_out_path / "sensor_width_camera_database.txt"
+        urllib.request.urlretrieve(url, openmvg_database)
+
     # camera_file_params = openmvg_database # Path to sensor_width_camera_database.txt file
     matches_dir = openmvg_out_path / "matches"
-    os.makedirs(matches_dir)
+    matches_dir.mkdir()
 
     # pIntrisics = subprocess.Popen( [os.path.join(openmvg_sfm_bin, "openMVG_main_SfMInit_ImageListing"),  "-i", img_dir, "-o", matches_dir, "-d", camera_file_params] )
     # pIntrisics.wait()

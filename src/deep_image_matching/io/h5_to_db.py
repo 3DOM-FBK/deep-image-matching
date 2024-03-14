@@ -12,12 +12,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import os
-import yaml
 import argparse
+import os
 import warnings
 from pathlib import Path
-from typing import Union
 
 import h5py
 import numpy as np
@@ -63,7 +61,7 @@ def create_camera(db, image_path, camera_model):
 
     focal = get_focal(image_path)
 
-    if camera_model == "simple-pinhole": 
+    if camera_model == "simple-pinhole":
         model = 0  # simple pinhole
         param_arr = np.array([focal, width / 2, height / 2])
     elif camera_model == "pinhole":
@@ -80,31 +78,32 @@ def create_camera(db, image_path, camera_model):
 
     return db.add_camera(model, width, height, param_arr)
 
+
 def parse_camera_options(camera_options: dict, db, image_path):
     grouped_images = {}
-    n_cameras = len(camera_options.keys())-1
+    n_cameras = len(camera_options.keys()) - 1
     for camera in range(n_cameras):
         cam_opt = camera_options[f"cam{camera}"]
-        images = cam_opt['images'].split(',')
-        for i,img in enumerate(images):
-            grouped_images[img] = {
-                'camera_id' : camera + 1
-            }
+        images = cam_opt["images"].split(",")
+        for i, img in enumerate(images):
+            grouped_images[img] = {"camera_id": camera + 1}
             if i == 0:
                 path = os.path.join(image_path, img)
                 try:
-                    create_camera(db, path, cam_opt['camera_model'])
+                    create_camera(db, path, cam_opt["camera_model"])
                 except:
-                    logger.warning(f"Was not possible to load the first image to initialize cam{camera}")
+                    logger.warning(
+                        f"Was not possible to load the first image to initialize cam{camera}"
+                    )
     return grouped_images
 
-def add_keypoints(db, h5_path, image_path, camera_options):
 
+def add_keypoints(db, h5_path, image_path, camera_options):
     grouped_images = parse_camera_options(camera_options, db, image_path)
 
     keypoint_f = h5py.File(str(h5_path), "r")
 
-    #camera_id = None
+    # camera_id = None
     fname_to_id = {}
     k = 0
     for filename in tqdm(list(keypoint_f.keys())):
@@ -115,17 +114,21 @@ def add_keypoints(db, h5_path, image_path, camera_options):
             raise IOError(f"Invalid image path {path}")
 
         if filename not in list(grouped_images.keys()):
-            if camera_options['general']['single_camera'] == False:
-                camera_id = create_camera(db, path, camera_options['general']['camera_model'])
-            elif camera_options['general']['single_camera'] == True:
+            if camera_options["general"]["single_camera"] is False:
+                camera_id = create_camera(
+                    db, path, camera_options["general"]["camera_model"]
+                )
+            elif camera_options["general"]["single_camera"] is True:
                 if k == 0:
-                    camera_id = create_camera(db, path, camera_options['general']['camera_model'])
+                    camera_id = create_camera(
+                        db, path, camera_options["general"]["camera_model"]
+                    )
                     single_camera_id = camera_id
                     k += 1
                 elif k > 0:
                     camera_id = single_camera_id
         else:
-            camera_id = grouped_images[filename]['camera_id']
+            camera_id = grouped_images[filename]["camera_id"]
         image_id = db.add_image(filename, camera_id)
         fname_to_id[filename] = image_id
         # print('keypoints')
@@ -161,7 +164,7 @@ def add_raw_matches(db, h5_path, fname_to_id):
 
                 matches = group[key_2][()]
                 db.add_matches(id_1, id_2, matches)
-                #db.add_two_view_geometry(id_1, id_2, matches)
+                # db.add_two_view_geometry(id_1, id_2, matches)
 
                 added.add(pair_id)
 
@@ -189,7 +192,7 @@ def add_matches(db, h5_path, fname_to_id):
                     continue
 
                 matches = group[key_2][()]
-                #db.add_matches(id_1, id_2, matches)
+                # db.add_matches(id_1, id_2, matches)
                 db.add_two_view_geometry(id_1, id_2, matches)
 
                 added.add(pair_id)

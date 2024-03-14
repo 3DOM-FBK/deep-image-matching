@@ -1,0 +1,3 @@
+general:
+  path_to_binaries: null # If None, the binaries are assumed to be in the PATH
+  openmvg_database: null # If None, it will be downloaded from the openMVG repository

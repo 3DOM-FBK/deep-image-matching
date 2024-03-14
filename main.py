@@ -1,9 +1,6 @@
-import os
-import yaml
-import subprocess
 from importlib import import_module
-from pathlib import Path
 
+import yaml
 from deep_image_matching import logger, timer
 from deep_image_matching.config import Config
 from deep_image_matching.image_matching import ImageMatching
@@ -72,7 +69,6 @@ timer.update("export_to_colmap")
 
 # Visualize view graph
 if config.general["graph"]:
-
     try:
         graph = import_module("deep_image_matching.graph")
         graph.view_graph(database_path, output_dir, imgs_dir)
@@ -85,9 +81,8 @@ if config.general["graph"]:
 if config.general["openmvg_conf"]:
     with open(config.general["openmvg_conf"], "r") as file:
         openmvgcfg = yaml.safe_load(file)
-    system_OS = openmvgcfg["general"]["OS"]
-    openmvg_sfm_bin = Path(openmvgcfg["general"]["path_to_binaries"])
-    openmvg_database = Path(openmvgcfg["general"]["openmvg_database"])
+    openmvg_sfm_bin = openmvgcfg["general"]["path_to_binaries"]
+    openmvg_database = openmvgcfg["general"]["openmvg_database"]
     openmvg_out_path = output_dir / "openmvg"
 
     export_to_openmvg(
@@ -106,7 +101,6 @@ if config.general["openmvg_conf"]:
     reconstruction.main(
         openmvg_out_path=openmvg_out_path,
         skip_reconstruction=config.general["skip_reconstruction"],
-        system_OS=system_OS,
         openmvg_sfm_bin=openmvg_sfm_bin,
     )
 
@@ -126,7 +120,7 @@ if not config.general["skip_reconstruction"]:
         reconstruction = import_module("deep_image_matching.reconstruction")
 
         # Define database path
-        #database = output_dir / "database_pycolmap.db"
+        # database = output_dir / "database_pycolmap.db"
         database = output_dir / "database.db"
 
         # Define how pycolmap create the cameras. Possible CameraMode are:
