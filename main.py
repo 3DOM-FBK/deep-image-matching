@@ -110,6 +110,7 @@ if config.general["openmvg_conf"]:
 if not config.general["skip_reconstruction"]:
     use_pycolmap = True
     try:
+        # To be sure, check if pycolmap is available, otherwise skip reconstruction
         pycolmap = import_module("pycolmap")
     except ImportError:
         logger.error("Pycomlap is not available.")
@@ -118,53 +119,6 @@ if not config.general["skip_reconstruction"]:
     if use_pycolmap:
         # import reconstruction module
         reconstruction = import_module("deep_image_matching.reconstruction")
-
-        # Define database path
-        # database = output_dir / "database_pycolmap.db"
-        database = output_dir / "database.db"
-
-        # Define how pycolmap create the cameras. Possible CameraMode are:
-        # CameraMode.AUTO: infer the camera model based on the image exif
-        # CameraMode.PER_FOLDER: create a camera for each folder in the image directory
-        # CameraMode.PER_IMAGE: create a camera for each image in the image directory
-        # CameraMode.SINGLE: create a single camera for all images
-        camera_mode = pycolmap.CameraMode.AUTO
-
-        # Optional - You can manually define the cameras parameters (refer to https://github.com/colmap/colmap/blob/main/src/colmap/sensor/models.h).
-        # Note, that the cameras are first detected with the CameraMode specified and then overwitten with the custom model. Therefore, you MUST provide the SAME NUMBER of cameras and with the SAME ORDER in which the cameras appear in the COLMAP database.
-        # To see the camera number and order, you can run the reconstruction a first time with the AUTO camera mode (and without manually define the cameras) and see the list of cameras in the database with
-        #   print(list(model.cameras.values()))
-        # or opening the database with the COLMAP gui.
-        #
-        # OPENCV camera models and number of parameters to be used
-        #    SIMPLE_PINHOLE: f, cx, cy
-        #    PINHOLE: fx, fy, cx, cy
-        #    SIMPLE_RADIAL: f, cx, cy, k
-        #    RADIAL: f, cx, cy, k1, k2
-        #    OPENCV: fx, fy, cx, cy, k1, k2, p1, p2
-        #    OPENCV_FISHEYE: fx, fy, cx, cy, k1, k2, k3, k4
-        #    FULL_OPENCV: fx, fy, cx, cy, k1, k2, p1, p2, k3, k4, k5, k6
-        #    FOV: fx, fy, cx, cy, omega
-        #    SIMPLE_RADIAL_FISHEYE: f, cx, cy, k
-        #    RADIAL_FISHEYE: f, cx, cy, k1, k2
-        #    THIN_PRISM_FISHEYE: fx, fy, cx, cy, k1, k2, p1, p2, k3, k4, sx1, sy1
-        # NOTE: Use the SIMPLE-PINHOLE camera model if you want to export the solution to Metashape, as there are some bugs in COLMAP (or pycolamp) when exporting the solution in the Bundler format.
-        # e.g., using FULL-OPENCV camera model, the principal point is not exported correctly and the tie points are wrong in Metashape.
-        #
-        # cam0 = pycolmap.Camera(
-        #    model="PINHOLE",
-        #    width=1500,
-        #    height=1000,
-        #    params=[1500, 1500, 750, 500],
-        # )
-        # cam1 = pycolmap.Camera(
-        #     model="SIMPLE_PINHOLE",
-        #     width=6012,
-        #     height=4008,
-        #     params=[9.267, 3.053, 1.948],
-        # )
-        # cameras = [cam0] # or cameras = [cam0, cam1]
-        cameras = []
 
         # Optional - You can specify some reconstruction configuration
         # reconst_opts = (
@@ -178,23 +132,14 @@ if not config.general["skip_reconstruction"]:
 
         # Run reconstruction
         model = reconstruction.main(
-            database=database,
+            database=output_dir / "database.db",
             image_dir=imgs_dir,
-            feature_path=feature_path,
-            match_path=match_path,
-            pair_path=pair_path,
             sfm_dir=output_dir,
-            camera_mode=camera_mode,
-            cameras=cameras,
-            skip_geometric_verification=True,
             reconst_opts=reconst_opts,
             verbose=config.general["verbose"],
         )
 
         timer.update("pycolmap reconstruction")
-
-    else:
-        logger.warning("Reconstruction with COLMAP CLI is not implemented yet.")
 
 # Print timing
 timer.print("Deep Image Matching")
