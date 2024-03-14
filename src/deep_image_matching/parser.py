@@ -20,13 +20,13 @@ def parse_cli() -> dict:
         help="Project directoryt, containing a folder 'images', in which all the images are present and where the results will be saved.",
         default=None,
     )
-    # parser.add_argument(
-    #     "-i",
-    #     "--images",
-    #     type=str,
-    #     help="Folder containing images to process. If not specified, an 'images' folder inside the project folder is assumed.",
-    #     default=None,
-    # )
+    parser.add_argument(
+        "-i",
+        "--images",
+        type=str,
+        help="Folder containing images to process. If not specified, an 'images' folder inside the project folder is assumed.",
+        default=None,
+    )
     # parser.add_argument(
     #     "-o",
     #     "--outs",
@@ -49,14 +49,16 @@ def parse_cli() -> dict:
         help="Path of a YAML configuration file that contains user-defined options. If not specified, the default configuration for the selected matching configuration is used.",
         default=None,
     )
-    parser.add_argument(
-        "-q",
-        "--quality",
-        type=str,
-        choices=["lowest", "low", "medium", "high", "highest"],
-        default="high",
-        help="Set the image resolution for the matching. High means full resolution images, medium is half res, low is 1/4 res, highest is x2 upsampling. Default is high.",
-    ),
+    (
+        parser.add_argument(
+            "-q",
+            "--quality",
+            type=str,
+            choices=["lowest", "low", "medium", "high", "highest"],
+            default="high",
+            help="Set the image resolution for the matching. High means full resolution images, medium is half res, low is 1/4 res, highest is x2 upsampling. Default is high.",
+        ),
+    )
     parser.add_argument(
         "-t",
         "--tiling",
