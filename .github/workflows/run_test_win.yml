@@ -1,4 +1,4 @@
-name: run-test
+name: run-test-win
 
 on:
   push:

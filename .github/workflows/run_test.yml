@@ -29,7 +29,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .
           pip install pycolmap
-          pip install einops
       - name: Test with pytest
         run: |
           pytest
