@@ -373,7 +373,7 @@ class MatcherBase(metaclass=ABCMeta):
                     matches_path,
                     img0,
                     img1,
-                    save_path=viz_dir / f"{img0_name}_{img1_name}.png",
+                    save_path=viz_dir / f"{img0_name}_{img1_name}.jpg",
                     img_format="jpg",
                     jpg_quality=70,
                 )

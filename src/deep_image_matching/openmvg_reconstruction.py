@@ -44,7 +44,8 @@ def main(
                     raise FileNotFoundError(
                         "openMVG binaries path is not provided and DIM is not able to find it automatically. Please provide the path to openMVG binaries."
                     )
-            openmvg_sfm_bin = Path(openmvg_sfm_bin)
+                else:
+                    openmvg_sfm_bin = Path(openmvg_sfm_bin).parent
             pRecons = subprocess.Popen(
                 [
                     openmvg_sfm_bin / "openMVG_main_SfM",
