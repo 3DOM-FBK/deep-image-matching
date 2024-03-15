@@ -19,9 +19,13 @@
 
 Multivew matcher for SfM software. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. Now, it supports both OpenMVG and MicMac. Feel free to collaborate!
 
-Check the documentation at <a href="https://3dom-fbk.github.io/deep-image-matching/">Docs</a>.
+While `dev` branch is more frequently updated, `master` is the default more stable branch and is updated from `dev` less frequently. If you are looking for the newest developments, please switch to `dev`. 
 
-While `dev` branch is more frequently updated, `master` is the default more stable branch and is updated from `dev` less frequently. If you are looking for the newest developments, please switch to `dev`. **Please, note that `deep-image-matching` is under active development** and it is still in an experimental stage. If you find any bug, please open an issue.
+
+For how to use DIM, check the <a href="https://3dom-fbk.github.io/deep-image-matching/">Documentation</a> (updated for the master branch). 
+
+
+**Please, note that `deep-image-matching` is under active development** and it is still in an experimental stage. If you find any bug, please open an issue.
 
 Key features:
 
@@ -118,7 +122,7 @@ If you face any issues, especially on Linux when using the `gpus all` setting, p
 
 ## Usage instructions
 
-<!-- This is a comment You can run deep-image-matching from the command line or from the GUI. -->
+<!-- You can run deep-image-matching from the command line or from the GUI. -->
 
 Use the following command to see all the available options from the CLI:
 
@@ -132,18 +136,21 @@ For example, to run the matching with SuperPoint and LightGlue on a dataset, you
 python main.py --dir assets/example_cyprus --pipeline superpoint+lightglue
 ```
 
-For all the usage instructions and configurations, refer to the documenation at [https://3dom-fbk.github.io/deep-image-matching/](https://3dom-fbk.github.io/deep-image-matching/getting_started) or check the example notebooks.
+The `--dir` parameter defines the processing directory, where all the results will be saved. This directory must constain a subfolder named **images** in which all the images must be stored. We currentely do not support image retrieval from multiple directories or subdirectories, but we may add this feature in the future. 
 
-<!--To run the GUI, you can use the following command:
+The `--pipeline` parameter defines the combaination of local feature extractor and matcher. 
+
+For all the usage instructions and configurations, refer to the [documenation](https://3dom-fbk.github.io/deep-image-matching/getting_started) or check the example notebooks.
+
+<!-- To run the GUI, you can use the following command:
 
 ```bash
 python main.py --gui
-
-```-->
+``` -->
 
 ## Advanced usage
 
-For advanced usage, you can check the `scripts` directory.
+For advanced usage, please refer to the [documentation](https://3dom-fbk.github.io/deep-image-matching/) and/or check the `scripts` directory.
 
 ### Merging databases with different local features
 
