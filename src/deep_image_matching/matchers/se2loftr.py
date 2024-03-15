@@ -87,39 +87,6 @@ class SE2LOFTRMatcher(DetectorFreeMatcherBase):
             image = K.color.rgb_to_grayscale(image)
         return image
 
-    # def _update_features(
-    #     self, feature_path, im0_name, im1_name, new_keypoints0, new_keypoints1, matches0
-    # ) -> None:
-    #     for i, im_name, new_keypoints in zip(
-    #         [0, 1], [im0_name, im1_name], [new_keypoints0, new_keypoints1]
-    #     ):
-    #         features = get_features(feature_path, im_name)
-    #         existing_keypoints = features["keypoints"]
-
-    #         if len(existing_keypoints.shape) == 1:
-    #             features["keypoints"] = new_keypoints
-    #             with h5py.File(feature_path, "r+", libver="latest") as fd:
-    #                 del fd[im_name]
-    #                 grp = fd.create_group(im_name)
-    #                 for k, v in features.items():
-    #                     if k == "im_path" or k == "feature_path":
-    #                         grp.create_dataset(k, data=str(v))
-    #                     if isinstance(v, np.ndarray):
-    #                         grp.create_dataset(k, data=v)
-
-    #         else:
-    #             n_exisiting_keypoints = existing_keypoints.shape[0]
-    #             features["keypoints"] = np.vstack((existing_keypoints, new_keypoints))
-    #             matches0[:, i] = matches0[:, i] + n_exisiting_keypoints
-    #             with h5py.File(feature_path, "r+", libver="latest") as fd:
-    #                 del fd[im_name]
-    #                 grp = fd.create_group(im_name)
-    #                 for k, v in features.items():
-    #                     if k == "im_path" or k == "feature_path":
-    #                         grp.create_dataset(k, data=str(v))
-    #                     if isinstance(v, np.ndarray):
-    #                         grp.create_dataset(k, data=v)
-
     @torch.no_grad()
     def _match_pairs(
         self,
@@ -145,7 +112,44 @@ class SE2LOFTRMatcher(DetectorFreeMatcherBase):
         img0_name = img0_path.name
         img1_name = img1_path.name
 
-        # # Load image
+        # NOTE: NEW SE2-LOFTR code but currently fails...
+        # # Load images
+        # image0 = self._load_image_np(img0_path)
+        # image1 = self._load_image_np(img1_path)
+
+        # # Resize images if needed
+        # image0_ = self._resize_image(self._quality, image0)
+        # image1_ = self._resize_image(self._quality, image1)
+
+        # # Covert images to tensor
+        # timg0_ = self._frame2tensor(image0_, self._device)
+        # timg1_ = self._frame2tensor(image1_, self._device)
+
+        # # Run inference
+        # try:
+        #     with torch.inference_mode():
+        #         input_dict = {"image0": timg0_, "image1": timg1_}
+        #         correspondences = self.matcher(input_dict)
+        # except torch.cuda.OutOfMemoryError as e:
+        #     logger.error(
+        #         f"Out of memory error while matching images {img0_name} and {img1_name}. Try using a lower quality level or use a tiling approach."
+        #     )
+        #     raise e
+
+        # # Get matches and build features
+        # mkpts0 = correspondences["keypoints0"].cpu().numpy()
+        # mkpts1 = correspondences["keypoints1"].cpu().numpy()
+
+        # # Retrieve original image coordinates if matching was performed on up/down-sampled images
+        # mkpts0 = self._resize_keypoints(self._quality, mkpts0)
+        # mkpts1 = self._resize_keypoints(self._quality, mkpts1)
+
+        # # Get match confidence
+        # mconf = correspondences["confidence"].cpu().numpy()
+
+        # NOTE: OLD SE2-LOFTR code but works with no tiling
+
+        # Load image
         image0 = cv2.imread(str(img0_path))
         image1 = cv2.imread(str(img1_path))
 
@@ -159,19 +163,7 @@ class SE2LOFTRMatcher(DetectorFreeMatcherBase):
             height0, width0 = image0.shape[:2]
             height1, width1 = image1.shape[:2]
 
-        # Run inference
-        # try:
-        #     with torch.inference_mode():
-        #         input_dict = {"image0": timg0_, "image1": timg1_}
-        #         correspondences = self.matcher(input_dict)
-        # except torch.cuda.OutOfMemoryError as e:
-        #     logger.error(
-        #         f"Out of memory error while matching images {img0_name} and {img1_name}. Try using a lower quality level or use a tiling approach."
-        #     )
-        #     raise e
-
         # Inference with LoFTR and get prediction -
-        # NOTE: OLD way but works with no tiling
         with torch.inference_mode():
             img0_raw = cv2.resize(image0, self.resize_to)
             img1_raw = cv2.resize(image1, self.resize_to)
@@ -188,10 +180,6 @@ class SE2LOFTRMatcher(DetectorFreeMatcherBase):
         mkpts0[:, 1] = mkpts0[:, 1] * height0 / 480
         mkpts1[:, 0] = mkpts1[:, 0] * width1 / 640
         mkpts1[:, 1] = mkpts1[:, 1] * height1 / 480
-
-        # Create a 1-to-1 matching array
-        matches0 = np.arange(mkpts0.shape[0])
-        matches = np.hstack((matches0.reshape((-1, 1)), matches0.reshape((-1, 1))))
 
         # Create a 1-to-1 matching array
         matches0 = np.arange(mkpts0.shape[0])
