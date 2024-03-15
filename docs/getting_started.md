@@ -2,6 +2,8 @@
 
 Deep-Image-Matching can be launched from the Command Line (CLI), from the GUI (note that the GUI is still under development) or use Deep_Image_Matching as a Python library.
 
+In `assets` folder there are some projects and images for testing.
+
 ## Run Deep-Image-Matching
 
 ### Command Line Interface (CLI)
@@ -10,8 +12,10 @@ Before running the CLI, check the options with `python ./main.py --help`.
 
 The minimal required option are:
 
-- `--dir` `-d`: it is the path of the 'project directory', i.e., the directory containing a folder names 'images', with all the image to be processed, and where the output will be saved
+- `--dir` `-d`: it is the path of the 'project directory', i.e., the directory containing a folder named 'images', with all the image to be processed, and where the output will be saved
 - `--pipeline` `-p`: the name of pipeline (i.e., the combination of local feature extractor and matcher) to use (e.g., "superpoint+lightglue"). See the [Local feature extractor and matcher](#local-feature-extractor-and-matcher) section for more details.
+
+Example: `python main.py --dir ./assets/example_cyprus --pipeline superpoint+lightglue`
 
 Other optional parameters are:
 

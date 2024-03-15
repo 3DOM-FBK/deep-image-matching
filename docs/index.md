@@ -8,19 +8,20 @@
 | -------------------------------------------------- | ------------------------------------------------------ |
 | <img src='./assets/temple_rsift.gif' height="165"> | <img src='./assets/temple_superglue.gif' height="165"> |
 
-Multivew matcher for SfM software. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI. Feel free to collaborate!
+Multivew matcher for SfM software. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. Now, it supports both OpenMVG and MicMac. Feel free to collaborate!
+
+While `dev` branch is more frequently updated, `master` is the default more stable branch and is updated from `dev` less frequently. If you are looking for the newest developments, please switch to `dev`.
 
 **Please, note that `deep-image-matching` is under active development** and it is still in an experimental stage. If you find any bug, please open an issue.
 
 Key features:
 
-- [x] Multiview
-- [x] Large format images
-- [x] SOTA deep-learning and hand-crafted features
-- [x] Full compatibility with COLMAP
-- [x] Support for image rotations
-- [x] Compatibility with Agisoft Metashape (only on Linux and MacOS by using pycolmap)
-- [x] Support image retrieval with deep-learning local features
+- Multiview
+- Large format images
+- SOTA deep-learning and hand-crafted features
+- Support for image rotations
+- Compatibility with several SfM software
+- Support image retrieval with deep-learning local features
 
 | Supported Extractors               | Supported Matchers                                        |
 | ---------------------------------- | --------------------------------------------------------- |
