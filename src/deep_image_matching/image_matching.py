@@ -346,8 +346,6 @@ class ImageMatching:
             timer.update("Match pair")
 
             # NOTE: Geometric verif. has been moved to the end of the matching process
-            # if matches is None:
-            #     continue
 
         # TODO: Clean up features with no matches
 

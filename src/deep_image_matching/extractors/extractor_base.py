@@ -1,5 +1,4 @@
 import inspect
-import threading
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
 from typing import Optional, Tuple, TypedDict, Union
@@ -221,18 +220,14 @@ class ExtractorBase(metaclass=ABCMeta):
         features["image_size"] = np.array(image.shape[:2])
 
         # Save features to disk in h5 format
-        h5_thread = threading.Thread(
-            target=lambda: save_features_h5(
-                feature_path,
-                features,
-                im_path.name,
-                as_half=self.features_as_half,
-            )
+        save_features_h5(
+            feature_path,
+            features,
+            im_path.name,
+            as_half=self.features_as_half,
         )
-        h5_thread.start()
 
         # For debug: visualize keypoints and save to disk
-        # Do everything in a separate thread not to block the main thread
         if self._config["general"]["verbose"]:
             viz_dir = output_dir / "debug" / "keypoints"
             viz_dir.mkdir(parents=True, exist_ok=True)

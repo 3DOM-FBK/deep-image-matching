@@ -112,6 +112,7 @@ if not config.general["skip_reconstruction"]:
     try:
         # To be sure, check if pycolmap is available, otherwise skip reconstruction
         pycolmap = import_module("pycolmap")
+        logger.info(f"Using pycolmap version {pycolmap.__version__}")
     except ImportError:
         logger.error("Pycomlap is not available.")
         use_pycolmap = False
