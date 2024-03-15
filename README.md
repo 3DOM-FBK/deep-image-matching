@@ -18,21 +18,20 @@
 | ----------------------------------------------------- | --------------------------------------------------------- |
 | <img src='docs/assets/temple_rsift.gif' height="165"> | <img src='docs/assets/temple_superglue.gif' height="165"> |
 
-Multivew matcher for SfM software. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI. Feel free to collaborate!
+Multivew matcher for SfM software. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. Now, it supports both OpenMVG and MicMac. Feel free to collaborate!
 
 Check the documentation at <a href="https://3dom-fbk.github.io/deep-image-matching/">Docs</a>.
 
-**Please, note that `deep-image-matching` is under active development** and it is still in an experimental stage. If you find any bug, please open an issue.
+While `dev` branch is more frequently updated, `master` is the default more stable branch and is updated from `dev` less frequently. If you are looking for the newest developments, please switch to `dev`. **Please, note that `deep-image-matching` is under active development** and it is still in an experimental stage. If you find any bug, please open an issue.
 
 Key features:
 
-- [x] Multiview
-- [x] Large format images
-- [x] SOTA deep-learning and hand-crafted features
-- [x] Full compatibility with COLMAP
-- [x] Support for image rotations
-- [x] Compatibility with Agisoft Metashape (only on Linux and MacOS by using pycolmap)
-- [x] Support image retrieval with deep-learning local features
+- Multiview
+- Large format images
+- SOTA deep-learning and hand-crafted features
+- Support for image rotations
+- Compatibility with several SfM software
+- Support image retrieval with deep-learning local features
 
 | Supported Extractors               | Supported Matchers                                        |
 | ---------------------------------- | --------------------------------------------------------- |
@@ -78,14 +77,12 @@ cd deep-image-matching
 pip install -e .
 ```
 
-Install pycolmap:
+Install pycolmap (optional):
 
 ```bash
-pip install pycolmap
+pip install pycolmap==0.6.1
 ```
-
-As [pycolmap](https://github.com/colmap/pycolmap) was released on PyPi only for Linux and macOS (up to version 0.4.0), it is not installed by default with deep-image-matching.
-From version 0.5.0, pycolmap can be installed on Windows too. However, it will demand some testing before being added to the dependencies of deep-image-matching, as there are some errors on Windows that are blocking deep_image_matching pipeline (while it works completely fine on Linux).
+Pycolmap is optional to run reconstruction directly in DIM. If pycolmap is not available, matches will be written both in a h5 and colmap database for later processing with COLMAP GUI or API, or other processing.
 
 For more information, check the [documentation](https://3dom-fbk.github.io/deep-image-matching/installation/).
 
@@ -122,7 +119,7 @@ If you face any issues, especially on Linux when using the `gpus all` setting, p
 
 ## Usage instructions
 
-You can run deep-image-matching from the command line or from the GUI.
+<!-- This is a comment You can run deep-image-matching from the command line or from the GUI. -->
 
 Use the following command to see all the available options from the CLI:
 
@@ -138,12 +135,12 @@ python main.py --dir assets/example_cyprus --pipeline superpoint+lightglue
 
 For all the usage instructions and configurations, refer to the documenation at [https://3dom-fbk.github.io/deep-image-matching/](https://3dom-fbk.github.io/deep-image-matching/getting_started) or check the example notebooks.
 
-To run the GUI, you can use the following command:
+<!--To run the GUI, you can use the following command:
 
 ```bash
 python main.py --gui
 
-```
+```-->
 
 ## Advanced usage
 
@@ -155,7 +152,7 @@ To run the matching with different local features and/or matchers and marging to
 
 ```bash
 python ./join_databases.py --help
-python ./join_databases.py --input assets/to_be_joined --output docs/assets/to_be_joined
+python ./join_databases.py --input path/to/dir/with/databases --output path/to/output/dir
 ```
 
 ### Exporting the solution to Metashape
@@ -182,14 +179,14 @@ See the [TODO list](notes.md) for the list of features and improvements that are
 If you find the repository useful for your work consider citing the papers:
 
 ```bibtex
-@Article{morelli2024_deep_image_matching,
-AUTHOR = {Morelli, L. and Ioli, F. and Maiwald, F. and Mazzacca, G. and Menna, F. and Remondino, F.},
-TITLE = {DEEP-IMAGE-MATCHING: A TOOLBOX FOR MULTIVIEW IMAGE MATCHING OF COMPLEX SCENARIOS},
-JOURNAL = {The International Archives of the Photogrammetry, Remote Sensing and Spatial Information Sciences},
-VOLUME = {XLVIII-2/W4-2024},
-YEAR = {2024},
-PAGES = {309--316},
-DOI = {10.5194/isprs-archives-XLVIII-2-W4-2024-309-2024}
+@article{morelli2024_deep_image_matching,
+  AUTHOR = {Morelli, L. and Ioli, F. and Maiwald, F. and Mazzacca, G. and Menna, F. and Remondino, F.},
+  TITLE = {DEEP-IMAGE-MATCHING: A TOOLBOX FOR MULTIVIEW IMAGE MATCHING OF COMPLEX SCENARIOS},
+  JOURNAL = {The International Archives of the Photogrammetry, Remote Sensing and Spatial Information Sciences},
+  VOLUME = {XLVIII-2/W4-2024},
+  YEAR = {2024},
+  PAGES = {309--316},
+  DOI = {10.5194/isprs-archives-XLVIII-2-W4-2024-309-2024}
 }
 ```
 
