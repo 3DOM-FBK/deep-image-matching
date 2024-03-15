@@ -6,7 +6,6 @@ from pprint import pprint
 import cv2
 import h5py
 import numpy as np
-import pycolmap
 import torch
 from tqdm import tqdm
 
@@ -425,7 +424,7 @@ class ImageMatching:
             logger.debug(f"Matching image pair: {name0} - {name1}")
 
             # Run matching
-            matches = self._matcher.match(
+            self._matcher.match(
                 feature_path=feature_path,
                 matches_path=matches_path,
                 img0=im0,
