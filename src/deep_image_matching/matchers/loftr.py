@@ -275,7 +275,8 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
 
     def _frame2tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor:
         image = K.image_to_tensor(np.array(image), False).float() / 255.0
+        image = image.to(device)
         if image.shape[1] > 2:
-            image = K.color.bgr_to_rgb(image.to(device))
+            image = K.color.bgr_to_rgb(image)
             image = K.color.rgb_to_grayscale(image)
         return image
