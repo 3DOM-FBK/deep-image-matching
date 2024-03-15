@@ -35,6 +35,7 @@ nav:
       - MICMAC: micmac.md
       - OpenMVG: openmvg.md
   - API Reference:
+      - Image_matching: image_matching.md
       - Configuration: config.md
       - Extractors: extractors.md
       - Matchers: matchers.md
