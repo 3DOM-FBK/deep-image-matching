@@ -6,12 +6,12 @@ import numpy as np
 import torch
 
 
-def recent_konria_version(base_version: str = "0.7.1"):
+def konria_071(base_version: str = "0.7.1"):
     try:
         from packaging import version
     except ImportError:
         return False
-    return version.parse(K.__version__) >= version.parse(base_version)
+    return version.parse(K.__version__) == version.parse(base_version)
 
 
 # TODO: add possibility to specify the number of rows and columns in the grid
@@ -131,7 +131,7 @@ class Tiler:
         patches = patches.squeeze(0)
 
         # Compute number of rows and columns
-        if recent_konria_version():
+        if konria_071():
             n_rows = (H + 2 * padding[0] - window_size[0]) // stride[0] + 1
             n_cols = (W + 2 * padding[1] - window_size[1]) // stride[1] + 1
         else:
@@ -143,7 +143,7 @@ class Tiler:
         for row in range(n_rows):
             for col in range(n_cols):
                 tile_idx = np.ravel_multi_index((row, col), (n_rows, n_cols), order="C")
-                if recent_konria_version():
+                if konria_071():
                     x = -padding[1] + col * stride[1]
                     y = -padding[0] + row * stride[0]
                 else:

@@ -10,12 +10,12 @@ def tiler():
     return Tiler()
 
 
-def recent_konria_version(base_version: str = "0.7.1"):
+def konria_071(base_version: str = "0.7.1"):
     try:
         from packaging import version
     except ImportError:
         return False
-    return version.parse(kornia.__version__) >= version.parse(base_version)
+    return version.parse(kornia.__version__) == version.parse(base_version)
 
 
 def test_compute_tiles_by_size_no_overlap_no_padding(tiler):
@@ -33,7 +33,7 @@ def test_compute_tiles_by_size_no_overlap_no_padding(tiler):
     assert isinstance(tiles, dict)
     assert isinstance(origins, dict)
     assert isinstance(padding, tuple)
-    if recent_konria_version():
+    if konria_071():
         assert len(padding) == 2
     else:
         assert len(padding) == 4
@@ -47,7 +47,7 @@ def test_compute_tiles_by_size_no_overlap_no_padding(tiler):
         assert tile.shape == (window_size, window_size, 3)
 
     # Assert the padding values
-    if recent_konria_version():
+    if konria_071():
         assert padding == (0, 0)
     else:
         assert padding == (0, 0, 0, 0)
@@ -68,7 +68,7 @@ def test_compute_tiles_by_size_no_overlap_padding(tiler):
     assert isinstance(tiles, dict)
     assert isinstance(origins, dict)
     assert isinstance(padding, tuple)
-    if recent_konria_version():
+    if konria_071():
         assert len(padding) == 2
     else:
         assert len(padding) == 4
@@ -81,7 +81,7 @@ def test_compute_tiles_by_size_no_overlap_padding(tiler):
         assert tile.shape == (window_size, window_size, 3)
 
     # Assert the padding values
-    if recent_konria_version():
+    if konria_071():
         assert padding == (10, 10)
     else:
         assert padding == (10, 10, 10, 10)
@@ -102,7 +102,7 @@ def test_compute_tiles_by_size_overlap_no_padding(tiler):
     assert isinstance(tiles, dict)
     assert isinstance(origins, dict)
     assert isinstance(padding, tuple)
-    if recent_konria_version():
+    if konria_071():
         assert len(padding) == 2
     else:
         assert len(padding) == 4
@@ -115,7 +115,7 @@ def test_compute_tiles_by_size_overlap_no_padding(tiler):
         assert tile.shape == (window_size, window_size, 3)
 
     # Assert the padding values
-    if recent_konria_version():
+    if konria_071():
         assert padding == (0, 0)
     else:
         assert padding == (0, 0, 0, 0)
@@ -137,7 +137,7 @@ def test_compute_tiles_by_size_with_torch_tensor(tiler):
     assert isinstance(tiles, dict)
     assert isinstance(origins, dict)
     assert isinstance(padding, tuple)
-    if recent_konria_version():
+    if konria_071():
         assert len(padding) == 2
     else:
         assert len(padding) == 4
@@ -150,7 +150,7 @@ def test_compute_tiles_by_size_with_torch_tensor(tiler):
         assert tile.shape == (window_size[0], window_size[1], channels)
 
     # Assert the padding values
-    if recent_konria_version():
+    if konria_071():
         assert padding == (0, 0)
     else:
         assert padding == (0, 0, 0, 0)

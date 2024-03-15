@@ -29,7 +29,7 @@ dependencies = [
     "opencv-python",
     "opencv-contrib-python",
     "pydegensac",
-    "kornia>=0.7.1",
+    "kornia>=0.7.2",
     "h5py",
     "tqdm",
     "easydict",
