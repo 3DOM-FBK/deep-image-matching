@@ -1,5 +1,4 @@
 import inspect
-import threading
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
 from typing import Optional, Tuple, TypedDict, Union
@@ -221,34 +220,26 @@ class ExtractorBase(metaclass=ABCMeta):
         features["image_size"] = np.array(image.shape[:2])
 
         # Save features to disk in h5 format
-        h5_thread = threading.Thread(
-            target=lambda: save_features_h5(
-                feature_path,
-                features,
-                im_path.name,
-                as_half=self.features_as_half,
-            )
+        save_features_h5(
+            feature_path,
+            features,
+            im_path.name,
+            as_half=self.features_as_half,
         )
-        h5_thread.start()
 
         # For debug: visualize keypoints and save to disk
-        # Do everything in a separate thread not to block the main thread
         if self._config["general"]["verbose"]:
-
-            def debug_viz(im_path, keypoints, output_dir, im_name):
-                viz_dir = output_dir / "debug"
-                viz_dir.mkdir(parents=True, exist_ok=True)
-                image = cv2.imread(str(im_path))
-                self.viz_keypoints(image, keypoints, viz_dir, im_name)
-
-            threading.Thread(
-                target=debug_viz(
-                    im_path, features["keypoints"], output_dir, im_path.stem
-                )
-            ).start()
-
-        # Wait for thread to finish (maybe not needed, but just to be sure)
-        h5_thread.join()
+            viz_dir = output_dir / "debug" / "keypoints"
+            viz_dir.mkdir(parents=True, exist_ok=True)
+            image = cv2.imread(str(im_path))
+            self.viz_keypoints(
+                image,
+                features["keypoints"],
+                viz_dir,
+                im_path.stem,
+                img_format="jpg",
+                jpg_quality=70,
+            )
 
         return feature_path
 
@@ -317,16 +308,17 @@ class ExtractorBase(metaclass=ABCMeta):
 
             # For debug: visualize keypoints and save to disk
             if self._config["general"]["verbose"]:
-
-                def debug_viz(tile, keypoints, output_dir, im_name):
-                    tile = np.uint8(tile)
-                    viz_dir = output_dir / "debug"
-                    viz_dir.mkdir(parents=True, exist_ok=True)
-                    self.viz_keypoints(tile, keypoints, viz_dir, im_name)
-
-                threading.Thread(
-                    target=debug_viz(tile, kp_tile, self._output_dir, f"tile_{idx}")
-                ).start()
+                tile = np.uint8(tile)
+                viz_dir = self._output_dir / "debug" / "tiles"
+                viz_dir.mkdir(parents=True, exist_ok=True)
+                self.viz_keypoints(
+                    tile,
+                    kp_tile,
+                    viz_dir,
+                    f"tile_{idx}",
+                    img_format="jpg",
+                    jpg_quality=70,
+                )
 
             # get keypoints in original image coordinates
             kp_tile += np.array(tiles_origins[idx])

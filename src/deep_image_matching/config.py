@@ -504,6 +504,14 @@ class Config:
             args["openmvg"] = Path(args["openmvg"])
             if not args["openmvg"].exists():
                 raise ValueError(f"File {args['openmvg']} does not exist")
+        
+        if args["camera_options"] is not None:
+            if Path(args["camera_options"]).suffix != '.yaml':
+                raise ValueError(f"File passed to --camera_options must be .yaml file")
+        
+        if args["upright"] == True:
+            if args["strategy"] == "matching_lowres":
+                raise ValueError(f"With option '--upright' is not possible to use '--strategy matching_lowres', since pairs are chosen with superpoint+lightglue that is not rotation invariant. Use another strategy, e.g. 'bruteforce'.")
 
         # Build configuration dictionary
         cfg = {
@@ -521,6 +529,7 @@ class Config:
             "graph": args["graph"],
             "skip_reconstruction": args["skip_reconstruction"],
             "openmvg_conf": args["openmvg"],
+            "camera_options": args["camera_options"],
         }
 
         return cfg

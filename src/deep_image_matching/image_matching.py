@@ -161,12 +161,15 @@ class ImageMatching:
         logger.info(f"  Output folder: {self.output_dir}")
         logger.info(f"  Number of images: {len(self.image_list)}")
         logger.info(f"  Matching strategy: {self.matching_strategy}")
-        logger.info(f"  Image quality: {self.custom_config['general']['quality']}")
+        logger.info(f"  Image quality: {self.custom_config['general']['quality'].name}")
         logger.info(
-            f"  Tile selection: {self.custom_config['general']['tile_selection']}"
+            f"  Tile selection: {self.custom_config['general']['tile_selection'].name}"
         )
         logger.info(f"  Feature extraction method: {self.local_features}")
         logger.info(f"  Matching method: {self.matching_method}")
+        logger.info(
+            f"  Geometric verification: {self.custom_config['general']['geom_verification'].name}"
+        )
         logger.info(f"  CUDA available: {torch.cuda.is_available()}")
 
     @property
@@ -347,8 +350,6 @@ class ImageMatching:
             timer.update("Match pair")
 
             # NOTE: Geometric verif. has been moved to the end of the matching process
-            # if matches is None:
-            #     continue
 
         # TODO: Clean up features with no matches
 

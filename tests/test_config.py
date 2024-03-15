@@ -35,10 +35,12 @@ def test_valid_basic_arguments(data_dir):
         "quality": "high",
         "tiling": "preselection",
         "strategy": "matching_lowres",
-        "upright": True,
+        "upright": False,
         "skip_reconstruction": False,
         "force": True,
         "verbose": False,
+        "openmvg": None,
+        "camera_options": None,
     }
     config = Config(args)
 

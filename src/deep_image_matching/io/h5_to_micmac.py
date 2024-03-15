@@ -8,8 +8,9 @@ from typing import Tuple
 import cv2
 import h5py
 import numpy as np
-from deep_image_matching import IMAGE_EXT, logger
-from deep_image_matching.visualization import viz_matches_cv2
+
+from .. import IMAGE_EXT, logger
+from ..visualization import viz_matches_cv2
 
 
 def execute(cmd, cwd=None):
@@ -27,6 +28,25 @@ def execute(cmd, cwd=None):
     return_code = popen.wait()
     if return_code:
         raise subprocess.CalledProcessError(return_code, cmd)
+
+
+def read_Homol_matches(file: Path) -> Tuple[np.ndarray, np.ndarray]:
+    x0y0 = []
+    x1y1 = []
+    with open(file, "r") as f:
+        for line in f:
+            line = line.split()
+            x0y0.append(np.array([line[0], line[1]], dtype=np.float32))
+            x1y1.append(np.array([line[2], line[3]], dtype=np.float32))
+
+    x0y0 = np.asarray(x0y0)
+    x1y1 = np.asarray(x1y1)
+
+    # data = np.loadtxt(file, dtype=np.float32)
+    # x0y0 = data[:, :2]
+    # x1y1 = data[:, 2:4]
+
+    return x0y0, x1y1
 
 
 def get_matches(feature_path, match_path, key0, key1) -> Tuple[np.ndarray, np.ndarray]:
@@ -72,14 +92,13 @@ def get_matches(feature_path, match_path, key0, key1) -> Tuple[np.ndarray, np.nd
     return x0y0, x1y1
 
 
-def write_matches(file, x0y0, x1y1):
-    with open(file, "w") as f:
-        for x0, y0, x1, y1 in zip(x0y0[:, 0], x0y0[:, 1], x1y1[:, 0], x1y1[:, 1]):
-            f.write(f"{x0:6f} {y0:6f} {x1:6f} {y1:6f} 1.000000\n")
-
-
 def show_micmac_matches(
-    file: Path, image_dir: Path, out: Path = None, **kwargs
+    file: Path,
+    image_dir: Path,
+    i0_name: Path = None,
+    i1_name: Path = None,
+    out: Path = None,
+    **kwargs,
 ) -> np.ndarray:
     """
     Display the tie points between two images matched by a MicMac from the matches text file.
@@ -96,30 +115,28 @@ def show_micmac_matches(
     file = Path(file)
     if not file.exists():
         raise FileNotFoundError(f"File {file} does not exist")
+    if not image_dir.exists():
+        raise FileNotFoundError(f"Image directory {image_dir} does not exist")
 
     # Get the image names
-    i0 = file.parent.name.replace("Pastis", "")
-    i1 = file.name.replace(".txt", "")
+    if i0_name is None or i1_name is None:
+        i0_name = file.parent.name.replace("Pastis", "")
+        i1_name = file.name.replace(".txt", "")
+    if not (image_dir / i0_name).exists():
+        raise FileNotFoundError(f"Image {i0_name} does not exist in {image_dir}")
+    if not (image_dir / i1_name).exists():
+        raise FileNotFoundError(f"Image {i1_name} does not exist in {image_dir}")
 
     # Read the matches
-    # x0y0 = []
-    # x1y1 = []
-    # with open(file, "r") as f:
-    #     for line in f:
-    #         line = line.split()
-    #         x0y0.append(np.array([line[0],line[1]], dtype=np.float32))
-    #         x1y1.append(np.array([line[2],line[3]], dtype=np.float32))
-
-    # x0y0 = np.asarray(x0y0)
-    # x1y1 = np.asarray(x1y1)
-
-    data = np.loadtxt(file, dtype=np.float32)
-    x0y0 = data[:, :2]
-    x1y1 = data[:, 2:4]
+    x0y0, x1y1 = read_Homol_matches(file)
 
     # Read the images
-    image0 = cv2.imread(str(image_dir / i0))
-    image1 = cv2.imread(str(image_dir / i1))
+    image0 = cv2.imread(str(image_dir / i0_name))
+    image1 = cv2.imread(str(image_dir / i1_name))
+    if image0 is None:
+        raise OSError(f"Unable to read image {i0_name}")
+    if image1 is None:
+        raise OSError(f"Unable to read image {i1_name}")
 
     out = viz_matches_cv2(image0, image1, x0y0, x1y1, out, **kwargs)
 
@@ -145,6 +162,11 @@ def export_tie_points(
     Returns:
         None
     """
+
+    def write_matches(file, x0y0, x1y1):
+        with open(file, "w") as f:
+            for x0, y0, x1, y1 in zip(x0y0[:, 0], x0y0[:, 1], x1y1[:, 0], x1y1[:, 1]):
+                f.write(f"{x0:6f} {y0:6f} {x1:6f} {y1:6f} 1.000000\n")
 
     feature_path = Path(feature_path)
     match_path = Path(match_path)

@@ -1,4 +1,0 @@
-general:
-  OS: linux
-  path_to_binaries: /home/threedom/Desktop/github_lcmrl/openMVG/openMVG_Build/Linux-x86_64-RELEASE/
-  openmvg_database: /home/threedom/Desktop/prova/sensor_width_database/sensor_width_camera_database.txt

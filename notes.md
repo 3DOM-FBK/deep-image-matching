@@ -25,9 +25,11 @@
 
 ## Other enhancements
 
+- [ ] Improve configuration management [_Hydra_](https://hydra.cc/docs/tutorials/structured_config/schema/) to make using yaml files, command line and GUI (Issue [[#48](https://github.com/3DOM-FBK/deep-image-matching/issues/48)])
 - [ ] Tests on satellite images
 - [ ] Add steerers + DeDoDe
 - [ ] Add Silk features
+- [ ] Add SIFT + LightGlue
 - [ ] Support for more hand-crafted local features from kornia and opencv (e.g., affine SIFT, AKAZE, etc.)
 - [ ] Extend documentation
 - [ ] Workflow to rebuild & publish image to Docker Hub

@@ -10,6 +10,7 @@ fra_*
 sb_*
 config.yaml
 run_casalbagliano.sh
+config/cameras_test.yaml
 
 # VScode
 .vscode/
