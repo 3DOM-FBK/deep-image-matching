@@ -32,8 +32,8 @@ nav:
   - Examples: examples.md
   - Use DIM with:
       - COLMAP: colmap.md
-      - MICMAC: micmac.md
       - OpenMVG: openmvg.md
+      - MICMAC: micmac.md
   - API Reference:
       - Image_matching: image_matching.md
       - Configuration: config.md
