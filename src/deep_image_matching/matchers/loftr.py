@@ -130,6 +130,8 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
         # Create a 1-to-1 matching array
         matches0 = np.arange(mkpts0.shape[0])
         matches = np.hstack((matches0.reshape((-1, 1)), matches0.reshape((-1, 1))))
+
+        # Update features in h5 file
         matches = self._update_features_h5(
             feature_path,
             img0_name,
