@@ -36,13 +36,13 @@ Key features:
 | ---------------------------------- | --------------------------------------------------------- |
 | &check; SuperPoint                 | &check; Lightglue (with Superpoint, Disk, and ALIKED)     |
 | &check; DISK                       | &check; SuperGlue (with Superpoint)                       |
-| &check; ALIKE                      | &check; LoFTR                                             |
-| &check; ALIKED                     | &check; SE2-LoFTR (no tiling)                                       |
 | &#x2610; Superpoint free           | &check; Nearest neighbor (with KORNIA Descriptor Matcher) |
+| &check; ALIKE                      | &check; LoFTR (only GPU)                                  |
+| &check; ALIKED                     | &check; SE2-LoFTR (no tiling and only GPU)                |
 | &check; KeyNet + OriNet + HardNet8 | &check; RoMa                                              |
-| &check; ORB (opencv)               | &#x2610; GlueStick                                        |
-| &check; SIFT (opencv)              |
-| &check; DeDoDe                     |
+| &check; DeDoDe (only GPU)          | &#x2610; GlueStick                                        |
+| &check; SIFT (from Opencv)         | 
+| &check; ORB (from Opencv)          |
 
 | Supported SfM software                        |
 | --------------------------------------------- |
