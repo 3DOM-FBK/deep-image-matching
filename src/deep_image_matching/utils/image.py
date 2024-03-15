@@ -160,24 +160,47 @@ class Image:
     def height(self) -> int:
         """Returns the height of the image in pixels"""
         if self._height is None:
-            logger.error(f"Image height not available for {self.name}.")
-            return None
+            logger.error(
+                f"Image height not available for {self.name}. Try to read it from the image file."
+            )
+            try:
+                img = PIL.Image.open(self._path)
+                self._width, self._height = img.size
+            except Exception as e:
+                logger.error(f"Unable to read image size for {self.name}: {e}")
+                return None
         return int(self._height)
 
     @property
     def width(self) -> int:
         """Returns the width of the image in pixels"""
         if self._width is None:
-            logger.error(f"Image width not available for {self.name}.")
-            return None
+            logger.error(
+                f"Image width not available for {self.name}. Try to read it from the image file."
+            )
+            try:
+                img = PIL.Image.open(self._path)
+                self._width, self._height = img.size
+            except Exception as e:
+                logger.error(f"Unable to read image size for {self.name}: {e}")
+                return None
+
         return int(self._width)
 
     @property
     def size(self) -> tuple:
         """Returns the size of the image in pixels as a tuple (width, height)"""
         if self._width is None or self._height is None:
-            logger.error(f"Image size not available for {self.name}.")
-            return None
+            logger.warning(
+                f"Image size not available for {self.name}. Trying to read it from the image file."
+            )
+            try:
+                img = PIL.Image.open(self._path)
+                self._width, self._height = img.size
+            except Exception as e:
+                logger.error(f"Unable to read image size for {self.name}: {e}")
+                return None
+
         return (int(self._width), int(self._height))
 
     @property

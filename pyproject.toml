@@ -39,7 +39,10 @@ dependencies = [
     "pyyaml",
     "packaging",
     "einops",
-    "pyvis>=0.3.2",    
+    "pyvis>=0.3.2",
+    "yacs>=0.1.8",
+    "e2cnn",
+    "pytorch_lightning",
 ]
 requires-python = ">=3.8"
 

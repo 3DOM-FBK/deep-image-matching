@@ -130,6 +130,8 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
         # Create a 1-to-1 matching array
         matches0 = np.arange(mkpts0.shape[0])
         matches = np.hstack((matches0.reshape((-1, 1)), matches0.reshape((-1, 1))))
+
+        # Update features in h5 file
         matches = self._update_features_h5(
             feature_path,
             img0_name,
@@ -275,7 +277,8 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
 
     def _frame2tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor:
         image = K.image_to_tensor(np.array(image), False).float() / 255.0
-        image = K.color.bgr_to_rgb(image.to(device))
+        image = image.to(device)
         if image.shape[1] > 2:
+            image = K.color.bgr_to_rgb(image)
             image = K.color.rgb_to_grayscale(image)
         return image
