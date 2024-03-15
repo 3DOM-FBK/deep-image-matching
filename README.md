@@ -66,7 +66,7 @@ Want to run on your images? ➡️ [![Open In Colab](https://colab.research.goog
 
 For installing deep-image-matching, first create a conda environment:
 
-```bash
+```
 conda create -n deep-image-matching python=3.9
 conda activate deep-image-matching
 pip install --upgrade pip
@@ -74,7 +74,7 @@ pip install --upgrade pip
 
 Clone the repository and install deep-image-matching in editable mode:
 
-```bash
+```
 git clone https://github.com/3DOM-FBK/deep-image-matching.git
 cd deep-image-matching
 pip install -e .
@@ -82,7 +82,7 @@ pip install -e .
 
 Install pycolmap (optional):
 
-```bash
+```
 pip install pycolmap==0.6.1
 ```
 Pycolmap is optional to run reconstruction directly in DIM. If pycolmap is not available, matches will be written both in a h5 and colmap database for later processing with COLMAP GUI or API, or other processing.
@@ -93,7 +93,7 @@ For more information, check the [documentation](https://3dom-fbk.github.io/deep-
 
 If you prefer using Docker, first, build the image:
 
-```bash
+```
 docker build --tag deep-image-matching .
 ```
 
@@ -102,13 +102,13 @@ Note that the first time you run the command, it will take a while to download t
 Once the image is built, you can run it with the following commands.
 On Linux:
 
-```bash
+```
 docker run --name run-deep-image-matching --mount type=bind,source=/home/username/data,target=/workspace/data --gpus all -it deep-image-matching
 ```
 
 On Windows (please use Powershell):
 
-```powershell
+```
 docker run --name run-deep-image-matching --mount type=bind,source=D:\data,target=/workspace/data --gpus all -it deep-image-matching
 ```
 
@@ -126,13 +126,13 @@ If you face any issues, especially on Linux when using the `gpus all` setting, p
 
 Use the following command to see all the available options from the CLI:
 
-```bash
+```
 python main.py --help
 ```
 
 For example, to run the matching with SuperPoint and LightGlue on a dataset, you can use the following command:
 
-```bash
+```
 python main.py --dir assets/example_cyprus --pipeline superpoint+lightglue
 ```
 
@@ -156,7 +156,7 @@ For advanced usage, please refer to the [documentation](https://3dom-fbk.github.
 
 To run the matching with different local features and/or matchers and marging together the results, you can use scripts in the `./scripts` directory for merging the COLMAP databases.
 
-```bash
+```
 python ./join_databases.py --help
 python ./join_databases.py --input path/to/dir/with/databases --output path/to/output/dir
 ```
