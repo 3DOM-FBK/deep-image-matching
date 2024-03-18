@@ -110,9 +110,6 @@ class Image:
         try:
             self.read_exif()
         except Exception:
-            logger.info(
-                "Unable to read image exif, loading only image size (this will likely not affect the matching results)."
-            )
             img = PIL.Image.open(path)
             self._width, self._height = img.size
 
