@@ -14,3 +14,11 @@
         - _resize_image
         - _resize_features
         - viz_keypoints
+  
+::: deep_image_matching.extractors.superpoint.SuperPointExtractor
+    options:
+      show_root_heading: true
+      show_source: false
+      members:
+        - __init__
+        - _extract

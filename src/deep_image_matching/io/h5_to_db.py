@@ -26,7 +26,85 @@ from .. import logger
 from ..utils.database import COLMAPDatabase, image_ids_to_pair_id
 
 
-def get_focal(image_path, err_on_default=False):
+def export_to_colmap(
+    img_dir,
+    feature_path: Path,
+    match_path: Path,
+    database_path: str = "colmap.db",
+    camera_options: dict = None,
+):
+    """
+    Exports image features and matches to a COLMAP database.
+
+    Args:
+        img_dir (str): Path to the directory containing the source images.
+        feature_path (Path): Path to the feature file (in HDF5 format) containing the extracted keypoints.
+        match_path (Path): Path to the match file (in HDF5 format) containing the matches between keypoints.
+        database_path (str, optional): Path to the COLMAP database file. Defaults to "colmap.db".
+        camera_options (bool, optional): Flag indicating whether to use camera options. Defaults to False.
+
+    Returns:
+        None
+
+    Raises:
+        IOError: If the image path is invalid.
+
+    Warnings:
+        If the database path already exists, it will be deleted and recreated.
+        If a pair of images already has matches in the database, a warning will be raised.
+
+    Example:
+        export_to_colmap(
+            img_dir="/path/to/images",
+            feature_path=Path("/path/to/features.h5"),
+            match_path=Path("/path/to/matches.h5"),
+            database_path="colmap.db",
+            camera_options=False
+        )
+    """
+    if database_path.exists():
+        logger.warning(f"Database path {database_path} already exists - deleting it")
+        database_path.unlink()
+
+    db = COLMAPDatabase.connect(database_path)
+    db.create_tables()
+    fname_to_id = add_keypoints(db, feature_path, img_dir, camera_options)
+    raw_match_path = match_path.parent / "raw_matches.h5"
+    if raw_match_path.exists():
+        add_raw_matches(
+            db,
+            raw_match_path,
+            fname_to_id,
+        )
+    if match_path.exists():
+        add_matches(
+            db,
+            match_path,
+            fname_to_id,
+        )
+
+    db.commit()
+    return
+
+
+def get_focal(image_path: Path, err_on_default: bool = False) -> float:
+    """
+    Get the focal length of an image.
+
+    Parameters:
+        image_path (Path): The path to the image file.
+        err_on_default (bool, optional): Whether to raise an error if the focal length cannot be determined from the image's EXIF data. Defaults to False.
+
+    Returns:
+        float: The focal length of the image.
+
+    Raises:
+        RuntimeError: If the focal length cannot be determined from the image's EXIF data and `err_on_default` is set to True.
+
+    Note:
+        This function calculates the focal length based on the maximum size of the image and the EXIF data. If the focal length cannot be determined from the EXIF data, it uses a default prior value.
+
+    """
     image = Image.open(image_path)
     max_size = max(image.size)
 
@@ -55,7 +133,7 @@ def get_focal(image_path, err_on_default=False):
     return focal
 
 
-def create_camera(db, image_path, camera_model):
+def create_camera(db: Path, image_path: Path, camera_model: str):
     image = Image.open(image_path)
     width, height = image.size
 
@@ -199,38 +277,6 @@ def add_matches(db, h5_path, fname_to_id):
 
                 pbar.update(1)
     match_file.close()
-
-
-def export_to_colmap(
-    img_dir,
-    feature_path: Path,
-    match_path: Path,
-    database_path="colmap.db",
-    camera_options=False,
-):
-    if database_path.exists():
-        logger.warning(f"Database path {database_path} already exists - deleting it")
-        database_path.unlink()
-
-    db = COLMAPDatabase.connect(database_path)
-    db.create_tables()
-    fname_to_id = add_keypoints(db, feature_path, img_dir, camera_options)
-    raw_match_path = match_path.parent / "raw_matches.h5"
-    if raw_match_path.exists():
-        add_raw_matches(
-            db,
-            raw_match_path,
-            fname_to_id,
-        )
-    if match_path.exists():
-        add_matches(
-            db,
-            match_path,
-            fname_to_id,
-        )
-
-    db.commit()
-    return
 
 
 if __name__ == "__main__":
