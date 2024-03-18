@@ -29,13 +29,20 @@ from tqdm import tqdm
 from .. import logger
 from ..utils.database import COLMAPDatabase, image_ids_to_pair_id
 
+default_camera_options = {
+    "general": {
+        "single_camera": False,
+        "camera_model": "simple-radial",
+    },
+}
+
 
 def export_to_colmap(
-    img_dir,
+    img_dir: Path,
     feature_path: Path,
     match_path: Path,
     database_path: str = "database.db",
-    camera_options: dict = {},
+    camera_options: dict = default_camera_options,
 ):
     """
     Exports image features and matches to a COLMAP database.
@@ -45,7 +52,7 @@ def export_to_colmap(
         feature_path (Path): Path to the feature file (in HDF5 format) containing the extracted keypoints.
         match_path (Path): Path to the match file (in HDF5 format) containing the matches between keypoints.
         database_path (str, optional): Path to the COLMAP database file. Defaults to "colmap.db".
-        camera_options (dict, optional): Flag indicating whether to use camera options. Defaults to empty dict.
+        camera_options (dict, optional): Flag indicating whether to use camera options. Defaults to default_camera_options.
 
     Returns:
         None
@@ -63,9 +70,9 @@ def export_to_colmap(
             feature_path=Path("/path/to/features.h5"),
             match_path=Path("/path/to/matches.h5"),
             database_path="colmap.db",
-            camera_options=False
         )
     """
+    database_path = Path(database_path)
     if database_path.exists():
         logger.warning(f"Database path {database_path} already exists - deleting it")
         database_path.unlink()

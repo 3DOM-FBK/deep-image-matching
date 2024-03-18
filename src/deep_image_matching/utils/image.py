@@ -281,7 +281,9 @@ class Image:
             raise ValueError("Exif error")
 
         if len(exif) == 0:
-            logger.info(f"No exif data available for image {self.name}")
+            logger.info(
+                f"No exif data available for image {self.name} (this will probably not affect the matching)."
+            )
             raise ValueError("Exif error")
 
         # Get image size
