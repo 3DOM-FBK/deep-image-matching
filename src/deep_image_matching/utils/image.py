@@ -271,17 +271,17 @@ class Image:
             with open(self._path, "rb") as f:
                 exif = exifread.process_file(f, details=False, debug=False)
         except IOError as e:
-            logger.warning(f"{e}. Unable to read exif data for image {self.name}.")
+            logger.info(f"{e}. Unable to read exif data for image {self.name}.")
             raise InvalidExif("Exif error")
         except InvalidExif as e:
-            logger.warning(f"Unable to read exif data for image {self.name}. {e}")
+            logger.info(f"Unable to read exif data for image {self.name}. {e}")
             raise ValueError("Exif error")
         except ExifNotFound as e:
-            logger.warning(f"Unable to read exif data for image {self.name}. {e}")
+            logger.info(f"Unable to read exif data for image {self.name}. {e}")
             raise ValueError("Exif error")
 
         if len(exif) == 0:
-            logger.warning(f"No exif data available for image {self.name}")
+            logger.info(f"No exif data available for image {self.name}")
             raise ValueError("Exif error")
 
         # Get image size
@@ -301,7 +301,7 @@ class Image:
         elif "EXIF DateTimeOriginal" in exif.keys():
             date_str = exif["EXIF DateTimeOriginal"].printable
         else:
-            logger.warning(f"Date not available in exif for {self.name}")
+            logger.info(f"Date not available in exif for {self.name}")
             date_str = None
         if date_str is not None:
             for format in self.DATE_FORMATS:
@@ -323,7 +323,7 @@ class Image:
                 else:
                     self._focal_length = float(focal_length_str)
             except ValueError:
-                logger.warning(
+                logger.info(
                     f"Unable to get focal length from exif for image {self.name}"
                 )
 
