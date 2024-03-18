@@ -20,11 +20,15 @@ plugins:
       handlers:
         python:
           paths: [src] # search packages in the src folder
-          docstring_style: "google"
-          docstring_options: "true"
+          docstring_style: google
+          docstring_options: true
           options:
+            docstring_section_style: spacy
             show_source: false
-            # heading_level: 2
+            heading_level: 2
+            group_by_category: true
+            filters: ["!^_", "^__init__$"]
+            show_root_full_path: false
 
 nav:
   - Home: index.md

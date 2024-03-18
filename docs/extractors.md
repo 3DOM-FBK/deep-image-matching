@@ -5,7 +5,7 @@
 ::: deep_image_matching.extractors.extractor_base.ExtractorBase
     options:
       show_root_heading: true
-      show_source: false
+      show_source: true
       members:
         - __init__
         - extract
@@ -20,7 +20,5 @@
 ::: deep_image_matching.extractors.superpoint.SuperPointExtractor
     options:
       show_root_heading: true
-      show_source: false
+      show_source: true
       members:
-        - __init__
-        - _extract
