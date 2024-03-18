@@ -12,6 +12,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+"""
+This module contains functions to export image features and matches to a COLMAP database.
+"""
+
 import argparse
 import os
 import warnings
@@ -41,7 +45,7 @@ def export_to_colmap(
         feature_path (Path): Path to the feature file (in HDF5 format) containing the extracted keypoints.
         match_path (Path): Path to the match file (in HDF5 format) containing the matches between keypoints.
         database_path (str, optional): Path to the COLMAP database file. Defaults to "colmap.db".
-        camera_options (bool, optional): Flag indicating whether to use camera options. Defaults to False.
+        camera_options (dict, optional): Flag indicating whether to use camera options. Defaults to None.
 
     Returns:
         None
@@ -157,7 +161,26 @@ def create_camera(db: Path, image_path: Path, camera_model: str):
     return db.add_camera(model, width, height, param_arr)
 
 
-def parse_camera_options(camera_options: dict, db, image_path):
+def parse_camera_options(
+    camera_options: dict,
+    db: Path,
+    image_path: Path,
+) -> dict:
+    """
+    Parses camera options and creates camera entries in the COLMAP database.
+
+    This function groups images by camera, assigns camera IDs, and attempts to
+    initialize camera models in the provided COLMAP database.
+
+    Args:
+        camera_options (dict): A dictionary containing camera configuration options.
+        db (Path): Path to the COLMAP database.
+        image_path (Path): Path to the directory containing source images.
+
+    Returns:
+        dict: A dictionary mapping image filenames to their assigned camera IDs.
+    """
+
     grouped_images = {}
     n_cameras = len(camera_options.keys()) - 1
     for camera in range(n_cameras):
@@ -176,7 +199,26 @@ def parse_camera_options(camera_options: dict, db, image_path):
     return grouped_images
 
 
-def add_keypoints(db, h5_path, image_path, camera_options):
+def add_keypoints(
+    db: Path, h5_path: Path, image_path: Path, camera_options=dict
+) -> dict:
+    """
+    Adds keypoints from an HDF5 file to a COLMAP database.
+
+    Reads keypoints from an HDF5 file, associates them with cameras (if necessary),
+    and adds the image and keypoint information to the specified COLMAP database.
+
+    Args:
+        db (Path): Path to the COLMAP database.
+        h5_path (Path): Path to the HDF5 file containing keypoints.
+        image_path (Path): Path to the directory containing source images.
+        camera_options (dict, optional): Camera configuration options (see `parse_camera_options`).
+                                         Defaults to an empty dictionary.
+
+    Returns:
+        dict: A dictionary mapping image filenames to their corresponding image IDs in the database.
+    """
+
     grouped_images = parse_camera_options(camera_options, db, image_path)
 
     keypoint_f = h5py.File(str(h5_path), "r")
@@ -221,7 +263,19 @@ def add_keypoints(db, h5_path, image_path, camera_options):
     return fname_to_id
 
 
-def add_raw_matches(db, h5_path, fname_to_id):
+def add_raw_matches(db: Path, h5_path: Path, fname_to_id: dict):
+    """
+    Adds raw feature matches from an HDF5 file to a COLMAP database.
+
+    Reads raw matches from an HDF5 file, maps image filenames to their image IDs,
+    and adds match information to the specified COLMAP database. Prevents duplicate
+    matches from being added.
+
+    Args:
+        db (Path): Path to the COLMAP database.
+        h5_path (Path): Path to the HDF5 file containing raw matches.
+        fname_to_id (dict):  A dictionary mapping image filenames to their image IDs.
+    """
     match_file = h5py.File(str(h5_path), "r")
 
     added = set()

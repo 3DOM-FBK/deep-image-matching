@@ -1,3 +1,5 @@
+""" """
+
 import argparse
 import shutil
 import subprocess
@@ -49,7 +51,9 @@ def read_Homol_matches(file: Path) -> Tuple[np.ndarray, np.ndarray]:
     return x0y0, x1y1
 
 
-def get_matches(feature_path, match_path, key0, key1) -> Tuple[np.ndarray, np.ndarray]:
+def get_matches(
+    feature_path: Path, match_path: Path, key0: str, key1: str
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Retrieve the matches between two images based on the given keys.
 
@@ -68,7 +72,6 @@ def get_matches(feature_path, match_path, key0, key1) -> Tuple[np.ndarray, np.nd
     with h5py.File(str(feature_path), "r") as features, h5py.File(
         str(match_path), "r"
     ) as matches:
-
         # Check if the matches are present
         if key0 not in matches.keys() or key1 not in matches[key0].keys():
             return None, None
@@ -379,7 +382,6 @@ def main():
 
 
 if __name__ == "__main__":
-
     main()
 
     # project_path = Path("datasets/cyprus_micmac2")

@@ -1,3 +1,7 @@
+"""
+This module contains functions to export image features, matches, and camera data to an OpenMVG project.
+"""
+
 import json
 import os
 import shutil
@@ -9,9 +13,10 @@ from pathlib import Path
 
 import h5py
 import numpy as np
-from deep_image_matching.io.h5_to_db import get_focal
 from PIL import Image
 from tqdm import tqdm
+
+from deep_image_matching.io.h5_to_db import get_focal
 
 from .. import logger
 
@@ -110,7 +115,19 @@ def add_matches(h5_path, sfm_data, matches_dir):
 
 def generate_sfm_data(images_dir: Path, camera_options: dict):
     """
-    Inspired by PySfMUtils https://gitlab.com/educelab/sfm-utils/-/blob/develop/sfm_utils/openmvg.py?ref_type=heads
+    Generates Structure-from-Motion (SfM) data in the OpenMVG format.
+
+    This function was inspired from [PySfMUtils](https://gitlab.com/educelab/sfm-utils/-/blob/develop/sfm_utils/openmvg.py?ref_type=heads) to create an OpenMVG-compatible JSON data structure, including image information, camera intrinsics, and views.
+
+    Args:
+        images_dir (Path): Path to the directory containing source images.
+        camera_options (dict): Camera configuration options from 'config/cameras.yaml'.
+
+    Returns:
+        dict: A dictionary containing the generated SfM data structure.
+    """
+
+    """
     images_dir : path to directory containing all the images
     camera_options : dictionary with all the options from config/cameras.yaml
     """
@@ -338,7 +355,24 @@ def export_to_openmvg(
     camera_options: dict,
     openmvg_sfm_bin: Path = None,
     openmvg_database: Path = None,
-):
+) -> None:
+    """
+    Exports image features, matches, and camera data to an OpenMVG project.
+
+    This function prepares the necessary files and directories for running OpenMVG's SfM pipeline.
+
+    Args:
+        img_dir (Path): Path to the directory containing source images.
+        feature_path (Path): Path to the feature file (HDF5 format).
+        match_path (Path): Path to the match file (HDF5 format).
+        openmvg_out_path (Path): Path to the desired output directory for the OpenMVG project.
+        camera_options (dict): Camera configuration options.
+        openmvg_sfm_bin (Path, optional): Path to the OpenMVG SfM executable. If not provided,
+                                          attempts to find it automatically (Linux only).
+        openmvg_database (Path, optional): Path to the OpenMVG sensor width database.
+                                           If not provided, downloads it to the output directory.
+
+    """
     openmvg_out_path = Path(openmvg_out_path)
     if openmvg_out_path.exists():
         logger.warning(
@@ -388,4 +422,4 @@ def export_to_openmvg(
     add_keypoints(feature_path, img_dir, matches_dir)
     add_matches(match_path, openmvg_out_path / "matches" / "sfm_data.json", matches_dir)
 
-    return
+    return None
