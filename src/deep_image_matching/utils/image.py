@@ -275,7 +275,7 @@ class Image:
                 exif = exifread.process_file(f, details=False, debug=False)
         except IOError as e:
             logger.warning(f"{e}. Unable to read exif data for image {self.name}.")
-            raise ValueError("Exif error")
+            raise InvalidExif("Exif error")
         except InvalidExif as e:
             logger.warning(f"Unable to read exif data for image {self.name}. {e}")
             raise ValueError("Exif error")
@@ -317,8 +317,15 @@ class Image:
         # Get Focal Length
         if "EXIF FocalLength" in exif.keys():
             try:
-                self._focal_length = float(exif["EXIF FocalLength"].printable)
-            except KeyError:
+                focal_length_str = exif["EXIF FocalLength"].printable
+
+                # Check if it's a ratio
+                if "/" in focal_length_str:
+                    numerator, denominator = focal_length_str.split("/")
+                    self._focal_length = float(numerator) / float(denominator)
+                else:
+                    self._focal_length = float(focal_length_str)
+            except ValueError:
                 logger.warning(
                     f"Unable to get focal length from exif for image {self.name}"
                 )

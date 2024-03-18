@@ -4,7 +4,9 @@ For the COLMAP database, by default, DIM assigns camera models to images based o
 
 For images not assigned to specific `cam<x>` camera groups, the options specified under `general` are applied. The `camera_model` can be selected from `["simple-pinhole", "pinhole", "simple-radial", "opencv"]`. It's worth noting that it's easily possible to extend this to include all the classical COLMAP camera models. Cameras can either be shared among all images (`single_camera == True`), or each camera can have a different camera model (`single_camera == False`).
 
-A subset of images can share intrinsics using `cam<x>` key, by specifying the `camera_model` along with the names of the images separated by commas. For instance:
+A subset of images can share intrinsics using `cam<x>` key, by specifying the `camera_model` along with the names of the images separated by commas.
+Note that you must specify the full image name, including the extension.
+For instance:
 
 ```python
 cam0:
