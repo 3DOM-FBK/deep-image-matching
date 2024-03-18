@@ -381,9 +381,26 @@ class Image:
 
 
 class ImageList:
+    """
+    Represents a collection of Image objects
+
+    Attributes:
+        IMAGE_EXT (tuple): Supported image file extensions.
+    """
+
     IMAGE_EXT = IMAGE_EXT
 
     def __init__(self, img_dir: Path):
+        """
+        Initializes an ImageList object
+
+        Args:
+            img_dir (Path): The path to the directory containing the images.
+
+        Raises:
+            ValueError: If the directory does not exist, is not a directory, or
+                does not contain any valid images.
+        """
         if not img_dir.exists():
             raise ValueError(f"Directory {img_dir} does not exist")
 
@@ -425,15 +442,34 @@ class ImageList:
         return self.images[cur]
 
     def add_image(self, path: Path, img_id: int):
+        """
+        Adds a new Image object to the ImageList.
+
+        Args:
+            path (Path): The path to the image file.
+            img_id (int): The ID to assign to the image.
+        """
         new_image = Image(path, img_id)
         self.images.append(new_image)
 
     @property
     def img_names(self):
+        """
+        Returns a list of image names in the ImageList.
+
+        Returns:
+            list: A list of image names (strings).
+        """
         return [im.name for im in self.images]
 
     @property
     def img_paths(self):
+        """
+        Returns a list of image paths in the ImageList
+
+        Returns:
+            list: A list of image paths (Path objects).
+        """
         return [im.path for im in self.images]
 
 

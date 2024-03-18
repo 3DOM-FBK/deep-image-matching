@@ -20,6 +20,8 @@ plugins:
       handlers:
         python:
           paths: [src] # search packages in the src folder
+          docstring_style: "google"
+          docstring_options: "true"
           options:
             show_source: false
             # heading_level: 2
@@ -28,12 +30,17 @@ nav:
   - Home: index.md
   - Installation: installation.md
   - Getting started: getting_started.md
-  - Advanced usage: advanced_usage.md
   - Examples: examples.md
+
+  - Advanced usage:
+      - camera_models.md
+      - scripts.md
+
   - Use DIM with:
       - COLMAP: colmap.md
       - OpenMVG: openmvg.md
       - MICMAC: micmac.md
+
   - API Reference:
       - Image_matching: image_matching.md
       - Configuration: config.md
@@ -41,4 +48,5 @@ nav:
       - Matchers: matchers.md
       - IO: io.md
       - Utils: utils.md
+
   - About: about.md

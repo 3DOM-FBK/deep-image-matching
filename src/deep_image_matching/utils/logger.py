@@ -39,6 +39,27 @@ def setup_logger(
     log_folder: str = None,
     logfile_basename: str = "log",
 ) -> logging.Logger:
+    """
+    Configures and returns a logging.Logger instance.
+
+    This function checks for existing loggers with the same name. It provides
+    flexible configuration for both console and file-based logging with customizable
+    log levels, formats, and an optional log file.
+
+    Args:
+        name (str, optional): The name of the logger. If None, the root logger
+            will be used. Defaults to None.
+        log_level (str, optional): The logging level for both console and file
+            outputs. Valid options are 'debug', 'info', 'warning', 'error',
+            'critical'. Defaults to 'info'.
+        log_folder (str, optional): The path to the directory for storing log files.
+            If None, no file output will be generated. Defaults to None.
+        logfile_basename (str, optional): The base name for the log file. A timestamp
+            will be appended. Defaults to "log".
+
+    Returns:
+        logging.Logger: A configured logger instance.
+    """
     # Check if logger already exists
     if logging.getLogger(name).hasHandlers():
         logger = logging.getLogger(name)

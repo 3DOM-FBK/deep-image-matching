@@ -6,7 +6,7 @@ For images not assigned to specific `cam<x>` camera groups, the options specifie
 
 A subset of images can share intrinsics using `cam<x>` key, by specifying the `camera_model` along with the names of the images separated by commas. For instance:
 
-```
+```python
 cam0:
   camera_model: "pinhole"
   images: "DSC_6468.jpg,DSC_6469.jpg"
@@ -16,7 +16,7 @@ There's no limit to the number of `cam<x>` entries you can use, just add them fo
 
 A comprehensive example of a `cameras.yaml` file can be found in the `config` folder:
 
-```
+```python
 general:
   camera_model: "pinhole" # ["simple-pinhole", "pinhole", "simple-radial", "opencv"]
   openmvg_camera_model: "pinhole_radial_k3" # ["pinhole", "pinhole_radial_k3", "pinhole_brown_t2"]

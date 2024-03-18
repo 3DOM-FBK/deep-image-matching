@@ -15,6 +15,8 @@
         - _resize_features
         - viz_keypoints
   
+<br/><br/>
+
 ::: deep_image_matching.extractors.superpoint.SuperPointExtractor
     options:
       show_root_heading: true

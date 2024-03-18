@@ -1,4 +1,4 @@
-# Advanced Usage
+# Scripts
 
 You can use the scripts located inside the `scripts` folder for advanced usage of the Deep-Image-Matching pipeline.
 
@@ -10,19 +10,10 @@ Documentation for the scripts is in progress. If you have any questions, please 
 
 To visualize the geometrically verified matches, you have two options:
 
-### COLMAP GUI
+1. Use COLMAP to visualize the matches (see [COLMAP instructions](./colmap.md#colmap))
+2. Use the `show_matches.py` script
 
-For installing and setting up COLMAP, refer to the [COLMAP instructions](./colmap.md#colmap).
-
-Check the matches:
-
-- `Processing` tab > `Database Management`
-- Choose an image > click on the top right `Overlapping images`
-- Select the `Two-view geometries` tab
-- Choose the `id` of an overlapping image and click on `Show matches`
-
-
-### Use show_matches.py script
+### show_matches.py
 
 To visualize the results you can use the `show_matches.py` script. Pass to the `--images` argument the names of the images (e.g. "img01.jpg img02.jpg") or their ids (e.g. "1 2") and choose accordingly the `--type` between `names` if you specify the name of the image with the extension, or `ids` if you specifiy the image `id`. In COLMAP image `ids` starts from 1 and not from 0.
 
