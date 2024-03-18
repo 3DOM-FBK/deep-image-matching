@@ -34,8 +34,8 @@ def export_to_colmap(
     img_dir,
     feature_path: Path,
     match_path: Path,
-    database_path: str = "colmap.db",
-    camera_options: dict = None,
+    database_path: str = "database.db",
+    camera_options: dict = {},
 ):
     """
     Exports image features and matches to a COLMAP database.
@@ -45,7 +45,7 @@ def export_to_colmap(
         feature_path (Path): Path to the feature file (in HDF5 format) containing the extracted keypoints.
         match_path (Path): Path to the match file (in HDF5 format) containing the matches between keypoints.
         database_path (str, optional): Path to the COLMAP database file. Defaults to "colmap.db".
-        camera_options (dict, optional): Flag indicating whether to use camera options. Defaults to None.
+        camera_options (dict, optional): Flag indicating whether to use camera options. Defaults to empty dict.
 
     Returns:
         None
@@ -200,7 +200,7 @@ def parse_camera_options(
 
 
 def add_keypoints(
-    db: Path, h5_path: Path, image_path: Path, camera_options=dict
+    db: Path, h5_path: Path, image_path: Path, camera_options: dict = {}
 ) -> dict:
     """
     Adds keypoints from an HDF5 file to a COLMAP database.
@@ -221,44 +221,43 @@ def add_keypoints(
 
     grouped_images = parse_camera_options(camera_options, db, image_path)
 
-    keypoint_f = h5py.File(str(h5_path), "r")
+    with h5py.File(str(h5_path), "r") as keypoint_f:
+        # camera_id = None
+        fname_to_id = {}
+        k = 0
+        for filename in tqdm(list(keypoint_f.keys())):
+            keypoints = keypoint_f[filename]["keypoints"].__array__()
 
-    # camera_id = None
-    fname_to_id = {}
-    k = 0
-    for filename in tqdm(list(keypoint_f.keys())):
-        keypoints = keypoint_f[filename]["keypoints"].__array__()
+            path = os.path.join(image_path, filename)
+            if not os.path.isfile(path):
+                raise IOError(f"Invalid image path {path}")
 
-        path = os.path.join(image_path, filename)
-        if not os.path.isfile(path):
-            raise IOError(f"Invalid image path {path}")
-
-        if filename not in list(grouped_images.keys()):
-            if camera_options["general"]["single_camera"] is False:
-                camera_id = create_camera(
-                    db, path, camera_options["general"]["camera_model"]
-                )
-            elif camera_options["general"]["single_camera"] is True:
-                if k == 0:
+            if filename not in list(grouped_images.keys()):
+                if camera_options["general"]["single_camera"] is False:
                     camera_id = create_camera(
                         db, path, camera_options["general"]["camera_model"]
                     )
-                    single_camera_id = camera_id
-                    k += 1
-                elif k > 0:
-                    camera_id = single_camera_id
-        else:
-            camera_id = grouped_images[filename]["camera_id"]
-        image_id = db.add_image(filename, camera_id)
-        fname_to_id[filename] = image_id
-        # print('keypoints')
-        # print(keypoints)
-        # print('image_id', image_id)
-        if len(keypoints.shape) >= 2:
-            db.add_keypoints(image_id, keypoints)
-        # else:
-        #    keypoints =
-        #    db.add_keypoints(image_id, keypoints)
+                elif camera_options["general"]["single_camera"] is True:
+                    if k == 0:
+                        camera_id = create_camera(
+                            db, path, camera_options["general"]["camera_model"]
+                        )
+                        single_camera_id = camera_id
+                        k += 1
+                    elif k > 0:
+                        camera_id = single_camera_id
+            else:
+                camera_id = grouped_images[filename]["camera_id"]
+            image_id = db.add_image(filename, camera_id)
+            fname_to_id[filename] = image_id
+            # print('keypoints')
+            # print(keypoints)
+            # print('image_id', image_id)
+            if len(keypoints.shape) >= 2:
+                db.add_keypoints(image_id, keypoints)
+            # else:
+            #    keypoints =
+            #    db.add_keypoints(image_id, keypoints)
 
     return fname_to_id
 
