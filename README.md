@@ -56,11 +56,13 @@ Key features:
 | &check; Agisoft Metashape                     |
 | &check; Software that supports bundler format |
 
-## Colab demo
+## Colab demo and notebooks
 
 Want to run on a sample dataset? ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/colab_run_from_bash_example.ipynb)
 
 Want to run on your images? ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/colab_run_from_bash_custom_images.ipynb)
+
+DIM can also be utilized as a library instead of being executed through the Command Line Interface (refer to the `Usage Instructions`). For an illustrative example, please see `notebooks/sfm_pipeline.ipynb`.
 
 ## Local Installation
 
