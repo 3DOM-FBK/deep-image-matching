@@ -145,7 +145,7 @@ confs = {
         "extractor": {
             "name": "sift",
         },
-        "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.99},
+        "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.85},
     },
     "loftr": {
         "extractor": {"name": "no_extractor"},
@@ -258,6 +258,7 @@ class Config:
         "skip_reconstruction": False,
         "force": True,
         "verbose": False,
+        "graph": True,
     }
     cfg = {
         "general": {},
@@ -499,6 +500,19 @@ class Config:
         if args["verbose"]:
             change_logger_level(logger.name, "debug")
 
+        if args["openmvg"] is not None:
+            args["openmvg"] = Path(args["openmvg"])
+            if not args["openmvg"].exists():
+                raise ValueError(f"File {args['openmvg']} does not exist")
+        
+        if args["camera_options"] is not None:
+            if Path(args["camera_options"]).suffix != '.yaml':
+                raise ValueError(f"File passed to --camera_options must be .yaml file")
+        
+        if args["upright"] == True:
+            if args["strategy"] == "matching_lowres":
+                raise ValueError(f"With option '--upright' is not possible to use '--strategy matching_lowres', since pairs are chosen with superpoint+lightglue that is not rotation invariant. Use another strategy, e.g. 'bruteforce'.")
+
         # Build configuration dictionary
         cfg = {
             "image_dir": args["images"],
@@ -512,7 +526,10 @@ class Config:
             "db_path": args["db_path"],
             "upright": args["upright"],
             "verbose": args["verbose"],
+            "graph": args["graph"],
             "skip_reconstruction": args["skip_reconstruction"],
+            "openmvg_conf": args["openmvg"],
+            "camera_options": args["camera_options"],
         }
 
         return cfg

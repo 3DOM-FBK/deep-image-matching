@@ -5,7 +5,7 @@
 ::: deep_image_matching.extractors.extractor_base.ExtractorBase
     options:
       show_root_heading: true
-      show_source: false
+      show_source: true
       members:
         - __init__
         - extract
@@ -14,3 +14,11 @@
         - _resize_image
         - _resize_features
         - viz_keypoints
+  
+<br/><br/>
+
+::: deep_image_matching.extractors.superpoint.SuperPointExtractor
+    options:
+      show_root_heading: true
+      show_source: true
+      members:

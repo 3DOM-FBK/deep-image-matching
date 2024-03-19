@@ -1,0 +1,140 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    /* Prevents scrolling when side panel is open */
+}
+
+#container {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+}
+/* Toggable Side Panel Styles */
+
+#sidePanel {
+    width: 20%;
+    height: 100%;
+    background-color: #e0e0e057;
+    overflow-x: auto;
+    overflow-y: auto;
+    transition: 0.2s;
+    border-right-style: solid;
+    border-right-color: #53505017;
+}
+
+#sideButton {
+    padding: 10px;
+    cursor: pointer;
+    background-color: #7059f785;
+    color: white;
+    font-size: x-large;
+    font-weight: bolder;
+}
+
+#mynetwork {
+    flex-grow: 1;
+    position: relative;
+    transition: 0.2s;
+}
+
+table {
+    width: 100%;
+    color: rgb(22, 22, 22);
+    margin-top: 20px;
+    overflow: auto;
+}
+
+th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+tr.inforow {
+    font-size: larger;
+    font-weight: bold;
+    border: none !important;  
+    color: #404040;
+}
+
+tr.na {
+    color:rgba(182, 22, 22, 0.829);
+    display: none;
+}
+
+tr.comm {
+    display: none;
+}
+
+.comm td {
+    padding-left: 20px;
+    font-size:small;
+    cursor: pointer;
+}
+
+
+.na td{
+    padding-left: 20px;
+    font-size: small;
+}
+
+th,
+td {
+    padding: 10px;
+    font-size: large;
+}
+
+p {
+    font-size: smaller;
+    text-align: justify;
+    color: #3f3e3eb6;
+    border-color: black;
+    padding: 10px;
+}
+
+#reopenButton {
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    padding: 10px;
+    cursor: pointer;
+    background-color: #7059f785;
+    color: white;
+    display: none;
+}
+
+#imagePopup{
+    position: absolute;
+    display: none;
+    background-size: contain;
+    background-repeat: no-repeat;
+    pointer-events: none;
+    height: 20%;
+    width: 20%;
+}
+
+
+{% if tooltip_link %}
+/* position absolute is important and the container has to be relative or absolute as well. */
+
+div.popup {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    display: none;
+    background-color: #f5f4ed;
+    -moz-border-radius: 3px;
+    -webkit-border-radius: 3px;
+    border-radius: 3px;
+    border: 1px solid #808074;
+    box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.2);
+}
+/* hide the original tooltip */
+
+.vis-tooltip {
+    display: none;
+}
+
+{% endif %}

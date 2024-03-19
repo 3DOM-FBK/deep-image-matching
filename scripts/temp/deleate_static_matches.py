@@ -1,3 +1,5 @@
+# Not ready, working on it! Do not use please
+
 STATIC_THRESHOLD_X_MIN = 0 # 88pixel
 STATIC_THRESHOLD_X_MAX = 30 # 13pixel
 STATIC_THRESHOLD_Y_MIN = 50 # 88pixel

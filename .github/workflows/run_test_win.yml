@@ -1,8 +1,8 @@
-name: run-test
+name: run-test-win
 
 on:
   push:
-    branches: [master, dev]
+    branches: "*" # Run on all branches
   pull_request:
     branches: [master, dev]
 

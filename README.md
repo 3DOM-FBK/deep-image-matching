@@ -1,72 +1,74 @@
 <div align="center">
  
- [![Static Badge](https://img.shields.io/badge/Matches_for-COLMAP-red)](https://github.com/colmap/colmap)
- ![Static Badge](https://img.shields.io/badge/Matches_for-Metashape-blue) [![Static Badge](https://img.shields.io/badge/Powered_by-Kornia-green)](https://github.com/kornia/kornia) [![Static Badge](https://img.shields.io/badge/Powered_by-hloc-blue)](https://github.com/kornia/kornia)
+ [![Static Badge](https://img.shields.io/badge/Matches_for-COLMAP-red)](https://github.com/colmap/colmap) [![Static Badge](https://img.shields.io/badge/Matches_for-OpenMVG-red)](https://github.com/openMVG/openMVG) [![Static Badge](https://img.shields.io/badge/Matches_for-MICMAC-red)](https://github.com/micmacIGN/micmac) ![Static Badge](https://img.shields.io/badge/Matches_for-Metashape-red) 
  
-  [![GitHub Release](https://img.shields.io/github/v/release/3DOM-FBK/deep-image-matching)](https://github.com/3DOM-FBK/deep-image-matching/releases) [![Static Badge](https://img.shields.io/badge/docs-DeepImageMatching-blue
+ [![Static Badge](https://img.shields.io/badge/Powered_by-Kornia-green)](https://github.com/kornia/kornia) [![Static Badge](https://img.shields.io/badge/Powered_by-hloc-green)](https://github.com/kornia/kornia) [![GitHub Release](https://img.shields.io/github/v/release/3DOM-FBK/deep-image-matching)](https://github.com/3DOM-FBK/deep-image-matching/releases) [![Static Badge](https://img.shields.io/badge/docs-DeepImageMatching-blue
  )](https://3dom-fbk.github.io/deep-image-matching/)
- 
+
 </div>
 
 # DEEP-IMAGE-MATCHING
 
-| SIFT                                             | DISK                                               | IMAGES ORIENTATION                                   | DENSE WITH ROMA                                |
-| ------------------------------------------------ | -------------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------- |
+| SIFT                                                  | DISK                                                    | IMAGES ORIENTATION                                        | DENSE WITH ROMA                                     |
+| ----------------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------- |
 | <img src='docs/assets/matches_sift.gif' height="100"> | <img src='docs/assets/matches_joined.gif' height="100"> | <img src='docs/assets/orientation_deep.gif' height="100"> | <img src='docs/assets/roma_dense.gif' height="100"> |
 
-| SIFT                                             | SUPERGLUE                                            |
-| ------------------------------------------------ | ---------------------------------------------------- |
+| SIFT                                                  | SUPERGLUE                                                 |
+| ----------------------------------------------------- | --------------------------------------------------------- |
 | <img src='docs/assets/temple_rsift.gif' height="165"> | <img src='docs/assets/temple_superglue.gif' height="165"> |
 
+Multivew matcher for SfM software. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. Now, it supports both OpenMVG and MicMac. Feel free to collaborate!
 
-Multivew matcher for SfM software. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. It supports both CLI and GUI. Feel free to collaborate!
+While `dev` branch is more frequently updated, `master` is the default more stable branch and is updated from `dev` less frequently. If you are looking for the newest developments, please switch to `dev`. 
 
-Check the documentation at <a href="https://3dom-fbk.github.io/deep-image-matching/">Docs</a>.
-If you want the most recent features, you should check and use the `dev` branch.
+
+For how to use DIM, check the <a href="https://3dom-fbk.github.io/deep-image-matching/">Documentation</a> (updated for the master branch). 
+
 
 **Please, note that `deep-image-matching` is under active development** and it is still in an experimental stage. If you find any bug, please open an issue.
 
 Key features:
 
-- [x] Multiview
-- [x] Large format images
-- [x] SOTA deep-learning and hand-crafted features
-- [x] Full compatibility with COLMAP
-- [x] Support for image rotations
-- [x] Compatibility with Agisoft Metashape (only on Linux and MacOS by using pycolmap)
-- [x] Support image retrieval with deep-learning local features
+- Multiview
+- Large format images
+- SOTA deep-learning and hand-crafted features
+- Support for image rotations
+- Compatibility with several SfM software
+- Support image retrieval with deep-learning local features
 
 | Supported Extractors               | Supported Matchers                                        |
 | ---------------------------------- | --------------------------------------------------------- |
 | &check; SuperPoint                 | &check; Lightglue (with Superpoint, Disk, and ALIKED)     |
 | &check; DISK                       | &check; SuperGlue (with Superpoint)                       |
-| &check; ALIKE                      | &check; LoFTR                                             |
-| &check; ALIKED                     | &#x2610; SE2-LoFTR                                        |
 | &#x2610; Superpoint free           | &check; Nearest neighbor (with KORNIA Descriptor Matcher) |
+| &check; ALIKE                      | &check; LoFTR (only GPU)                                  |
+| &check; ALIKED                     | &check; SE2-LoFTR (no tiling and only GPU)                |
 | &check; KeyNet + OriNet + HardNet8 | &check; RoMa                                              |
-| &check; ORB (opencv)               | &#x2610; GlueStick                                        |
-| &check; SIFT (opencv)              |
-| &check; DeDoDe                     |
+| &check; DeDoDe (only GPU)          | &#x2610; GlueStick                                        |
+| &check; SIFT (from Opencv)         | 
+| &check; ORB (from Opencv)          |
 
 | Supported SfM software                        |
 | --------------------------------------------- |
 | &check; COLMAP                                |
-| &#x2610; OpenMVG                               |
-| &#x2610; MICMAC                               |
+| &check; OpenMVG                               |
+| &check; MICMAC                                |
 | &check; Agisoft Metashape                     |
 | &check; Software that supports bundler format |
 
-## Colab demo 
+## Colab demo and notebooks
 
 Want to run on a sample dataset? ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/colab_run_from_bash_example.ipynb)
 
 Want to run on your images? ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/colab_run_from_bash_custom_images.ipynb)
 
-## Installation
+DIM can also be utilized as a library instead of being executed through the Command Line Interface (refer to the `Usage Instructions`). For an illustrative example, please see `notebooks/sfm_pipeline.ipynb`.
+
+## Local Installation
 
 For installing deep-image-matching, first create a conda environment:
 
-```bash
+```
 conda create -n deep-image-matching python=3.9
 conda activate deep-image-matching
 pip install --upgrade pip
@@ -74,37 +76,65 @@ pip install --upgrade pip
 
 Clone the repository and install deep-image-matching in editable mode:
 
-```bash
+```
 git clone https://github.com/3DOM-FBK/deep-image-matching.git
 cd deep-image-matching
 pip install -e .
 ```
 
-Install pycolmap:
+Install pycolmap (optional):
 
-```bash
-pip install pycolmap
 ```
-
-As [pycolmap](https://github.com/colmap/pycolmap) was released on PyPi only for Linux and macOS (up to version 0.4.0), it is not installed by default with deep-image-matching. 
-From version 0.5.0, pycolmap can be installed on Windows too. However, it needs some testing before including in dependencies of deep-image-matching, as there are some errors on Windows that are blocking deep_image_matching pipeline (while it works completely fine on Linux).
+pip install pycolmap==0.6.1
+```
+Pycolmap is optional to run reconstruction directly in DIM. If pycolmap is not available, matches will be written both in a h5 and colmap database for later processing with COLMAP GUI or API, or other processing.
 
 For more information, check the [documentation](https://3dom-fbk.github.io/deep-image-matching/installation/).
 
+## Docker Installation
+
+If you prefer using Docker, first, build the image:
+
+```
+docker build --tag deep-image-matching .
+```
+
+Note that the first time you run the command, it will take a while to download the base image and install all the dependencies.
+
+Once the image is built, you can run it with the following commands.
+On Linux:
+
+```
+docker run --name run-deep-image-matching --mount type=bind,source=/home/username/data,target=/workspace/data --gpus all -it deep-image-matching
+```
+
+On Windows (please use Powershell):
+
+```
+docker run --name run-deep-image-matching --mount type=bind,source=D:\data,target=/workspace/data --gpus all -it deep-image-matching
+```
+
+**replace** `/home/username/data` (on Linux) or `D:\data` (on Winows) with the desired path for mounting a shared volume between the local OS and the docker container. Make sure to use absolute paths. This folder will be used to store alll the input data (images) and outputs.
+
+Include the `--detach` option to run the container in background and/or `--rm` to remove container on exit.
+
+Once the container is running, you can then open the repo cloned inside the container directly in VSCode using `ctrl+alt+O` and selecting the option "attach to running container" (make sure to have the Docker extension installed in VSCode), then enjoy!
+
+If you face any issues, especially on Linux when using the `gpus all` setting, please refer to the [documentation](https://3dom-fbk.github.io/deep-image-matching/installation/).
+
 ## Usage instructions
 
-You can run deep-image-matching from the command line or from the GUI.
-
+<!-- You can run deep-image-matching from the command line or from the GUI. -->
 
 Use the following command to see all the available options from the CLI:
 
-```bash
+```
 python main.py --help
 ```
 
 For example, to run the matching with SuperPoint and LightGlue on a dataset, you can use the following command:
 
-```bash
+```
 python main.py --dir assets/example_cyprus --pipeline superpoint+lightglue
 ```
 
@@ -114,13 +144,11 @@ The `--pipeline` parameter defines the combaination of local feature extractor a
 
 For all the usage instructions and configurations, refer to the [documenation](https://3dom-fbk.github.io/deep-image-matching/getting_started) or check the example notebooks.
 
-To run the GUI, you can use the following command:
+<!-- To run the GUI, you can use the following command:
 
 ```bash
 python main.py --gui
-```
-
-Please note that the GUI is currently out of date and should be upgraded to the latest version of Deep-Image-Matching. We will update it soon, thank you for your patience.
+``` -->
 
 ## Advanced usage
 
@@ -130,9 +158,9 @@ For advanced usage, please refer to the [documentation](https://3dom-fbk.github.
 
 To run the matching with different local features and/or matchers and marging together the results, you can use scripts in the `./scripts` directory for merging the COLMAP databases.
 
-```bash
+```
 python ./join_databases.py --help
-python ./join_databases.py --input assets/to_be_joined --output docs/assets/to_be_joined
+python ./join_databases.py --input path/to/dir/with/databases --output path/to/output/dir
 ```
 
 ### Exporting the solution to Metashape
@@ -150,29 +178,25 @@ Please, refer to the instructions at [https://github.com/franioli/metashape](htt
 Any contribution to this repo is really welcome!
 If you want to contribute to the project, please, check the [contributing guidelines](./CONTRIBUTING.md).
 
-## TODO:
+## To Do List:
 
-- [x] Tile processing for high resolution images
-- [x] Manage image rotations
-- [x] Add image retrieval with global descriptors
-- [x] add GUI
-- [x] Add pycolmap compatibility
-- [x] Add exporting to Bundler format ready for importing into Metashape (only on Linux and MacOS by using pycolmap)
-- [ ] Add visualization for extracted features and matches
-- [ ] Improve speed
-- [ ] Autoselect tiling grid in order to fit images in GPU memory
-- [x] Add tests, documentation and examples (e.g. colab, ..)
-- [ ] Apply masks during feature extraction
-- [ ] Integrate support for Pix4D [Open Photogrammetry Format](https://github.com/Pix4D/opf-spec)
-- [ ] Work with submodules
-- [ ] Automatically download weights for all the models
-- [x] Cleanup repository to removed large files from Git history
-- [x] Update README CLI options
-
+See the [TODO list](notes.md) for the list of features and improvements that are planned for the future.
 
 ## References
 
 If you find the repository useful for your work consider citing the papers:
+
+```bibtex
+@article{morelli2024_deep_image_matching,
+  AUTHOR = {Morelli, L. and Ioli, F. and Maiwald, F. and Mazzacca, G. and Menna, F. and Remondino, F.},
+  TITLE = {DEEP-IMAGE-MATCHING: A TOOLBOX FOR MULTIVIEW IMAGE MATCHING OF COMPLEX SCENARIOS},
+  JOURNAL = {The International Archives of the Photogrammetry, Remote Sensing and Spatial Information Sciences},
+  VOLUME = {XLVIII-2/W4-2024},
+  YEAR = {2024},
+  PAGES = {309--316},
+  DOI = {10.5194/isprs-archives-XLVIII-2-W4-2024-309-2024}
+}
+```
 
 ```bibtex
 @article{morelli2022photogrammetry,
@@ -187,15 +211,20 @@ If you find the repository useful for your work consider citing the papers:
 ```
 
 ```bibtex
-@article{ioli2023replicable,
-  title={A Replicable Open-Source Multi-Camera System for Low-Cost 4d Glacier Monitoring},
-  author={Ioli, F and Bruno, E and Calzolari, D and Galbiati, M and Mannocchi, A and Manzoni, P and Martini, M and Bianchi, A and Cina, A and De Michele, C and others},
-  journal={The International Archives of the Photogrammetry, Remote Sensing and Spatial Information Sciences},
-  volume={48},
-  pages={137--144},
-  year={2023},
-  publisher={Copernicus GmbH}
+@article{ioli2024,
+  title={Deep Learning Low-cost Photogrammetry for 4D Short-term Glacier
+Dynamics Monitoring},
+  author={Ioli, Francesco and Dematteis, Nicolò and Giordan, Daniele and Nex, Francesco and Pinto Livio},
+  journal={PFG – Journal of Photogrammetry, Remote Sensing and Geoinformation Science},
+  year={2024},
+  DOI = {10.1007/s41064-023-00272-w}
 }
 ```
 
-Depending on the options used, consider citing the corresponding work of [KORNIA](https://github.com/kornia/kornia), [HLOC](https://github.com/cvg/Hierarchical-Localization), and local features.
+Depending on the options used, consider citing the corresponding work of:
+- [KORNIA](https://github.com/kornia/kornia)
+- [HLOC](https://github.com/cvg/Hierarchical-Localization)
+- [COLMAP](https://github.com/colmap/colmap)
+- [OpenMVG](https://github.com/openMVG/openMVG)
+- [MICMAC](https://github.com/micmacIGN/micmac)
+- used local features and matchers

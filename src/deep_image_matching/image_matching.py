@@ -46,6 +46,25 @@ def get_pairs_from_file(pair_file: Path) -> list:
 
 
 class ImageMatching:
+    """
+    ImageMatching class for performing image matching and feature extraction.
+
+    Methods:
+        __init__(self, imgs_dir, output_dir, matching_strategy, local_features, matching_method, retrieval_option=None, pair_file=None, overlap=None, existing_colmap_model=None, custom_config={})
+            Initializes the ImageMatching class.
+        generate_pairs(self, **kwargs) -> Path:
+            Generates pairs of images for matching.
+        rotate_upright_images(self)
+            Rotates upright images.
+        extract_features(self) -> Path:
+            Extracts features from the images.
+        match_pairs(self, feature_path, try_full_image=False) -> Path:
+            Matches pairs of images.
+        rotate_back_features(self, feature_path)
+            Rotates back the features.
+
+    """
+
     default_conf_general = {
         "quality": Quality.MEDIUM,
         "tile_selection": TileSelection.NONE,
@@ -78,6 +97,32 @@ class ImageMatching:
         existing_colmap_model: Path = None,
         custom_config: dict = {},
     ):
+        """
+        Initializes the ImageMatching class.
+
+        Parameters:
+            imgs_dir (Path): Path to the directory containing the images.
+            output_dir (Path): Path to the output directory for the results.
+            matching_strategy (str): The strategy for generating pairs of images for matching.
+            local_features (str): The method for extracting local features from the images.
+            matching_method (str): The method for matching pairs of images.
+            retrieval_option (str, optional): The retrieval option for generating pairs of images. Defaults to None.
+            pair_file (Path, optional): Path to the file containing custom pairs of images. Required when 'retrieval_option' is set to 'custom_pairs'. Defaults to None.
+            overlap (int, optional): The overlap between tiles. Required when 'retrieval_option' is set to 'sequential'. Defaults to None.
+            existing_colmap_model (Path, optional): Path to the existing COLMAP model. Required when 'retrieval_option' is set to 'covisibility'. Defaults to None.
+            custom_config (dict, optional): Custom configuration settings. Defaults to {}.
+
+        Raises:
+            ValueError: If the 'overlap' option is required but not provided when 'retrieval_option' is set to 'sequential'.
+            ValueError: If the 'pair_file' option is required but not provided when 'retrieval_option' is set to 'custom_pairs'.
+            ValueError: If the 'pair_file' does not exist when 'retrieval_option' is set to 'custom_pairs'.
+            ValueError: If the 'existing_colmap_model' option is required but not provided when 'retrieval_option' is set to 'covisibility'.
+            ValueError: If the 'existing_colmap_model' does not exist when 'retrieval_option' is set to 'covisibility'.
+            ValueError: If the image folder is empty or contains only one image.
+
+        Returns:
+            None
+        """
         self.image_dir = Path(imgs_dir)
         self.output_dir = Path(output_dir)
         self.matching_strategy = matching_strategy
@@ -160,18 +205,28 @@ class ImageMatching:
         logger.info(f"  Output folder: {self.output_dir}")
         logger.info(f"  Number of images: {len(self.image_list)}")
         logger.info(f"  Matching strategy: {self.matching_strategy}")
-        logger.info(f"  Image quality: {self.custom_config['general']['quality']}")
+        logger.info(f"  Image quality: {self.custom_config['general']['quality'].name}")
         logger.info(
-            f"  Tile selection: {self.custom_config['general']['tile_selection']}"
+            f"  Tile selection: {self.custom_config['general']['tile_selection'].name}"
         )
         logger.info(f"  Feature extraction method: {self.local_features}")
         logger.info(f"  Matching method: {self.matching_method}")
+        logger.info(
+            f"  Geometric verification: {self.custom_config['general']['geom_verification'].name}"
+        )
+        logger.info(f"  CUDA available: {torch.cuda.is_available()}")
 
     @property
     def img_names(self):
         return self.image_list.img_names
 
     def generate_pairs(self, **kwargs) -> Path:
+        """
+        Generates pairs of images for matching.
+
+        Returns:
+            Path: The path to the pair file containing the generated pairs of images.
+        """
         if self.pair_file is not None and self.matching_strategy == "custom_pairs":
             if not self.pair_file.exists():
                 raise FileExistsError(f"File {self.pair_file} does not exist")
@@ -198,6 +253,17 @@ class ImageMatching:
         return self.pair_file
 
     def rotate_upright_images(self):
+        """
+        Rotates the images in the image directory to an upright position.
+
+        This method rotates the images in the image directory to an upright position using the OpenCV library. The rotated images are saved in a separate directory called "upright_images" within the output directory.
+
+        Returns:
+            None
+
+        Raises:
+            None
+        """
         logger.info("Rotating images upright...")
         path_to_upright_dir = self.output_dir / "upright_images"
         os.makedirs(path_to_upright_dir, exist_ok=False)
@@ -296,6 +362,16 @@ class ImageMatching:
         logger.info(f"Images rotated and saved in {path_to_upright_dir}")
 
     def extract_features(self) -> Path:
+        """
+        Extracts features from the images using the specified local feature extraction method.
+
+        Returns:
+            Path: The path to the directory containing the extracted features.
+
+        Raises:
+            ValueError: If the local feature extraction method is invalid or not supported.
+
+        """
         logger.info(f"Extracting features with {self.local_features}...")
         logger.info(f"{self.local_features} configuration: ")
         pprint(self.custom_config["extractor"])
@@ -310,6 +386,19 @@ class ImageMatching:
         return feature_path
 
     def match_pairs(self, feature_path: Path, try_full_image: bool = False) -> Path:
+        """
+        Matches features using a specified matching method.
+
+        Args:
+            feature_path (Path): The path to the directory containing the extracted features.
+            try_full_image (bool, optional): Whether to try matching the full image. Defaults to False.
+
+        Returns:
+            Path: The path to the directory containing the matches.
+
+        Raises:
+            ValueError: If the feature path does not exist.
+        """
         timer = Timer(log_level="debug")
 
         logger.info(f"Matching features with {self.matching_method}...")
@@ -335,7 +424,7 @@ class ImageMatching:
             logger.debug(f"Matching image pair: {name0} - {name1}")
 
             # Run matching
-            matches = self._matcher.match(
+            self._matcher.match(
                 feature_path=feature_path,
                 matches_path=matches_path,
                 img0=im0,
@@ -345,8 +434,6 @@ class ImageMatching:
             timer.update("Match pair")
 
             # NOTE: Geometric verif. has been moved to the end of the matching process
-            # if matches is None:
-            #     continue
 
         # TODO: Clean up features with no matches
 
@@ -356,6 +443,20 @@ class ImageMatching:
         return matches_path
 
     def rotate_back_features(self, feature_path: Path) -> None:
+        """
+        Rotates back the features.
+
+        This method rotates back the features extracted from the images that were previously rotated upright using the 'rotate_upright_images' method. The rotation is performed based on the theta value associated with each image in the 'rotated_images' list. The rotated features are then saved back to the feature file.
+
+        Parameters:
+            feature_path (Path): The path to the feature file containing the extracted features.
+
+        Returns:
+            None
+
+        Raises:
+            None
+        """
         # images = self.image_list.img_names
         for img, theta in tqdm(self.rotated_images):
             features = get_features(feature_path, img)

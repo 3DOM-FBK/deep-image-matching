@@ -6,12 +6,12 @@ import numpy as np
 import torch
 
 
-def recent_konria_version(base_version: str = "0.7.1"):
+def konria_071(base_version: str = "0.7.1"):
     try:
         from packaging import version
     except ImportError:
         return False
-    return version.parse(K.__version__) >= version.parse(base_version)
+    return version.parse(K.__version__) == version.parse(base_version)
 
 
 # TODO: add possibility to specify the number of rows and columns in the grid
@@ -71,22 +71,22 @@ class Tiler:
         Compute tiles by specifying the window size and overlap.
 
         Parameters:
-        - input (np.ndarray or torch.Tensor): The input image.
-        - window_size (int or Tuple[int, int]): The size of each tile. If int, the same size is used for both height and width. If Tuple[int, int], the first element represents the x coordinate (horizontal) and the second element represents the y coordinate (vertical).
-        - overlap (int or Tuple[int, int], default=0): The overlap between adjacent tiles. If int, the same overlap is used for both height and width. If Tuple[int, int], the first element represents the overlap in the horizontal direction and the second element represents the overlap in the vertical direction.
+            input (np.ndarray or torch.Tensor): The input image.
+            window_size (int or Tuple[int, int]): The size of each tile. If int, the same size is used for both height and width. If Tuple[int, int], the first element represents the x coordinate (horizontal) and the second element represents the y coordinate (vertical).
+            overlap (int or Tuple[int, int], default=0): The overlap between adjacent tiles. If int, the same overlap is used for both height and width. If Tuple[int, int], the first element represents the overlap in the horizontal direction and the second element represents the overlap in the vertical direction.
 
         Returns:
-        Tuple[Dict[int, np.ndarray], Dict[int, Tuple[int, int]]]: A tuple containing two dictionaries. The first dictionary contains the extracted tiles, where the key is the index of the tile and the value is the tile itself. The second dictionary contains the x, y coordinates of the top-left corner of each tile in the original image (before padding), where the key is the index of the tile and the value is a tuple of two integers representing the x and y coordinates.
+            Tuple[Dict[int, np.ndarray], Dict[int, Tuple[int, int]]]: A tuple containing two dictionaries. The first dictionary contains the extracted tiles, where the key is the index of the tile and the value is the tile itself. The second dictionary contains the x, y coordinates of the top-left corner of each tile in the original image (before padding), where the key is the index of the tile and the value is a tuple of two integers representing the x and y coordinates.
 
         Raises:
-        - TypeError: If the input is not a numpy array or a torch tensor.
-        - TypeError: If the window_size is not an integer or a tuple of integers.
-        - TypeError: If the overlap is not an integer or a tuple of integers.
+            TypeError: If the input is not a numpy array or a torch tensor.
+            TypeError: If the window_size is not an integer or a tuple of integers.
+            TypeError: If the overlap is not an integer or a tuple of integers.
 
         Note:
-        - If the input is a numpy array, it is assumed to be in the format (H, W, C). If C > 1, it is converted to (C, H, W).
-        - The output tiles are in the format (H, W, C).
-        - The output origins are expressed in x, y coordinates, where x is the horizontal axis and y is the vertical axis (pointing down, as in OpenCV).
+            - If the input is a numpy array, it is assumed to be in the format (H, W, C). If C > 1, it is converted to (C, H, W).
+            - The output tiles are in the format (H, W, C).
+            - The output origins are expressed in x, y coordinates, where x is the horizontal axis and y is the vertical axis (pointing down, as in OpenCV).
         """
         if isinstance(window_size, int):
             window_size = (window_size, window_size)
@@ -131,7 +131,7 @@ class Tiler:
         patches = patches.squeeze(0)
 
         # Compute number of rows and columns
-        if recent_konria_version():
+        if konria_071():
             n_rows = (H + 2 * padding[0] - window_size[0]) // stride[0] + 1
             n_cols = (W + 2 * padding[1] - window_size[1]) // stride[1] + 1
         else:
@@ -143,7 +143,7 @@ class Tiler:
         for row in range(n_rows):
             for col in range(n_cols):
                 tile_idx = np.ravel_multi_index((row, col), (n_rows, n_cols), order="C")
-                if recent_konria_version():
+                if konria_071():
                     x = -padding[1] + col * stride[1]
                     y = -padding[0] + row * stride[0]
                 else:

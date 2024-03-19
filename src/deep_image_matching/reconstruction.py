@@ -7,9 +7,6 @@ import pycolmap
 from . import logger
 from .triangulation import (
     OutputCapture,
-    estimation_and_geometric_verification,
-    import_features,
-    import_matches,
 )
 from .utils.database import COLMAPDatabase
 
@@ -63,7 +60,7 @@ def update_cameras(database_path: Path, cameras: [List[pycolmap.Camera]]):
 
     for camera_id, cam in enumerate(cameras, start=1):
         db.update_camera(
-            camera_id, cam.model_id, cam.width, cam.height, cam.params, True
+            camera_id, cam.model.value, cam.width, cam.height, cam.params, True
         )
     db.commit()
     db.close()
@@ -121,10 +118,10 @@ def pycolmap_reconstruction(
 def main(
     database: Path,
     image_dir: Path,
-    feature_path: Path,
-    match_path: Path,
-    pair_path: Path,
     sfm_dir: Path,
+    feature_path: Path = None,
+    match_path: Path = None,
+    pair_path: Path = None,
     camera_mode: pycolmap.CameraMode = pycolmap.CameraMode.AUTO,
     cameras=None,
     skip_geometric_verification: bool = False,
@@ -134,27 +131,27 @@ def main(
     reconst_opts: Optional[Dict[str, Any]] = None,
     verbose: bool = True,
 ) -> pycolmap.Reconstruction:
-    # Create empty database
-    create_empty_db(database)
-    import_images(image_dir, database, camera_mode)
-
-    # Update cameras intrinsics in the database
-    if cameras:
-        update_cameras(database, cameras)
-
-    # Import features and matches
-    image_ids = get_image_ids(database)
-    import_features(image_ids, database, feature_path)
-    import_matches(
-        image_ids,
-        database,
-        match_path,
-        skip_geometric_verification=skip_geometric_verification,
-    )
-
-    # Run geometric verification
-    if not skip_geometric_verification:
-        estimation_and_geometric_verification(database, pair_path, verbose=verbose)
+    ## Create empty database
+    # create_empty_db(database)
+    # import_images(image_dir, database, camera_mode)
+    #
+    ## Update cameras intrinsics in the database
+    # if cameras:
+    #    update_cameras(database, cameras)
+    #
+    ## Import features and matches
+    # image_ids = get_image_ids(database)
+    # import_features(image_ids, database, feature_path)
+    # import_matches(
+    #    image_ids,
+    #    database,
+    #    match_path,
+    #    skip_geometric_verification=skip_geometric_verification,
+    # )
+    #
+    ## Run geometric verification
+    # if not skip_geometric_verification:
+    #    estimation_and_geometric_verification(database, pair_path, verbose=verbose)
 
     # Run reconstruction
     model = pycolmap_reconstruction(
@@ -165,10 +162,10 @@ def main(
         options=reconst_opts,
     )
     if model is not None:
-        logger.info(
-            f"Reconstruction statistics:\n{model.summary()}"
-            + f"\n\tnum_input_images = {len(image_ids)}"
-        )
+        # logger.info(
+        #    f"Reconstruction statistics:\n{model.summary()}"
+        #    + f"\n\tnum_input_images = {len(image_ids)}"
+        # )
 
         # Copy images to sfm_dir (for debugging)
         # shutil.copytree(image_dir, sfm_dir / "images", dirs_exist_ok=True)
