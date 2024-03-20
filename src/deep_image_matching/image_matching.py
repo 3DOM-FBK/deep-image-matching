@@ -1,3 +1,9 @@
+# Aggiungere check epipolare
+# se un'immagine ripetutamente non si riesce ad agganciare, -> scartarla
+# Estrarre tutte le features in una volta
+# Un'immagine viene ruotata solo se per due volte passa il check
+# Velocizzare il tutto
+
 import os
 import shutil
 from pathlib import Path
@@ -25,14 +31,12 @@ from .matchers.lightglue import LightGlueMatcher
 from .matchers.matcher_base import matcher_loader
 from .pairs_generator import PairsGenerator
 from .utils.image import ImageList
+from .utils.geometric_verification import geometric_verification
 
 
 from multiprocessing import Pool
 from multiprocessing import Pool, set_start_method
 from functools import partial
-
-
-
 
 
 def resize(img, new_width):
@@ -42,33 +46,21 @@ def resize(img, new_width):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     return img
 
+
 def find_matches_per_rotation(
-    path_to_img0, path_to_img1, rotations, cv2_rot_params
+    path_to_img0,
+    path_to_img1,
+    rotations,
+    cv2_rot_params,
+    SPextractor,
+    LGmatcher,
 ):
     resize_size = 1000
     features = {
         "feat0": None,
         "feat1": None,
     }
-    SPextractor = SuperPointExtractor(
-        config={
-            "general": {},
-            "extractor": {
-                "keypoint_threshold": 0.005,
-                "max_keypoints": 1024,
-            },
-        }
-    )
-    LGmatcher = LightGlueMatcher(
-        config={
-            "general": {},
-            "matcher": {
-                "depth_confidence": 0.95,  # early stopping, disable with -1
-                "width_confidence": 0.99,  # point pruning, disable with -1
-                "filter_threshold": 0.1,  # match threshold
-            },
-        },
-    )
+
     image0 = cv2.imread(path_to_img0)
     image0 = resize(image0, resize_size)
     image1 = cv2.imread(path_to_img1)
@@ -84,25 +76,47 @@ def find_matches_per_rotation(
         features["feat1"] = SPextractor._extract(_image1)
         matches = LGmatcher._match_pairs(features["feat0"], features["feat1"])
 
-        matchesXrotation.append((rotation, matches.shape[0]))
+        F, inlMask = geometric_verification(
+            features["feat0"]["keypoints"][matches[:, 0], :],
+            features["feat1"]["keypoints"][matches[:, 1], :],
+            GeometricVerification.PYDEGENSAC,
+            threshold=1,
+            confidence=0.9999,
+            max_iters=10000,
+            bool=False,
+        )
+
+        verified_matches = np.sum(inlMask)
+        print(matches.shape[0], verified_matches)
+
+        # matchesXrotation.append((rotation, matches.shape[0]))
+        matchesXrotation.append((rotation, verified_matches))
     return matchesXrotation
 
-def prova(cluster0, path_to_upright_dir, rotations, cv2_rot_params, cluster1):
-    #print("cluster1", cluster1)
-    #print("cluster0", cluster0)
-    #print("path_to_upright_dir", path_to_upright_dir)
-    #print("rotations", rotations)
-    #print("cv2_rot_params", cv2_rot_params)
+
+def prova(
+    cluster0,
+    path_to_upright_dir,
+    rotations,
+    cv2_rot_params,
+    SPextractor,
+    LGmatcher,
+    cluster1,
+):
     processed = []
 
     for j, img1 in enumerate(cluster1):
-        for i, img0 in enumerate(cluster0):
+        # for i, img0 in enumerate(cluster0):
+        for i in range(len(cluster0)):
+            img0 = cluster0[len(cluster0) - 1 - i]
             print(j, i, len(cluster1), len(cluster0))
             matchesXrotation = find_matches_per_rotation(
                 str(path_to_upright_dir / img0),
                 str(path_to_upright_dir / img1),
                 rotations,
                 cv2_rot_params,
+                SPextractor,
+                LGmatcher,
             )
             index_of_max = max(
                 range(len(matchesXrotation)),
@@ -110,17 +124,11 @@ def prova(cluster0, path_to_upright_dir, rotations, cv2_rot_params, cluster1):
             )
             n_matches = matchesXrotation[index_of_max][1]
             if index_of_max != 0 and n_matches > 200:
-                print(
-                    f"ref {img0}     rotated {img1} {rotations[index_of_max]}"
-                )
-                #self.rotated_images.append((img1, rotations[index_of_max]))
+                print(f"ref {img0}     rotated {img1} {rotations[index_of_max]}")
+                # self.rotated_images.append((img1, rotations[index_of_max]))
                 image1 = cv2.imread(str(path_to_upright_dir / img1))
-                rotated_image1 = cv2.rotate(
-                    image1, cv2_rot_params[index_of_max]
-                )
-                rotated_image1 = cv2.cvtColor(
-                    rotated_image1, cv2.COLOR_BGR2GRAY
-                )
+                rotated_image1 = cv2.rotate(image1, cv2_rot_params[index_of_max])
+                rotated_image1 = cv2.cvtColor(rotated_image1, cv2.COLOR_BGR2GRAY)
                 cv2.imwrite(str(path_to_upright_dir / img1), rotated_image1)
                 processed.append(img1)
                 break
@@ -129,9 +137,7 @@ def prova(cluster0, path_to_upright_dir, rotations, cv2_rot_params, cluster1):
                 image1 = cv2.imread(str(path_to_upright_dir / img1))
                 image1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
                 cv2.imwrite(str(path_to_upright_dir / img1), image1)
-                print(
-                    f"ref {img0}     NOT rotated {img1} {rotations[index_of_max]}"
-                )
+                print(f"ref {img0}     NOT rotated {img1} {rotations[index_of_max]}")
                 break
     return processed
 
@@ -412,7 +418,7 @@ class ImageMatching:
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             return img
 
-        #@torch.no_grad() # probably not useful
+        # @torch.no_grad() # probably not useful
         def find_matches_per_rotation(
             path_to_img0, path_to_img1, rotations, cv2_rot_params
         ):
@@ -463,16 +469,34 @@ class ImageMatching:
 
         import random
 
+        SPextractor = SuperPointExtractor(
+            config={
+                "general": {},
+                "extractor": {
+                    "keypoint_threshold": 0.005,
+                    "max_keypoints": 1024,
+                },
+            }
+        )
+        LGmatcher = LightGlueMatcher(
+            config={
+                "general": {},
+                "matcher": {
+                    "depth_confidence": 0.95,  # early stopping, disable with -1
+                    "width_confidence": 0.99,  # point pruning, disable with -1
+                    "filter_threshold": 0.1,  # match threshold
+                },
+            },
+        )
+
         random_first_img = random.randint(0, len(cluster1))
         random_first_img = 15
         print(cluster1[random_first_img])
-
 
         cluster0.append(cluster1[random_first_img])
         cluster1.pop(random_first_img)
 
         MULTIPROCESS = True
-
 
         iterations = 0
         max_iter = 650
@@ -482,11 +506,11 @@ class ImageMatching:
             print("cluster0", cluster0)
             print("cluster1", cluster1)
 
-            if MULTIPROCESS ==  False:
+            if MULTIPROCESS == False:
                 for j, img1 in enumerate(cluster1):
-                    #for i, img0 in enumerate(cluster0):
+                    # for i, img0 in enumerate(cluster0):
                     for i in range(len(cluster0)):
-                        img0 = cluster0[len(cluster0)-1-i]
+                        img0 = cluster0[len(cluster0) - 1 - i]
                         print(j, i, len(cluster1), len(cluster0))
                         matchesXrotation = find_matches_per_rotation(
                             str(path_to_upright_dir / img0),
@@ -535,23 +559,28 @@ class ImageMatching:
                 print("len(cluster1)", len(cluster1))
                 break
 
-
             elif MULTIPROCESS == True:
                 N_CORES = 4
-
 
                 print(cluster0)
                 print(cluster1)
 
-                partial_prova = partial(prova, cluster0, path_to_upright_dir,rotations, cv2_rot_params)
+                partial_prova = partial(
+                    prova,
+                    cluster0,
+                    path_to_upright_dir,
+                    rotations,
+                    cv2_rot_params,
+                    SPextractor,
+                    LGmatcher,
+                )
                 sublists = np.array_split(cluster1, N_CORES)
-                with Pool (N_CORES) as p:
+                with Pool(N_CORES) as p:
                     processed = p.map(partial_prova, sublists)
                 print(len(sublists[0]))
                 print(len(sublists[1]))
                 print(len(sublists[2]))
                 print(len(sublists[3]))
-
 
             processed = [item for sublist in processed for item in sublist if item]
 
@@ -577,7 +606,6 @@ class ImageMatching:
 
         torch.cuda.empty_cache()
         logger.info(f"Images rotated and saved in {path_to_upright_dir}")
-
 
     def extract_features(self) -> Path:
         """
