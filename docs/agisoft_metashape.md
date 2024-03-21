@@ -31,8 +31,8 @@ Therefore, you may have to rotate the reconstruction or to use Ground Control Po
 ![](./assets/metashape_reconstruction.png)
 
 Opening an image, you can also see the keypoints and the matches between the images.
-Note, that the Bunlder camera model is a simple pinhole camera model, so the radial distortion is not taken into account. 
-Therefore, you may see large reprojection errors in the images.
+Note, that the Bunlder camera model is a simple pinhole camera model, with only the focal length and two radial distortion parameters.
+Therefore, you will probably see large reprojection errors in the images.
 To fix this, you should import your camera calibration according to the Metashape camera model and run the bundle adjustment (optimization) again.
 
 ![](./assets/metashape_keypoints.png)
