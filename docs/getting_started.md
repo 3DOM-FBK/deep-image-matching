@@ -13,7 +13,7 @@ Before running the CLI, check the options with `python ./main.py --help`.
 The minimal required option are:
 
 - `--dir` `-d`: it is the path of the 'project directory', i.e., the directory containing a folder named 'images', with all the image to be processed, and where the output will be saved
-- `--pipeline` `-p`: the name of pipeline (i.e., the combination of local feature extractor and matcher) to use (e.g., "superpoint+lightglue"). See the [Local feature extractor and matcher](#local-feature-extractor-and-matcher) section for more details.
+- `--pipeline` `-p`: the name of pipeline (i.e., the combination of local feature extractor and matcher) to use (e.g., "superpoint+lightglue"). See the [Pipelines](#pipelines) section for more details.
 
 Example: `python main.py --dir ./assets/example_cyprus --pipeline superpoint+lightglue`
 
@@ -54,9 +54,8 @@ The GUI loads the available configurations from [`config.py`](https://github.com
 
 If you want to use Deep_Image_Matching from a Jupyter notebook, you can check the examples in the [`notebooks`](https://github.com/3DOM-FBK/deep-image-matching/tree/master/notebooks) folder.
 
-## Basic configuration
 
-### Pipelines
+## Pipelines
 
 The `pipeline` parameter defines the combination of local feature extractor and matcher to be used for the matching is is defined by the `--pipeline` option in the CLI.
 
@@ -93,7 +92,7 @@ From the GUI, you can chose the configuration from the drop-down menu.
 
 More information can be obtained looking to the code in [`config.py`](https://github.com/3DOM-FBK/deep-image-matching/blob/master/src/deep_image_matching/config.py) file located in `/src/deep_image_matching` directory.
 
-### Matching strategies
+## Matching strategies
 
 The matching strategy defines how the pairs of images to be matches are selected. Available matching strategies are:
 
@@ -109,7 +108,7 @@ The matching strategy defines how the pairs of images to be matches are selected
     image_3.jpg image_4.jpg
 ```
 
-### Quality
+## Quality
 
 The `Quality` parameter define the resolution at which the images are matched. The available options are:
 
@@ -119,7 +118,7 @@ The `Quality` parameter define the resolution at which the images are matched. T
 - `low`: images are downsampled by a factor of 4 by using the OpenCV pixel-area approach ([cv2.INTER_AREA](https://docs.opencv.org/4.x/da/d54/group__imgproc__transform.html#gga5bb5a1fea74ea38e1a5445ca803ff121acf959dca2480cc694ca016b81b442ceb)).
 - `lowest`: images are downsampled by a factor of 8 by using the OpenCV pixel-area approach ([cv2.INTER_AREA](https://docs.opencv.org/4.x/da/d54/group__imgproc__transform.html#gga5bb5a1fea74ea38e1a5445ca803ff121acf959dca2480cc694ca016b81b442ceb)).
 
-### Tiling
+## Tiling
 
 If images have a high resolution (e.g., larger than 3000 px, but this limit depends on the memory of your GPU) and you do not want to downsample them (e.g., to avoid loosing accuracy in feature detection), it may be useful to carry out the matching by dividing the images into regular tiles.
 This can be done by specifying the tiling approach with the `--tiling` option in the CLI.
@@ -130,87 +129,5 @@ If you want to run the matching by tile, you can choose different approaches for
 - `grid`: the images are divided into a regular grid of size 2400x2000 px for feature extraction. The matching is carried out by matching the tiles in the same position in the grid (e.g., the tile in the top-left corner of the first image is matched with the tile in the top-left corner of the second image). This method is recommended only if the images are taken from the same point of view and the camera is not rotated.
 - `exhaustive`: the images are divided into a regular grid of size 2400x2000 px to extract the features. The matching is carried out by matching all the possible combinations of tiles (brute-force). This method can be very slow for large images or in combination with the `highest` quality option and, in some cases, it may lead to error in the geometric verification if too many wrong matches are detected.
 
-To control the tile size and the tile overlap, refer to the [Advanced configuration](#advanced-configuration) section.
+To control the tile size and the tile overlap, refer to the [Advanced configuration](./advanced_configuration.md) section.
 
-## Advanced configuration
-
-If you want to set any additional parameter, you can do it by editing the `config.yaml` file that must be located in the same directory of the `main.py` file.
-These are non-mandatory parameters that can be used to fine-tune the matching process, but none of them is specifically required to run the matching, as default values are set for all of them.
-
-The `config.yaml` file is a YAML file that contains all the parameters that can be set for the matching. The parameters are divided into different sections: 'general', 'extractor', 'matcher'.
-
-The 'general' section contains general parameters for the processing (in addition to those defined by the CLI arguments):
-
-- `tile_size`: size of the tiles defined as a Tuple (width, height) in pixel (default `(2400, 2000)`),
-- `tile_overlap`: the tiles can be overlapped by a certain amount of pixel to avoid features/matches detected close to the tile borders (default `10`),
-- `min_matches_per_tile`: the minimum number of matches per each tile. Below this number, the matches are rejected because they are considered not robust enough (default `10`),
-- `geom_verification`: defines the geometric verification method to be used. Available options are: `NONE` (no geometric verification), `PYDEGENSAC` (use pydegensac), `MAGSAC` (use opencv MAGSAC). (default `GeometricVerification.PYDEGENSAC`),
-- `gv_threshold`: the threshold for the geometric verification (default `4`),
-- `gv_confidence`: the confidence for the geometric verification (default `0.99999`),
-- `min_inliers_per_pair`: the minimum number of inliers matches per image pair (default `15`),
-- `min_inlier_ratio_per_pair`: the minimum inlier ratio (i.e., number of valid matches/number of total matches) per image pair (default `0.25`),
-- `try_match_full_images`: even if the features are extracted by tiles, you can try to match the features of the entire image first (if the number of features is not too high and they can fit into memory) (Default is False).
-
-For example, if you want to change the tile size and the tile overlap, you can set the `tile_size` and `tile_overlap` parameters in the `general` section as follows:
-
-```yaml
-general:
-  tile_size: (2400, 2000)
-  tile_overlap: 20
-```
-
-The `extractor` and `matcher` sections contain the parameters that control the local feature extractor and the matcher selected by the '--pipeline' option from the CLI (or from GUI).
-Both the sections **must contain the name** of the local feature extractor or the matcher that will be used for the matching (the name must be the same as the one used in the `--pipeline` option in the CLI).
-In addition, you can specify any other parameters for controlling the extractor and the matcher.
-The default values of all the configuration parameters are defined in the [`config.py`](https://github.com/3DOM-FBK/deep-image-matching/blob/master/src/deep_image_matching/config.py) file located in `/src/deep_image_matching` directory.
-Please, note that different extractors or matchers may have different parameters, so you need to check carefully the available parameters for each extractor/matcher in the file [`config.py`](https://github.com/3DOM-FBK/deep-image-matching/blob/master/src/deep_image_matching/config.py).
-
-```yaml
-extractor:
-  name: "superpoint"
-  max_keypoints: 8000
-
-matcher:
-  name: "lightglue"
-  filter_threshold: 0.1
-```
-
-Note, that you can use an arbitrary number of parameters for each configuration section ("general", "extractor", "matcher"): you can set only one parameter or all of them, depending on your needs.
-Here is an example of `config.yaml` file for the `superpoint+lightglue` pipeline:
-
-<details>
-
-<summary>config.yaml</summary>
-
-```yaml
-general:
-  tile_size: (2400, 2000)
-  tile_overlap: 10
-  tile_preselection_size: 1000,
-  min_matches_per_tile: 10,
-  geom_verification: "PYDEGENSAC", # or NONE, PYDEGENSAC, MAGSAC
-  gv_threshold: 4,
-  gv_confidence: 0.99999,
-  min_inliers_per_pair: 10
-  min_inlier_ratio_per_pair: 0.1
-
-
-extractor:
-  name: "superpoint"
-  max_keypoints: 4096
-  keypoint_threshold: 0.0005
-  nms_radius: 3
-
-matcher:
-  name: "lightglue"
-  filter_threshold: 0.1
-  n_layers: 9
-  mp: False # enable mixed precision
-  flash: True # enable FlashAttention if available.
-  depth_confidence: 0.95 # early stopping, disable with -1
-  width_confidence: 0.99 # point pruning, disable with -1
-  filter_threshold: 0.1 # match threshold
-
-```
-
-</details>
