@@ -44,7 +44,7 @@ The Bundler format is composed of two files: `bundler.out` and `bundler_list.txt
 
 The file `bundler.out` contains the camera poses and the matches between the images and it has the following format:
 
-```math
+```
 # Bundle file v0.3
 <num_cameras> <num_points> 
 <camera1> [two integers]
@@ -59,7 +59,7 @@ The file `bundler.out` contains the camera poses and the matches between the ima
 
 Where `<camera>` is defined as:
 
-```math
+```
     <f> <k1> <k2>   [the focal length, followed by two radial distortion coeffs]
     <R>             [a 3x3 matrix representing the camera rotation]
     <t>             [a 3-vector describing the camera translation]
@@ -67,7 +67,7 @@ Where `<camera>` is defined as:
 
 The `<point>` is defined as:
 
-```math
+```
     <position>      [a 3-vector describing the 3D position of the point]
     <color>         [a 3-vector describing the RGB color of the point]
     <view list>     [a list of views the point is visible in]
@@ -75,7 +75,7 @@ The `<point>` is defined as:
 
 The `<view list>` is defined as:
 
-```math
+```
     <track_length> <camera1> <key1> <x> <y> <camera2> <key2> <x> <y> ... 
 ```
 
@@ -98,7 +98,7 @@ Refer to the [Bundler file format](https://www.cs.cornell.edu/~snavely/bundler/b
 The camera index in `<view list>` is given by the order in which the cameras are listed in the `bundler_list.txt` file, that contains the list of the path of the images used in the reconstruction.
 For example:
 
-```math
+```
 DSC_6470.JPG
 DSC_6474.JPG
 DSC_6472.JPG
