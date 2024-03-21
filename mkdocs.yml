@@ -45,7 +45,7 @@ nav:
       - COLMAP: colmap.md
       - OpenMVG: openmvg.md
       - MICMAC: micmac.md
-
+      - Agisoft Metashape: agisoft_metashape.md
   - API Reference:
       - Image_matching: image_matching.md
       - Configuration: config.md
