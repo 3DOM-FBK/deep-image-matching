@@ -1,3 +1,4 @@
+# Aggiungere interfaccia con global descriptors
 # Aggiungere check epipolare
 # se un'immagine ripetutamente non si riesce ad agganciare, -> scartarla
 # Estrarre tutte le features in una volta
@@ -55,7 +56,7 @@ def find_matches_per_rotation(
     SPextractor,
     LGmatcher,
 ):
-    resize_size = 1000
+    resize_size = 500
     features = {
         "feat0": None,
         "feat1": None,
@@ -123,7 +124,7 @@ def prova(
                 key=lambda i: matchesXrotation[i][1],
             )
             n_matches = matchesXrotation[index_of_max][1]
-            if index_of_max != 0 and n_matches > 200:
+            if index_of_max != 0 and n_matches > 100:
                 print(f"ref {img0}     rotated {img1} {rotations[index_of_max]}")
                 # self.rotated_images.append((img1, rotations[index_of_max]))
                 image1 = cv2.imread(str(path_to_upright_dir / img1))
@@ -132,7 +133,7 @@ def prova(
                 cv2.imwrite(str(path_to_upright_dir / img1), rotated_image1)
                 processed.append(img1)
                 break
-            if index_of_max == 0 and n_matches > 200:
+            if index_of_max == 0 and n_matches > 100:
                 processed.append(img1)
                 image1 = cv2.imread(str(path_to_upright_dir / img1))
                 image1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
@@ -499,7 +500,7 @@ class ImageMatching:
         MULTIPROCESS = True
 
         iterations = 0
-        max_iter = 650
+        max_iter = 130
         while True:
             iterations += 1
             rotated = []
