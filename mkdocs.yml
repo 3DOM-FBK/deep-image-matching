@@ -37,6 +37,7 @@ nav:
   - Examples: examples.md
 
   - Advanced usage:
+      - advanced_configuration.md
       - camera_models.md
       - scripts.md
 
