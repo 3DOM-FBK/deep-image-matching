@@ -22,6 +22,7 @@ Here you have to select the `bundler.out` file and the `bundler_list.txt` file, 
 
 ![](./assets/metashape_import_1.png)
 
+
 ![](./assets/metashape_import_2.png)
 
 Then you should see the camera poses and the matches between the images.
