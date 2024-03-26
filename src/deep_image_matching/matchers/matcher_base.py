@@ -152,29 +152,21 @@ class MatcherBase(metaclass=ABCMeta):
 
         # Load extractor and matcher for the preselction
         if self._config["general"]["tile_selection"] != TileSelection.NONE:
-            self._preselction_extractor = (
-                SuperPoint(
-                    {
-                        "nms_radius": 3,
-                        "max_keypoints": 2048,
-                        "keypoint_threshold": 0.0005,
-                    }
-                )
-                .eval()
-                .to(self._device)
-            )
-            self._preselction_matcher = (
-                LightGlue(
-                    features="superpoint",
-                    n_layers=7,
-                    depth_confidence=0.9,
-                    width_confidence=0.95,
-                    filter_threshold=0.2,
-                    flash=True,
-                )
-                .eval()
-                .to(self._device)
-            )
+            sp_cfg = {
+                "nms_radius": 5,  # 3
+                "max_keypoints": 4000,  # 2048
+                "keypoint_threshold": 0.005,  # 0.0005
+            }
+            lg_cfg = {
+                "features": "superpoint",
+                "n_layers": 9,
+                "depth_confidence": 0.9,
+                "width_confidence": 0.95,
+                "filter_threshold": 0.3,
+                "flash": True,
+            }
+            self._preselction_extractor = SuperPoint(sp_cfg).eval().to(self._device)
+            self._preselction_matcher = LightGlue(**lg_cfg).eval().to(self._device)
         else:
             self._preselction_extractor = None
             self._preselction_matcher = None
@@ -638,20 +630,21 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
 
         # Load extractor and matcher for the preselction
         if self._config["general"]["tile_selection"] == TileSelection.PRESELECTION:
-            self._preselction_extractor = (
-                SuperPoint({"max_keypoints": 2048}).eval().to(self._device)
-            )
-            self._preselction_matcher = (
-                LightGlue(
-                    features="superpoint",
-                    n_layers=7,
-                    depth_confidence=0.9,
-                    width_confidence=0.95,
-                    flash=False,
-                )
-                .eval()
-                .to(self._device)
-            )
+            sp_cfg = {
+                "nms_radius": 5,
+                "max_keypoints": 4000,
+                "keypoint_threshold": 0.005,
+            }
+            lg_cfg = {
+                "features": "superpoint",
+                "n_layers": 9,
+                "depth_confidence": 0.9,
+                "width_confidence": 0.95,
+                "filter_threshold": 0.5,
+                "flash": True,
+            }
+            self._preselction_extractor = SuperPoint(sp_cfg).eval().to(self._device)
+            self._preselction_matcher = LightGlue(**lg_cfg).eval().to(self._device)
         else:
             self._preselction_extractor = None
             self._preselction_matcher = None
@@ -983,6 +976,7 @@ def tile_selection(
     tile_overlap: int,
     tile_preselection_size: int = 1024,
     min_matches_per_tile: int = 5,
+    do_geometric_verification: bool = True,
     device: str = "cpu",
 ):
     """
@@ -1018,6 +1012,7 @@ def tile_selection(
     )
 
     # Select tile selection method
+
     if method == TileSelection.EXHAUSTIVE:
         # Match all the tiles with all the tiles
         logger.debug("Matching tiles exaustively")
@@ -1030,46 +1025,62 @@ def tile_selection(
         # Match tiles by preselection running matching on downsampled images
         logger.debug("Matching tiles by downsampling preselection")
 
-        # Downsampled images
-        size0 = i0.shape[:2][::-1]
-        size1 = i1.shape[:2][::-1]
-        scale0 = tile_preselection_size / max(size0)
-        scale1 = tile_preselection_size / max(size1)
-        size0_new = tuple(int(round(x * scale0)) for x in size0)
-        size1_new = tuple(int(round(x * scale1)) for x in size1)
-        i0 = cv2.resize(i0, size0_new, interpolation=cv2.INTER_AREA)
-        i1 = cv2.resize(i1, size1_new, interpolation=cv2.INTER_AREA)
+        # match downsampled images with roma
+        from PIL import Image
 
-        # Run SuperPoint on downsampled images
-        with torch.inference_mode():
-            feats0 = preselction_extractor({"image": frame2tensor(i0, device)})
-            feats1 = preselction_extractor({"image": frame2tensor(i1, device)})
+        from ..thirdparty.RoMa.roma import roma_outdoor
 
-            # Match features with LightGlue
-            feats0 = sp2lg(feats0)
-            feats1 = sp2lg(feats1)
-            res = preselction_matcher({"image0": feats0, "image1": feats1})
-            res = rbd2np(res)
+        n_matches = 10000
+        matcher = roma_outdoor(device)
+        W_A, H_A = Image.open(img0).size
+        W_B, H_B = Image.open(img1).size
+        warp, certainty = matcher.match(str(img0), str(img1), device=device)
+        matches, certainty = matcher.sample(warp, certainty, num=n_matches)
+        kp0, kp1 = matcher.to_pixel_coordinates(matches, H_A, W_A, H_B, W_B)
+        kp0, kp1 = kp0.cpu().numpy(), kp1.cpu().numpy()
 
-        # Get keypoints in original image
-        kp0 = feats0["keypoints"].cpu().numpy()[0]
-        kp0 = kp0[res["matches"][:, 0], :]
-        kp1 = feats1["keypoints"].cpu().numpy()[0]
-        kp1 = kp1[res["matches"][:, 1], :]
+        # # Downsampled images
+        # size0 = i0.shape[:2][::-1]
+        # size1 = i1.shape[:2][::-1]
+        # scale0 = tile_preselection_size / max(size0)
+        # scale1 = tile_preselection_size / max(size1)
+        # size0_new = tuple(int(round(x * scale0)) for x in size0)
+        # size1_new = tuple(int(round(x * scale1)) for x in size1)
+        # i0 = cv2.resize(i0, size0_new, interpolation=cv2.INTER_AREA)
+        # i1 = cv2.resize(i1, size1_new, interpolation=cv2.INTER_AREA)
 
-        # Scale up keypoints
-        kp0 = kp0 / scale0
-        kp1 = kp1 / scale1
+        # # Run SuperPoint on downsampled images
+        # with torch.inference_mode():
+        #     feats0 = preselction_extractor({"image": frame2tensor(i0, device)})
+        #     feats1 = preselction_extractor({"image": frame2tensor(i1, device)})
+
+        #     # Match features with LightGlue
+        #     feats0 = sp2lg(feats0)
+        #     feats1 = sp2lg(feats1)
+        #     res = preselction_matcher({"image0": feats0, "image1": feats1})
+        #     res = rbd2np(res)
+
+        # # Get keypoints in original image
+        # kp0 = feats0["keypoints"].cpu().numpy()[0]
+        # kp0 = kp0[res["matches"][:, 0], :]
+        # kp1 = feats1["keypoints"].cpu().numpy()[0]
+        # kp1 = kp1[res["matches"][:, 1], :]
+
+        # # Scale up keypoints
+        # kp0 = kp0 / scale0
+        # kp1 = kp1 / scale1
 
         # geometric verification
-        # _, inlMask = geometric_verification(
-        #     kpts0=kp0,
-        #     kpts1=kp1,
-        #     threshold=6,
-        #     confidence=0.9999,
-        # )
-        # kp0 = kp0[inlMask]
-        # kp1 = kp1[inlMask]
+        if do_geometric_verification:
+            _, inlMask = geometric_verification(
+                kpts0=kp0,
+                kpts1=kp1,
+                threshold=5,
+                confidence=0.9999,
+                quiet=True,
+            )
+            kp0 = kp0[inlMask]
+            kp1 = kp1[inlMask]
 
         # Select tile pairs where there are enough matches
         tile_pairs = []
@@ -1083,29 +1094,29 @@ def tile_selection(
 
         # For Debugging...
         # if False:
-        #     from matplotlib import pyplot as plt
+        # from matplotlib import pyplot as plt
 
-        #     out_dir = Path("sandbox/preselection")
-        #     out_dir.mkdir(parents=True, exist_ok=True)
-        #     image0 = cv2.imread(str(img0), cv2.IMREAD_GRAYSCALE)
-        #     image1 = cv2.imread(str(img1), cv2.IMREAD_GRAYSCALE)
-        #     c = "r"
-        #     s = 5
-        #     fig, axes = plt.subplots(1, 2)
-        #     for ax, img, kp in zip(axes, [image0, image1], [kp0, kp1]):
-        #         ax.imshow(cv2.cvtColor(img, cv2.COLOR_BAYER_BG2BGR))
-        #         ax.scatter(kp[:, 0], kp[:, 1], s=s, c=c)
-        #         ax.axis("off")
-        #     for lim0, lim1 in zip(t0_lims.values(), t1_lims.values()):
-        #         axes[0].axvline(lim0[0])
-        #         axes[0].axhline(lim0[1])
-        #         axes[1].axvline(lim1[0])
-        #         axes[1].axhline(lim1[1])
-        #     # axes[1].get_yaxis().set_visible(False)
-        #     fig.tight_layout()
-        #     plt.show()
-        #     fig.savefig(out_dir / f"{img0.name}-{img1.name}.jpg")
-        #     plt.close()
+        # out_dir = Path("sandbox/preselection")
+        # out_dir.mkdir(parents=True, exist_ok=True)
+        # image0 = cv2.imread(str(img0), cv2.IMREAD_GRAYSCALE)
+        # image1 = cv2.imread(str(img1), cv2.IMREAD_GRAYSCALE)
+        # c = "r"
+        # s = 5
+        # fig, axes = plt.subplots(1, 2)
+        # for ax, img, kp in zip(axes, [image0, image1], [kp0, kp1]):
+        #     ax.imshow(cv2.cvtColor(img, cv2.COLOR_BAYER_BG2BGR))
+        #     ax.scatter(kp[:, 0], kp[:, 1], s=s, c=c)
+        #     ax.axis("off")
+        # # for lim0, lim1 in zip(tiles0.values(), t1_lims.values()):
+        # #     axes[0].axvline(lim0[0])
+        # #     axes[0].axhline(lim0[1])
+        # #     axes[1].axvline(lim1[0])
+        # #     axes[1].axhline(lim1[1])
+        # # axes[1].get_yaxis().set_visible(False)
+        # fig.tight_layout()
+        # plt.show()
+        # fig.savefig(out_dir / f"{img0.name}-{img1.name}.jpg")
+        # plt.close()
 
     return tile_pairs
 
