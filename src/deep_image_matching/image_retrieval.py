@@ -5,6 +5,7 @@ from .hloc import extract_features, pairs_from_retrieval
 
 
 def ImageRetrieval(imgs_dir, outs_dir, retrieval_option, sfm_pairs):
+    max_track_length = 10  # Increase this number to increase the number of pairs
     if outs_dir.exists():
         shutil.rmtree(outs_dir)
         os.mkdir(outs_dir)
@@ -16,7 +17,9 @@ def ImageRetrieval(imgs_dir, outs_dir, retrieval_option, sfm_pairs):
     retrieval_path = extract_features.main(retrieval_conf, imgs_dir, outs_dir)
 
     try:
-        pairs_from_retrieval.main(retrieval_path, sfm_pairs, num_matched=number_imgs)
+        pairs_from_retrieval.main(
+            retrieval_path, sfm_pairs, num_matched=max_track_length
+        )
     except Exception as e:
         print("retrieval_path", retrieval_path)
         print("sfm_pairs", sfm_pairs)
