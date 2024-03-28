@@ -33,15 +33,13 @@ class RomaMatcher(DetectorFreeMatcherBase):
     """
 
     default_conf = {
-        "coarse_res": 700,  # (h,w) or only one value for square images
-        "upsample_res": 980,  # (h,w) or only one value for square images
-        "num_sampled_points": 10000,
+        "coarse_res": 560,  # (h,w) or only one value for square images
+        "upsample_res": 864,  # (h,w) or only one value for square images
+        "num_sampled_points": 10000,  # number of points to sample for each image (or for each tile if tile_preselection_size is set)
     }
 
     grayscale = False
     as_float = True
-    # coarse_res = 700  # (560, 840)  # (h,w) or only one value for square images
-    # upsample_res = 980  # (864, 1296)  # (h,w) or only one value for square images
     max_tile_pairs = 150  # Maximum number of tile pairs to match, raise an error if more than this number to avoid slow and likely inaccurate matching
     # max_matches_per_pair = 10000
     min_matches_per_tile = 3
@@ -52,22 +50,29 @@ class RomaMatcher(DetectorFreeMatcherBase):
         super().__init__(config)
 
         logger.warning(
-            f"RoMa uses a fixed tile size of {self.coarse_res} pixels. This can result in an enormous amount of tiles with high resolution images. If this is your case, try to downscale images using a lower 'Quality' value."
+            f"RoMa uses a fixed tile size of {self.config['matcher']['coarse_res']} pixels. This can result in an enormous amount of tiles with high resolution images. If this is your case, try to downscale images using a lower 'Quality' value."
         )
-        if isinstance(self.coarse_res, tuple):
-            tile_size = (self.coarse_res[1], self.coarse_res[0])
-        elif isinstance(self.coarse_res, int):
-            tile_size = (self.coarse_res, self.coarse_res)
+        if isinstance(self.config["matcher"]["coarse_res"], tuple):
+            tile_size = (
+                self.config["matcher"]["coarse_res"][1],
+                self.config["matcher"]["coarse_res"][0],
+            )
+        elif isinstance(self.config["matcher"]["coarse_res"], int):
+            tile_size = (
+                self.config["matcher"]["coarse_res"],
+                self.config["matcher"]["coarse_res"],
+            )
         else:
             raise ValueError(
                 "Invalid type for 'coarse_res'. It should be an integer or a tuple of two integers."
             )
+        # Force the tile size to be the same as the RoMa coarse_res
         self.config["general"]["tile_size"] = tile_size
 
         self.matcher = roma_outdoor(
             device=self._device,
-            coarse_res=self.config["coarse_res"],
-            upsample_res=self.config["upsample_res"],
+            coarse_res=self.config["matcher"]["coarse_res"],
+            upsample_res=self.config["matcher"]["upsample_res"],
         )
 
     def match(
@@ -284,12 +289,6 @@ class RomaMatcher(DetectorFreeMatcherBase):
         write_tiles_disk(tiles_dir / img1.name, tiles1)
         logger.debug(f"Tiles saved to {tiles_dir}")
 
-        # If max_matches_per_tile is not set, automatically compute it
-        if self.max_matches_per_tile < 0:
-            self.max_matches_per_tile = (
-                self.max_matches_per_pair // len(tile_pairs) * 10
-            )
-
         # Match each tile pair
         mkpts0_full = np.array([], dtype=np.float32).reshape(0, 2)
         mkpts1_full = np.array([], dtype=np.float32).reshape(0, 2)
@@ -309,7 +308,7 @@ class RomaMatcher(DetectorFreeMatcherBase):
                 str(tile_path0), str(tile_path1), device=self._device, batched=False
             )
             matches, certainty = self.matcher.sample(
-                warp, certainty, num=self.max_matches_per_tile
+                warp, certainty, num=self.config["matcher"]["num_sampled_points"]
             )
             kptsA, kptsB = self.matcher.to_pixel_coordinates(
                 matches, H_A, W_A, H_B, W_B
