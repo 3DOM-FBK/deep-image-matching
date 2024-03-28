@@ -48,9 +48,17 @@ class RomaMatcher(DetectorFreeMatcherBase):
     def __init__(self, config={}) -> None:
         super().__init__(config)
 
-        logger.warning(
-            f"RoMa uses a fixed tile size of {self.config['matcher']['coarse_res']} pixels. This can result in an enormous amount of tiles with high resolution images. If this is your case, try to downscale images using a lower 'Quality' value."
-        )
+        # Set up RoMa matcher
+        if self.config["general"]["tile_selection"] == TileSelection.NONE:
+            logger.info(
+                f"RoMa always use a coarse resolution of {self.config['matcher']['coarse_res']} pixels, regardless of the quality parameter resolution."
+            )
+        else:
+            logger.info("Running RoMa by tile..")
+            logger.info(
+                f"RoMa uses a fixed tile size of {self.config['matcher']['coarse_res']} pixels. This can result in a large number of tiles for high-resolution images. If the number of tiles is too high, consider reducing the image resolution via the 'Quality' parameter."
+            )
+
         if isinstance(self.config["matcher"]["coarse_res"], tuple):
             tile_size = (
                 self.config["matcher"]["coarse_res"][1],
