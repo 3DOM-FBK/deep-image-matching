@@ -1,78 +1,30 @@
+import contextlib
+import io
 import multiprocessing
+import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import pycolmap
 
 from . import logger
-from .triangulation import (
-    OutputCapture,
-)
-from .utils.database import COLMAPDatabase
 
 
-def create_empty_db(database_path: Path):
-    if database_path.exists():
-        logger.warning("The database already exists, deleting it.")
-        database_path.unlink()
-    logger.info("Creating an empty database...")
-    db = COLMAPDatabase.connect(database_path)
-    db.create_tables()
-    db.commit()
-    db.close()
+class OutputCapture:
+    def __init__(self, verbose: bool):
+        self.verbose = verbose
 
+    def __enter__(self):
+        if not self.verbose:
+            self.capture = contextlib.redirect_stdout(io.StringIO())
+            self.out = self.capture.__enter__()
 
-def import_images(
-    image_dir: Path,
-    database_path: Path,
-    camera_mode: pycolmap.CameraMode,
-    image_list: Optional[List[str]] = None,
-    options: Optional[Dict[str, Any]] = None,
-):
-    logger.info("Importing images into the database...")
-    if options is None:
-        options = {}
-    images = list(image_dir.iterdir())
-    if len(images) == 0:
-        raise IOError(f"No images found in {image_dir}.")
-    with pycolmap.ostream():
-        pycolmap.import_images(
-            database_path,
-            image_dir,
-            camera_mode,
-            image_list=image_list or [],
-            options=options,
-        )
-
-
-def update_cameras(database_path: Path, cameras: List[pycolmap.Camera]):
-    if not all([isinstance(cam, pycolmap.Camera) for cam in cameras]):
-        raise ValueError("cameras must be a list of pycolmap.Camera objects.")
-
-    db = COLMAPDatabase.connect(database_path)
-
-    num_cameras = len(db.execute("SELECT * FROM cameras;").fetchall())
-    if num_cameras != len(cameras):
-        raise ValueError(
-            f"Number of cameras in the database ({num_cameras}) "
-            f"does not match the number of cameras provided ({len(cameras)})."
-        )
-
-    for camera_id, cam in enumerate(cameras, start=1):
-        db.update_camera(
-            camera_id, cam.model.value, cam.width, cam.height, cam.params, True
-        )
-    db.commit()
-    db.close()
-
-
-def get_image_ids(database_path: Path) -> Dict[str, int]:
-    db = COLMAPDatabase.connect(database_path)
-    images = {}
-    for name, image_id in db.execute("SELECT name, image_id FROM images;"):
-        images[name] = image_id
-    db.close()
-    return images
+    def __exit__(self, exc_type, *args):
+        if not self.verbose:
+            self.capture.__exit__(exc_type, *args)
+            if exc_type is not None:
+                logger.error("Failed with output:\n%s", self.out.getvalue())
+        sys.stdout.flush()
 
 
 def pycolmap_reconstruction(

@@ -23,7 +23,6 @@ class RomaMatcher(DetectorFreeMatcherBase):
 
     Attributes:
         default_conf (dict): Default configuration options.
-        max_feat_no_tiling (int): Maximum number of features when tiling is not used.
         grayscale (bool): Flag indicating whether images are processed in grayscale.
         as_float (bool): Flag indicating whether to use float for image pixel values.
 
