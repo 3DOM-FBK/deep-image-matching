@@ -20,7 +20,7 @@ class AdalamMatcher(MatcherBase):
         super().__init__(config)
 
         # load the matcher
-        cfg = {**self.default_conf, **self._config.get("adalam", {})}
+        cfg = {**self.default_conf, **self.config.get("adalam", {})}
         self._matcher = KF.GeometryAwareDescriptorMatcher(cfg["match_mode"], cfg["th"])
 
     @torch.no_grad()

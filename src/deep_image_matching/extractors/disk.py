@@ -23,7 +23,7 @@ class DiskExtractor(ExtractorBase):
         # Init the base class
         super().__init__(config)
 
-        disk_cfg = self._config.get("extractor")
+        disk_cfg = self.config.get("extractor")
 
         # Load extractor
         self._extractor = DISK(disk_cfg).eval().to(self._device)

@@ -32,6 +32,7 @@ def featuresDict2Lightglue(feats: FeaturesDict, device: torch.device) -> dict:
 
     return feats
 
+
 def rbd(data: dict) -> dict:
     """Remove batch dimension from elements in data"""
     return {
@@ -60,7 +61,7 @@ class LightGlueMatcher(MatcherBase):
         super().__init__(config)
 
         # load the matcher
-        cfg = {**self.default_conf, **self._config.get("matcher", {})}
+        cfg = {**self.default_conf, **self.config.get("matcher", {})}
         self._matcher = LightGlue(self._localfeatures, **cfg).eval().to(self._device)
 
         if self._localfeatures == "disk":
@@ -79,9 +80,7 @@ class LightGlueMatcher(MatcherBase):
         match_res = self._matcher({"image0": feats0, "image1": feats1})
 
         # remove batch dimension and convert to numpy
-        mfeats0, mfeats1, matches01 = [
-            rbd(x) for x in [feats0, feats1, match_res]
-        ]
+        mfeats0, mfeats1, matches01 = [rbd(x) for x in [feats0, feats1, match_res]]
         match_res = {
             k: v.cpu().numpy()
             for k, v in matches01.items()

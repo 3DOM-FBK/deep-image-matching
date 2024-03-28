@@ -125,7 +125,7 @@ class ExtractorBase(metaclass=ABCMeta):
         # self._update_config(custom_config)
 
         # Update default config
-        self._config = {
+        self.config = {
             "general": {
                 **self.general_conf,
                 **custom_config.get("general", {}),
@@ -137,14 +137,14 @@ class ExtractorBase(metaclass=ABCMeta):
         }
 
         # Get main processing parameters and save them as class members
-        self._quality = self._config["general"]["quality"]
-        self._tiling = self._config["general"]["tile_selection"]
+        self._quality = self.config["general"]["quality"]
+        self._tiling = self.config["general"]["tile_selection"]
         logger.debug(
             f"Matching options: Quality: {self._quality.name} - Tiling: {self._tiling.name}"
         )
 
         # Define saving directory
-        output_dir = self._config["general"]["output_dir"]
+        output_dir = self.config["general"]["output_dir"]
         if output_dir is not None:
             self._output_dir = Path(output_dir)
             self._output_dir.mkdir(parents=True, exist_ok=True)
@@ -155,7 +155,7 @@ class ExtractorBase(metaclass=ABCMeta):
         # Get device
         self._device = (
             "cuda"
-            if torch.cuda.is_available() and not self._config["general"]["force_cpu"]
+            if torch.cuda.is_available() and not self.config["general"]["force_cpu"]
             else "cpu"
         )
         logger.debug(f"Running inference on device {self._device}")
@@ -184,7 +184,7 @@ class ExtractorBase(metaclass=ABCMeta):
         if not im_path.exists():
             raise ValueError(f"Image {im_path} does not exist")
 
-        output_dir = Path(self._config["general"]["output_dir"])
+        output_dir = Path(self.config["general"]["output_dir"])
         feature_path = output_dir / "features.h5"
 
         # Load image
@@ -197,7 +197,7 @@ class ExtractorBase(metaclass=ABCMeta):
         # Resize images if needed
         image_ = self._resize_image(self._quality, image, interp=self.interp)
 
-        if self._config["general"]["tile_selection"] == TileSelection.NONE:
+        if self.config["general"]["tile_selection"] == TileSelection.NONE:
             # Extract features from the whole image
             features = self._extract(image_)
             # features["feature_path"] = str(feature_path)
@@ -228,7 +228,7 @@ class ExtractorBase(metaclass=ABCMeta):
         )
 
         # For debug: visualize keypoints and save to disk
-        if self._config["general"]["verbose"]:
+        if self.config["general"]["verbose"]:
             viz_dir = output_dir / "debug" / "keypoints"
             viz_dir.mkdir(parents=True, exist_ok=True)
             image = cv2.imread(str(im_path))
@@ -278,8 +278,8 @@ class ExtractorBase(metaclass=ABCMeta):
             select_unique: If True the unique values of keypoints are selected
         """
         # Compute tiles limits
-        tile_size = self._config["general"]["tile_size"]
-        overlap = self._config["general"]["tile_overlap"]
+        tile_size = self.config["general"]["tile_size"]
+        overlap = self.config["general"]["tile_overlap"]
         tiler = Tiler(tiling_mode="size")
         tiles, tiles_origins, padding = tiler.compute_tiles_by_size(
             input=image, window_size=tile_size, overlap=overlap
@@ -307,7 +307,7 @@ class ExtractorBase(metaclass=ABCMeta):
                 scor_tile = None
 
             # For debug: visualize keypoints and save to disk
-            if self._config["general"]["verbose"]:
+            if self.config["general"]["verbose"]:
                 tile = np.uint8(tile)
                 viz_dir = self._output_dir / "debug" / "tiles"
                 viz_dir.mkdir(parents=True, exist_ok=True)

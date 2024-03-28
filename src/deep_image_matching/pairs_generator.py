@@ -307,7 +307,7 @@ class PairsGenerator:
         self.output_dir = output_dir
         self.existing_colmap_model = existing_colmap_model
 
-        self._config = kwargs
+        self.config = kwargs
 
     def bruteforce(self):
         logger.debug("Bruteforce matching, generating pairs ..")
@@ -342,7 +342,7 @@ class PairsGenerator:
 
     def covisibility(self):
         logger.info("Covisibility matching, generating pairs ..")
-        num_matched = self._config.get("num_matched", 10)
+        num_matched = self.config.get("num_matched", 10)
         pairs = pairs_from_covisibility(
             model=self.existing_colmap_model,
             num_matched=num_matched,

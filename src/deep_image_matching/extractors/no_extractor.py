@@ -40,7 +40,7 @@ class NoExtractor(ExtractorBase):
         if not im_path.exists():
             raise ValueError(f"Image {im_path} does not exist")
 
-        output_dir = Path(self._config["general"]["output_dir"])
+        output_dir = Path(self.config["general"]["output_dir"])
         feature_path = output_dir / "features.h5"
         output_dir.mkdir(parents=True, exist_ok=True)
         im_name = im_path.name

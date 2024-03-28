@@ -19,7 +19,7 @@ class KeyNet(ExtractorBase):
         # Init the base class
         super().__init__(config)
 
-        cfg = self._config.get("extractor")
+        cfg = self.config.get("extractor")
 
         # Load extractor
         self._extractor = KF.KeyNetAffNetHardNet(

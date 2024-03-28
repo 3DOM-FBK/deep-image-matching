@@ -27,7 +27,7 @@ class ORBExtractor(ExtractorBase):
         super().__init__(config)
 
         # Load extractor
-        cfg = self._config.get("extractor")
+        cfg = self.config.get("extractor")
         self._extractor = cv2.ORB_create(
             nfeatures=cfg["n_features"],
             scaleFactor=cfg["scaleFactor"],

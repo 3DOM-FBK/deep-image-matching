@@ -302,8 +302,8 @@ class Config:
             self.update_from_yaml(config_file)
             self.print()
 
-        self._config_file = self.cfg["general"]["output_dir"] / "config.json"
-        self.save(self._config_file)
+        self.config_file = self.cfg["general"]["output_dir"] / "config.json"
+        self.save(self.config_file)
 
     def as_dict(self) -> dict:
         """
@@ -633,7 +633,7 @@ class Config:
 
         """
         if path is None:
-            path = self._config_file
+            path = self.config_file
         else:
             path = Path(path)
             path.parent.mkdir(parents=True, exist_ok=True)

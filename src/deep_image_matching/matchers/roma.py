@@ -32,12 +32,18 @@ class RomaMatcher(DetectorFreeMatcherBase):
         match(self, feature_path: Path, matches_path: Path, img0: Path, img1: Path, try_full_image: bool = False) -> np.ndarray: Match features between two images.
     """
 
+    default_conf = {
+        "coarse_res": 700,  # (h,w) or only one value for square images
+        "upsample_res": 980,  # (h,w) or only one value for square images
+        "num_sampled_points": 10000,
+    }
+
     grayscale = False
     as_float = True
-    coarse_res = 700  # (560, 840)  # (h,w) or only one value for square images
-    upsample_res = 980  # (864, 1296)  # (h,w) or only one value for square images
-    max_tile_pairs = 150  # 50
-    max_matches_per_pair = 10000
+    # coarse_res = 700  # (560, 840)  # (h,w) or only one value for square images
+    # upsample_res = 980  # (864, 1296)  # (h,w) or only one value for square images
+    max_tile_pairs = 150  # Maximum number of tile pairs to match, raise an error if more than this number to avoid slow and likely inaccurate matching
+    # max_matches_per_pair = 10000
     min_matches_per_tile = 3
     max_matches_per_tile = 5000
     keep_tiles = True  # False
@@ -56,12 +62,12 @@ class RomaMatcher(DetectorFreeMatcherBase):
             raise ValueError(
                 "Invalid type for 'coarse_res'. It should be an integer or a tuple of two integers."
             )
-        self._config["general"]["tile_size"] = tile_size
+        self.config["general"]["tile_size"] = tile_size
 
         self.matcher = roma_outdoor(
             device=self._device,
-            coarse_res=self.coarse_res,
-            upsample_res=self.upsample_res,
+            coarse_res=self.config["coarse_res"],
+            upsample_res=self.config["upsample_res"],
         )
 
     def match(
@@ -122,17 +128,17 @@ class RomaMatcher(DetectorFreeMatcherBase):
 
         # Rescale threshold according the image original image size
         img_shape = cv2.imread(str(img0)).shape
-        tile_size = max(self._config["general"]["tile_size"])
+        tile_size = max(self.config["general"]["tile_size"])
         scale_fct = np.floor(max(img_shape) / tile_size / 2)
-        gv_threshold = self._config["general"]["gv_threshold"] * scale_fct
+        gv_threshold = self.config["general"]["gv_threshold"] * scale_fct
 
         # Apply geometric verification
         _, inlMask = geometric_verification(
             kpts0=features0["keypoints"][matches[:, 0]],
             kpts1=features1["keypoints"][matches[:, 1]],
-            method=self._config["general"]["geom_verification"],
+            method=self.config["general"]["geom_verification"],
             threshold=gv_threshold,
-            confidence=self._config["general"]["gv_confidence"],
+            confidence=self.config["general"]["gv_confidence"],
         )
         matches = matches[inlMask]
         timer_match.update("Geom. verification")
@@ -232,8 +238,8 @@ class RomaMatcher(DetectorFreeMatcherBase):
 
         timer = Timer(log_level="debug", cumulate_by_key=True)
 
-        tile_size = self._config["general"]["tile_size"]
-        overlap = self._config["general"]["tile_overlap"]
+        tile_size = self.config["general"]["tile_size"]
+        overlap = self.config["general"]["tile_overlap"]
         img0_name = img0.name
         img1_name = img1.name
 
@@ -273,7 +279,7 @@ class RomaMatcher(DetectorFreeMatcherBase):
         tiles1, t_origins1, t_padding1 = tiler.compute_tiles_by_size(
             input=image1, window_size=tile_size, overlap=overlap
         )
-        tiles_dir = Path(self._config["general"]["output_dir"]) / "tiles"
+        tiles_dir = Path(self.config["general"]["output_dir"]) / "tiles"
         write_tiles_disk(tiles_dir / img0.name, tiles0)
         write_tiles_disk(tiles_dir / img1.name, tiles1)
         logger.debug(f"Tiles saved to {tiles_dir}")
@@ -332,9 +338,9 @@ class RomaMatcher(DetectorFreeMatcherBase):
             logger.debug(f"     Found {len(kptsA)} matches")
 
             # Viz for debugging
-            if self._config["general"]["verbose"]:
+            if self.config["general"]["verbose"]:
                 tile_match_dir = (
-                    Path(self._config["general"]["output_dir"])
+                    Path(self.config["general"]["output_dir"])
                     / "debug"
                     / "matches_by_tile"
                 )
@@ -391,11 +397,9 @@ class RomaMatcher(DetectorFreeMatcherBase):
             mkpts1_full = mkpts1_full[unique_idx]
 
         # Viz for debugging
-        if self._config["general"]["verbose"]:
+        if self.config["general"]["verbose"]:
             tile_match_dir = (
-                Path(self._config["general"]["output_dir"])
-                / "debug"
-                / "matches_by_tile"
+                Path(self.config["general"]["output_dir"]) / "debug" / "matches_by_tile"
             )
             tile_match_dir.mkdir(parents=True, exist_ok=True)
             image0 = cv2.imread(str(img0))
