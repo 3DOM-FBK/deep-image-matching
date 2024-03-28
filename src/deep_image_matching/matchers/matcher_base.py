@@ -72,7 +72,7 @@ class MatcherBase(metaclass=ABCMeta):
         tile_preselection_size (int): Maximum resize dimension for preselection.
     """
 
-    general_conf = {
+    default_general_conf = {
         "output_dir": None,
         "quality": Quality.LOW,
         "tile_selection": TileSelection.NONE,
@@ -107,7 +107,7 @@ class MatcherBase(metaclass=ABCMeta):
         # Update default config
         self.config = {
             "general": {
-                **self.general_conf,
+                **self.default_general_conf,
                 **custom_config.get("general", {}),
             },
             "matcher": {
@@ -116,18 +116,16 @@ class MatcherBase(metaclass=ABCMeta):
             },
         }
 
-        if "min_inliers_per_pair" in custom_config["general"]:
-            self.min_inliers_per_pair = custom_config["general"]["min_inliers_per_pair"]
-        if "min_inlier_ratio_per_pair" in custom_config["general"]:
-            self.min_inlier_ratio_per_pair = custom_config["general"][
-                "min_inlier_ratio_per_pair"
-            ]
-        if "min_matches_per_tile" in custom_config["general"]:
-            self.min_matches_per_tile = custom_config["general"]["min_matches_per_tile"]
-        if "tile_preselection_size" in custom_config["general"]:
-            self.tile_preselection_size = custom_config["general"][
-                "tile_preselection_size"
-            ]
+        # Get main processing parameters and save them as class members
+        # NOTE: this is used for backward compatibility, it should be removed
+        self._quality = self.config["general"]["quality"]
+        self._tiling = self.config["general"]["tile_selection"]
+        self.min_inliers_per_pair = self.config["general"]["min_inliers_per_pair"]
+        self.min_inlier_ratio_per_pair = self.config["general"][
+            "min_inlier_ratio_per_pair"
+        ]
+        self.min_matches_per_tile = self.config["general"]["min_matches_per_tile"]
+        self.tile_preselection_size = self.config["general"]["tile_preselection_size"]
 
         # Get main processing parameters and save them as class members
         self._tiling = self.config["general"]["tile_selection"]
@@ -569,7 +567,7 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
     in particular the `match` method. It must be subclassed to implement a new matcher.
 
     Attributes:
-        general_conf (dict): Default configuration for general settings.
+        default_general_conf (dict): Default configuration for general settings.
         default_conf (dict): Default configuration for matcher-specific settings.
         required_inputs (list): List of required input parameters.
         min_inliers_per_pair (int): Minimum number of matches required.
@@ -578,7 +576,7 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         tile_preselection_size (int): Maximum resize dimension for preselection.
     """
 
-    general_conf = {
+    default_general_conf = {
         "output_dir": None,
         "quality": Quality.LOW,
         "tile_selection": TileSelection.NONE,
@@ -587,6 +585,7 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         "force_cpu": False,
         "do_viz": False,
     }
+    default_conf = {}
     required_inputs = []
     min_inliers_per_pair = 20
     min_matches_per_tile = 5
@@ -610,7 +609,7 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         # Update default config
         self.config = {
             "general": {
-                **self.general_conf,
+                **self.default_general_conf,
                 **custom_config.get("general", {}),
             },
             "matcher": {
@@ -620,16 +619,13 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         }
 
         # Get main processing parameters and save them as class members
+        # NOTE: this is used for backward compatibility, it should be removed
         self._quality = self.config["general"]["quality"]
         self._tiling = self.config["general"]["tile_selection"]
-        if "min_inliers_per_pair" in custom_config["general"]:
-            self.min_inliers_per_pair = custom_config["general"]["min_inliers_per_pair"]
-        if "min_matches_per_tile" in custom_config["general"]:
-            self.min_matches_per_tile = custom_config["general"]["min_matches_per_tile"]
-        if "tile_preselection_size" in custom_config["general"]:
-            self.tile_preselection_size = custom_config["general"][
-                "tile_preselection_size"
-            ]
+        self.min_inliers_per_pair = self.config["general"]["min_inliers_per_pair"]
+        self.min_matches_per_tile = self.config["general"]["min_matches_per_tile"]
+        self.tile_preselection_size = self.config["general"]["tile_preselection_size"]
+
         logger.debug(f"Matching options: Tiling: {self._tiling.name}")
 
         # Define saving directory
