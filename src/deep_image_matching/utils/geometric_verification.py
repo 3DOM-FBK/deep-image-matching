@@ -1,8 +1,9 @@
 import importlib
-from typing import Tuple
+from typing import Tuple, Union
 
 import cv2
 import numpy as np
+import pytest
 
 from deep_image_matching import GeometricVerification, logger
 
@@ -41,7 +42,7 @@ def log_error(err: Exception, method: str, fallback: bool = False) -> None:
 def geometric_verification(
     kpts0: np.ndarray = None,
     kpts1: np.ndarray = None,
-    method: GeometricVerification = GeometricVerification.PYDEGENSAC,
+    method: Union[str, int, GeometricVerification] = "pydegensac",
     threshold: float = 1,
     confidence: float = 0.9999,
     max_iters: int = 10000,
@@ -65,10 +66,25 @@ def geometric_verification(
             - inlMask: a Boolean array that masks the correspondences that were identified as inliers.
 
     """
-
-    assert isinstance(
-        method, GeometricVerification
-    ), "Invalid method. It must be a GeometricVerification enum in GeometricVerification.PYDEGENSAC or GeometricVerification.MAGSAC."
+    gv_names = [gv.name for gv in GeometricVerification]
+    if isinstance(method, str):
+        try:
+            method = GeometricVerification[method.upper()]
+        except KeyError:
+            raise ValueError(
+                f"Invalid Geometry Verification method. It must be one of {gv_names}"
+            )
+    elif isinstance(method, int):
+        try:
+            method = GeometricVerification(method)
+        except ValueError:
+            raise ValueError(
+                f"Invalid Geometry Verification method. It must be one of {gv_names}"
+            )
+    if not isinstance(method, GeometricVerification):
+        raise ValueError(
+            f"Invalid Geometry Verification method. It must be a GeometricVerification enum, a string with the method name among {gv_names} or an integer corresponding to the method index."
+        )
 
     fallback = False
     F = None
@@ -155,3 +171,30 @@ def geometric_verification(
         logger.debug(f"Estiamted Fundamental matrix: \n{F}")
 
     return F, inlMask
+
+
+@pytest.fixture
+def tie_points():
+    # Create two numpy array with shape (100, 2)
+    rng = np.random.default_rng(12345)
+    kpts0 = rng.random((100, 2))
+    kpts1 = rng.random((100, 2))
+
+    return kpts0, kpts1
+
+
+if __name__ == "__main__":
+    # Generate random keypoints
+    rng = np.random.default_rng(12345)
+    kpts0 = rng.random((100, 2))
+    kpts1 = rng.random((100, 2))
+    method = GeometricVerification.PYDEGENSAC
+    F, mask = geometric_verification(
+        kpts0=kpts0,
+        kpts1=kpts1,
+        method=method,
+        threshold=1,
+        confidence=0.9999,
+        max_iters=10000,
+    )
+    print(F)
