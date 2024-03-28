@@ -45,7 +45,7 @@ def import_images(
         )
 
 
-def update_cameras(database_path: Path, cameras: [List[pycolmap.Camera]]):
+def update_cameras(database_path: Path, cameras: List[pycolmap.Camera]):
     if not all([isinstance(cam, pycolmap.Camera) for cam in cameras]):
         raise ValueError("cameras must be a list of pycolmap.Camera objects.")
 
