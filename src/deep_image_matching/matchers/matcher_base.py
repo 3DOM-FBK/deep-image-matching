@@ -353,7 +353,7 @@ class MatcherBase(metaclass=ABCMeta):
 
         logger.debug(f"Matching {img0_name}-{img1_name} done!")
 
-        # For debugging
+        # # For debugging
         if self._config["general"]["verbose"]:
             viz_dir = self._output_dir / "debug" / "matches"
             viz_dir.mkdir(parents=True, exist_ok=True)
@@ -421,7 +421,7 @@ class MatcherBase(metaclass=ABCMeta):
 
         # Match each tile pair
         for tidx0, tidx1 in tile_pairs:
-            logger.debug(f"  - Matching tile pair ({tidx0}, {tidx1})")
+            logger.debug(f" - Matching tile pair ({tidx0}, {tidx1})")
 
             # Get features in tile and their ids in original array
             feats0_tile, idx0 = get_features_by_tile(features0, tidx0)
@@ -429,6 +429,7 @@ class MatcherBase(metaclass=ABCMeta):
 
             # Match features
             correspondences = self._match_pairs(feats0_tile, feats1_tile)
+            logger.debug(f"     Found {len(correspondences)} matches")
             timer.update("match tile")
 
             # Restore original ids of the matched keypoints
@@ -446,6 +447,27 @@ class MatcherBase(metaclass=ABCMeta):
                 logger.warning(
                     f"Found {sum(counts>1)} duplicate matches in tile pair ({tidx0}, {tidx1})"
                 )
+
+        # Viz for debugging
+        # if self._config["general"]["verbose"]:
+        #     tile_match_dir = (
+        #         Path(self._config["general"]["output_dir"])
+        #         / "debug"
+        #         / "matches_by_tile"
+        #     )
+        #     tile_match_dir.mkdir(parents=True, exist_ok=True)
+        #     image0 = cv2.imread(str(img0))
+        #     image1 = cv2.imread(str(img1))
+        #     viz_matches_cv2(
+        #         image0,
+        #         image1,
+        #         features0["keypoints"][matches_full[:, 0]],
+        #         features1["keypoints"][matches_full[:, 1]],
+        #         save_path=tile_match_dir / f"{img0.stem}-{img1.stem}.jpg",
+        #         line_thickness=-1,
+        #         autoresize=True,
+        #         jpg_quality=60,
+        #     )
 
         logger.debug("Matching by tile completed.")
         timer.print(f"{__class__.__name__} match_by_tile")
@@ -1002,6 +1024,9 @@ def tile_selection(
         i1_new_size = get_size_by_quality(quality, i1.shape[:2])
         i0 = resize_image(i0, (i0_new_size[1], i0_new_size[0]))
         i1 = resize_image(i1, (i1_new_size[1], i1_new_size[0]))
+    else:
+        i0_new_size = i0.shape[:2]
+        i1_new_size = i1.shape[:2]
 
     # Compute tiles
     tiles0, t_orig0, t_padding0 = tiler.compute_tiles_by_size(
@@ -1026,14 +1051,12 @@ def tile_selection(
         logger.debug("Matching tiles by downsampling preselection")
 
         # match downsampled images with roma
-        from PIL import Image
-
         from ..thirdparty.RoMa.roma import roma_outdoor
 
-        n_matches = 10000
-        matcher = roma_outdoor(device)
-        W_A, H_A = Image.open(img0).size
-        W_B, H_B = Image.open(img1).size
+        n_matches = 5000
+        matcher = roma_outdoor(device, coarse_res=448)
+        H_A, W_A = i0_new_size
+        H_B, W_B = i1_new_size
         warp, certainty = matcher.match(str(img0), str(img1), device=device)
         matches, certainty = matcher.sample(warp, certainty, num=n_matches)
         kp0, kp1 = matcher.to_pixel_coordinates(matches, H_A, W_A, H_B, W_B)
@@ -1083,40 +1106,44 @@ def tile_selection(
             kp1 = kp1[inlMask]
 
         # Select tile pairs where there are enough matches
-        tile_pairs = []
+        tile_pairs = set()
         all_pairs = sorted(product(tiles0.keys(), tiles1.keys()))
         for tidx0, tidx1 in all_pairs:
             ret0 = points_in_rect(kp0, get_tile_bounding_box(t_orig0[tidx0], tile_size))
             ret1 = points_in_rect(kp1, get_tile_bounding_box(t_orig1[tidx1], tile_size))
             n_matches = sum(ret0 & ret1)
             if n_matches > min_matches_per_tile:
-                tile_pairs.append((tidx0, tidx1))
+                tile_pairs.add((tidx0, tidx1))
+        tile_pairs = sorted(tile_pairs)
 
         # For Debugging...
         # if False:
-        # from matplotlib import pyplot as plt
+        from matplotlib import pyplot as plt
 
-        # out_dir = Path("sandbox/preselection")
-        # out_dir.mkdir(parents=True, exist_ok=True)
-        # image0 = cv2.imread(str(img0), cv2.IMREAD_GRAYSCALE)
-        # image1 = cv2.imread(str(img1), cv2.IMREAD_GRAYSCALE)
-        # c = "r"
-        # s = 5
-        # fig, axes = plt.subplots(1, 2)
-        # for ax, img, kp in zip(axes, [image0, image1], [kp0, kp1]):
-        #     ax.imshow(cv2.cvtColor(img, cv2.COLOR_BAYER_BG2BGR))
-        #     ax.scatter(kp[:, 0], kp[:, 1], s=s, c=c)
-        #     ax.axis("off")
-        # # for lim0, lim1 in zip(tiles0.values(), t1_lims.values()):
-        # #     axes[0].axvline(lim0[0])
-        # #     axes[0].axhline(lim0[1])
-        # #     axes[1].axvline(lim1[0])
-        # #     axes[1].axhline(lim1[1])
-        # # axes[1].get_yaxis().set_visible(False)
-        # fig.tight_layout()
+        out_dir = Path("sandbox/preselection")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        image0 = cv2.imread(str(img0), cv2.IMREAD_GRAYSCALE)
+        image1 = cv2.imread(str(img1), cv2.IMREAD_GRAYSCALE)
+        image0 = resize_image(image0, (i0_new_size[1], i0_new_size[0]))
+        image1 = resize_image(image1, (i1_new_size[1], i1_new_size[0]))
+        c = "r"
+        s = 5
+        fig, axes = plt.subplots(1, 2)
+        for ax, img, kp in zip(axes, [image0, image1], [kp0, kp1]):
+            ax.imshow(cv2.cvtColor(img, cv2.COLOR_BAYER_BG2BGR))
+            ax.scatter(kp[:, 0], kp[:, 1], s=s, c=c)
+            ax.axis("off")
+            ax.set_aspect("equal")
+        for lim0, lim1 in zip(t_orig0.values(), t_orig0.values()):
+            axes[0].axvline(lim0[0])
+            axes[0].axhline(lim0[1])
+            axes[1].axvline(lim1[0])
+            axes[1].axhline(lim1[1])
+        axes[1].get_yaxis().set_visible(False)
+        fig.tight_layout()
         # plt.show()
-        # fig.savefig(out_dir / f"{img0.name}-{img1.name}.jpg")
-        # plt.close()
+        fig.savefig(out_dir / f"{img0.name}-{img1.name}.jpg")
+        plt.close()
 
     return tile_pairs
 

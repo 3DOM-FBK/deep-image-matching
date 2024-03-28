@@ -32,10 +32,16 @@ def featuresDict2Lightglue(feats: FeaturesDict, device: torch.device) -> dict:
 
     return feats
 
+def rbd(data: dict) -> dict:
+    """Remove batch dimension from elements in data"""
+    return {
+        k: v[0] if isinstance(v, (torch.Tensor, np.ndarray, list)) else v
+        for k, v in data.items()
+    }
+
 
 class LightGlueMatcher(MatcherBase):
     default_conf = {
-        "name": "lightglue",
         "flash": True,  # enable FlashAttention if available.
         "mp": False,  # enable mixed precision
         "depth_confidence": 0.95,  # early stopping, disable with -1
@@ -74,7 +80,7 @@ class LightGlueMatcher(MatcherBase):
 
         # remove batch dimension and convert to numpy
         mfeats0, mfeats1, matches01 = [
-            self._rbd(x) for x in [feats0, feats1, match_res]
+            rbd(x) for x in [feats0, feats1, match_res]
         ]
         match_res = {
             k: v.cpu().numpy()
@@ -86,10 +92,3 @@ class LightGlueMatcher(MatcherBase):
         matches01_idx = match_res["matches"]
 
         return matches01_idx
-
-    def _rbd(self, data: dict) -> dict:
-        """Remove batch dimension from elements in data"""
-        return {
-            k: v[0] if isinstance(v, (torch.Tensor, np.ndarray, list)) else v
-            for k, v in data.items()
-        }

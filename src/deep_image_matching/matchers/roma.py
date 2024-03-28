@@ -6,12 +6,14 @@ import h5py
 import numpy as np
 import torch
 from PIL import Image
+from tqdm import tqdm
 
-from .. import GeometricVerification, TileSelection, Timer, logger
+from .. import TileSelection, Timer, logger
 from ..io.h5 import get_features
 from ..thirdparty.RoMa.roma import roma_outdoor
 from ..utils.geometric_verification import geometric_verification
 from ..utils.tiling import Tiler
+from ..visualization import viz_matches_cv2
 from .matcher_base import DetectorFreeMatcherBase, tile_selection
 
 
@@ -32,8 +34,8 @@ class RomaMatcher(DetectorFreeMatcherBase):
 
     grayscale = False
     as_float = True
-    coarse_res = 784  # (560, 840)  # (h,w) or only one value for square images
-    upsample_res = 1120  # (864, 1296)  # (h,w) or only one value for square images
+    coarse_res = 700  # (560, 840)  # (h,w) or only one value for square images
+    upsample_res = 980  # (864, 1296)  # (h,w) or only one value for square images
     max_tile_pairs = 150  # 50
     max_matches_per_pair = 10000
     min_matches_per_tile = 3
@@ -287,7 +289,7 @@ class RomaMatcher(DetectorFreeMatcherBase):
         mkpts1_full = np.array([], dtype=np.float32).reshape(0, 2)
         conf_full = np.array([], dtype=np.float32)
 
-        for tidx0, tidx1 in tile_pairs:
+        for tidx0, tidx1 in tqdm(tile_pairs, leave=False, desc="Matching tiles"):
             logger.debug(f"  - Matching tile pair ({tidx0}, {tidx1})")
 
             tile_path0 = tiles_dir / img0.name / f"tile_{tidx0}.png"
@@ -312,25 +314,25 @@ class RomaMatcher(DetectorFreeMatcherBase):
             conf = certainty.cpu().numpy()
 
             # Do an intermediate and permessive geometric verification to reduce non-matched kpts in the final db
-            _, inlMask = geometric_verification(
-                kpts0=kptsA,
-                kpts1=kptsB,
-                method=GeometricVerification.PYDEGENSAC,
-                threshold=6,
-                confidence=0.99999,
-                quiet=True,
-            )
-            matches = matches[inlMask]
-            logger.debug(
-                f"  - Intermediate GV: {sum(inlMask)} ({sum(inlMask) / len(inlMask)*100:.2f}%) inliers in tile pair ({tidx0}, {tidx1})"
-            )
-            kptsA = kptsA[inlMask]
-            kptsB = kptsB[inlMask]
+            # _, inlMask = geometric_verification(
+            #     kpts0=kptsA,
+            #     kpts1=kptsB,
+            #     method=GeometricVerification.PYDEGENSAC,
+            #     threshold=6,
+            #     confidence=0.99999,
+            #     quiet=True,
+            # )
+            # matches = matches[inlMask]
+            # logger.debug(
+            #     f"  - Intermediate GV: {sum(inlMask)} ({sum(inlMask) / len(inlMask)*100:.2f}%) inliers in tile pair ({tidx0}, {tidx1})"
+            # )
+            # kptsA = kptsA[inlMask]
+            # kptsB = kptsB[inlMask]
 
+            logger.debug(f"     Found {len(kptsA)} matches")
+
+            # Viz for debugging
             if self._config["general"]["verbose"]:
-                # For debugging
-                from ..visualization import viz_matches_cv2
-
                 tile_match_dir = (
                     Path(self._config["general"]["output_dir"])
                     / "debug"
@@ -388,8 +390,14 @@ class RomaMatcher(DetectorFreeMatcherBase):
             mkpts0_full = mkpts0_full[unique_idx]
             mkpts1_full = mkpts1_full[unique_idx]
 
-        # For debugging
+        # Viz for debugging
         if self._config["general"]["verbose"]:
+            tile_match_dir = (
+                Path(self._config["general"]["output_dir"])
+                / "debug"
+                / "matches_by_tile"
+            )
+            tile_match_dir.mkdir(parents=True, exist_ok=True)
             image0 = cv2.imread(str(img0))
             image1 = cv2.imread(str(img1))
             viz_matches_cv2(
