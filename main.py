@@ -130,14 +130,20 @@ if not config.general["skip_reconstruction"]:
         #     },
         # )
         reconst_opts = {}
+        refine_intrinsics = (
+            config.general["refine_intrinsics"]
+            if "refine_intrinsics" in config.general
+            else True
+        )
 
         # Run reconstruction
-        model = reconstruction.main(
-            database=output_dir / "database.db",
-            image_dir=imgs_dir,
+        model = reconstruction.pycolmap_reconstruction(
+            database_path=output_dir / "database.db",
             sfm_dir=output_dir,
-            reconst_opts=reconst_opts,
+            image_dir=imgs_dir,
+            options=reconst_opts,
             verbose=config.general["verbose"],
+            refine_intrinsics=refine_intrinsics,
         )
 
         timer.update("pycolmap reconstruction")

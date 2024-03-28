@@ -76,18 +76,27 @@ def get_image_ids(database_path: Path) -> Dict[str, int]:
 
 
 def pycolmap_reconstruction(
-    sfm_dir: Path,
     database_path: Path,
+    sfm_dir: Path,
     image_dir: Path,
+    refine_intrinsics: bool = True,
+    options: Optional[Dict[str, Any]] = {},
+    export_text: bool = True,
+    export_bundler: bool = True,
+    export_ply: bool = True,
     verbose: bool = False,
-    options: Optional[Dict[str, Any]] = None,
 ) -> pycolmap.Reconstruction:
     models_path = sfm_dir / "models"
     models_path.mkdir(exist_ok=True, parents=True)
     logger.info("Running 3D reconstruction...")
-    # options = {"ignore_two_view_track": False}
-    if options is None:
-        options = {}
+
+    if not refine_intrinsics:
+        options = {
+            "ba_refine_focal_length": False,
+            "ba_refine_principal_point": False,
+            "ba_refine_extra_params": False,
+            **options,
+        }
     options = {"num_threads": min(multiprocessing.cpu_count(), 16), **options}
     with OutputCapture(verbose):
         with pycolmap.ostream():
@@ -112,9 +121,39 @@ def pycolmap_reconstruction(
         f"Largest model is #{largest_index} " f"with {largest_num_images} images."
     )
 
+    for index, model in reconstructions.items():
+        if len(reconstructions) > 1:
+            logger.info(f"Exporting model #{index}...")
+            reconstruction_dir = sfm_dir / "reconstruction" / f"model_{index}"
+        else:
+            logger.info("Exporting model...")
+            reconstruction_dir = sfm_dir / "reconstruction"
+        reconstruction_dir.mkdir(exist_ok=True, parents=True)
+
+        # Export reconstruction in Colmap format
+        model.write(reconstruction_dir)
+
+        # Export ply
+        if export_ply:
+            model.export_PLY(reconstruction_dir / "rec.ply")
+
+        # Export reconstruction in text format
+        if export_text:
+            model.write_text(str(reconstruction_dir))
+
+        # Export reconstruction in Bundler format
+        if export_bundler:
+            fname = "bundler"
+            model.export_bundler(
+                reconstruction_dir / (fname + ".out"),
+                reconstruction_dir / (fname + "_list.txt"),
+                skip_distortion=True,
+            )
+
     return reconstructions[largest_index]
 
 
+# Deprecated. Use pycolmap_reconstruction instead.
 def main(
     database: Path,
     image_dir: Path,
