@@ -1,24 +1,26 @@
 [build-system]
-requires      = ["setuptools>=65", "wheel"]
-build-backend = "setuptools.build_meta"
+  requires      = ["setuptools>=65", "wheel"]
+  build-backend = "setuptools.build_meta"
 
 [project]
-name = "deep_image_matching"
-version = "1.0.0"
-description = "Multiview matching with deep-learning and hand-crafted local features for COLMAP and other SfM software."
-readme = "README.md"
-authors = [
-    { name = "Francesco Ioli", email = "francesco.ioli@polimi.it" },
-    { name = "Luca Morelli", email = "lmorelli@fbk.eu"}
-]
-license = { file = "LICENSE.txt" }
-classifiers = [
+  name = "deep_image_matching"
+  version = "1.0.0"
+  description = "Multiview matching with deep-learning and hand-crafted local features for COLMAP and other SfM software."
+  readme = "README.md"
+  authors = [
+      { name = "Francesco Ioli", email = "francesco.ioli@polimi.it" },
+      { name = "Luca Morelli", email = "lmorelli@fbk.eu"}
+  ]
+  license = { file = "LICENSE" }
+  classifiers = [
     "License :: OSI Approved :: BSD-3-Clause license ",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-]
-keywords = []
-dependencies = [
+  ]
+  requires-python = ">=3.8"
+  keywords = ["image-matching", "deep-learning", "local-features", "multiview-matching", "sfm"]
+  
+  dependencies = [
     "numpy",
     "scipy",
     "matplotlib",
@@ -41,38 +43,60 @@ dependencies = [
     "yacs>=0.1.8",
     "e2cnn",
     "pytorch_lightning",
-    "xformers"
-]
-requires-python = ">=3.8"
+    "xformers",
+  ]
 
+  [project.optional-dependencies]
+    dev = [
+      "flake8", 
+      "black", 
+      "bumpver", 
+      "isort", 
+      "pip-tools", 
+      "pytest", 
+      "mkdocs", 
+      "mkdocs-material", 
+      "mkdocstrings[python]", 
+      "pre-commit",]
 
-[project.optional-dependencies]
-dev = ["flake8", "black", "bumpver", "isort", "pip-tools", "pytest", "mkdocs", "mkdocs-material", "mkdocstrings[python]", "pre-commit"]
-
-[project.urls]
-Homepage = "https://github.com/3DOM-FBK/deep-image-matching"
+  [project.urls]
+    Homepage = "https://github.com/3DOM-FBK/deep-image-matching"
+    Documentation = "https://3dom-fbk.github.io/deep-image-matching/"
+    Download = "https://github.com/3DOM-FBK/deep-image-matching"
+    Source Code = "https://github.com/3DOM-FBK/deep-image-matching"
 
 [tool.pytest.ini_options]
-addopts = [
-    "--import-mode=importlib",
-]
+  addopts = [
+      "--import-mode=importlib",
+  ]
     
-[tool.isort]
-profile = "black"
-
 [tool.bumpver]
-current_version = "1.0.0"
-version_pattern = "MAJOR.MINOR.PATCH"
-commit_message = "bump version {old_version} -> {new_version}"
-commit = true
-tag = false
-push = false
+  current_version = "1.0.0"
+  version_pattern = "MAJOR.MINOR.PATCH"
+  commit_message = "bump version {old_version} -> {new_version}"
+  commit = true
+  tag = false
+  push = false
 
-[tool.bumpver.file_patterns]
-"pyproject.toml" = [
-    'current_version = "{version}"', 
-    'version = "{version}"'
-]
-"src/deep_image_matching/__init__.py" = [
-    "{version}"
-]
+  [tool.bumpver.file_patterns]
+    "pyproject.toml" = [
+        'current_version = "{version}"', 
+        'version = "{version}"'
+    ]
+    "src/deep_image_matching/__init__.py" = [
+        "{version}"
+    ]
+
+[tool.isort]
+  profile = "black"
+
+[tool.ruff]
+  line-length = 120
+
+  [tool.ruff.lint]
+    select = ["E9","F63","F7","F82"]
+    ignore = ["E501"]
+
+  [tool.ruff.lint.per-file-ignores]
+    "*/__init__.py" = ["F401", "F403"] # Allow unused imports and star imports
+    "src/deep_image_matching/__init__.py" = ["I001"] # Allow unsorted imports

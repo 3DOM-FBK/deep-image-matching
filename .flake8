@@ -3,5 +3,6 @@ select = E9,F63,F7,F82
 ignore = E501, E121, E123
 exclude = .git,__pycache__,.ipynb_checkpoints
 per-file-ignores =
+    */__init__.py: F401
     src/deep_image_matching/thirdparty/RoMa/roma/losses/robust_loss.py:E9,F63,F7,F82
     src/deep_image_matching/thirdparty/DeDoDe/DeDoDe/utils.py:E9,F63,F7,F82
