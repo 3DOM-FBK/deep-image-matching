@@ -9,6 +9,7 @@ import h5py
 import numpy as np
 import torch
 
+from ..config import Config
 from ..constants import Quality, TileSelection, get_size_by_quality
 from ..utils.image import Image, resize_image
 from ..utils.tiling import Tiler
@@ -94,8 +95,7 @@ def save_features_h5(feature_path: Path, features: FeaturesDict, im_name: str, a
 
 
 class ExtractorBase(metaclass=ABCMeta):
-    general_conf = {
-        "output_dir": None,
+    _default_general_conf = {
         "quality": Quality.HIGH,
         "tile_selection": TileSelection.NONE,
         "tile_size": (1024, 1024),  # (x, y) or (width, height)
@@ -103,7 +103,7 @@ class ExtractorBase(metaclass=ABCMeta):
         "force_cpu": False,
         "do_viz": False,
     }
-    default_conf = {}
+    _default_conf = {}
     required_inputs = []
     grayscale = True
     as_float = True
@@ -111,43 +111,36 @@ class ExtractorBase(metaclass=ABCMeta):
     descriptor_size = 128
     features_as_half = True
 
-    def __init__(self, custom_config: dict):
+    def __init__(self, custom_config: Config) -> None:
         """
         Initialize the instance with a custom config. This is the method to be called by subclasses
 
         Args:
-                custom_config: a dictionary of options to
+            custom_config: A Config object with custom configuration parameters
         """
         # If a custom config is passed, update the default config
-        if not isinstance(custom_config, dict):
-            raise TypeError("opt must be a dictionary")
-        # self._update_config(custom_config)
+        if not isinstance(custom_config, Config):
+            raise TypeError("Invalid config object. 'custom_config' must be a Config object")
 
-        # Update default config
+        # Update default config with custom config
+        # NOTE: This is done to keep backward compatibility with the old config format that was a dictionary, it should be replaced with the new config object
         self.config = {
             "general": {
-                **self.general_conf,
-                **custom_config.get("general", {}),
+                **self._default_general_conf,
+                **custom_config.general,
             },
             "extractor": {
-                **self.default_conf,
-                **custom_config.get("extractor", {}),
+                **self._default_conf,
+                **custom_config.extractor,
             },
         }
 
         # Get main processing parameters and save them as class members
+        # NOTE: this is used for backward compatibility, it should be removed
         self._quality = self.config["general"]["quality"]
         self._tiling = self.config["general"]["tile_selection"]
         logger.debug(f"Matching options: Quality: {self._quality.name} - Tiling: {self._tiling.name}")
-
-        # Define saving directory
-        output_dir = self.config["general"]["output_dir"]
-        if output_dir is not None:
-            self._output_dir = Path(output_dir)
-            self._output_dir.mkdir(parents=True, exist_ok=True)
-        else:
-            self._output_dir = None
-        logger.debug(f"Saving directory: {self._output_dir}")
+        logger.debug(f"Saving directory: {self.config['general']['output_dir']}")
 
         # Get device
         self._device = "cuda" if torch.cuda.is_available() and not self.config["general"]["force_cpu"] else "cpu"
@@ -175,8 +168,8 @@ class ExtractorBase(metaclass=ABCMeta):
         if not im_path.exists():
             raise ValueError(f"Image {im_path} does not exist")
 
-        output_dir = Path(self.config["general"]["output_dir"])
-        feature_path = output_dir / "features.h5"
+        # Define feature path
+        feature_path = self.config["general"]["output_dir"] / "features.h5"
 
         # Load image
         image = cv2.imread(str(im_path))
@@ -218,7 +211,7 @@ class ExtractorBase(metaclass=ABCMeta):
 
         # For debug: visualize keypoints and save to disk
         if self.config["general"]["verbose"]:
-            viz_dir = output_dir / "debug" / "keypoints"
+            viz_dir = self.config["general"]["output_dir"] / "debug" / "keypoints"
             viz_dir.mkdir(parents=True, exist_ok=True)
             image = cv2.imread(str(im_path))
             self.viz_keypoints(
@@ -294,7 +287,7 @@ class ExtractorBase(metaclass=ABCMeta):
             # For debug: visualize keypoints and save to disk
             if self.config["general"]["verbose"]:
                 tile = np.uint8(tile)
-                viz_dir = self._output_dir / "debug" / "tiles"
+                viz_dir = self.config["general"]["output_dir"] / "debug" / "tiles"
                 viz_dir.mkdir(parents=True, exist_ok=True)
                 self.viz_keypoints(
                     tile,

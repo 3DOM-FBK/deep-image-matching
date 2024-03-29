@@ -12,5 +12,6 @@ from .parser import parse_cli
 
 # Import classes and variables
 from .constants import *
-from .image_matching import ImageMatching
+from .image_matching import ImageMatcher
 from .config import Config
+from .pairs_generator import PairsGenerator

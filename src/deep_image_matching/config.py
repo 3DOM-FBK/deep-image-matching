@@ -54,7 +54,7 @@ conf_general = {
 }
 
 
-# The configuration for DeepImageMatching is defined as a dictionary with the following keys:
+# The configuration for DeepImageMatcher is defined as a dictionary with the following keys:
 # - 'extractor': extractor configuration
 # - 'matcher': matcher configuration
 # The 'extractor' and 'matcher' values must contain a 'name' key with the name of the extractor/matcher to be used. Additionally, the other parameters of the extractor/matcher can be specified.
@@ -217,7 +217,7 @@ class Config:
     the configuration to a file.
 
     Attributes:
-        default_cli_opts (dict): The default command-line options.
+        _default_cli_opts (dict): The default command-line options.
         cfg (dict): The configuration dictionary with the following keys: general, extractor, matcher.
 
     Methods:
@@ -238,7 +238,7 @@ class Config:
         save: Save the configuration to a file.
     """
 
-    default_cli_opts = {
+    _default_cli_opts = {
         "gui": False,
         "dir": None,
         "images": None,
@@ -258,7 +258,7 @@ class Config:
         "verbose": False,
         "graph": True,
     }
-    cfg = {
+    _cfg = {
         "general": {},
         "extractor": {},
         "matcher": {},
@@ -266,15 +266,18 @@ class Config:
 
     @property
     def general(self):
-        return self.cfg["general"]
+        return self._cfg["general"]
 
     @property
     def extractor(self):
-        return self.cfg["extractor"]
+        return self._cfg["extractor"]
 
     @property
     def matcher(self):
-        return self.cfg["matcher"]
+        return self._cfg["matcher"]
+
+    def __repr__(self) -> str:
+        return f"DeepImageMatching Configuration Object"
 
     def __init__(self, args: dict):
         """
@@ -287,10 +290,10 @@ class Config:
         general = self.parse_general_config(args)
 
         # Build configuration dictionary
-        self.cfg["general"] = {**conf_general, **general}
+        self._cfg["general"] = {**conf_general, **general}
         features_config = self.get_config(args["pipeline"])
-        self.cfg["extractor"] = features_config["extractor"]
-        self.cfg["matcher"] = features_config["matcher"]
+        self._cfg["extractor"] = features_config["extractor"]
+        self._cfg["matcher"] = features_config["matcher"]
 
         # If the user has provided a configuration file, update the configuration
         if "config_file" in args and args["config_file"] is not None:
@@ -300,7 +303,7 @@ class Config:
             self.update_from_yaml(config_file)
             self.print()
 
-        self.config_file = self.cfg["general"]["output_dir"] / "config.json"
+        self.config_file = self._cfg["general"]["output_dir"] / "config.json"
         self.save(self.config_file)
 
     def as_dict(self) -> dict:
@@ -310,7 +313,7 @@ class Config:
         Returns:
             dict: The configuration dictionary.
         """
-        return self.cfg
+        return self._cfg
 
     @staticmethod
     def get_config(name: str) -> dict:
@@ -363,7 +366,7 @@ class Config:
             dict: The configuration dictionary with the following keys: general, extractor, matcher.
 
         """
-        args = {**Config.default_cli_opts, **input_args}
+        args = {**Config._default_cli_opts, **input_args}
 
         # Check that at least one of the two options is provided
         if args["images"] is None and args["dir"] is None:
@@ -550,7 +553,7 @@ class Config:
                         f"Invalid tile_size option: {tile_sz} in the configuration file {path}. Valid options are: Tuple[int, int], str, list"
                     )
 
-            self.cfg["general"].update(cfg["general"])
+            self._cfg["general"].update(cfg["general"])
 
         if "extractor" in cfg:
             if "name" not in cfg["extractor"]:
@@ -558,22 +561,22 @@ class Config:
                     f"Extractor name is missing in configuration file {path}. Please specify the extractor name for which you want to update the configuration."
                 )
                 exit(1)
-            if cfg["extractor"]["name"] != self.cfg["extractor"]["name"]:
+            if cfg["extractor"]["name"] != self._cfg["extractor"]["name"]:
                 logger.warning(
                     f"Extractor name in configuration file {path} does not match with the extractor chosen from CLI or GUI. The custom configuration is not set, but matching is run with the default options."
                 )
-            self.cfg["extractor"].update(cfg["extractor"])
+            self._cfg["extractor"].update(cfg["extractor"])
         if "matcher" in cfg:
             if "name" not in cfg["matcher"]:
                 logger.error(
                     f"Matcher name is missing in configuration file {path}. Please specify the matcher name for which you want to update the configuration."
                 )
                 exit(1)
-            if cfg["matcher"]["name"] != self.cfg["matcher"]["name"]:
+            if cfg["matcher"]["name"] != self._cfg["matcher"]["name"]:
                 logger.warning(
                     f"Matcher name in configuration file {path} does not match with the matcher chosen from CLI or GUI. The custom configuration is not set, but matching is run with the default options."
                 )
-            self.cfg["matcher"].update(cfg["matcher"])
+            self._cfg["matcher"].update(cfg["matcher"])
 
     def print(self):
         """
@@ -605,7 +608,7 @@ class Config:
             path = Path(path)
             path.parent.mkdir(parents=True, exist_ok=True)
 
-        cfg = deepcopy(self.cfg)
+        cfg = deepcopy(self._cfg)
 
         # Convert enums to strings
         for k, v in cfg.items():

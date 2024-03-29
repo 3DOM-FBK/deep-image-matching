@@ -5,53 +5,20 @@ import deep_image_matching as dim
 import yaml
 
 logger = dim.setup_logger("dim")
-timer = dim.Timer(logger=logger)
 
 # Parse arguments from command line
 args = dim.parse_cli()
 
 # Build configuration
 config = dim.Config(args)
-
-# For simplicity, save some of the configuration parameters in variables.
 imgs_dir = config.general["image_dir"]
 output_dir = config.general["output_dir"]
 
-# Initialize ImageMatching class
-img_matching = dim.ImageMatching(
-    imgs_dir=imgs_dir,
-    output_dir=output_dir,
-    matching_strategy=config.general["matching_strategy"],
-    local_features=config.extractor["name"],
-    matching_method=config.matcher["name"],
-    pair_file=config.general["pair_file"],
-    retrieval_option=config.general["retrieval"],
-    overlap=config.general["overlap"],
-    existing_colmap_model=config.general["db_path"],
-    custom_config=config.as_dict(),
-)
+# Initialize ImageMatcher class
+matcher = dim.ImageMatcher(config)
 
-# Generate pairs to be matched
-pair_path = img_matching.generate_pairs()
-timer.update("generate_pairs")
-
-# Try to rotate images so they will be all "upright", useful for deep-learning approaches that usually are not rotation invariant
-if config.general["upright"]:
-    img_matching.rotate_upright_images()
-    timer.update("rotate_upright_images")
-
-# Extract features
-feature_path = img_matching.extract_features()
-timer.update("extract_features")
-
-# Matching
-match_path = img_matching.match_pairs(feature_path)
-timer.update("matching")
-
-# If features have been extracted on "upright" images, this function bring features back to their original image orientation
-if config.general["upright"]:
-    img_matching.rotate_back_features(feature_path)
-    timer.update("rotate_back_features")
+# Run image matching
+feature_path, match_path = matcher.run()
 
 # Export in colmap format
 with open(config.general["camera_options"], "r") as file:
@@ -64,14 +31,12 @@ dim.io.export_to_colmap(
     database_path=database_path,
     camera_options=camera_options,
 )
-timer.update("export_to_colmap")
 
 # Visualize view graph
 if config.general["graph"]:
     try:
         graph = import_module("deep_image_matching.graph")
         graph.view_graph(database_path, output_dir, imgs_dir)
-        timer.update("show view graph")
     except ImportError:
         logger.error("pyvis is not available. Unable to visualize view graph.")
 
@@ -93,7 +58,6 @@ if config.general["openmvg_conf"]:
         openmvg_database=openmvg_database,
         camera_options=camera_options,
     )
-    timer.update("export_to_openmvg")
 
     # Reconstruction with OpenMVG
     reconstruction = import_module("deep_image_matching.openmvg_reconstruction")
@@ -102,8 +66,6 @@ if config.general["openmvg_conf"]:
         skip_reconstruction=config.general["skip_reconstruction"],
         openmvg_sfm_bin=openmvg_sfm_bin,
     )
-
-    timer.update("SfM with openMVG")
 
 # Reconstruction with pycolmap
 if not config.general["skip_reconstruction"]:
@@ -140,8 +102,3 @@ if not config.general["skip_reconstruction"]:
             verbose=config.general["verbose"],
             refine_intrinsics=refine_intrinsics,
         )
-
-        timer.update("pycolmap reconstruction")
-
-# Print timing
-timer.print("Deep Image Matching")

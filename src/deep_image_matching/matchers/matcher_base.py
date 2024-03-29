@@ -10,6 +10,7 @@ import h5py
 import numpy as np
 import torch
 
+from ..config import Config
 from ..constants import Quality, TileSelection, Timer, get_size_by_quality
 from ..extractors.extractor_base import ExtractorBase
 from ..hloc.extractors.superpoint import SuperPoint
@@ -70,50 +71,45 @@ class MatcherBase(metaclass=ABCMeta):
         tile_preselection_size (int): Maximum resize dimension for preselection.
     """
 
-    default_general_conf = {
-        "output_dir": None,
+    _default_general_conf = {
         "quality": Quality.LOW,
         "tile_selection": TileSelection.NONE,
         "tile_size": [2048, 1365],
         "tile_overlap": 0,
         "force_cpu": False,
         "do_viz": False,
+        "min_inliers_per_pair": 15,
+        "min_inlier_ratio_per_pair": 0.2,
+        "min_matches_per_tile": 5,
+        "tile_preselection_size": 1000,
     }
-    default_conf = {}
+    _default_conf = {}
     required_inputs = []
-    min_inliers_per_pair = 15
-    min_inlier_ratio_per_pair = 0.2
-    min_matches_per_tile = 5
-    tile_preselection_size = 1000
     max_feat_no_tiling = 20000
 
-    def __init__(self, custom_config) -> None:
+    def __init__(self, custom_config: Config) -> None:
         """
-        Initializes the MatcherBase object.
+        Initialize the MatcherBase with a custom config. This is the method to be called by subclasses
 
         Args:
-            custom_config (dict): Options for the matcher.
-
-        Raises:
-            TypeError: If `custom_config` is not a dictionary.
+            custom_config: A Config object with custom configuration parameters
         """
-
         # If a custom config is passed, update the default config
-        if not isinstance(custom_config, dict):
-            raise TypeError("opt must be a dictionary")
+        if not isinstance(custom_config, Config):
+            raise TypeError("Invalid config object. 'custom_config' must be a Config object")
 
-        # Update default config
+        # Update default config with custom config
+        # NOTE: This is done to keep backward compatibility with the old config format that was a dictionary, it should be replaced with the new config object
         self.config = {
             "general": {
-                **self.default_general_conf,
-                **custom_config.get("general", {}),
+                **self._default_general_conf,
+                **custom_config.general,
             },
             "matcher": {
-                **self.default_conf,
-                **custom_config.get("matcher", {}),
+                **self._default_conf,
+                **custom_config.matcher,
             },
         }
-
         # Get main processing parameters and save them as class members
         # NOTE: this is used for backward compatibility, it should be removed
         self._quality = self.config["general"]["quality"]
@@ -126,16 +122,7 @@ class MatcherBase(metaclass=ABCMeta):
         # Get main processing parameters and save them as class members
         self._tiling = self.config["general"]["tile_selection"]
         logger.debug(f"Matching options: Tiling: {self._tiling.name}")
-
-        # Define saving directory
-        output_dir = self.config["general"]["output_dir"]
-        if output_dir is not None:
-            self._output_dir = Path(output_dir)
-            self._output_dir.mkdir(parents=True, exist_ok=True)
-        else:
-            self._output_dir = None
-        logger.debug(f"Saving directory: {self._output_dir}")
-
+        logger.debug(f"Saving directory: {self.config['general']['output_dir']}")
         # Get device
         self._device = torch.device(
             "cuda" if torch.cuda.is_available() and not self.config["general"]["force_cpu"] else "cpu"
@@ -336,7 +323,7 @@ class MatcherBase(metaclass=ABCMeta):
 
         # # For debugging
         if self.config["general"]["verbose"]:
-            viz_dir = self._output_dir / "debug" / "matches"
+            viz_dir = self.config["general"]["output_dir"] / "debug" / "matches"
             viz_dir.mkdir(parents=True, exist_ok=True)
             self.viz_matches(
                 feature_path,
@@ -551,48 +538,43 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         tile_preselection_size (int): Maximum resize dimension for preselection.
     """
 
-    default_general_conf = {
-        "output_dir": None,
+    _default_general_conf = {
         "quality": Quality.LOW,
         "tile_selection": TileSelection.NONE,
         "tile_size": [1024, 1024],
         "tile_overlap": 0,
         "force_cpu": False,
         "do_viz": False,
+        "min_inliers_per_pair": 15,
+        "min_inlier_ratio_per_pair": 0.2,
+        "min_matches_per_tile": 5,
     }
-    default_conf = {}
+    _default_conf = {}
     required_inputs = []
-    min_inliers_per_pair = 20
-    min_matches_per_tile = 5
-    tile_preselection_size = 1024
 
-    def __init__(self, custom_config) -> None:
+    def __init__(self, custom_config: Config) -> None:
         """
-        Initializes the MatcherBase object.
+        Initialize the MatcherBase with a custom config. This is the method to be called by subclasses
 
         Args:
-            custom_config (dict): Options for the matcher.
-
-        Raises:
-            TypeError: If `custom_config` is not a dictionary.
+            custom_config: A Config object with custom configuration parameters
         """
-
         # If a custom config is passed, update the default config
-        if not isinstance(custom_config, dict):
-            raise TypeError("opt must be a dictionary")
+        if not isinstance(custom_config, Config):
+            raise TypeError("Invalid config object. 'custom_config' must be a Config object")
 
-        # Update default config
+        # Update default config with custom config
+        # NOTE: This is done to keep backward compatibility with the old config format that was a dictionary, it should be replaced with the new config object
         self.config = {
             "general": {
-                **self.default_general_conf,
-                **custom_config.get("general", {}),
+                **self._default_general_conf,
+                **custom_config.general,
             },
             "matcher": {
-                **self.default_conf,
-                **custom_config.get("matcher", {}),
+                **self._default_conf,
+                **custom_config.matcher,
             },
         }
-
         # Get main processing parameters and save them as class members
         # NOTE: this is used for backward compatibility, it should be removed
         self._quality = self.config["general"]["quality"]
@@ -602,15 +584,7 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         self.tile_preselection_size = self.config["general"]["tile_preselection_size"]
 
         logger.debug(f"Matching options: Tiling: {self._tiling.name}")
-
-        # Define saving directory
-        output_dir = self.config["general"]["output_dir"]
-        if output_dir is not None:
-            self._output_dir = Path(output_dir)
-            self._output_dir.mkdir(parents=True, exist_ok=True)
-        else:
-            self._output_dir = None
-        logger.debug(f"Saving directory: {self._output_dir}")
+        logger.debug(f"Saving directory: {self.config['general']['output_dir']}")
 
         # Get device
         self._device = torch.device(
@@ -724,7 +698,7 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         timer_match.print(f"{__class__.__name__} match")
 
         # For debugging
-        # viz_dir = self._output_dir / "viz"
+        # viz_dir = self.config["general"]["output_dir"] / "viz"
         # viz_dir.mkdir(parents=True, exist_ok=True)
         # self.viz_matches(
         #     feature_path,
