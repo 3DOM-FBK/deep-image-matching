@@ -27,7 +27,6 @@
     "torch",
     "torchvision",
     "pillow",
-    "pandas",
     "opencv-python",
     "opencv-contrib-python",
     "pydegensac",
@@ -63,7 +62,7 @@
     Homepage = "https://github.com/3DOM-FBK/deep-image-matching"
     Documentation = "https://3dom-fbk.github.io/deep-image-matching/"
     Download = "https://github.com/3DOM-FBK/deep-image-matching"
-    Source Code = "https://github.com/3DOM-FBK/deep-image-matching"
+    "Source Code" = "https://github.com/3DOM-FBK/deep-image-matching"
 
 [tool.pytest.ini_options]
   addopts = [
