@@ -1,16 +1,17 @@
 import sys
 from pathlib import Path
+
 import torchvision.transforms as tvf
 
 from ..utils.base_model import BaseModel
 
 r2d2_path = Path(__file__).parent / "../../third_party/r2d2"
 sys.path.append(str(r2d2_path))
-from extract import load_network, NonMaxSuppression, extract_multiscale
+from extract import NonMaxSuppression, extract_multiscale, load_network
 
 
 class R2D2(BaseModel):
-    default_conf = {
+    _default_conf = {
         "model_name": "r2d2_WASF_N16.pt",
         "max_keypoints": 5000,
         "scale_factor": 2**0.25,
@@ -25,9 +26,7 @@ class R2D2(BaseModel):
 
     def _init(self, conf):
         model_fn = r2d2_path / "models" / conf["model_name"]
-        self.norm_rgb = tvf.Normalize(
-            mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-        )
+        self.norm_rgb = tvf.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         self.net = load_network(model_fn)
         self.detector = NonMaxSuppression(
             rel_thr=conf["reliability_threshold"],

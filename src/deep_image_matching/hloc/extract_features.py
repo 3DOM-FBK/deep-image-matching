@@ -160,7 +160,7 @@ def resize_image(image, size, interp):
 
 
 class ImageDataset(torch.utils.data.Dataset):
-    default_conf = {
+    _default_conf = {
         "globs": ["*.jpg", "*.png", "*.jpeg", "*.JPG", "*.PNG", "*.tif", "*.TIF"],
         "grayscale": False,
         "resize_max": None,
@@ -169,7 +169,7 @@ class ImageDataset(torch.utils.data.Dataset):
     }
 
     def __init__(self, root, conf, paths=None):
-        self.conf = conf = SimpleNamespace(**{**self.default_conf, **conf})
+        self.conf = conf = SimpleNamespace(**{**self._default_conf, **conf})
         self.root = root
 
         if paths is None:

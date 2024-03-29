@@ -13,7 +13,7 @@ logger = logging.getLogger("dim")
 
 
 class NoExtractor(ExtractorBase):
-    default_conf = {}
+    _default_conf = {}
 
     def __init__(self, config: dict):
         super().__init__(config)

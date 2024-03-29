@@ -8,7 +8,7 @@ from .extractor_base import ExtractorBase
 
 
 class DiskExtractor(ExtractorBase):
-    default_conf = {
+    _default_conf = {
         "weights": "depth",
         "max_keypoints": 2000,
         "nms_window_size": 5,
@@ -37,9 +37,7 @@ class DiskExtractor(ExtractorBase):
         feats = self._extractor({"image": image_})
 
         # Remove elements from list/tuple
-        feats = {
-            k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()
-        }
+        feats = {k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()}
         # Convert tensors to numpy arrays
         feats = {k: v.cpu().numpy() for k, v in feats.items()}
 

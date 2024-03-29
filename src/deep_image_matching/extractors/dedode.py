@@ -8,11 +8,17 @@ from .extractor_base import ExtractorBase, FeaturesDict
 
 
 class DeDoDe(ExtractorBase):
-    dedode_detector_L_url = "https://github.com/Parskatt/DeDoDe/releases/download/dedode_pretrained_models/dedode_detector_L.pth"
-    dedode_descriptor_G_url = "https://github.com/Parskatt/DeDoDe/releases/download/dedode_pretrained_models/dedode_descriptor_G.pth"
-    dedode_descriptor_B_url = "https://github.com/Parskatt/DeDoDe/releases/download/dedode_pretrained_models/dedode_descriptor_B.pth"
+    dedode_detector_L_url = (
+        "https://github.com/Parskatt/DeDoDe/releases/download/dedode_pretrained_models/dedode_detector_L.pth"
+    )
+    dedode_descriptor_G_url = (
+        "https://github.com/Parskatt/DeDoDe/releases/download/dedode_pretrained_models/dedode_descriptor_G.pth"
+    )
+    dedode_descriptor_B_url = (
+        "https://github.com/Parskatt/DeDoDe/releases/download/dedode_pretrained_models/dedode_descriptor_B.pth"
+    )
 
-    default_conf = {
+    _default_conf = {
         "name:": "",
     }
     required_inputs = ["image"]
@@ -29,14 +35,10 @@ class DeDoDe(ExtractorBase):
         # Load extractor and descriptor
         device = torch.device(self._device if torch.cuda.is_available() else "cpu")
         self.detector = dedode_detector_L(
-            weights=torch.hub.load_state_dict_from_url(
-                self.dedode_detector_L_url, map_location=device
-            )
+            weights=torch.hub.load_state_dict_from_url(self.dedode_detector_L_url, map_location=device)
         )
         self.descriptor = dedode_descriptor_G(
-            weights=torch.hub.load_state_dict_from_url(
-                self.dedode_descriptor_G_url, map_location=device
-            )
+            weights=torch.hub.load_state_dict_from_url(self.dedode_descriptor_G_url, map_location=device)
         )
 
         # Old way of loading the weights from disk
@@ -69,9 +71,7 @@ class DeDoDe(ExtractorBase):
         #     )
         # )
 
-        self.normalizer = transforms.Normalize(
-            mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-        )
+        self.normalizer = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         self.num_features = cfg["n_features"]
 
     @torch.no_grad()
@@ -79,17 +79,11 @@ class DeDoDe(ExtractorBase):
         H, W, C = image.shape
         resized_image = cv2.resize(image, (784, 784))
         standard_im = np.array(resized_image) / 255.0
-        norm_image = (
-            self.normalizer(torch.from_numpy(standard_im).permute(2, 0, 1))
-            .float()
-            .to(self._device)[None]
-        )
+        norm_image = self.normalizer(torch.from_numpy(standard_im).permute(2, 0, 1)).float().to(self._device)[None]
         batch = {"image": norm_image}
         detections_A = self.detector.detect(batch, num_keypoints=self.num_features)
         keypoints_A, P_A = detections_A["keypoints"], detections_A["confidence"]
-        description_A = self.descriptor.describe_keypoints(batch, keypoints_A)[
-            "descriptions"
-        ]
+        description_A = self.descriptor.describe_keypoints(batch, keypoints_A)["descriptions"]
         kpts = keypoints_A.cpu().detach().numpy()[0]
         des = description_A.cpu().detach().numpy()[0]
 

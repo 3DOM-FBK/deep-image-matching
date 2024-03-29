@@ -45,9 +45,7 @@ from torchvision.models import resnet
 from .utils import Extractor
 
 
-def get_patches(
-    tensor: torch.Tensor, required_corners: torch.Tensor, ps: int
-) -> torch.Tensor:
+def get_patches(tensor: torch.Tensor, required_corners: torch.Tensor, ps: int) -> torch.Tensor:
     c, h, w = tensor.shape
     corner = (required_corners - ps / 2 + 1).long()
     corner[:, 0] = corner[:, 0].clamp(min=0, max=w - 1 - ps)
@@ -120,9 +118,7 @@ class DKD(nn.Module):
         x = torch.linspace(-self.radius, self.radius, self.kernel_size)
         # (kernel_size*kernel_size) x 2 : (w,h)
         kw = {"indexing": "ij"} if torch.__version__ >= "1.10" else {}
-        self.hw_grid = (
-            torch.stack(torch.meshgrid([x, x], **kw)).view(2, -1).t()[:, [1, 0]]
-        )
+        self.hw_grid = torch.stack(torch.meshgrid([x, x], **kw)).view(2, -1).t()[:, [1, 0]]
 
     def forward(
         self,
@@ -189,9 +185,7 @@ class DKD(nn.Module):
             self.hw_grid = self.hw_grid.to(scores_map)  # to device
             for b_idx in range(b):
                 patch = patches[b_idx].t()  # (H*W) x (kernel**2)
-                indices_kpt = indices_keypoints[
-                    b_idx
-                ]  # one dimension vector, say its size is M
+                indices_kpt = indices_keypoints[b_idx]  # one dimension vector, say its size is M
                 patch_scores = patch[indices_kpt]  # M x (kernel**2)
                 keypoints_xy_nms = torch.stack(
                     [indices_kpt % w, torch.div(indices_kpt, w, rounding_mode="trunc")],
@@ -200,19 +194,14 @@ class DKD(nn.Module):
 
                 # max is detached to prevent undesired backprop loops in the graph
                 max_v = patch_scores.max(dim=1).values.detach()[:, None]
-                x_exp = (
-                    (patch_scores - max_v) / self.temperature
-                ).exp()  # M * (kernel**2), in [0, 1]
+                x_exp = ((patch_scores - max_v) / self.temperature).exp()  # M * (kernel**2), in [0, 1]
 
                 # \frac{ \sum{(i,j) \times \exp(x/T)} }{ \sum{\exp(x/T)} }
-                xy_residual = (
-                    x_exp @ self.hw_grid / x_exp.sum(dim=1)[:, None]
-                )  # Soft-argmax, Mx2
+                xy_residual = x_exp @ self.hw_grid / x_exp.sum(dim=1)[:, None]  # Soft-argmax, Mx2
 
                 hw_grid_dist2 = (
                     torch.norm(
-                        (self.hw_grid[None, :, :] - xy_residual[:, None, :])
-                        / self.radius,
+                        (self.hw_grid[None, :, :] - xy_residual[:, None, :]) / self.radius,
                         dim=-1,
                     )
                     ** 2
@@ -228,18 +217,14 @@ class DKD(nn.Module):
                     keypoints_xy.view(1, 1, -1, 2),
                     mode="bilinear",
                     align_corners=True,
-                )[
-                    0, 0, 0, :
-                ]  # CxN
+                )[0, 0, 0, :]  # CxN
 
                 keypoints.append(keypoints_xy)
                 scoredispersitys.append(scoredispersity)
                 kptscores.append(kptscore)
         else:
             for b_idx in range(b):
-                indices_kpt = indices_keypoints[
-                    b_idx
-                ]  # one dimension vector, say its size is M
+                indices_kpt = indices_keypoints[b_idx]  # one dimension vector, say its size is M
                 # To avoid warning: UserWarning: __floordiv__ is deprecated
                 keypoints_xy_nms = torch.stack(
                     [indices_kpt % w, torch.div(indices_kpt, w, rounding_mode="trunc")],
@@ -251,9 +236,7 @@ class DKD(nn.Module):
                     keypoints_xy.view(1, 1, -1, 2),
                     mode="bilinear",
                     align_corners=True,
-                )[
-                    0, 0, 0, :
-                ]  # CxN
+                )[0, 0, 0, :]  # CxN
                 keypoints.append(keypoints_xy)
                 scoredispersitys.append(kptscore)  # for jit.script compatability
                 kptscores.append(kptscore)
@@ -304,9 +287,7 @@ class DeformableConv2d(nn.Module):
         self.padding = padding
         self.mask = mask
 
-        self.channel_num = (
-            3 * kernel_size * kernel_size if mask else 2 * kernel_size * kernel_size
-        )
+        self.channel_num = 3 * kernel_size * kernel_size if mask else 2 * kernel_size * kernel_size
         self.offset_conv = nn.Conv2d(
             in_channels,
             self.channel_num,
@@ -400,13 +381,9 @@ class ConvBlock(nn.Module):
             self.gate = gate
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
-        self.conv1 = get_conv(
-            in_channels, out_channels, kernel_size=3, conv_type=conv_type, mask=mask
-        )
+        self.conv1 = get_conv(in_channels, out_channels, kernel_size=3, conv_type=conv_type, mask=mask)
         self.bn1 = norm_layer(out_channels)
-        self.conv2 = get_conv(
-            out_channels, out_channels, kernel_size=3, conv_type=conv_type, mask=mask
-        )
+        self.conv2 = get_conv(out_channels, out_channels, kernel_size=3, conv_type=conv_type, mask=mask)
         self.bn2 = norm_layer(out_channels)
 
     def forward(self, x):
@@ -446,13 +423,9 @@ class ResBlock(nn.Module):
             raise NotImplementedError("Dilation > 1 not supported in ResBlock")
         # Both self.conv1 and self.downsample layers
         # downsample the input when stride != 1
-        self.conv1 = get_conv(
-            inplanes, planes, kernel_size=3, conv_type=conv_type, mask=mask
-        )
+        self.conv1 = get_conv(inplanes, planes, kernel_size=3, conv_type=conv_type, mask=mask)
         self.bn1 = norm_layer(planes)
-        self.conv2 = get_conv(
-            planes, planes, kernel_size=3, conv_type=conv_type, mask=mask
-        )
+        self.conv2 = get_conv(planes, planes, kernel_size=3, conv_type=conv_type, mask=mask)
         self.bn2 = norm_layer(planes)
         self.downsample = downsample
         self.stride = stride
@@ -517,9 +490,7 @@ class SDDH(nn.Module):
         )
 
         # sampled feature conv
-        self.sf_conv = nn.Conv2d(
-            dims, dims, kernel_size=1, stride=1, padding=0, bias=False
-        )
+        self.sf_conv = nn.Conv2d(dims, dims, kernel_size=1, stride=1, padding=0, bias=False)
 
         # convM
         if not conv2D:
@@ -527,9 +498,7 @@ class SDDH(nn.Module):
             agg_weights = torch.nn.Parameter(torch.rand(n_pos, dims, dims))
             self.register_parameter("agg_weights", agg_weights)
         else:
-            self.convM = nn.Conv2d(
-                dims * n_pos, dims, kernel_size=1, stride=1, padding=0, bias=False
-            )
+            self.convM = nn.Conv2d(dims * n_pos, dims, kernel_size=1, stride=1, padding=0, bias=False)
 
     def forward(self, x, keypoints):
         # x: [B,C,H,W]
@@ -547,30 +516,18 @@ class SDDH(nn.Module):
             N_kpts = len(kptsi)
 
             if self.kernel_size > 1:
-                patch = self.get_patches_func(
-                    xi, kptsi_wh.long(), self.kernel_size
-                )  # [N_kpts, C, K, K]
+                patch = self.get_patches_func(xi, kptsi_wh.long(), self.kernel_size)  # [N_kpts, C, K, K]
             else:
                 kptsi_wh_long = kptsi_wh.long()
-                patch = (
-                    xi[:, kptsi_wh_long[:, 1], kptsi_wh_long[:, 0]]
-                    .permute(1, 0)
-                    .reshape(N_kpts, c, 1, 1)
-                )
+                patch = xi[:, kptsi_wh_long[:, 1], kptsi_wh_long[:, 0]].permute(1, 0).reshape(N_kpts, c, 1, 1)
 
-            offset = self.offset_conv(patch).clamp(
-                -max_offset, max_offset
-            )  # [N_kpts, 2*n_pos, 1, 1]
+            offset = self.offset_conv(patch).clamp(-max_offset, max_offset)  # [N_kpts, 2*n_pos, 1, 1]
             if self.mask:
-                offset = (
-                    offset[:, :, 0, 0].view(N_kpts, 3, self.n_pos).permute(0, 2, 1)
-                )  # [N_kpts, n_pos, 3]
+                offset = offset[:, :, 0, 0].view(N_kpts, 3, self.n_pos).permute(0, 2, 1)  # [N_kpts, n_pos, 3]
                 offset = offset[:, :, :-1]  # [N_kpts, n_pos, 2]
                 mask_weight = torch.sigmoid(offset[:, :, -1])  # [N_kpts, n_pos]
             else:
-                offset = (
-                    offset[:, :, 0, 0].view(N_kpts, 2, self.n_pos).permute(0, 2, 1)
-                )  # [N_kpts, n_pos, 2]
+                offset = offset[:, :, 0, 0].view(N_kpts, 2, self.n_pos).permute(0, 2, 1)  # [N_kpts, n_pos, 2]
             offsets.append(offset)  # for visualization
 
             # get sample positions
@@ -582,24 +539,16 @@ class SDDH(nn.Module):
             features = F.grid_sample(
                 xi.unsqueeze(0), pos, mode="bilinear", align_corners=True
             )  # [1,C,(N_kpts*n_pos),1]
-            features = features.reshape(c, N_kpts, self.n_pos, 1).permute(
-                1, 0, 2, 3
-            )  # [N_kpts, C, n_pos, 1]
+            features = features.reshape(c, N_kpts, self.n_pos, 1).permute(1, 0, 2, 3)  # [N_kpts, C, n_pos, 1]
             if self.mask:
                 features = torch.einsum("ncpo,np->ncpo", features, mask_weight)
 
-            features = torch.selu_(self.sf_conv(features)).squeeze(
-                -1
-            )  # [N_kpts, C, n_pos]
+            features = torch.selu_(self.sf_conv(features)).squeeze(-1)  # [N_kpts, C, n_pos]
             # convM
             if not self.conv2D:
-                descs = torch.einsum(
-                    "ncp,pcd->nd", features, self.agg_weights
-                )  # [N_kpts, C]
+                descs = torch.einsum("ncp,pcd->nd", features, self.agg_weights)  # [N_kpts, C]
             else:
-                features = features.reshape(N_kpts, -1)[
-                    :, :, None, None
-                ]  # [N_kpts, C*n_pos, 1, 1]
+                features = features.reshape(N_kpts, -1)[:, :, None, None]  # [N_kpts, C*n_pos, 1, 1]
                 descs = self.convM(features).squeeze()  # [N_kpts, C]
 
             # normalize
@@ -610,7 +559,7 @@ class SDDH(nn.Module):
 
 
 class ALIKED(Extractor):
-    default_conf = {
+    _default_conf = {
         "model_name": "aliked-n16",
         "max_num_keypoints": -1,
         "detection_threshold": 0.2,
@@ -656,18 +605,10 @@ class ALIKED(Extractor):
         self.conv2 = resnet.conv1x1(c2, dim // 4)
         self.conv3 = resnet.conv1x1(c3, dim // 4)
         self.conv4 = resnet.conv1x1(dim, dim // 4)
-        self.upsample2 = nn.Upsample(
-            scale_factor=2, mode="bilinear", align_corners=True
-        )
-        self.upsample4 = nn.Upsample(
-            scale_factor=4, mode="bilinear", align_corners=True
-        )
-        self.upsample8 = nn.Upsample(
-            scale_factor=8, mode="bilinear", align_corners=True
-        )
-        self.upsample32 = nn.Upsample(
-            scale_factor=32, mode="bilinear", align_corners=True
-        )
+        self.upsample2 = nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
+        self.upsample4 = nn.Upsample(scale_factor=4, mode="bilinear", align_corners=True)
+        self.upsample8 = nn.Upsample(scale_factor=8, mode="bilinear", align_corners=True)
+        self.upsample32 = nn.Upsample(scale_factor=32, mode="bilinear", align_corners=True)
         self.score_head = nn.Sequential(
             resnet.conv1x1(dim, 8),
             self.gate,
@@ -682,14 +623,10 @@ class ALIKED(Extractor):
             radius=conf.nms_radius,
             top_k=-1 if conf.detection_threshold > 0 else conf.max_num_keypoints,
             scores_th=conf.detection_threshold,
-            n_limit=conf.max_num_keypoints
-            if conf.max_num_keypoints > 0
-            else self.n_limit_max,
+            n_limit=conf.max_num_keypoints if conf.max_num_keypoints > 0 else self.n_limit_max,
         )
 
-        state_dict = torch.hub.load_state_dict_from_url(
-            self.checkpoint_url.format(conf.model_name), map_location="cpu"
-        )
+        state_dict = torch.hub.load_state_dict_from_url(self.checkpoint_url.format(conf.model_name), map_location="cpu")
         self.load_state_dict(state_dict, strict=True)
 
     def get_resblock(self, c_in, c_out, conv_type, mask):
@@ -742,9 +679,7 @@ class ALIKED(Extractor):
         if image.shape[1] == 1:
             image = grayscale_to_rgb(image)
         feature_map, score_map = self.extract_dense_map(image)
-        keypoints, kptscores, scoredispersitys = self.dkd(
-            score_map, image_size=data.get("image_size")
-        )
+        keypoints, kptscores, scoredispersitys = self.dkd(score_map, image_size=data.get("image_size"))
         descriptors, offsets = self.desc_head(feature_map, keypoints)
 
         _, _, h, w = image.shape

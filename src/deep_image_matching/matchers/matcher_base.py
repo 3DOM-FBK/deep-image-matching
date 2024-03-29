@@ -63,7 +63,7 @@ class MatcherBase(metaclass=ABCMeta):
 
     Attributes:
         general_conf (dict): Default configuration for general settings.
-        default_conf (dict): Default configuration for matcher-specific settings.
+        _default_conf (dict): Default configuration for matcher-specific settings.
         required_inputs (list): List of required input parameters.
         min_inliers_per_pair (int): Minimum number of matches required.
         min_matches_per_tile (int): Minimum number of matches required per tile.
@@ -530,7 +530,7 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
 
     Attributes:
         default_general_conf (dict): Default configuration for general settings.
-        default_conf (dict): Default configuration for matcher-specific settings.
+        _default_conf (dict): Default configuration for matcher-specific settings.
         required_inputs (list): List of required input parameters.
         min_inliers_per_pair (int): Minimum number of matches required.
         min_matches_per_tile (int): Minimum number of matches required per tile.

@@ -126,7 +126,7 @@ def test_keynet(data_dir, script):
 def test_dedode_nn(data_dir, script):
     if not torch.cuda.is_available():
         pytest.skip(
-            "Due to some bugs in DeDoDe code, DeDoDe is not available without CUDA GPU."
+            "DeDoDe is not available without CUDA GPU."
         )
     run_pipeline(
         f"python {script} --dir {data_dir} --pipeline dedode+kornia_matcher --strategy sequential --overlap 1 --skip_reconstruction --force"
@@ -172,7 +172,7 @@ def test_loftr(data_dir, script):
 def test_roma(data_dir, script):
     if not torch.cuda.is_available():
         pytest.skip(
-            "Due to some bugs in ROMA code, ROMA is not available without CUDA GPU."
+            "ROMA is not available without CUDA GPU."
         )
     run_pipeline(
         f"python {script} --dir {data_dir} --pipeline roma --strategy bruteforce --skip_reconstruction --force"
@@ -182,7 +182,7 @@ def test_roma(data_dir, script):
 def test_roma_tiling(data_dir, script, config_file_tiling):
     if not torch.cuda.is_available():
         pytest.skip(
-            "Due to some bugs in ROMA code, ROMA is not available without CUDA GPU."
+            "ROMA is not available without CUDA GPU."
         )
     run_pipeline(
         f"python {script} --dir {data_dir} --pipeline roma --strategy bruteforce --config {config_file_tiling} --tiling preselection --skip_reconstruction --force"

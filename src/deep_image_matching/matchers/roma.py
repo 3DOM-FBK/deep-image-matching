@@ -25,7 +25,7 @@ class RomaMatcher(DetectorFreeMatcherBase):
     RomaMatcher class for feature matching using RoMa.
 
     Attributes:
-        default_conf (dict): Default configuration options.
+        _default_conf (dict): Default configuration options.
         grayscale (bool): Flag indicating whether images are processed in grayscale.
         as_float (bool): Flag indicating whether to use float for image pixel values.
 
@@ -34,7 +34,7 @@ class RomaMatcher(DetectorFreeMatcherBase):
         match(self, feature_path: Path, matches_path: Path, img0: Path, img1: Path, try_full_image: bool = False) -> np.ndarray: Match features between two images.
     """
 
-    default_conf = {
+    _default_conf = {
         "coarse_res": 560,  # (h,w) or only one value for square images
         "upsample_res": 864,  # (h,w) or only one value for square images
         "num_sampled_points": 10000,  # number of points to sample for each image (or for each tile if tile_preselection_size is set)

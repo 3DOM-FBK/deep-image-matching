@@ -7,7 +7,7 @@ from .extractor_base import ExtractorBase, FeaturesDict
 
 
 class KeyNet(ExtractorBase):
-    default_conf = {
+    _default_conf = {
         "name:": "",
     }
     required_inputs = ["image"]

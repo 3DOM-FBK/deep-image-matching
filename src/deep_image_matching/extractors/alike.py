@@ -6,7 +6,7 @@ from .extractor_base import ExtractorBase
 
 
 class AlikeExtractor(ExtractorBase):
-    default_conf = {
+    _default_conf = {
         "name:": "alike",
         "model": "alike-s",
         "device": "cuda",

@@ -8,7 +8,7 @@ from SuperGluePretrainedNetwork.models.superglue import SuperGlue as SG
 
 
 class SuperGlue(BaseModel):
-    default_conf = {
+    _default_conf = {
         "weights": "outdoor",
         "sinkhorn_iterations": 100,
         "match_threshold": 0.2,

@@ -4,7 +4,7 @@ from ..utils.base_model import BaseModel
 
 
 class DISK(BaseModel):
-    default_conf = {
+    _default_conf = {
         "weights": "depth",
         "max_keypoints": None,
         "nms_window_size": 5,

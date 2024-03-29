@@ -5,7 +5,7 @@ from .extractor_base import ExtractorBase, FeaturesDict
 
 
 class ORBExtractor(ExtractorBase):
-    default_conf = {
+    _default_conf = {
         "name:": "orb",
         "n_features": 4000,
         "scaleFactor": 1.2,

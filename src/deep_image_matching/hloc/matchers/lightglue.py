@@ -1,9 +1,10 @@
-from ..utils.base_model import BaseModel
 from lightglue import LightGlue as LightGlue_
+
+from ..utils.base_model import BaseModel
 
 
 class LightGlue(BaseModel):
-    default_conf = {
+    _default_conf = {
         "features": "superpoint",
         "depth_confidence": 0.95,
         "width_confidence": 0.99,

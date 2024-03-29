@@ -35,7 +35,7 @@ def rbd(data: dict) -> dict:
 
 
 class LightGlueMatcher(MatcherBase):
-    default_conf = {
+    _default_conf = {
         "flash": True,  # enable FlashAttention if available.
         "mp": False,  # enable mixed precision
         "depth_confidence": 0.95,  # early stopping, disable with -1
@@ -54,7 +54,7 @@ class LightGlueMatcher(MatcherBase):
         super().__init__(config)
 
         # load the matcher
-        cfg = {**self.default_conf, **self.config.get("matcher", {})}
+        cfg = {**self._default_conf, **self.config.get("matcher", {})}
         self._matcher = LightGlue(self._localfeatures, **cfg).eval().to(self._device)
 
         if self._localfeatures == "disk":

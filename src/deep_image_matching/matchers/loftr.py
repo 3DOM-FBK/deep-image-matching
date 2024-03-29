@@ -18,7 +18,7 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
     LOFTRMatcher class for feature matching using the LOFTR method.
 
     Attributes:
-        default_conf (dict): Default configuration options.
+        _default_conf (dict): Default configuration options.
         max_feat_no_tiling (int): Maximum number of features when tiling is not used.
         grayscale (bool): Flag indicating whether images are processed in grayscale.
         as_float (bool): Flag indicating whether to use float for image pixel values.
@@ -36,7 +36,7 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
         viz_matches(self, feature_path: Path, matchings_path: Path, img0: Path, img1: Path, save_path: str = None, fast_viz: bool = True, interactive_viz: bool = False, **config) -> None: Visualize matches.
     """
 
-    default_conf = {"pretrained": "outdoor"}
+    _default_conf = {"pretrained": "outdoor"}
     grayscale = False
     as_float = True
     min_matches = 100
@@ -53,7 +53,7 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
 
         super().__init__(config)
 
-        model = config["matcher"]["pretrained"]
+        model = self.config["matcher"]["pretrained"]
         self.matcher = KF.LoFTR(pretrained=model).to(self._device).eval()
 
         tile_size = self.config["general"]["tile_size"]

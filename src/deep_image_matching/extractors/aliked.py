@@ -9,7 +9,7 @@ from .extractor_base import ExtractorBase
 
 class AlikedExtractor(ExtractorBase):
     # config from original ALIKED implementation
-    # default_conf = {
+    # _default_conf = {
     #     "name:": "aliked",
     #     "model": "aliked-n16rot",
     #     "device": "cuda",
@@ -19,7 +19,7 @@ class AlikedExtractor(ExtractorBase):
     # }
 
     # config from LightGlue implementation of ALIKED
-    default_conf = {
+    _default_conf = {
         "name:": "aliked",
         "model": "aliked-n16rot",
         "device": "cuda",

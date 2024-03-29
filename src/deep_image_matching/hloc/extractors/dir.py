@@ -1,18 +1,19 @@
+import os
 import sys
 from pathlib import Path
-import torch
 from zipfile import ZipFile
-import os
-import sklearn
+
 import gdown
+import sklearn
+import torch
 
 from ..utils.base_model import BaseModel
 
 sys.path.append(str(Path(__file__).parent / "../../third_party/deep-image-retrieval"))
 os.environ["DB_ROOT"] = ""  # required by dirtorch
 
-from dirtorch.utils import common  # noqa: E402
 from dirtorch.extract_features import load_model  # noqa: E402
+from dirtorch.utils import common  # noqa: E402
 
 # The DIR model checkpoints (pickle files) include sklearn.decomposition.pca,
 # which has been deprecated in sklearn v0.24
@@ -22,7 +23,7 @@ sys.modules["sklearn.decomposition.pca"] = sklearn.decomposition._pca
 
 
 class DIR(BaseModel):
-    default_conf = {
+    _default_conf = {
         "model_name": "Resnet-101-AP-GeM",
         "whiten_name": "Landmarks_clean",
         "whiten_params": {
@@ -66,9 +67,7 @@ class DIR(BaseModel):
         desc = desc.unsqueeze(0)  # batch dimension
         if self.conf["whiten_name"]:
             pca = self.net.pca[self.conf["whiten_name"]]
-            desc = common.whiten_features(
-                desc.cpu().numpy(), pca, **self.conf["whiten_params"]
-            )
+            desc = common.whiten_features(desc.cpu().numpy(), pca, **self.conf["whiten_params"])
             desc = torch.from_numpy(desc)
 
         return {

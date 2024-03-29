@@ -1,5 +1,6 @@
-from pathlib import Path
 import logging
+from pathlib import Path
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -39,7 +40,7 @@ class NetVLADLayer(nn.Module):
 
 
 class NetVLAD(BaseModel):
-    default_conf = {"model_name": "VGG16-NetVLAD-Pitts30K", "whiten": True}
+    _default_conf = {"model_name": "VGG16-NetVLAD-Pitts30K", "whiten": True}
     required_inputs = ["image"]
 
     # Models exported using
@@ -51,14 +52,10 @@ class NetVLAD(BaseModel):
 
     def _init(self, conf):
         if conf["model_name"] not in self.checkpoint_urls:
-            raise ValueError(
-                f'{conf["model_name"]} not in {self.checkpoint_urls.keys()}.'
-            )
+            raise ValueError(f'{conf["model_name"]} not in {self.checkpoint_urls.keys()}.')
 
         # Download the checkpoint.
-        checkpoint_path = Path(
-            torch.hub.get_dir(), "netvlad", conf["model_name"] + ".mat"
-        )
+        checkpoint_path = Path(torch.hub.get_dir(), "netvlad", conf["model_name"] + ".mat")
         if not checkpoint_path.exists():
             checkpoint_path.parent.mkdir(exist_ok=True, parents=True)
             url = self.checkpoint_urls[conf["model_name"]]

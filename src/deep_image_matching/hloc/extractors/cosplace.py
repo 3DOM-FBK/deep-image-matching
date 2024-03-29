@@ -21,7 +21,7 @@ from ..utils.base_model import BaseModel
 
 
 class CosPlace(BaseModel):
-    default_conf = {"backbone": "ResNet50", "fc_output_dim": 2048}
+    _default_conf = {"backbone": "ResNet50", "fc_output_dim": 2048}
     required_inputs = ["image"]
 
     def _init(self, conf):

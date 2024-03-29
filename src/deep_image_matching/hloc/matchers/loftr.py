@@ -1,13 +1,14 @@
-import torch
 import warnings
-from kornia.feature.loftr.loftr import default_cfg
+
+import torch
 from kornia.feature import LoFTR as LoFTR_
+from kornia.feature.loftr.loftr import default_cfg
 
 from ..utils.base_model import BaseModel
 
 
 class LoFTR(BaseModel):
-    default_conf = {
+    _default_conf = {
         "weights": "outdoor",
         "match_threshold": 0.2,
         "max_num_matches": None,

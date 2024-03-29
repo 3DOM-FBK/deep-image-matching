@@ -5,7 +5,7 @@ from .extractor_base import ExtractorBase, FeaturesDict
 
 
 class SIFTExtractor(ExtractorBase):
-    default_conf = {
+    _default_conf = {
         "name:": "sift",
         "n_features": 4000,
         "nOctaveLayers": 3,

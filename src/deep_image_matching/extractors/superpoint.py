@@ -26,7 +26,7 @@ def sample_descriptors_fix_sampling(keypoints, descriptors, s: int = 8):
 
 
 class SuperPoint(nn.Module):
-    default_conf = {
+    _default_conf = {
         "nms_radius": 4,
         "keypoint_threshold": 0.005,
         "max_keypoints": -1,
@@ -39,7 +39,7 @@ class SuperPoint(nn.Module):
     def __init__(self, conf):
         """Perform some logic and call the _init method of the child model."""
         super().__init__()
-        self.conf = conf = {**self.default_conf, **conf}
+        self.conf = conf = {**self._default_conf, **conf}
         self.required_inputs = copy(self.required_inputs)
         self._init(conf)
         sys.stdout.flush()
@@ -66,7 +66,7 @@ class SuperPointExtractor(ExtractorBase):
     This class is a subclass of ExtractorBase and represents a feature extractor using the SuperPoint algorithm.
 
     Attributes:
-        default_conf (dict): Default configuration for the SuperPointExtractor.
+        _default_conf (dict): Default configuration for the SuperPointExtractor.
         required_inputs (list): List of required inputs for the SuperPointExtractor.
         grayscale (bool): Flag indicating whether the input images should be converted to grayscale.
         descriptor_size (int): Size of the descriptors extracted by the SuperPoint algorithm.
@@ -81,7 +81,7 @@ class SuperPointExtractor(ExtractorBase):
         viz_keypoints(self, image: np.ndarray, keypoints: np.ndarray, output_dir: Path, im_name: str = "keypoints", resize_to: int = 2000, img_format: str = "jpg", jpg_quality: int = 90, ...): Visualizes keypoints on an image and saves the visualization to the specified output directory.
     """
 
-    default_conf = {
+    _default_conf = {
         "name": "superpoint",
         "nms_radius": 4,
         "keypoint_threshold": 0.005,

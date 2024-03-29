@@ -37,7 +37,7 @@ class NetVLADLayer(nn.Module):
 
 
 class NetVLAD(BaseModel):
-    default_conf = {"model_name": "VGG16-NetVLAD-Pitts30K", "whiten": True}
+    _default_conf = {"model_name": "VGG16-NetVLAD-Pitts30K", "whiten": True}
     required_inputs = ["image"]
 
     # Models exported using

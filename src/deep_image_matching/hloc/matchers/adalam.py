@@ -1,14 +1,13 @@
 import torch
-
-from ..utils.base_model import BaseModel
-
 from kornia.feature.adalam import AdalamFilter
 from kornia.utils.helpers import get_cuda_device_if_available
+
+from ..utils.base_model import BaseModel
 
 
 class AdaLAM(BaseModel):
     # See https://kornia.readthedocs.io/en/latest/_modules/kornia/feature/adalam/adalam.html.
-    default_conf = {
+    _default_conf = {
         "area_ratio": 100,
         "search_expansion": 4,
         "ransac_iters": 128,
@@ -40,9 +39,7 @@ class AdaLAM(BaseModel):
     def _forward(self, data):
         assert data["keypoints0"].size(0) == 1
         if data["keypoints0"].size(1) < 2 or data["keypoints1"].size(1) < 2:
-            matches = torch.zeros(
-                (0, 2), dtype=torch.int64, device=data["keypoints0"].device
-            )
+            matches = torch.zeros((0, 2), dtype=torch.int64, device=data["keypoints0"].device)
         else:
             matches = self.adalam.match_and_filter(
                 data["keypoints0"][0],

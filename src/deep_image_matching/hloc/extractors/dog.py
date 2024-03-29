@@ -1,11 +1,10 @@
 import kornia
-from kornia.feature.laf import laf_from_center_scale_ori, extract_patches_from_pyramid
 import numpy as np
-import torch
 import pycolmap
+import torch
+from kornia.feature.laf import extract_patches_from_pyramid, laf_from_center_scale_ori
 
 from ..utils.base_model import BaseModel
-
 
 EPS = 1e-6
 
@@ -18,7 +17,7 @@ def sift_to_rootsift(x):
 
 
 class DoG(BaseModel):
-    default_conf = {
+    _default_conf = {
         "options": {
             "first_octave": 0,
             "peak_threshold": 0.01,
@@ -81,16 +80,12 @@ class DoG(BaseModel):
                 torch.from_numpy(laf_scale)[None, :, None, None],
                 torch.from_numpy(laf_ori)[None, :, None],
             ).to(image.device)
-            patches = extract_patches_from_pyramid(
-                image, lafs, PS=self.conf["patch_size"]
-            )[0]
+            patches = extract_patches_from_pyramid(image, lafs, PS=self.conf["patch_size"])[0]
             descriptors = patches.new_zeros((len(patches), 128))
             if len(patches) > 0:
                 for start_idx in range(0, len(patches), self.max_batch_size):
                     end_idx = min(len(patches), start_idx + self.max_batch_size)
-                    descriptors[start_idx:end_idx] = self.describe(
-                        patches[start_idx:end_idx]
-                    )
+                    descriptors[start_idx:end_idx] = self.describe(patches[start_idx:end_idx])
         else:
             raise ValueError(f'Unknown descriptor: {self.conf["descriptor"]}')
 
