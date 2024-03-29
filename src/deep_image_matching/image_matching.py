@@ -78,10 +78,6 @@ class ImageMatching:
         "hide_matching_track": True,
         "do_viz_tiles": False,
     }
-    # pair_file=pair_file,
-    # retrieval_option=retrieval_option,
-    # overlap=overlap,
-    # existing_colmap_model=existing_colmap_model,
 
     def __init__(
         # TODO: add default values for not necessary parameters
@@ -126,12 +122,12 @@ class ImageMatching:
         self.image_dir = Path(imgs_dir)
         self.output_dir = Path(output_dir)
         self.matching_strategy = matching_strategy
-        self.retrieval_option = retrieval_option
         self.local_features = local_features
         self.matching_method = matching_method
-        self.pair_file = Path(pair_file) if pair_file else None
         self.overlap = overlap
+        self.retrieval_option = retrieval_option
         self.existing_colmap_model = existing_colmap_model
+        self.pair_file = Path(pair_file) if pair_file else None
 
         # Merge default and custom config
         self.custom_config = custom_config

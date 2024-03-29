@@ -1,8 +1,9 @@
 from enum import Enum
 from typing import Tuple
 
-from .utils.logger import change_logger_level, get_logger, setup_logger  # noqa: F401
-from .utils.timer import Timer, timeit  # noqa: F401
+from .image_matching import ImageMatching  # noqa
+from .utils.logger import change_logger_level, get_logger, setup_logger  # noqa
+from .utils.timer import Timer, timeit  # noqa
 
 __version__ = "1.0.0"
 

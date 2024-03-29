@@ -5,8 +5,6 @@ import cv2
 import kornia as K
 import numpy as np
 import torch
-
-# from ..thirdparty.se2loftr.src.utils.misc import lower_config
 from yacs.config import CfgNode as CN
 
 from .. import TileSelection, Timer, logger
@@ -148,7 +146,6 @@ class SE2LOFTRMatcher(DetectorFreeMatcherBase):
         # mconf = correspondences["confidence"].cpu().numpy()
 
         # NOTE: OLD SE2-LOFTR code but works with no tiling
-
         # Load image
         image0 = cv2.imread(str(img0_path))
         image1 = cv2.imread(str(img1_path))

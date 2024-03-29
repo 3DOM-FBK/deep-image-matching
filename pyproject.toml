@@ -32,8 +32,6 @@ dependencies = [
     "kornia>=0.7.2",
     "h5py",
     "tqdm",
-    "easydict",
-    "pytest",
     "exifread",
     "joblib",
     "pyyaml",
