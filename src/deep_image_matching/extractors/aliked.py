@@ -37,7 +37,7 @@ class AlikedExtractor(ExtractorBase):
 
         # Load extractor
         cfg = self.config.get("extractor")
-        if cfg["device"] == "cuda" and torch.cuda.is_available():
+        if self._device == "cuda" and torch.cuda.is_available():
             self._extractor = ALIKED(**cfg).cuda()
         else:
             self._extractor = ALIKED(**cfg)
@@ -79,10 +79,7 @@ class AlikedExtractor(ExtractorBase):
 
     def _rbd(self, data: dict) -> dict:
         """Remove batch dimension from elements in data"""
-        return {
-            k: v[0] if isinstance(v, (torch.Tensor, np.ndarray, list)) else v
-            for k, v in data.items()
-        }
+        return {k: v[0] if isinstance(v, (torch.Tensor, np.ndarray, list)) else v for k, v in data.items()}
 
 
 if __name__ == "__main__":
