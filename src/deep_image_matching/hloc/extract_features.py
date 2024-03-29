@@ -1,6 +1,7 @@
 import argparse
 import collections.abc as collections
 import glob
+import logging
 import pprint
 from pathlib import Path
 from types import SimpleNamespace
@@ -13,10 +14,13 @@ import PIL.Image
 import torch
 from tqdm import tqdm
 
-from . import extractors, logger
+from . import extractors
 from .utils.base_model import dynamic_load
 from .utils.io import list_h5_names, read_image
 from .utils.parsers import parse_image_lists
+
+logger = logging.getLogger(__name__)
+
 
 """
 A set of standard configurations that can be directly selected from the command
@@ -195,9 +199,7 @@ class ImageDataset(torch.utils.data.Dataset):
         image = image.astype(np.float32)
         size = image.shape[:2][::-1]
 
-        if self.conf.resize_max and (
-            self.conf.resize_force or max(size) > self.conf.resize_max
-        ):
+        if self.conf.resize_max and (self.conf.resize_force or max(size) > self.conf.resize_max):
             scale = self.conf.resize_max / max(size)
             size_new = tuple(int(round(x * scale)) for x in size)
             image = resize_image(image, size_new, self.conf.interpolation)
@@ -228,17 +230,13 @@ def main(
     feature_path: Optional[Path] = None,
     overwrite: bool = False,
 ) -> Path:
-    logger.info(
-        "Extracting local features with configuration:" f"\n{pprint.pformat(conf)}"
-    )
+    logger.info("Extracting local features with configuration:" f"\n{pprint.pformat(conf)}")
 
     dataset = ImageDataset(image_dir, conf["preprocessing"], image_list)
     if feature_path is None:
         feature_path = Path(export_dir, conf["output"] + ".h5")
     feature_path.parent.mkdir(exist_ok=True, parents=True)
-    skip_names = set(
-        list_h5_names(feature_path) if feature_path.exists() and not overwrite else ()
-    )
+    skip_names = set(list_h5_names(feature_path) if feature_path.exists() and not overwrite else ())
     dataset.names = [n for n in dataset.names if n not in skip_names]
     if len(dataset.names) == 0:
         logger.info("Skipping the extraction.")
@@ -248,9 +246,7 @@ def main(
     Model = dynamic_load(extractors, conf["model"]["name"])
     model = Model(conf["model"]).eval().to(device)
 
-    loader = torch.utils.data.DataLoader(
-        dataset, num_workers=1, shuffle=False, pin_memory=True
-    )
+    loader = torch.utils.data.DataLoader(dataset, num_workers=1, shuffle=False, pin_memory=True)
     for idx, data in enumerate(tqdm(loader)):
         name = dataset.names[idx]
         pred = model({"image": data["image"].to(device, non_blocking=True)})
@@ -300,9 +296,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--image_dir", type=Path, required=True)
     parser.add_argument("--export_dir", type=Path, required=True)
-    parser.add_argument(
-        "--conf", type=str, default="superpoint_aachen", choices=list(confs.keys())
-    )
+    parser.add_argument("--conf", type=str, default="superpoint_aachen", choices=list(confs.keys()))
     parser.add_argument("--as_half", action="store_true")
     parser.add_argument("--image_list", type=Path)
     parser.add_argument("--feature_path", type=Path)

@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 import kornia as K
@@ -5,9 +6,11 @@ import numpy as np
 import torch
 from kornia import feature as KF
 
-from .. import TileSelection, Timer, logger
+from ..constants import TileSelection, Timer
 from ..utils.tiling import Tiler
 from .matcher_base import DetectorFreeMatcherBase, tile_selection
+
+logger = logging.getLogger("dim")
 
 
 class LOFTRMatcher(DetectorFreeMatcherBase):
@@ -255,9 +258,7 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
         # Select uniue features on image 0, on rounded coordinates
         if select_unique is True:
             decimals = 1
-            _, unique_idx = np.unique(
-                np.round(mkpts0_full, decimals), axis=0, return_index=True
-            )
+            _, unique_idx = np.unique(np.round(mkpts0_full, decimals), axis=0, return_index=True)
             mkpts0_full = mkpts0_full[unique_idx]
             mkpts1_full = mkpts1_full[unique_idx]
 

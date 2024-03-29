@@ -3,6 +3,7 @@ This module contains functions to export image features, matches, and camera dat
 """
 
 import json
+import logging
 import os
 import shutil
 import sys
@@ -18,7 +19,7 @@ from tqdm import tqdm
 
 from deep_image_matching.io.h5_to_db import get_focal
 
-from .. import logger
+logger = logging.getLogger("dim")
 
 __OPENMVG_DIST_NAME_MAP = {
     "pinhole_radial_k3": "disto_k3",
@@ -29,14 +30,9 @@ __OPENMVG_DIST_NAME_MAP = {
 def loadJSON(sfm_data):
     with open(sfm_data) as file:
         sfm_data = json.load(file)
-    view_ids = {
-        view["value"]["ptr_wrapper"]["data"]["filename"]: view["key"]
-        for view in sfm_data["views"]
-    }
+    view_ids = {view["value"]["ptr_wrapper"]["data"]["filename"]: view["key"] for view in sfm_data["views"]}
     image_paths = [
-        os.path.join(
-            sfm_data["root_path"], view["value"]["ptr_wrapper"]["data"]["filename"]
-        )
+        os.path.join(sfm_data["root_path"], view["value"]["ptr_wrapper"]["data"]["filename"])
         for view in sfm_data["views"]
     ]
     return view_ids, image_paths
@@ -51,9 +47,7 @@ def saveFeaturesOpenMVG(matches_folder, basename, keypoints):
 def saveDescriptorsOpenMVG(matches_folder, basename, descriptors):
     with open(os.path.join(matches_folder, f"{basename}.desc"), "wb") as desc:
         desc.write(len(descriptors).to_bytes(8, byteorder="little"))
-        desc.write(
-            ((descriptors.numpy() + 1) * 0.5 * 255).round(0).astype(np.ubyte).tobytes()
-        )
+        desc.write(((descriptors.numpy() + 1) * 0.5 * 255).round(0).astype(np.ubyte).tobytes())
 
 
 def saveMatchesOpenMVG(matches, out_folder):
@@ -78,9 +72,7 @@ def add_keypoints(h5_path, image_path, matches_dir):
         if not os.path.isfile(path):
             raise IOError(f"Invalid image path {path}")
         if len(keypoints.shape) >= 2:
-            threading.Thread(
-                target=lambda: saveFeaturesOpenMVG(matches_dir, name, keypoints)
-            ).start()
+            threading.Thread(target=lambda: saveFeaturesOpenMVG(matches_dir, name, keypoints)).start()
             # threading.Thread(target=lambda: saveDescriptorsOpenMVG(matches_dir, filename, features.descriptors)).start()
     return
 
@@ -104,9 +96,7 @@ def add_matches(h5_path, sfm_data, matches_dir):
                     warnings.warn(f"Pair ({key_1}, {key_2}) already added!")
                     continue
                 matches = group[key_2][()]
-                putative_matches.append(
-                    [np.int32(id_1), np.int32(id_2), matches.astype(np.int32)]
-                )
+                putative_matches.append([np.int32(id_1), np.int32(id_2), matches.astype(np.int32)])
                 added.add((key_1, key_2))
                 pbar.update(1)
     match_file.close()
@@ -134,9 +124,7 @@ def generate_sfm_data(images_dir: Path, camera_options: dict):
     # Emulate the Cereal pointer counter
     __ptr_cnt = 2147483649
 
-    def open_mvg_view(
-        id: int, img_name: str, images_dir: Path, images_cameras: dict
-    ) -> dict:
+    def open_mvg_view(id: int, img_name: str, images_dir: Path, images_cameras: dict) -> dict:
         """
         OpenMVG View struct
         images_cameras : dictionary with image names as key and camera id as value
@@ -250,9 +238,7 @@ def generate_sfm_data(images_dir: Path, camera_options: dict):
             #    "cam_id": cam,
             #    "camera_model": camera_options["general"]["camera_model"],
             # }
-            intrinsics[cam] = assign_intrinsics(
-                images_dir, img, cam, camera_options["general"]["openmvg_camera_model"]
-            )
+            intrinsics[cam] = assign_intrinsics(images_dir, img, cam, camera_options["general"]["openmvg_camera_model"])
             # Assign a camera to images defined in 'camx'
             other_cam = 1
             for key in list(camera_options.keys()):
@@ -325,20 +311,13 @@ def generate_sfm_data(images_dir: Path, camera_options: dict):
 
     # Construct OpenMVG struct
     images = os.listdir(images_dir)
-    intrinsics, views_and_cameras = parse_camera_options(
-        images_dir, images, camera_options
-    )
+    intrinsics, views_and_cameras = parse_camera_options(images_dir, images, camera_options)
 
     data = {
         "sfm_data_version": "0.3",
         "root_path": str(images_dir),
-        "views": [
-            open_mvg_view(i, img, images_dir, views_and_cameras)
-            for i, img in enumerate(images)
-        ],
-        "intrinsics": [
-            open_mvg_intrinsic(intrinsics[c]) for c in list(intrinsics.keys())
-        ],
+        "views": [open_mvg_view(i, img, images_dir, views_and_cameras) for i, img in enumerate(images)],
+        "intrinsics": [open_mvg_intrinsic(intrinsics[c]) for c in list(intrinsics.keys())],
         "extrinsics": [],
         "structure": [],
         "control_points": [],
@@ -375,9 +354,7 @@ def export_to_openmvg(
     """
     openmvg_out_path = Path(openmvg_out_path)
     if openmvg_out_path.exists():
-        logger.warning(
-            f"OpenMVG output folder {openmvg_out_path} already exists - deleting it"
-        )
+        logger.warning(f"OpenMVG output folder {openmvg_out_path} already exists - deleting it")
         os.rmdir(openmvg_out_path)
     openmvg_out_path.mkdir(parents=True)
 
@@ -392,21 +369,18 @@ def export_to_openmvg(
             )
     openmvg_sfm_bin = Path(openmvg_sfm_bin)
     if not openmvg_sfm_bin.exists():
-        raise FileNotFoundError(
-            f"openMVG binaries path {openmvg_sfm_bin} does not exist."
-        )
+        raise FileNotFoundError(f"openMVG binaries path {openmvg_sfm_bin} does not exist.")
 
     if openmvg_database is not None:
         openmvg_database = Path(openmvg_database)
         if not openmvg_database.exists():
-            raise FileNotFoundError(
-                f"openMVG database path {openmvg_database} does not exist."
-            )
+            raise FileNotFoundError(f"openMVG database path {openmvg_database} does not exist.")
     else:
         # Download openMVG sensor_width_camera_database to the openMVG output folder
-        url = "https://github.com/openMVG/openMVG/blob/develop/src/openMVG/exif/sensor_width_database/sensor_width_camera_database.txt"
+        url = "https://raw.githubusercontent.com/openMVG/openMVG/6d6b1dd70bded094ba06024e481dd5a5c662dc83/src/openMVG/exif/sensor_width_database/sensor_width_camera_database.txt"
         openmvg_database = openmvg_out_path / "sensor_width_camera_database.txt"
-        urllib.request.urlretrieve(url, openmvg_database)
+        with urllib.request.urlopen(url) as response, open(openmvg_database, "wb") as out_file:
+            shutil.copyfileobj(response, out_file)
 
     # camera_file_params = openmvg_database # Path to sensor_width_camera_database.txt file
     matches_dir = openmvg_out_path / "matches"

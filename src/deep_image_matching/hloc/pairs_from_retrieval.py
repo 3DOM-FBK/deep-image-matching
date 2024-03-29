@@ -1,15 +1,18 @@
 import argparse
+import collections.abc as collections
+import logging
 from pathlib import Path
 from typing import Optional
+
 import h5py
 import numpy as np
 import torch
-import collections.abc as collections
 
-from . import logger
+from .utils.io import list_h5_names
 from .utils.parsers import parse_image_lists
 from .utils.read_write_model import read_images_binary
-from .utils.io import list_h5_names
+
+logger = logging.getLogger(__name__)
 
 
 def parse_names(prefix, names, names_all):
@@ -25,10 +28,7 @@ def parse_names(prefix, names, names_all):
         elif isinstance(names, collections.Iterable):
             names = list(names)
         else:
-            raise ValueError(
-                f"Unknown type of image list: {names}."
-                "Provide either a list or a path to a list file."
-            )
+            raise ValueError(f"Unknown type of image list: {names}." "Provide either a list or a path to a list file.")
     else:
         names = names_all
     return names
@@ -109,9 +109,7 @@ def main(
 
     # Avoid self-matching
     self = np.array(query_names)[:, None] == np.array(db_names)[None]
-    pairs = pairs_from_score_matrix(
-        sim, self, num_matched, min_score=0
-    )  # default min_score=0
+    pairs = pairs_from_score_matrix(sim, self, num_matched, min_score=0)  # default min_score=0
     pairs = [(query_names[i], db_names[j]) for i, j in pairs]
 
     logger.info(f"Found {len(pairs)} pairs.")

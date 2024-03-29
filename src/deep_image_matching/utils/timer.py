@@ -3,7 +3,7 @@ import time
 from collections import OrderedDict
 from functools import wraps
 
-logger = logging.getLogger("deep-image-matching")
+logger = logging.getLogger("dim")
 
 
 def timeit(func):
@@ -88,9 +88,7 @@ class Timer:
             if self.cumulate:
                 self.times[name] += dt
             else:
-                self.times[name] = (
-                    self.smoothing * dt + (1 - self.smoothing) * self.times[name]
-                )
+                self.times[name] = self.smoothing * dt + (1 - self.smoothing) * self.times[name]
         else:
             self.times[name] = dt
 

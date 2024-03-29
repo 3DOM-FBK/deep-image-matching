@@ -75,9 +75,7 @@ def run_reconstruction(
     options = {"num_threads": min(multiprocessing.cpu_count(), 16), **options}
     with OutputCapture(verbose):
         with pycolmap.ostream():
-            reconstructions = pycolmap.incremental_mapping(
-                database_path, image_dir, models_path, options=options
-            )
+            reconstructions = pycolmap.incremental_mapping(database_path, image_dir, models_path, options=options)
 
     if len(reconstructions) == 0:
         logger.error("Could not reconstruct any model!")
@@ -92,9 +90,7 @@ def run_reconstruction(
             largest_index = index
             largest_num_images = num_images
     assert largest_index is not None
-    logger.info(
-        f"Largest model is #{largest_index} " f"with {largest_num_images} images."
-    )
+    logger.info(f"Largest model is #{largest_index} " f"with {largest_num_images} images.")
 
     for filename in ["images.bin", "cameras.bin", "points3D.bin"]:
         if (sfm_dir / filename).exists():
@@ -138,13 +134,10 @@ def main(
     )
     if not skip_geometric_verification:
         estimation_and_geometric_verification(database, pairs, verbose)
-    reconstruction = run_reconstruction(
-        sfm_dir, database, image_dir, verbose, mapper_options
-    )
+    reconstruction = run_reconstruction(sfm_dir, database, image_dir, verbose, mapper_options)
     if reconstruction is not None:
         logger.info(
-            f"Reconstruction statistics:\n{reconstruction.summary()}"
-            + f"\n\tnum_input_images = {len(image_ids)}"
+            f"Reconstruction statistics:\n{reconstruction.summary()}" + f"\n\tnum_input_images = {len(image_ids)}"
         )
     return reconstruction
 
@@ -178,17 +171,11 @@ if __name__ == "__main__":
         "--mapper_options",
         nargs="+",
         default=[],
-        help="List of key=value from {}".format(
-            pycolmap.IncrementalMapperOptions().todict()
-        ),
+        help="List of key=value from {}".format(pycolmap.IncrementalMapperOptions().todict()),
     )
     args = parser.parse_args().__dict__
 
-    image_options = parse_option_args(
-        args.pop("image_options"), pycolmap.ImageReaderOptions()
-    )
-    mapper_options = parse_option_args(
-        args.pop("mapper_options"), pycolmap.IncrementalMapperOptions()
-    )
+    image_options = parse_option_args(args.pop("image_options"), pycolmap.ImageReaderOptions())
+    mapper_options = parse_option_args(args.pop("mapper_options"), pycolmap.IncrementalMapperOptions())
 
     main(**args, image_options=image_options, mapper_options=mapper_options)

@@ -1,4 +1,5 @@
 import inspect
+import logging
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
 from typing import Optional, Tuple, TypedDict, Union
@@ -8,9 +9,11 @@ import h5py
 import numpy as np
 import torch
 
-from .. import Quality, TileSelection, get_size_by_quality, logger
+from ..constants import Quality, TileSelection, get_size_by_quality
 from ..utils.image import Image, resize_image
 from ..utils.tiling import Tiler
+
+logger = logging.getLogger("dim")
 
 
 class FeaturesDict(TypedDict):
@@ -48,9 +51,7 @@ def extractor_loader(root, model):
     # return getattr(module, 'Model')
 
 
-def save_features_h5(
-    feature_path: Path, features: FeaturesDict, im_name: str, as_half: bool = True
-):
+def save_features_h5(feature_path: Path, features: FeaturesDict, im_name: str, as_half: bool = True):
     # If as_half is True then the features are converted to float16.
     if as_half:
         feat_dtype = np.float16
@@ -80,9 +81,7 @@ def save_features_h5(
                         compression_opts=9,
                     )
                 else:
-                    raise TypeError(
-                        f"Features data must be of type np.ndarray, not {type(v)}"
-                    )
+                    raise TypeError(f"Features data must be of type np.ndarray, not {type(v)}")
 
         except OSError as error:
             if "No space left on device" in error.args[0]:
@@ -139,9 +138,7 @@ class ExtractorBase(metaclass=ABCMeta):
         # Get main processing parameters and save them as class members
         self._quality = self.config["general"]["quality"]
         self._tiling = self.config["general"]["tile_selection"]
-        logger.debug(
-            f"Matching options: Quality: {self._quality.name} - Tiling: {self._tiling.name}"
-        )
+        logger.debug(f"Matching options: Quality: {self._quality.name} - Tiling: {self._tiling.name}")
 
         # Define saving directory
         output_dir = self.config["general"]["output_dir"]
@@ -153,11 +150,7 @@ class ExtractorBase(metaclass=ABCMeta):
         logger.debug(f"Saving directory: {self._output_dir}")
 
         # Get device
-        self._device = (
-            "cuda"
-            if torch.cuda.is_available() and not self.config["general"]["force_cpu"]
-            else "cpu"
-        )
+        self._device = "cuda" if torch.cuda.is_available() and not self.config["general"]["force_cpu"] else "cpu"
         logger.debug(f"Running inference on device {self._device}")
 
     def extract(self, img: Union[Image, Path, str]) -> np.ndarray:
@@ -178,9 +171,7 @@ class ExtractorBase(metaclass=ABCMeta):
         elif isinstance(img, Path):
             im_path = img
         else:
-            raise TypeError(
-                "Invalid image path. 'img' must be a string, a Path or an Image object"
-            )
+            raise TypeError("Invalid image path. 'img' must be a string, a Path or an Image object")
         if not im_path.exists():
             raise ValueError(f"Image {im_path} does not exist")
 
@@ -202,9 +193,7 @@ class ExtractorBase(metaclass=ABCMeta):
             features = self._extract(image_)
             # features["feature_path"] = str(feature_path)
             # features["im_path"] = str(im_path)
-            features["tile_idx"] = np.zeros(
-                features["keypoints"].shape[0], dtype=np.float32
-            )
+            features["tile_idx"] = np.zeros(features["keypoints"].shape[0], dtype=np.float32)
 
         else:
             # Extract features by tiles
@@ -281,15 +270,11 @@ class ExtractorBase(metaclass=ABCMeta):
         tile_size = self.config["general"]["tile_size"]
         overlap = self.config["general"]["tile_overlap"]
         tiler = Tiler(tiling_mode="size")
-        tiles, tiles_origins, padding = tiler.compute_tiles_by_size(
-            input=image, window_size=tile_size, overlap=overlap
-        )
+        tiles, tiles_origins, padding = tiler.compute_tiles_by_size(input=image, window_size=tile_size, overlap=overlap)
 
         # Initialize empty arrays
         kpts_full = np.array([], dtype=np.float32).reshape(0, 2)
-        descriptors_full = np.array([], dtype=np.float32).reshape(
-            self.descriptor_size, 0
-        )
+        descriptors_full = np.array([], dtype=np.float32).reshape(self.descriptor_size, 0)
         scores_full = np.array([], dtype=np.float32)
         tile_idx_full = np.array([], dtype=np.float32)
 
@@ -367,9 +352,7 @@ class ExtractorBase(metaclass=ABCMeta):
 
         return features
 
-    def _resize_image(
-        self, quality: Quality, image: np.ndarray, interp: str = "cv2_area"
-    ) -> Tuple[np.ndarray]:
+    def _resize_image(self, quality: Quality, image: np.ndarray, interp: str = "cv2_area") -> Tuple[np.ndarray]:
         """
         Resize images based on the specified quality.
 
@@ -389,9 +372,7 @@ class ExtractorBase(metaclass=ABCMeta):
         new_size = get_size_by_quality(quality, image.shape[:2])
         return resize_image(image, (new_size[1], new_size[0]), interp=interp)
 
-    def _resize_features(
-        self, quality: Quality, features: FeaturesDict
-    ) -> Tuple[FeaturesDict]:
+    def _resize_features(self, quality: Quality, features: FeaturesDict) -> Tuple[FeaturesDict]:
         """
         Resize features based on the specified quality.
 

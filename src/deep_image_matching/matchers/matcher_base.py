@@ -1,4 +1,5 @@
 import inspect
+import logging
 from abc import ABCMeta, abstractmethod
 from itertools import product
 from pathlib import Path
@@ -9,9 +10,8 @@ import h5py
 import numpy as np
 import torch
 
-from deep_image_matching.extractors.extractor_base import ExtractorBase
-
-from .. import Quality, TileSelection, Timer, get_size_by_quality, logger
+from ..constants import Quality, TileSelection, Timer, get_size_by_quality
+from ..extractors.extractor_base import ExtractorBase
 from ..hloc.extractors.superpoint import SuperPoint
 from ..io.h5 import get_features, get_matches
 from ..thirdparty.LightGlue.lightglue import LightGlue
@@ -19,6 +19,8 @@ from ..utils.geometric_verification import geometric_verification
 from ..utils.image import resize_image
 from ..utils.tiling import Tiler
 from ..visualization import viz_matches_cv2, viz_matches_mpl
+
+logger = logging.getLogger("dim")
 
 
 class FeaturesDict(TypedDict):
@@ -47,11 +49,7 @@ def matcher_loader(root, model):
     classes = [c for c in classes if c[1].__module__ == module_path]
     # Filter classes inherited from BaseModel
     # classes = [c for c in classes if issubclass(c[1], MatcherBase)]
-    classes = [
-        c
-        for c in classes
-        if issubclass(c[1], MatcherBase) or issubclass(c[1], DetectorFreeMatcherBase)
-    ]
+    classes = [c for c in classes if issubclass(c[1], MatcherBase) or issubclass(c[1], DetectorFreeMatcherBase)]
     assert len(classes) == 1, classes
     return classes[0][1]
 
@@ -121,9 +119,7 @@ class MatcherBase(metaclass=ABCMeta):
         self._quality = self.config["general"]["quality"]
         self._tiling = self.config["general"]["tile_selection"]
         self.min_inliers_per_pair = self.config["general"]["min_inliers_per_pair"]
-        self.min_inlier_ratio_per_pair = self.config["general"][
-            "min_inlier_ratio_per_pair"
-        ]
+        self.min_inlier_ratio_per_pair = self.config["general"]["min_inlier_ratio_per_pair"]
         self.min_matches_per_tile = self.config["general"]["min_matches_per_tile"]
         self.tile_preselection_size = self.config["general"]["tile_preselection_size"]
 
@@ -142,9 +138,7 @@ class MatcherBase(metaclass=ABCMeta):
 
         # Get device
         self._device = torch.device(
-            "cuda"
-            if torch.cuda.is_available() and not self.config["general"]["force_cpu"]
-            else "cpu"
+            "cuda" if torch.cuda.is_available() and not self.config["general"]["force_cpu"] else "cpu"
         )
         logger.debug(f"Running inference on device {self._device}")
 
@@ -242,9 +236,7 @@ class MatcherBase(metaclass=ABCMeta):
                 raise RuntimeError(
                     "Too many features to run the matching on full images. Try running the matching with tile selection or use a lower max_keypoints value."
                 )
-            logger.debug(
-                f"Tile selection was {self._tiling.name}. Matching full images..."
-            )
+            logger.debug(f"Tile selection was {self._tiling.name}. Matching full images...")
             matches = self._match_pairs(features0, features1)
             timer_match.update("match full images")
         else:
@@ -274,9 +266,7 @@ class MatcherBase(metaclass=ABCMeta):
 
         # If the fallback flag was set for any reason, try to match by tiles
         if fallback_flag:
-            logger.debug(
-                f"Fallback: matching by tile with {self._tiling.name} selection..."
-            )
+            logger.debug(f"Fallback: matching by tile with {self._tiling.name} selection...")
             matches = self._match_by_tile(
                 img0,
                 img1,
@@ -298,9 +288,7 @@ class MatcherBase(metaclass=ABCMeta):
         # Do Geometric verification
         # Rescale threshold according the image qualit
         if len(matches) < 8:
-            logger.debug(
-                f"Too few matches found ({len(matches)}). Skipping image pair {img0.name}-{img1.name}"
-            )
+            logger.debug(f"Too few matches found ({len(matches)}). Skipping image pair {img0.name}-{img1.name}")
             return None
 
         scales = {
@@ -310,10 +298,7 @@ class MatcherBase(metaclass=ABCMeta):
             Quality.LOW: 2.0,
             Quality.LOWEST: 3.0,
         }
-        gv_threshold = (
-            self.config["general"]["gv_threshold"]
-            * scales[self.config["general"]["quality"]]
-        )
+        gv_threshold = self.config["general"]["gv_threshold"] * scales[self.config["general"]["quality"]]
 
         # Apply geometric verification
         _, inlMask = geometric_verification(
@@ -328,9 +313,7 @@ class MatcherBase(metaclass=ABCMeta):
         matches = matches[inlMask]
 
         if num_inliers < self.min_inliers_per_pair:
-            logger.debug(
-                f"Too few inliers matches found ({num_inliers}). Skipping image pair {img0.name}-{img1.name}"
-            )
+            logger.debug(f"Too few inliers matches found ({num_inliers}). Skipping image pair {img0.name}-{img1.name}")
             timer_match.print(f"{__class__.__name__} match")
             return None
         elif inliers_ratio < self.min_inlier_ratio_per_pair:
@@ -438,13 +421,9 @@ class MatcherBase(metaclass=ABCMeta):
 
         # Select unique matches
         if select_unique is True:
-            matches_full, idx, counts = np.unique(
-                matches_full, axis=0, return_index=True, return_counts=True
-            )
+            matches_full, idx, counts = np.unique(matches_full, axis=0, return_index=True, return_counts=True)
             if any(counts > 1):
-                logger.warning(
-                    f"Found {sum(counts>1)} duplicate matches in tile pair ({tidx0}, {tidx1})"
-                )
+                logger.warning(f"Found {sum(counts>1)} duplicate matches in tile pair ({tidx0}, {tidx1})")
 
         # Viz for debugging
         # if self.config["general"]["verbose"]:
@@ -485,15 +464,11 @@ class MatcherBase(metaclass=ABCMeta):
     ) -> None:
         # Check input parameters
         if not interactive_viz:
-            assert (
-                save_path is not None
-            ), "output_dir must be specified if interactive_viz is False"
+            assert save_path is not None, "output_dir must be specified if interactive_viz is False"
         if fast_viz:
             if interactive_viz:
                 logger.warning("interactive_viz is ignored if fast_viz is True")
-            assert (
-                save_path is not None
-            ), "output_dir must be specified if fast_viz is True"
+            assert save_path is not None, "output_dir must be specified if fast_viz is True"
 
         # Get config parameters
         interactive_viz = kwargs.get("interactive_viz", False)
@@ -639,9 +614,7 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
 
         # Get device
         self._device = torch.device(
-            "cuda"
-            if torch.cuda.is_available() and not self.config["general"]["force_cpu"]
-            else "cpu"
+            "cuda" if torch.cuda.is_available() and not self.config["general"]["force_cpu"] else "cpu"
         )
         logger.debug(f"Running inference on device {self._device}")
 
@@ -745,9 +718,7 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
             if n_matches >= self.min_inliers_per_pair:
                 group.create_dataset(img1_name, data=matches)
             else:
-                logger.debug(
-                    f"Too few matches found. Skipping image pair {img0.name}-{img1.name}"
-                )
+                logger.debug(f"Too few matches found. Skipping image pair {img0.name}-{img1.name}")
                 return None
         timer_match.update("save to h5")
         timer_match.print(f"{__class__.__name__} match")
@@ -820,9 +791,7 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
     def _update_features_h5(
         self, feature_path, im0_name, im1_name, new_keypoints0, new_keypoints1, matches0
     ) -> np.ndarray:
-        for i, im_name, new_keypoints in zip(
-            [0, 1], [im0_name, im1_name], [new_keypoints0, new_keypoints1]
-        ):
+        for i, im_name, new_keypoints in zip([0, 1], [im0_name, im1_name], [new_keypoints0, new_keypoints1]):
             features = get_features(feature_path, im_name)
             existing_keypoints = features["keypoints"]
 
@@ -844,9 +813,7 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
 
         return matches0
 
-    def _resize_image(
-        self, quality: Quality, image: np.ndarray, interp: str = "cv2_area"
-    ) -> Tuple[np.ndarray]:
+    def _resize_image(self, quality: Quality, image: np.ndarray, interp: str = "cv2_area") -> Tuple[np.ndarray]:
         """
         Resize images based on the specified quality.
 
@@ -905,15 +872,11 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
     ) -> None:
         # Check input parameters
         if not interactive_viz:
-            assert (
-                save_path is not None
-            ), "output_dir must be specified if interactive_viz is False"
+            assert save_path is not None, "output_dir must be specified if interactive_viz is False"
         if fast_viz:
             if interactive_viz:
                 logger.warning("interactive_viz is ignored if fast_viz is True")
-            assert (
-                save_path is not None
-            ), "output_dir must be specified if fast_viz is True"
+            assert save_path is not None, "output_dir must be specified if fast_viz is True"
 
         img0 = Path(img0)
         img1 = Path(img1)
@@ -1024,12 +987,8 @@ def tile_selection(
         i1_new_size = i1.shape[:2]
 
     # Compute tiles
-    tiles0, t_orig0, t_padding0 = tiler.compute_tiles_by_size(
-        input=i0, window_size=tile_size, overlap=tile_overlap
-    )
-    tiles1, t_orig1, t_padding1 = tiler.compute_tiles_by_size(
-        input=i1, window_size=tile_size, overlap=tile_overlap
-    )
+    tiles0, t_orig0, t_padding0 = tiler.compute_tiles_by_size(input=i0, window_size=tile_size, overlap=tile_overlap)
+    tiles1, t_orig1, t_padding1 = tiler.compute_tiles_by_size(input=i1, window_size=tile_size, overlap=tile_overlap)
 
     # Select tile selection method
 
@@ -1224,7 +1183,4 @@ def sp2lg(feats: dict) -> dict:
 
 def rbd2np(data: dict) -> dict:
     """Remove batch dimension from elements in data"""
-    return {
-        k: v[0].cpu().numpy() if isinstance(v, (torch.Tensor, np.ndarray, list)) else v
-        for k, v in data.items()
-    }
+    return {k: v[0].cpu().numpy() if isinstance(v, (torch.Tensor, np.ndarray, list)) else v for k, v in data.items()}

@@ -33,6 +33,7 @@
 
 import sqlite3
 import sys
+from typing import List
 
 import numpy as np
 
@@ -79,7 +80,9 @@ CREATE TABLE IF NOT EXISTS two_view_geometries (
     config INTEGER NOT NULL,
     F BLOB,
     E BLOB,
-    H BLOB)
+    H BLOB,
+    qvec BLOB,
+    tvec BLOB)
 """
 
 CREATE_KEYPOINTS_TABLE = """CREATE TABLE IF NOT EXISTS keypoints (
@@ -139,7 +142,7 @@ def blob_to_array(blob, dtype, shape=(-1,)):
 
 class COLMAPDatabase(sqlite3.Connection):
     @staticmethod
-    def connect(database_path):
+    def connect(database_path: str):
         return sqlite3.connect(database_path, factory=COLMAPDatabase)
 
     def __init__(self, *args, **kwargs):
@@ -167,7 +170,13 @@ class COLMAPDatabase(sqlite3.Connection):
         self.executescript(CREATE_ALL)
 
     def add_camera(
-        self, model, width, height, params, prior_focal_length=False, camera_id=None
+        self,
+        model: str,
+        width: int,
+        height: int,
+        params: List[float],
+        prior_focal_length: bool = False,
+        camera_id: int = None,
     ):
         params = np.asarray(params, np.float64)
         cursor = self.execute(
@@ -185,12 +194,12 @@ class COLMAPDatabase(sqlite3.Connection):
 
     def update_camera(
         self,
-        camera_id,
-        model,
-        width,
-        height,
-        params,
-        prior_focal_length=True,
+        camera_id: int,
+        model: str,
+        width: int,
+        height: int,
+        params: List[float],
+        prior_focal_length: bool = True,
     ):
         params = np.asarray(params, np.float64)
         cursor = self.execute(
@@ -207,7 +216,12 @@ class COLMAPDatabase(sqlite3.Connection):
         return cursor.lastrowid
 
     def add_image(
-        self, name, camera_id, prior_q=np.zeros(4), prior_t=np.zeros(3), image_id=None
+        self,
+        name: str,
+        camera_id: int,
+        prior_q: np.ndarray = np.zeros(4),
+        prior_t: np.ndarray = np.zeros(3),
+        image_id: int = None,
     ):
         cursor = self.execute(
             "INSERT INTO images VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -265,6 +279,8 @@ class COLMAPDatabase(sqlite3.Connection):
         F=np.eye(3),
         E=np.eye(3),
         H=np.eye(3),
+        qvec=np.array([1.0, 0.0, 0.0, 0.0]),
+        tvec=np.zeros(3),
         config=2,
     ):
         assert len(matches.shape) == 2
@@ -278,8 +294,10 @@ class COLMAPDatabase(sqlite3.Connection):
         F = np.asarray(F, dtype=np.float64)
         E = np.asarray(E, dtype=np.float64)
         H = np.asarray(H, dtype=np.float64)
+        qvec = np.asarray(qvec, dtype=np.float64)
+        tvec = np.asarray(tvec, dtype=np.float64)
         self.execute(
-            "INSERT INTO two_view_geometries VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO two_view_geometries VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (pair_id,)
             + matches.shape
             + (
@@ -288,6 +306,8 @@ class COLMAPDatabase(sqlite3.Connection):
                 array_to_blob(F),
                 array_to_blob(E),
                 array_to_blob(H),
+                array_to_blob(qvec),
+                array_to_blob(tvec),
             ),
         )
 

@@ -1,3 +1,4 @@
+import logging
 import shutil
 from pathlib import Path
 
@@ -8,13 +9,15 @@ import torch
 from PIL import Image
 from tqdm import tqdm
 
-from .. import TileSelection, Timer, logger
+from ..constants import TileSelection, Timer
 from ..io.h5 import get_features
 from ..thirdparty.RoMa.roma import roma_outdoor
 from ..utils.geometric_verification import geometric_verification
 from ..utils.tiling import Tiler
 from ..visualization import viz_matches_cv2
 from .matcher_base import DetectorFreeMatcherBase, tile_selection
+
+logger = logging.getLogger("dim")
 
 
 class RomaMatcher(DetectorFreeMatcherBase):
@@ -70,9 +73,7 @@ class RomaMatcher(DetectorFreeMatcherBase):
                 self.config["matcher"]["coarse_res"],
             )
         else:
-            raise ValueError(
-                "Invalid type for 'coarse_res'. It should be an integer or a tuple of two integers."
-            )
+            raise ValueError("Invalid type for 'coarse_res'. It should be an integer or a tuple of two integers.")
         # Force the tile size to be the same as the RoMa coarse_res
         self.config["general"]["tile_size"] = tile_size
 
@@ -162,9 +163,7 @@ class RomaMatcher(DetectorFreeMatcherBase):
             if n_matches >= self.min_inliers_per_pair:
                 group.create_dataset(img1_name, data=matches)
             else:
-                logger.debug(
-                    f"Too few matches found. Skipping image pair {img0.name}-{img1.name}"
-                )
+                logger.debug(f"Too few matches found. Skipping image pair {img0.name}-{img1.name}")
                 return None
         timer_match.update("save to h5")
 
@@ -196,9 +195,7 @@ class RomaMatcher(DetectorFreeMatcherBase):
         W_A, H_A = Image.open(img0_path).size
         W_B, H_B = Image.open(img1_path).size
 
-        warp, certainty = self.matcher.match(
-            str(img0_path), str(img1_path), device=self._device
-        )
+        warp, certainty = self.matcher.match(str(img0_path), str(img1_path), device=self._device)
         matches, certainty = self.matcher.sample(warp, certainty)
         kptsA, kptsB = self.matcher.to_pixel_coordinates(matches, H_A, W_A, H_B, W_B)
         kptsA, kptsB = kptsA.cpu().numpy(), kptsB.cpu().numpy()
@@ -311,15 +308,9 @@ class RomaMatcher(DetectorFreeMatcherBase):
             W_B, H_B = tiles1[tidx1].shape[1], tiles1[tidx1].shape[0]
 
             # Run inference
-            warp, certainty = self.matcher.match(
-                str(tile_path0), str(tile_path1), device=self._device, batched=False
-            )
-            matches, certainty = self.matcher.sample(
-                warp, certainty, num=self.config["matcher"]["num_sampled_points"]
-            )
-            kptsA, kptsB = self.matcher.to_pixel_coordinates(
-                matches, H_A, W_A, H_B, W_B
-            )
+            warp, certainty = self.matcher.match(str(tile_path0), str(tile_path1), device=self._device, batched=False)
+            matches, certainty = self.matcher.sample(warp, certainty, num=self.config["matcher"]["num_sampled_points"])
+            kptsA, kptsB = self.matcher.to_pixel_coordinates(matches, H_A, W_A, H_B, W_B)
             kptsA, kptsB = kptsA.cpu().numpy(), kptsB.cpu().numpy()
 
             # Get match confidence
@@ -345,11 +336,7 @@ class RomaMatcher(DetectorFreeMatcherBase):
 
             # Viz for debugging
             if self.config["general"]["verbose"]:
-                tile_match_dir = (
-                    Path(self.config["general"]["output_dir"])
-                    / "debug"
-                    / "matches_by_tile"
-                )
+                tile_match_dir = Path(self.config["general"]["output_dir"]) / "debug" / "matches_by_tile"
                 tile_match_dir.mkdir(parents=True, exist_ok=True)
                 t0 = cv2.imread(str(tile_path0))
                 t1 = cv2.imread(str(tile_path1))
@@ -358,8 +345,7 @@ class RomaMatcher(DetectorFreeMatcherBase):
                     image1=t1,
                     pts0=kptsA,
                     pts1=kptsB,
-                    save_path=tile_match_dir
-                    / f"{img0.stem}-{img1.stem}_t{tidx0}-{tidx1}.jpg",
+                    save_path=tile_match_dir / f"{img0.stem}-{img1.stem}_t{tidx0}-{tidx1}.jpg",
                     line_thickness=1,
                     autoresize=False,
                     jpg_quality=60,
@@ -396,17 +382,13 @@ class RomaMatcher(DetectorFreeMatcherBase):
         # Select uniue features on image 0, on rounded coordinates
         if select_unique is True:
             decimals = 1
-            _, unique_idx = np.unique(
-                np.round(mkpts0_full, decimals), axis=0, return_index=True
-            )
+            _, unique_idx = np.unique(np.round(mkpts0_full, decimals), axis=0, return_index=True)
             mkpts0_full = mkpts0_full[unique_idx]
             mkpts1_full = mkpts1_full[unique_idx]
 
         # Viz for debugging
         if self.config["general"]["verbose"]:
-            tile_match_dir = (
-                Path(self.config["general"]["output_dir"]) / "debug" / "matches_by_tile"
-            )
+            tile_match_dir = Path(self.config["general"]["output_dir"]) / "debug" / "matches_by_tile"
             tile_match_dir.mkdir(parents=True, exist_ok=True)
             image0 = cv2.imread(str(img0))
             image1 = cv2.imread(str(img1))

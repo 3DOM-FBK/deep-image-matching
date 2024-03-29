@@ -17,6 +17,7 @@ This module contains functions to export image features and matches to a COLMAP 
 """
 
 import argparse
+import logging
 import os
 import warnings
 from pathlib import Path
@@ -26,8 +27,9 @@ import numpy as np
 from PIL import ExifTags, Image
 from tqdm import tqdm
 
-from .. import logger
 from ..utils.database import COLMAPDatabase, image_ids_to_pair_id
+
+logger = logging.getLogger("dim")
 
 default_camera_options = {
     "general": {
@@ -200,15 +202,11 @@ def parse_camera_options(
                 try:
                     create_camera(db, path, cam_opt["camera_model"])
                 except:
-                    logger.warning(
-                        f"Was not possible to load the first image to initialize cam{camera}"
-                    )
+                    logger.warning(f"Was not possible to load the first image to initialize cam{camera}")
     return grouped_images
 
 
-def add_keypoints(
-    db: Path, h5_path: Path, image_path: Path, camera_options: dict = {}
-) -> dict:
+def add_keypoints(db: Path, h5_path: Path, image_path: Path, camera_options: dict = {}) -> dict:
     """
     Adds keypoints from an HDF5 file to a COLMAP database.
 
@@ -241,14 +239,10 @@ def add_keypoints(
 
             if filename not in list(grouped_images.keys()):
                 if camera_options["general"]["single_camera"] is False:
-                    camera_id = create_camera(
-                        db, path, camera_options["general"]["camera_model"]
-                    )
+                    camera_id = create_camera(db, path, camera_options["general"]["camera_model"])
                 elif camera_options["general"]["single_camera"] is True:
                     if k == 0:
-                        camera_id = create_camera(
-                            db, path, camera_options["general"]["camera_model"]
-                        )
+                        camera_id = create_camera(db, path, camera_options["general"]["camera_model"])
                         single_camera_id = camera_id
                         k += 1
                     elif k > 0:
@@ -341,9 +335,7 @@ def add_matches(db, h5_path, fname_to_id):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "h5_path", help=("Path to the directory with " "keypoints.h5 and matches.h5")
-    )
+    parser.add_argument("h5_path", help=("Path to the directory with " "keypoints.h5 and matches.h5"))
     parser.add_argument("image_path", help="Path to source images")
     parser.add_argument(
         "--image-extension",

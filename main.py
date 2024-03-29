@@ -1,25 +1,24 @@
+import logging
 from importlib import import_module
 
+import deep_image_matching as dim
 import yaml
-from deep_image_matching import logger, timer
-from deep_image_matching.config import Config
-from deep_image_matching.image_matching import ImageMatching
-from deep_image_matching.io.h5_to_db import export_to_colmap
-from deep_image_matching.io.h5_to_openmvg import export_to_openmvg
-from deep_image_matching.parser import parse_cli
+
+logger = dim.setup_logger("dim")
+timer = dim.Timer(logger=logger)
 
 # Parse arguments from command line
-args = parse_cli()
+args = dim.parse_cli()
 
 # Build configuration
-config = Config(args)
+config = dim.Config(args)
 
 # For simplicity, save some of the configuration parameters in variables.
 imgs_dir = config.general["image_dir"]
 output_dir = config.general["output_dir"]
 
 # Initialize ImageMatching class
-img_matching = ImageMatching(
+img_matching = dim.ImageMatching(
     imgs_dir=imgs_dir,
     output_dir=output_dir,
     matching_strategy=config.general["matching_strategy"],
@@ -58,7 +57,7 @@ if config.general["upright"]:
 with open(config.general["camera_options"], "r") as file:
     camera_options = yaml.safe_load(file)
 database_path = output_dir / "database.db"
-export_to_colmap(
+dim.io.export_to_colmap(
     img_dir=imgs_dir,
     feature_path=feature_path,
     match_path=match_path,
@@ -85,7 +84,7 @@ if config.general["openmvg_conf"]:
     openmvg_database = openmvgcfg["general"]["openmvg_database"]
     openmvg_out_path = output_dir / "openmvg"
 
-    export_to_openmvg(
+    dim.io.export_to_openmvg(
         img_dir=imgs_dir,
         feature_path=feature_path,
         match_path=match_path,
@@ -94,7 +93,7 @@ if config.general["openmvg_conf"]:
         openmvg_database=openmvg_database,
         camera_options=camera_options,
     )
-    timer.update("export_to_openMVG")
+    timer.update("export_to_openmvg")
 
     # Reconstruction with OpenMVG
     reconstruction = import_module("deep_image_matching.openmvg_reconstruction")
@@ -130,11 +129,7 @@ if not config.general["skip_reconstruction"]:
         #     },
         # )
         reconst_opts = {}
-        refine_intrinsics = (
-            config.general["refine_intrinsics"]
-            if "refine_intrinsics" in config.general
-            else True
-        )
+        refine_intrinsics = config.general["refine_intrinsics"] if "refine_intrinsics" in config.general else True
 
         # Run reconstruction
         model = reconstruction.pycolmap_reconstruction(

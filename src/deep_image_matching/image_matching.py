@@ -1,3 +1,4 @@
+import logging
 import os
 import shutil
 from pathlib import Path
@@ -10,14 +11,10 @@ import torch
 from tqdm import tqdm
 
 from . import (
-    GeometricVerification,
-    Quality,
-    TileSelection,
-    Timer,
     extractors,
-    logger,
     matchers,
 )
+from .constants import GeometricVerification, Quality, TileSelection, Timer
 from .extractors.extractor_base import extractor_loader
 from .extractors.superpoint import SuperPointExtractor
 from .io.h5 import get_features
@@ -25,6 +22,8 @@ from .matchers.lightglue import LightGlueMatcher
 from .matchers.matcher_base import matcher_loader
 from .pairs_generator import PairsGenerator
 from .utils.image import ImageList
+
+logger = logging.getLogger("dim")
 
 
 def make_correspondence_matrix(matches: np.ndarray) -> np.ndarray:
@@ -139,27 +138,19 @@ class ImageMatching:
         # Check that parameters are valid
         if retrieval_option == "sequential":
             if overlap is None:
-                raise ValueError(
-                    "'overlap' option is required when 'strategy' is set to sequential"
-                )
+                raise ValueError("'overlap' option is required when 'strategy' is set to sequential")
         elif retrieval_option == "custom_pairs":
             if self.pair_file is None:
-                raise ValueError(
-                    "'pair_file' option is required when 'strategy' is set to custom_pairs"
-                )
+                raise ValueError("'pair_file' option is required when 'strategy' is set to custom_pairs")
             else:
                 if not self.pair_file.exists():
                     raise ValueError(f"File {self.pair_file} does not exist")
         elif retrieval_option == "covisibility":
             if self.existing_colmap_model is None:
-                raise ValueError(
-                    "'existing_colmap_model' option is required when 'strategy' is set to covisibility"
-                )
+                raise ValueError("'existing_colmap_model' option is required when 'strategy' is set to covisibility")
             else:
                 if not self.existing_colmap_model.exists():
-                    raise ValueError(
-                        f"File {self.existing_colmap_model} does not exist"
-                    )
+                    raise ValueError(f"File {self.existing_colmap_model} does not exist")
 
         # Initialize ImageList class
         self.image_list = ImageList(imgs_dir)
@@ -176,22 +167,16 @@ class ImageMatching:
         try:
             Extractor = extractor_loader(extractors, self.local_features)
         except AttributeError:
-            raise ValueError(
-                f"Invalid local feature extractor. {self.local_features} is not supported."
-            )
+            raise ValueError(f"Invalid local feature extractor. {self.local_features} is not supported.")
         self._extractor = Extractor(self.custom_config)
 
         # Initialize matcher
         try:
             Matcher = matcher_loader(matchers, self.matching_method)
         except AttributeError:
-            raise ValueError(
-                f"Invalid matcher. {self.matching_method} is not supported."
-            )
+            raise ValueError(f"Invalid matcher. {self.matching_method} is not supported.")
         if self.matching_method == "lightglue":
-            self._matcher = Matcher(
-                local_features=self.local_features, config=self.custom_config
-            )
+            self._matcher = Matcher(local_features=self.local_features, config=self.custom_config)
         else:
             self._matcher = Matcher(self.custom_config)
 
@@ -202,14 +187,10 @@ class ImageMatching:
         logger.info(f"  Number of images: {len(self.image_list)}")
         logger.info(f"  Matching strategy: {self.matching_strategy}")
         logger.info(f"  Image quality: {self.custom_config['general']['quality'].name}")
-        logger.info(
-            f"  Tile selection: {self.custom_config['general']['tile_selection'].name}"
-        )
+        logger.info(f"  Tile selection: {self.custom_config['general']['tile_selection'].name}")
         logger.info(f"  Feature extraction method: {self.local_features}")
         logger.info(f"  Matching method: {self.matching_method}")
-        logger.info(
-            f"  Geometric verification: {self.custom_config['general']['geom_verification'].name}"
-        )
+        logger.info(f"  Geometric verification: {self.custom_config['general']['geom_verification'].name}")
         logger.info(f"  CUDA available: {torch.cuda.is_available()}")
 
     @property
@@ -228,9 +209,7 @@ class ImageMatching:
                 raise FileExistsError(f"File {self.pair_file} does not exist")
 
             pairs = get_pairs_from_file(self.pair_file)
-            self.pairs = [
-                (self.image_dir / im1, self.image_dir / im2) for im1, im2 in pairs
-            ]
+            self.pairs = [(self.image_dir / im1, self.image_dir / im2) for im1, im2 in pairs]
 
         else:
             pairs_generator = PairsGenerator(
@@ -329,13 +308,9 @@ class ImageMatching:
                     if rotation != 0:
                         _image1 = cv2.rotate(_image1, cv2rotation)
                     features["feat1"] = SPextractor._extract(_image1)
-                    matches = LGmatcher._match_pairs(
-                        features["feat0"], features["feat1"]
-                    )
+                    matches = LGmatcher._match_pairs(features["feat0"], features["feat1"])
                     matchesXrotation.append((rotation, matches.shape[0]))
-                index_of_max = max(
-                    range(len(matchesXrotation)), key=lambda i: matchesXrotation[i][1]
-                )
+                index_of_max = max(range(len(matchesXrotation)), key=lambda i: matchesXrotation[i][1])
                 n_matches = matchesXrotation[index_of_max][1]
                 if index_of_max != 0 and n_matches > 100:
                     processed_images.append(target_img)

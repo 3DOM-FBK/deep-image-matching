@@ -1,13 +1,13 @@
 import argparse
 import sqlite3
-from tqdm import tqdm
 from collections import defaultdict
-import numpy as np
 from pathlib import Path
 
+import numpy as np
+from tqdm import tqdm
+
 from . import logger
-from .utils.read_write_model import Camera, Image, Point3D, CAMERA_MODEL_NAMES
-from .utils.read_write_model import write_model
+from .utils.read_write_model import CAMERA_MODEL_NAMES, Camera, Image, Point3D, write_model
 
 
 def recover_database_images_and_ids(database_path):
@@ -108,9 +108,7 @@ def read_nvm_model(nvm_path, intrinsics_path, image_ids, camera_ids, skip_points
         for j in range(int(num_observations)):
             s = 7 + 4 * j
             img_index, kp_index, kx, ky = data[s : s + 4]
-            image_idx_to_keypoints[int(img_index)].append(
-                (int(kp_index), float(kx), float(ky), i)
-            )
+            image_idx_to_keypoints[int(img_index)].append((int(kp_index), float(kx), float(ky), i))
             db_image_id = image_idx_to_db_image_id[int(img_index)]
             obs_image_ids.append(db_image_id)
             point2D_idxs.append(kp_index)
@@ -177,9 +175,7 @@ def main(nvm, intrinsics, database, output, skip_points=False):
     image_ids, camera_ids = recover_database_images_and_ids(database)
 
     logger.info("Reading the NVM model...")
-    model = read_nvm_model(
-        nvm, intrinsics, image_ids, camera_ids, skip_points=skip_points
-    )
+    model = read_nvm_model(nvm, intrinsics, image_ids, camera_ids, skip_points=skip_points)
 
     logger.info("Writing the COLMAP model...")
     output.mkdir(exist_ok=True, parents=True)

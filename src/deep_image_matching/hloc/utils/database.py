@@ -31,10 +31,10 @@
 
 # This script is based on an original implementation by True Price.
 
-import sys
 import sqlite3
-import numpy as np
+import sys
 
+import numpy as np
 
 IS_PYTHON3 = sys.version_info[0] >= 3
 
@@ -68,9 +68,7 @@ CREATE_IMAGES_TABLE = """CREATE TABLE IF NOT EXISTS images (
     prior_tz REAL,
     CONSTRAINT image_id_check CHECK(image_id >= 0 and image_id < {}),
     FOREIGN KEY(camera_id) REFERENCES cameras(camera_id))
-""".format(
-    MAX_IMAGE_ID
-)
+""".format(MAX_IMAGE_ID)
 
 CREATE_TWO_VIEW_GEOMETRIES_TABLE = """
 CREATE TABLE IF NOT EXISTS two_view_geometries (
@@ -151,20 +149,14 @@ class COLMAPDatabase(sqlite3.Connection):
 
         self.create_tables = lambda: self.executescript(CREATE_ALL)
         self.create_cameras_table = lambda: self.executescript(CREATE_CAMERAS_TABLE)
-        self.create_descriptors_table = lambda: self.executescript(
-            CREATE_DESCRIPTORS_TABLE
-        )
+        self.create_descriptors_table = lambda: self.executescript(CREATE_DESCRIPTORS_TABLE)
         self.create_images_table = lambda: self.executescript(CREATE_IMAGES_TABLE)
-        self.create_two_view_geometries_table = lambda: self.executescript(
-            CREATE_TWO_VIEW_GEOMETRIES_TABLE
-        )
+        self.create_two_view_geometries_table = lambda: self.executescript(CREATE_TWO_VIEW_GEOMETRIES_TABLE)
         self.create_keypoints_table = lambda: self.executescript(CREATE_KEYPOINTS_TABLE)
         self.create_matches_table = lambda: self.executescript(CREATE_MATCHES_TABLE)
         self.create_name_index = lambda: self.executescript(CREATE_NAME_INDEX)
 
-    def add_camera(
-        self, model, width, height, params, prior_focal_length=False, camera_id=None
-    ):
+    def add_camera(self, model, width, height, params, prior_focal_length=False, camera_id=None):
         params = np.asarray(params, np.float64)
         cursor = self.execute(
             "INSERT INTO cameras VALUES (?, ?, ?, ?, ?, ?)",
@@ -277,8 +269,8 @@ class COLMAPDatabase(sqlite3.Connection):
 
 
 def example_usage():
-    import os
     import argparse
+    import os
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--database_path", default="database.db")

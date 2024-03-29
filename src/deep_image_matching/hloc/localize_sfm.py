@@ -1,20 +1,19 @@
 import argparse
-import numpy as np
-from pathlib import Path
-from collections import defaultdict
-from typing import Dict, List, Union
-from tqdm import tqdm
 import pickle
+from collections import defaultdict
+from pathlib import Path
+from typing import Dict, List, Union
+
+import numpy as np
 import pycolmap
+from tqdm import tqdm
 
 from . import logger
 from .utils.io import get_keypoints, get_matches
 from .utils.parsers import parse_image_lists, parse_retrieval
 
 
-def do_covisibility_clustering(
-    frame_ids: List[int], reconstruction: pycolmap.Reconstruction
-):
+def do_covisibility_clustering(frame_ids: List[int], reconstruction: pycolmap.Reconstruction):
     clusters = []
     visited = set()
     for frame_id in frame_ids:
@@ -87,9 +86,7 @@ def pose_from_cluster(
         if image.num_points3D() == 0:
             logger.debug(f"No 3D points found for {image.name}.")
             continue
-        points3D_ids = np.array(
-            [p.point3D_id if p.has_point3D() else -1 for p in image.points2D]
-        )
+        points3D_ids = np.array([p.point3D_id if p.has_point3D() else -1 for p in image.points2D])
 
         matches, _ = get_matches(matches_path, qname, image.name)
         matches = matches[points3D_ids[matches[:, 1]] != -1]
@@ -113,9 +110,7 @@ def pose_from_cluster(
     }
 
     # mostly for logging and post-processing
-    mkp_to_3D_to_db = [
-        (j, kp_idx_to_3D_to_db[i][j]) for i in idxs for j in kp_idx_to_3D[i]
-    ]
+    mkp_to_3D_to_db = [(j, kp_idx_to_3D_to_db[i][j]) for i in idxs for j in kp_idx_to_3D[i]]
     log = {
         "db": db_ids,
         "PnP_ret": ret,
@@ -181,9 +176,7 @@ def main(
             best_cluster = None
             logs_clusters = []
             for i, cluster_ids in enumerate(clusters):
-                ret, log = pose_from_cluster(
-                    localizer, qname, qcam, cluster_ids, features, matches
-                )
+                ret, log = pose_from_cluster(localizer, qname, qcam, cluster_ids, features, matches)
                 if ret["success"] and ret["num_inliers"] > best_inliers:
                     best_cluster = i
                     best_inliers = ret["num_inliers"]
@@ -198,9 +191,7 @@ def main(
                 "covisibility_clustering": covisibility_clustering,
             }
         else:
-            ret, log = pose_from_cluster(
-                localizer, qname, qcam, db_ids, features, matches
-            )
+            ret, log = pose_from_cluster(localizer, qname, qcam, db_ids, features, matches)
             if ret["success"]:
                 poses[qname] = (ret["qvec"], ret["tvec"])
             else:

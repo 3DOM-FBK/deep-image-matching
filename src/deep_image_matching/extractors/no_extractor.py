@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import Union
 
@@ -5,9 +6,10 @@ import h5py
 import numpy as np
 import torch
 
-from .. import logger
 from ..utils.image import Image
 from .extractor_base import ExtractorBase
+
+logger = logging.getLogger("dim")
 
 
 class NoExtractor(ExtractorBase):
@@ -34,9 +36,7 @@ class NoExtractor(ExtractorBase):
         elif isinstance(img, Path):
             im_path = img
         else:
-            raise TypeError(
-                "Invalid image path. 'img' must be a string, a Path or an Image object"
-            )
+            raise TypeError("Invalid image path. 'img' must be a string, a Path or an Image object")
         if not im_path.exists():
             raise ValueError(f"Image {im_path} does not exist")
 

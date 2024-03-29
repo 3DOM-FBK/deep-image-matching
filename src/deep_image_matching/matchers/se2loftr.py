@@ -1,3 +1,4 @@
+import logging
 import urllib.request
 from pathlib import Path
 
@@ -7,11 +8,13 @@ import numpy as np
 import torch
 from yacs.config import CfgNode as CN
 
-from .. import TileSelection, Timer, logger
+from ..constants import TileSelection, Timer
 from ..thirdparty.se2loftr.configs.loftr.outdoor import loftr_ds_e2_dense_8rot
 from ..thirdparty.se2loftr.src.loftr import LoFTR
 from ..utils.tiling import Tiler
 from .matcher_base import DetectorFreeMatcherBase, tile_selection
+
+logger = logging.getLogger("dim")
 
 
 class SE2LOFTRMatcher(DetectorFreeMatcherBase):
@@ -20,15 +23,9 @@ class SE2LOFTRMatcher(DetectorFreeMatcherBase):
     min_matches = 100
     min_matches_per_tile = 3
     max_tile_size = 1200
-    weights_url = (
-        "https://github.com/franioli/DIM_datasets/raw/main/weights/8rot.ckpt?download="
-    )
+    weights_url = "https://github.com/franioli/DIM_datasets/raw/main/weights/8rot.ckpt?download="
     se2loftr_path = (
-        Path(__file__).parent.parent
-        / "thirdparty"
-        / "weights"
-        / "se2loftr_weights"
-        / "8rot.ckpt"
+        Path(__file__).parent.parent / "thirdparty" / "weights" / "se2loftr_weights" / "8rot.ckpt"
     )  # Path to se2loftr weights
     resize_to = (640, 480)
 
@@ -41,9 +38,7 @@ class SE2LOFTRMatcher(DetectorFreeMatcherBase):
         # _default_cfg['coarse']['temp_bug_fix'] = False  # set to False when using the old ckpt
 
         _used_cfg = self._lower_config(loftr_ds_e2_dense_8rot.cfg)["loftr"]
-        _used_cfg["coarse"]["temp_bug_fix"] = (
-            True  # set to False when using the old ckpt
-        )
+        _used_cfg["coarse"]["temp_bug_fix"] = True  # set to False when using the old ckpt
         self.matcher = LoFTR(config=_used_cfg).to(device=self._device)
 
         if not self.se2loftr_path.exists():
@@ -52,9 +47,7 @@ class SE2LOFTRMatcher(DetectorFreeMatcherBase):
             urllib.request.urlretrieve(self.weights_url, self.se2loftr_path)
             logger.info("SE2-LOFTR weights downloaded successfully.")
 
-        self.matcher.load_state_dict(
-            torch.load(str(self.se2loftr_path), map_location=self._device)["state_dict"]
-        )
+        self.matcher.load_state_dict(torch.load(str(self.se2loftr_path), map_location=self._device)["state_dict"])
         self.matcher = self.matcher.eval().to(device=self._device)
 
         tile_size = self.config["general"]["tile_size"]
@@ -310,9 +303,7 @@ class SE2LOFTRMatcher(DetectorFreeMatcherBase):
         # Select uniue features on image 0, on rounded coordinates
         if select_unique is True:
             decimals = 1
-            _, unique_idx = np.unique(
-                np.round(mkpts0_full, decimals), axis=0, return_index=True
-            )
+            _, unique_idx = np.unique(np.round(mkpts0_full, decimals), axis=0, return_index=True)
             mkpts0_full = mkpts0_full[unique_idx]
             mkpts1_full = mkpts1_full[unique_idx]
 
