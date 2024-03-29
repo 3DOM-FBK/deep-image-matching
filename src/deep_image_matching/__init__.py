@@ -1,7 +1,6 @@
 from enum import Enum
 from typing import Tuple
 
-from .image_matching import ImageMatching  # noqa
 from .utils.logger import change_logger_level, get_logger, setup_logger  # noqa
 from .utils.timer import Timer, timeit  # noqa
 
