@@ -106,6 +106,7 @@ def prova(
     cluster1,
 ):
     processed = []
+    rotated_images = []
 
     for j, img1 in enumerate(cluster1):
         # for i, img0 in enumerate(cluster0):
@@ -133,7 +134,7 @@ def prova(
                 n_matches = matchesXrotation[index_of_max][1]
                 if index_of_max != 0 and n_matches > 100:
                     print(f"ref {img0}     rotated {img1} {rotations[index_of_max]}")
-                    # self.rotated_images.append((img1, rotations[index_of_max]))
+                    rotated_images.append((img1, rotations[index_of_max]))
                     image1 = cv2.imread(str(path_to_upright_dir / img1))
                     rotated_image1 = cv2.rotate(image1, cv2_rot_params[index_of_max])
                     rotated_image1 = cv2.cvtColor(rotated_image1, cv2.COLOR_BGR2GRAY)
@@ -147,7 +148,7 @@ def prova(
                     cv2.imwrite(str(path_to_upright_dir / img1), image1)
                     print(f"ref {img0}     NOT rotated {img1} {rotations[index_of_max]}")
                     break
-    return processed
+    return processed, rotated_images
 
 
 def make_correspondence_matrix(matches: np.ndarray) -> np.ndarray:
@@ -541,13 +542,22 @@ class ImageMatching:
             )
             sublists = np.array_split(cluster1, N_CORES)
             with Pool(N_CORES) as p:
-                processed = p.map(partial_prova, sublists)
+                results = p.map(partial_prova, sublists)
             print(len(sublists[0]))
             print(len(sublists[1]))
             print(len(sublists[2]))
             print(len(sublists[3]))
 
+            processed = [item[0] for item in results]
+            rotated = [item[1] for item in results]
+
             processed = [item for sublist in processed for item in sublist if item]
+            self.rotated_images = self.rotated_images + [item[0] for item in rotated if item != []]
+            
+            #print(processed)
+            #print(rotated)
+            #quit()
+            #self.rotated_images = [item for item in rotated_images]
 
             for r in processed:
                 cluster0.append(r)
@@ -559,9 +569,12 @@ class ImageMatching:
                 break
 
         out_file = self.pair_file.parent / f"{self.pair_file.stem}_rot.txt"
+        print('out_file', out_file)
         with open(out_file, "w") as txt_file:
             for element in self.rotated_images:
+                print(element)
                 txt_file.write(f"{element[0]} {element[1]}\n")
+        #quit()
 
         # Update image directory to the dir with upright images
         # Features will be rotate accordingly on exporting, if the images have been rotated
