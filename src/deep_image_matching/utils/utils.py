@@ -62,14 +62,48 @@ def get_pairs_from_file(pair_file: Path) -> list:
 
 
 def to_homogeneous(p):
+    """
+    Converts 2D points to homogeneous coordinates.
+
+    Args:
+        p (np.ndarray): A numpy array of shape (N, 2) representing 2D points.
+
+    Returns:
+        np.ndarray: Array of shape (N, 3) where the last column is appended
+                    with ones for homogeneous representation.
+    """
     return np.pad(p, ((0, 0),) * (p.ndim - 1) + ((0, 1),), constant_values=1)
 
 
 def vector_to_cross_product_matrix(v):
+    """
+    Converts a 3D vector into its corresponding skew-symmetric cross-product matrix.
+
+    This matrix is useful for representing cross-product operations in vector-matrix calculations.
+
+    Args:
+        v (np.ndarray): A 3-dimensional NumPy array representing the input vector.
+
+    Returns:
+        np.ndarray: A 3x3 NumPy array representing the skew-symmetric cross-product matrix.
+    """
     return np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
 
 
 def compute_epipolar_errors(j_from_i: pycolmap.Rigid3d, p2d_i, p2d_j):
+    """
+    Computes epipolar errors for corresponding 2D points between two images.
+
+    Args:
+        j_from_i (pycolmap.Rigid3d): The transformation from image i to image j.
+        p2d_i (np.ndarray): 2D points in image i (shape: (N, 2)).
+        p2d_j (np.ndarray): Corresponding 2D points in image j (shape: (N, 2)).
+
+    Returns:
+        tuple: A tuple containing two numpy arrays:
+            * errors_i: Epipolar errors for points in image i.
+            * errors_j: Epipolar errors for points in image j.
+    """
     j_E_i = j_from_i.essential_matrix()
     l2d_j = to_homogeneous(p2d_i) @ j_E_i.T
     l2d_i = to_homogeneous(p2d_j) @ j_E_i
@@ -77,29 +111,3 @@ def compute_epipolar_errors(j_from_i: pycolmap.Rigid3d, p2d_i, p2d_j):
     errors_i = dist / np.linalg.norm(l2d_i[:, :2], axis=1)
     errors_j = dist / np.linalg.norm(l2d_j[:, :2], axis=1)
     return errors_i, errors_j
-
-
-def create_db_from_model(reconstruction: pycolmap.Reconstruction, database_path: Path) -> Dict[str, int]:
-    if database_path.exists():
-        logger.warning("The database already exists, deleting it.")
-        database_path.unlink()
-
-    with COLMAPDatabase.connect(database_path) as db:
-        db.create_tables()
-
-        for i, camera in reconstruction.cameras.items():
-            db.add_camera(
-                camera.model.value,
-                camera.width,
-                camera.height,
-                camera.params,
-                camera_id=i,
-                prior_focal_length=True,
-            )
-
-        for i, image in reconstruction.images.items():
-            db.add_image(image.name, image.camera_id, image_id=i)
-
-        db.commit()
-
-    return {image.name: i for i, image in reconstruction.images.items()}

@@ -17,7 +17,6 @@ from deep_image_matching.utils import (
 logger = logging.getLogger("dim")
 
 
-# Utils functions
 def parse_retrieval(path):
     retrieval = defaultdict(list)
     with open(path, "r") as f:
@@ -30,6 +29,18 @@ def parse_retrieval(path):
 
 
 def create_db_from_model(reconstruction: pycolmap.Reconstruction, database_path: Path) -> Dict[str, int]:
+    """
+    Creates a COLMAP database from a PyCOLMAP reconstruction (it deletes an existing database if found at the specified path). The function
+    populates the database with camera parameters and image information, but does not add 2D and 3D points.
+
+    Args:
+        reconstruction (pycolmap.Reconstruction): The input PyCOLMAP reconstruction.
+        database_path (Path): Path to the COLMAP database file.
+
+    Returns:
+        Dict[str, int]: A dictionary mapping image names to their corresponding
+                        image IDs in the database.
+    """
     if database_path.exists():
         logger.warning("The database already exists, deleting it.")
         database_path.unlink()
@@ -56,6 +67,19 @@ def create_db_from_model(reconstruction: pycolmap.Reconstruction, database_path:
 
 
 def get_keypoints(features_h5: Path, name: str) -> np.ndarray:
+    """
+    Loads keypoints from an HDF5 file.
+
+    Args:
+        features_h5 (Path): Path to the HDF5 file containing image features.
+        name (str): The name of the image whose keypoints are to be retrieved.
+
+    Returns:
+        np.ndarray: An array of keypoints.
+
+    Raises:
+        KeyError: If the specified image name is not found within the HDF5 file.
+    """
     with h5py.File(str(features_h5), "r", libver="latest") as f:
         if name not in f:
             raise KeyError(f"Key '{name}' not found in '{features_h5}'")
@@ -63,6 +87,20 @@ def get_keypoints(features_h5: Path, name: str) -> np.ndarray:
 
 
 def get_matches(matches_h5: Path, name0: str, name1) -> np.ndarray:
+    """
+    Retrieves feature matches between two images from an HDF5 file.
+
+    Args:
+        matches_h5 (Path): Path to the HDF5 file storing feature matches.
+        name0 (str): Name of the first image.
+        name1 (str): Name of the second image.
+
+    Returns:
+        np.ndarray: An array representing the feature matches.
+
+    Raises:
+        KeyError: If either image name is not found in the HDF5 file.
+    """
     with h5py.File(str(matches_h5), "r", libver="latest") as f:
         if name0 not in f:
             if name1 in f:
@@ -73,6 +111,14 @@ def get_matches(matches_h5: Path, name0: str, name1) -> np.ndarray:
 
 
 def import_keypoints(features_h5: Path, image_ids: Dict[str, int], database_path: Path) -> None:
+    """
+    Imports keypoints from an HDF5 file into a COLMAP database.
+
+    Args:
+        features_h5 (Path): Path to the HDF5 file containing image features.
+        image_ids (Dict[str, int]):  A dictionary mapping image names to image IDs.
+        database_path (Path): Path to the COLMAP database file.
+    """
     with COLMAPDatabase.connect(database_path) as db:
         for name, image_id in tqdm(image_ids.items(), desc="Importing keypoints"):
             keypoints = get_keypoints(features_h5, name)
@@ -88,6 +134,19 @@ def import_matches(
     pair_file: Path,
     add_two_view_geometry: bool = False,
 ):
+    """
+    Imports feature matches into a COLMAP database.
+
+    Reads image pairs from a file and retrieves corresponding matches from
+    an HDF5 file, adding them to the specified database.
+
+    Args:
+        matches_h5 (Path): Path to the HDF5 file containing feature matches.
+        image_ids (Dict[str, int]): A dictionary mapping image names to their corresponding image IDs.
+        database_path (Path): Path to the COLMAP database file.
+        pair_file (Path): Path to a file containing image pairs (one pair per line).
+        add_two_view_geometry (bool): If True, calculates and adds two-view geometry to the database. Defaults to False.
+    """
     pairs = get_pairs_from_file(pair_file)
     with COLMAPDatabase.connect(database_path) as db:
         for name0, name1 in tqdm(pairs, desc="Importing matches"):
@@ -108,6 +167,21 @@ def import_verifed_matches(
     pairs_path: Path,
     max_error: float = 4.0,
 ):
+    """
+    Imports geometrically verified matches into a COLMAP database.
+
+    Performs geometric verification of matches using epipolar constraints.
+    Only matches that pass the verification are added to the database.
+
+    Args:
+        image_ids (Dict[str, int]): A dictionary mapping image names to their corresponding image IDs.
+        reference (pycolmap.Reconstruction): The reference PyCOLMAP reconstruction.
+        database_path (Path): Path to the COLMAP database file.
+        features_path (Path): Path to the HDF5 file containing image features.
+        matches_path (Path): Path to the HDF5 file containing feature matches.
+        pairs_path (Path): Path to a file specifying image pairs for retrieval.
+        max_error (float): Maximum allowable epipolar error (in pixels) for a match to be considered valid. Defaults to 4.0.
+    """
     logger.info("Performing geometric verification of the matches...")
 
     pairs = parse_retrieval(pairs_path)
