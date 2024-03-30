@@ -10,6 +10,8 @@ from deep_image_matching.utils.database import pair_id_to_image_ids
 
 logger = logging.getLogger("dim")
 
+TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "utils/templates")
+
 
 def view_graph(db, output_dir, imgs_dir):
     logger.info("Creating view graph visualization...")
@@ -23,8 +25,7 @@ def view_graph(db, output_dir, imgs_dir):
     nt = Network()
 
     # HTML template for view graph details panel
-    current_directory = os.path.dirname(os.path.realpath(__file__))
-    nt.set_template(os.path.join(current_directory, "templates", "template.html"))
+    nt.set_template(os.path.join(TEMPLATE_DIR, "template.html"))
 
     # Add nodes
     G = nx.Graph()
