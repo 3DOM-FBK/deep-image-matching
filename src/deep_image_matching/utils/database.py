@@ -152,19 +152,23 @@ class COLMAPDatabase(sqlite3.Connection):
         super(COLMAPDatabase, self).__init__(*args, **kwargs)
 
         self.create_cameras_table = lambda: self.executescript(CREATE_CAMERAS_TABLE)
-        self.create_descriptors_table = lambda: self.executescript(
-            CREATE_DESCRIPTORS_TABLE
-        )
+        self.create_descriptors_table = lambda: self.executescript(CREATE_DESCRIPTORS_TABLE)
         self.create_images_table = lambda: self.executescript(CREATE_IMAGES_TABLE)
-        self.create_two_view_geometries_table = lambda: self.executescript(
-            CREATE_TWO_VIEW_GEOMETRIES_TABLE
-        )
+        self.create_two_view_geometries_table = lambda: self.executescript(CREATE_TWO_VIEW_GEOMETRIES_TABLE)
         self.create_keypoints_table = lambda: self.executescript(CREATE_KEYPOINTS_TABLE)
         self.create_matches_table = lambda: self.executescript(CREATE_MATCHES_TABLE)
         self.create_name_index = lambda: self.executescript(CREATE_NAME_INDEX)
 
         self.create_tables()
         self.commit()
+
+    def __enter__(self):
+        """Enter the context manager"""
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        """Exit the context manager. Close the connection when exiting"""
+        self.close()
 
     def create_tables(self):
         self.executescript(CREATE_ALL)
@@ -312,7 +316,9 @@ class COLMAPDatabase(sqlite3.Connection):
         )
 
     def get_keypoints(self) -> dict:
-        query = "SELECT images.name, rows, cols, data FROM keypoints JOIN images ON keypoints.image_id = images.image_id"
+        query = (
+            "SELECT images.name, rows, cols, data FROM keypoints JOIN images ON keypoints.image_id = images.image_id"
+        )
         data = self.execute(query).fetchall()
 
         kpts = {}
@@ -336,10 +342,7 @@ class COLMAPDatabase(sqlite3.Connection):
         return descs
 
     def get_matches(self) -> tuple:
-        images = {
-            k[0]: k[1]
-            for k in self.execute("SELECT image_id, name FROM images").fetchall()
-        }
+        images = {k[0]: k[1] for k in self.execute("SELECT image_id, name FROM images").fetchall()}
         data = self.execute("SELECT * FROM matches").fetchall()
         matches = {}
         for pair in data:
