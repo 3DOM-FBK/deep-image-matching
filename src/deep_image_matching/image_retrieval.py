@@ -16,7 +16,7 @@ def ImageRetrieval(imgs_dir, outs_dir, retrieval_option, sfm_pairs):
     retrieval_path = extract_features.main(retrieval_conf, imgs_dir, outs_dir)
 
     try:
-        pairs_from_retrieval.main(retrieval_path, sfm_pairs, num_matched=1) # num_matched=number_imgs
+        pairs_from_retrieval.main(retrieval_path, sfm_pairs, num_matched=10) # num_matched=number_imgs
     except Exception as e:
         print("retrieval_path", retrieval_path)
         print("sfm_pairs", sfm_pairs)
