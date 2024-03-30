@@ -6,12 +6,8 @@ from pathlib import Path
 from typing import Dict
 
 import numpy as np
-import pycolmap
 
-from .database import COLMAPDatabase
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("dim")
 
 
 class OutputCapture:
@@ -90,7 +86,7 @@ def vector_to_cross_product_matrix(v):
     return np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
 
 
-def compute_epipolar_errors(j_from_i: pycolmap.Rigid3d, p2d_i, p2d_j):
+def compute_epipolar_errors(j_from_i, p2d_i, p2d_j):
     """
     Computes epipolar errors for corresponding 2D points between two images.
 
