@@ -4,6 +4,7 @@ __version__ = "1.0.0"
 from . import io
 from . import utils
 from . import reconstruction
+from . import triangulation
 from . import extractors
 from . import matchers
 

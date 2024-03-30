@@ -5,16 +5,13 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import h5py
 import numpy as np
 import pycolmap
 from tqdm import tqdm
 
 from . import logger
-from .utils.database import COLMAPDatabase, image_ids_to_pair_id
-from .utils.geometry import compute_epipolar_errors
-from .utils.io import get_keypoints, get_matches
-from .utils.parsers import parse_retrieval
+from .utils import compute_epipolar_errors, get_keypoints, get_matches, parse_retrieval
+from .utils.database import COLMAPDatabase
 
 
 class OutputCapture:
@@ -44,7 +41,7 @@ def create_db_from_model(reconstruction: pycolmap.Reconstruction, database_path:
 
     for i, camera in reconstruction.cameras.items():
         db.add_camera(
-            camera.model_id,
+            camera.model.value,
             camera.width,
             camera.height,
             camera.params,
@@ -76,8 +73,8 @@ def import_features(image_ids: Dict[str, int], database_path: Path, features_pat
 def import_matches(
     image_ids: Dict[str, int],
     database_path: Path,
-    matches_path: Path,
     pairs_path: Path,
+    matches_path: Path,
     min_match_score: Optional[float] = None,
     skip_geometric_verification: bool = False,
 ):
@@ -106,53 +103,15 @@ def import_matches(
     db.close()
 
 
-def import_matches2(
-    image_ids: Dict[str, int],
-    database_path: Path,
-    matches_path: Path,
-    skip_geometric_verification: bool = False,
-):
-    logger.info("Importing matches into the database...")
-
-    db = COLMAPDatabase.connect(database_path)
-    match_file = h5py.File(str(matches_path), "r")
-
-    added = set()
-    n_keys = len(match_file.keys())
-    n_total = (n_keys * (n_keys - 1)) // 2
-
-    with tqdm(total=n_total) as pbar:
-        for key_1 in match_file.keys():
-            group = match_file[key_1]
-            for key_2 in group.keys():
-                id_1 = image_ids[key_1]
-                id_2 = image_ids[key_2]
-
-                pair_id = image_ids_to_pair_id(id_1, id_2)
-                if pair_id in added:
-                    logger.warning(f"Pair {pair_id} ({id_1}, {id_2}) already added!")
-                    continue
-
-                matches = group[key_2][()]
-                db.add_matches(id_1, id_2, matches)
-
-                if skip_geometric_verification:
-                    db.add_two_view_geometry(id_1, id_2, matches)
-
-                added.add(pair_id)
-
-                pbar.update(1)
-
-    db.commit()
-    db.close()
-    match_file.close()
-
-
 def estimation_and_geometric_verification(database_path: Path, pairs_path: Path, verbose: bool = False):
     logger.info("Performing geometric verification of the matches...")
     with OutputCapture(verbose):
         with pycolmap.ostream():
-            pycolmap.verify_matches(database_path, pairs_path, max_num_trials=20000, min_inlier_ratio=0.1)
+            pycolmap.verify_matches(
+                database_path,
+                pairs_path,
+                options=dict(ransac=dict(max_num_trials=20000, min_inlier_ratio=0.1)),
+            )
 
 
 def geometric_verification(
@@ -178,7 +137,7 @@ def geometric_verification(
         kps0, noise0 = get_keypoints(features_path, name0, return_uncertainty=True)
         noise0 = 1.0 if noise0 is None else noise0
         if len(kps0) > 0:
-            kps0 = np.stack(cam0.image_to_world(kps0))
+            kps0 = np.stack(cam0.cam_from_img(kps0))
         else:
             kps0 = np.zeros((0, 2))
 
@@ -189,7 +148,7 @@ def geometric_verification(
             kps1, noise1 = get_keypoints(features_path, name1, return_uncertainty=True)
             noise1 = 1.0 if noise1 is None else noise1
             if len(kps1) > 0:
-                kps1 = np.stack(cam1.image_to_world(kps1))
+                kps1 = np.stack(cam1.cam_from_img(kps1))
             else:
                 kps1 = np.zeros((0, 2))
 
@@ -203,11 +162,11 @@ def geometric_verification(
                 db.add_two_view_geometry(id0, id1, matches)
                 continue
 
-            qvec_01, tvec_01 = pycolmap.relative_pose(image0.qvec, image0.tvec, image1.qvec, image1.tvec)
-            _, errors0, errors1 = compute_epipolar_errors(qvec_01, tvec_01, kps0[matches[:, 0]], kps1[matches[:, 1]])
+            cam1_from_cam0 = image1.cam_from_world * image0.cam_from_world.inverse()
+            errors0, errors1 = compute_epipolar_errors(cam1_from_cam0, kps0[matches[:, 0]], kps1[matches[:, 1]])
             valid_matches = np.logical_and(
-                errors0 <= max_error * noise0 / cam0.mean_focal_length(),
-                errors1 <= max_error * noise1 / cam1.mean_focal_length(),
+                errors0 <= cam0.cam_from_img_threshold(noise0 * max_error),
+                errors1 <= cam1.cam_from_img_threshold(noise1 * max_error),
             )
             # TODO: We could also add E to the database, but we need
             # to reverse the transformations if id0 > id1 in utils/database.py.
