@@ -102,6 +102,7 @@ def prova(
     cv2_rot_params,
     SPextractor,
     LGmatcher,
+    pairs,
     cluster1,
 ):
     processed = []
@@ -109,37 +110,43 @@ def prova(
     for j, img1 in enumerate(cluster1):
         # for i, img0 in enumerate(cluster0):
         for i in range(len(cluster0)):
+            
             img0 = cluster0[len(cluster0) - 1 - i]
-            print(j, i, len(cluster1), len(cluster0))
-            matchesXrotation = find_matches_per_rotation(
-                str(path_to_upright_dir / img0),
-                str(path_to_upright_dir / img1),
-                rotations,
-                cv2_rot_params,
-                SPextractor,
-                LGmatcher,
-            )
-            index_of_max = max(
-                range(len(matchesXrotation)),
-                key=lambda i: matchesXrotation[i][1],
-            )
-            n_matches = matchesXrotation[index_of_max][1]
-            if index_of_max != 0 and n_matches > 100:
-                print(f"ref {img0}     rotated {img1} {rotations[index_of_max]}")
-                # self.rotated_images.append((img1, rotations[index_of_max]))
-                image1 = cv2.imread(str(path_to_upright_dir / img1))
-                rotated_image1 = cv2.rotate(image1, cv2_rot_params[index_of_max])
-                rotated_image1 = cv2.cvtColor(rotated_image1, cv2.COLOR_BGR2GRAY)
-                cv2.imwrite(str(path_to_upright_dir / img1), rotated_image1)
-                processed.append(img1)
-                break
-            if index_of_max == 0 and n_matches > 100:
-                processed.append(img1)
-                image1 = cv2.imread(str(path_to_upright_dir / img1))
-                image1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
-                cv2.imwrite(str(path_to_upright_dir / img1), image1)
-                print(f"ref {img0}     NOT rotated {img1} {rotations[index_of_max]}")
-                break
+
+            if True:#(img0, img1) in pairs or (img1, img0) in pairs:
+                print('inside pairs')            
+
+
+                print(j, i, len(cluster1), len(cluster0))
+                matchesXrotation = find_matches_per_rotation(
+                    str(path_to_upright_dir / img0),
+                    str(path_to_upright_dir / img1),
+                    rotations,
+                    cv2_rot_params,
+                    SPextractor,
+                    LGmatcher,
+                )
+                index_of_max = max(
+                    range(len(matchesXrotation)),
+                    key=lambda i: matchesXrotation[i][1],
+                )
+                n_matches = matchesXrotation[index_of_max][1]
+                if index_of_max != 0 and n_matches > 100:
+                    print(f"ref {img0}     rotated {img1} {rotations[index_of_max]}")
+                    # self.rotated_images.append((img1, rotations[index_of_max]))
+                    image1 = cv2.imread(str(path_to_upright_dir / img1))
+                    rotated_image1 = cv2.rotate(image1, cv2_rot_params[index_of_max])
+                    rotated_image1 = cv2.cvtColor(rotated_image1, cv2.COLOR_BGR2GRAY)
+                    cv2.imwrite(str(path_to_upright_dir / img1), rotated_image1)
+                    processed.append(img1)
+                    break
+                if index_of_max == 0 and n_matches > 100:
+                    processed.append(img1)
+                    image1 = cv2.imread(str(path_to_upright_dir / img1))
+                    image1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
+                    cv2.imwrite(str(path_to_upright_dir / img1), image1)
+                    print(f"ref {img0}     NOT rotated {img1} {rotations[index_of_max]}")
+                    break
     return processed
 
 
@@ -370,6 +377,7 @@ class ImageMatching:
 
     def rotate_upright_images(self, resize_size=1000):
         logger.info("Rotating images upright...")
+        pairs = [(item[0].name, item[1].name) for item in self.pairs]
         path_to_upright_dir = self.output_dir / "upright_images"
         os.makedirs(path_to_upright_dir, exist_ok=False)
         images = os.listdir(self.image_dir)
@@ -491,65 +499,23 @@ class ImageMatching:
         )
 
         random_first_img = random.randint(0, len(cluster1))
-        random_first_img = 15
+        random_first_img = 1 #15
         print(cluster1[random_first_img])
 
         cluster0.append(cluster1[random_first_img])
         cluster1.pop(random_first_img)
 
-        MULTIPROCESS = True
-
         iterations = 0
         max_iter = 130
+
         while True:
             iterations += 1
             rotated = []
             print("cluster0", cluster0)
             print("cluster1", cluster1)
 
-            if MULTIPROCESS == False:
-                for j, img1 in enumerate(cluster1):
-                    # for i, img0 in enumerate(cluster0):
-                    for i in range(len(cluster0)):
-                        img0 = cluster0[len(cluster0) - 1 - i]
-                        print(j, i, len(cluster1), len(cluster0))
-                        matchesXrotation = find_matches_per_rotation(
-                            str(path_to_upright_dir / img0),
-                            str(path_to_upright_dir / img1),
-                            rotations,
-                            cv2_rot_params,
-                        )
-                        index_of_max = max(
-                            range(len(matchesXrotation)),
-                            key=lambda i: matchesXrotation[i][1],
-                        )
-                        n_matches = matchesXrotation[index_of_max][1]
-                        if index_of_max != 0 and n_matches > 200:
-                            print(
-                                f"ref {img0}     rotated {img1} {rotations[index_of_max]}"
-                            )
-                            self.rotated_images.append((img1, rotations[index_of_max]))
-                            image1 = cv2.imread(str(path_to_upright_dir / img1))
-                            rotated_image1 = cv2.rotate(
-                                image1, cv2_rot_params[index_of_max]
-                            )
-                            rotated_image1 = cv2.cvtColor(
-                                rotated_image1, cv2.COLOR_BGR2GRAY
-                            )
-                            cv2.imwrite(str(path_to_upright_dir / img1), rotated_image1)
-                            rotated.append(j)
-                            break
-                        if index_of_max == 0 and n_matches > 200:
-                            rotated.append(j)
-                            image1 = cv2.imread(str(path_to_upright_dir / img1))
-                            image1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
-                            cv2.imwrite(str(path_to_upright_dir / img1), image1)
-                            print(
-                                f"ref {img0}     NOT rotated {img1} {rotations[index_of_max]}"
-                            )
-                            break
-
             rotated.sort
+            #cluster0 = []
             for r in reversed(rotated):
                 cluster0.append(cluster1[r])
             for r in reversed(rotated):
@@ -560,28 +526,26 @@ class ImageMatching:
                 print("len(cluster1)", len(cluster1))
                 break
 
-            elif MULTIPROCESS == True:
-                N_CORES = 4
-
-                print(cluster0)
-                print(cluster1)
-
-                partial_prova = partial(
-                    prova,
-                    cluster0,
-                    path_to_upright_dir,
-                    rotations,
-                    cv2_rot_params,
-                    SPextractor,
-                    LGmatcher,
-                )
-                sublists = np.array_split(cluster1, N_CORES)
-                with Pool(N_CORES) as p:
-                    processed = p.map(partial_prova, sublists)
-                print(len(sublists[0]))
-                print(len(sublists[1]))
-                print(len(sublists[2]))
-                print(len(sublists[3]))
+            N_CORES = 4
+            print(cluster0)
+            print(cluster1)
+            partial_prova = partial(
+                prova,
+                cluster0,
+                path_to_upright_dir,
+                rotations,
+                cv2_rot_params,
+                SPextractor,
+                LGmatcher,
+                pairs,
+            )
+            sublists = np.array_split(cluster1, N_CORES)
+            with Pool(N_CORES) as p:
+                processed = p.map(partial_prova, sublists)
+            print(len(sublists[0]))
+            print(len(sublists[1]))
+            print(len(sublists[2]))
+            print(len(sublists[3]))
 
             processed = [item for sublist in processed for item in sublist if item]
 
