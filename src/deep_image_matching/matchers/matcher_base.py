@@ -13,8 +13,8 @@ import torch
 from ..config import Config
 from ..constants import Quality, TileSelection, Timer, get_size_by_quality
 from ..extractors.extractor_base import ExtractorBase
-from ..hloc.extractors.superpoint import SuperPoint
 from ..io.h5 import get_features, get_matches
+from ..thirdparty.hloc.extractors.superpoint import SuperPoint
 from ..thirdparty.LightGlue.lightglue import LightGlue
 from ..utils.geometric_verification import geometric_verification
 from ..utils.image import resize_image

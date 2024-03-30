@@ -3,10 +3,8 @@ from pathlib import Path
 
 import torch
 
+from ...SuperGluePretrainedNetwork.models import superpoint
 from ..utils.base_model import BaseModel
-
-sys.path.append(str(Path(__file__).parent / "../../thirdparty"))
-from SuperGluePretrainedNetwork.models import superpoint  # noqa E402
 
 
 # The original keypoint sampling is incorrect. We patch it here but

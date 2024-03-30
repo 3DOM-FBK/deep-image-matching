@@ -162,16 +162,6 @@ def geometric_verification(
     return F, inlMask
 
 
-@pytest.fixture
-def tie_points():
-    # Create two numpy array with shape (100, 2)
-    rng = np.random.default_rng(12345)
-    kpts0 = rng.random((100, 2))
-    kpts1 = rng.random((100, 2))
-
-    return kpts0, kpts1
-
-
 if __name__ == "__main__":
     # Generate random keypoints
     rng = np.random.default_rng(12345)

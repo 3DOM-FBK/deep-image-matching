@@ -11,9 +11,9 @@ import torch
 from tqdm import tqdm
 
 from .constants import Timer, logger
-from .hloc.extractors.superpoint import SuperPoint
 from .image_retrieval import ImageRetrieval
 from .io.colmap_read_write_model import read_model
+from .thirdparty.hloc.extractors.superpoint import SuperPoint
 from .thirdparty.LightGlue.lightglue import LightGlue
 from .utils.geometric_verification import geometric_verification
 

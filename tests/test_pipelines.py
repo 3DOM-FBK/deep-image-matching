@@ -9,18 +9,14 @@ import yaml
 
 def run_pipeline(cmd, verbose: bool = False) -> None:
     # Run the script using subprocess
-    process = subprocess.Popen(
-        cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-    )
+    process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
 
     if verbose:
         print(stdout.decode("utf-8"))
 
     # Check if the process exited successfully (return code 0)
-    assert (
-        process.returncode == 0
-    ), f"Script execution failed with error: {stderr.decode('utf-8')}"
+    assert process.returncode == 0, f"Script execution failed with error: {stderr.decode('utf-8')}"
 
 
 def create_config_file(config: dict, path: Path) -> Path:
@@ -84,12 +80,8 @@ def test_sp_lg_custom_config(data_dir, script):
 # Test pycolmap reconstruction
 def test_pycolmap(data_dir, script):
     if platform.system() == "Windows":
-        pytest.skip(
-            "Pycolmap is not available on Windows. Please use WSL or Docker to run this test."
-        )
-    run_pipeline(
-        f"python {script} --dir {data_dir} --pipeline superpoint+lightglue --strategy matching_lowres --force"
-    )
+        pytest.skip("Pycolmap is not available on Windows. Please use WSL or Docker to run this test.")
+    run_pipeline(f"python {script} --dir {data_dir} --pipeline superpoint+lightglue --strategy matching_lowres --force")
 
 
 # Test different matching methods with sequential strategy (faster)
@@ -125,9 +117,7 @@ def test_keynet(data_dir, script):
 
 def test_dedode_nn(data_dir, script):
     if not torch.cuda.is_available():
-        pytest.skip(
-            "DeDoDe is not available without CUDA GPU."
-        )
+        pytest.skip("DeDoDe is not available without CUDA GPU.")
     run_pipeline(
         f"python {script} --dir {data_dir} --pipeline dedode+kornia_matcher --strategy sequential --overlap 1 --skip_reconstruction --force"
     )
@@ -171,9 +161,7 @@ def test_loftr(data_dir, script):
 
 def test_roma(data_dir, script):
     if not torch.cuda.is_available():
-        pytest.skip(
-            "ROMA is not available without CUDA GPU."
-        )
+        pytest.skip("ROMA is not available without CUDA GPU.")
     run_pipeline(
         f"python {script} --dir {data_dir} --pipeline roma --strategy bruteforce --skip_reconstruction --force"
     )
@@ -181,9 +169,7 @@ def test_roma(data_dir, script):
 
 def test_roma_tiling(data_dir, script, config_file_tiling):
     if not torch.cuda.is_available():
-        pytest.skip(
-            "ROMA is not available without CUDA GPU."
-        )
+        pytest.skip("ROMA is not available without CUDA GPU.")
     run_pipeline(
         f"python {script} --dir {data_dir} --pipeline roma --strategy bruteforce --config {config_file_tiling} --tiling preselection --skip_reconstruction --force"
     )
