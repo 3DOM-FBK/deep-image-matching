@@ -12,7 +12,7 @@ import cv2
 import h5py
 import numpy as np
 
-from ..constants import IMAGE_EXT
+from ..utils.image import IMAGE_EXT
 from ..visualization import viz_matches_cv2
 
 logger = logging.getLogger("dim")

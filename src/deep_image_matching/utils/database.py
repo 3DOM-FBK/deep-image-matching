@@ -36,8 +36,10 @@ import sys
 from typing import List
 
 import numpy as np
+from packaging import version
 
 IS_PYTHON3 = sys.version_info[0] >= 3
+IS_NP_NEW119 = version.parse(np.__version__) >= version.parse("1.19.0")
 
 MAX_IMAGE_ID = 2**31 - 1
 
@@ -128,13 +130,19 @@ def pair_id_to_image_ids(pair_id):
 
 def array_to_blob(array):
     if IS_PYTHON3:
-        return array.tostring()
+        if IS_NP_NEW119:
+            return array.tobytes()
+        else:
+            return array.tostring()
     else:
         return np.getbuffer(array)
 
 
 def blob_to_array(blob, dtype, shape=(-1,)):
     if IS_PYTHON3:
+        if IS_NP_NEW119:
+            return np.frombuffer(blob, dtype=dtype).reshape(*shape)
+
         return np.fromstring(blob, dtype=dtype).reshape(*shape)
     else:
         return np.frombuffer(blob, dtype=dtype).reshape(*shape)

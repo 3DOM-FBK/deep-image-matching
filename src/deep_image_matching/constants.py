@@ -7,9 +7,6 @@ logger = setup_logger(name="dim", log_level="info")
 timer = Timer(logger=logger)
 
 
-IMAGE_EXT = [".jpg", ".JPG", ".png", ".PNG", ".tif", "TIF"]
-
-
 class TileSelection(Enum):
     """Enumeration for tile selection methods."""
 

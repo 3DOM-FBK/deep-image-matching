@@ -9,10 +9,12 @@ import numpy as np
 import PIL
 from PIL import Image
 
-from ..constants import IMAGE_EXT
 from .sensor_width_database import SensorWidthDatabase
 
 logger = logging.getLogger("dim")
+
+
+IMAGE_EXT = [".jpg", ".JPG", ".png", ".PNG", ".tif", "TIF"]
 
 Image.MAX_IMAGE_PIXELS = None
 

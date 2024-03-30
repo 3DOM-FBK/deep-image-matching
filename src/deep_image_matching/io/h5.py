@@ -95,7 +95,6 @@ def get_keypoints(path: Path, name: str, return_uncertainty: bool = False) -> np
         return p, uncertainty
     return p
 
-
 def get_matches(path: Path, name0: str, name1: str) -> np.ndarray:
     with h5py.File(str(path), "r", libver="latest") as hfile:
         group = hfile[name0]

@@ -20,7 +20,7 @@ from .extractors import SuperPointExtractor, extractor_loader
 from .io import get_features
 from .matchers import LightGlueMatcher, matcher_loader
 from .pairs_generator import PairsGenerator
-from .utils.image import ImageList
+from .utils import ImageList, get_pairs_from_file
 
 logger = logging.getLogger("dim")
 timer = Timer(logger=logger)
@@ -32,16 +32,6 @@ def make_correspondence_matrix(matches: np.ndarray) -> np.ndarray:
     matrix = np.hstack((n_tie_points, matches.reshape((-1, 1))))
     correspondences = matrix[~np.any(matrix == -1, axis=1)]
     return correspondences
-
-
-def get_pairs_from_file(pair_file: Path) -> list:
-    pairs = []
-    with open(pair_file, "r") as txt_file:
-        lines = txt_file.readlines()
-        for line in lines:
-            im1, im2 = line.strip().split(" ", 1)
-            pairs.append((im1, im2))
-    return pairs
 
 
 class ImageMatcher:
