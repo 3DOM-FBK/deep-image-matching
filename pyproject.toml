@@ -13,7 +13,6 @@
   ]
   license = { file = "LICENSE" }
   classifiers = [
-    "License :: OSI Approved :: BSD-3-Clause license ",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
   ]
@@ -24,7 +23,7 @@
     "numpy",
     "scipy",
     "matplotlib",
-    "torch",
+    "torch<=2.2.1",
     "torchvision",
     "pillow",
     "opencv-python",
