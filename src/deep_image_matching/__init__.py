@@ -19,9 +19,15 @@ from . import utils
 from . import reconstruction
 from . import extractors
 from . import matchers
+from . import visualization
 
 if not NO_PYCOLMAP:
     from . import triangulation  # the triangulation module strictly requires pycolmap
+
+try:
+    from . import graph
+except ImportError:
+    logging.warning("pyvis is not available. Unable to visualize view graph.")
 
 # Import functions
 from .parser import parse_cli
