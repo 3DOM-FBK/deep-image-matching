@@ -82,7 +82,7 @@ cd deep-image-matching
 pip install -e .
 ```
 
-Install pycolmap (optional):
+Install pycolmap (optional, but recommended):
 
 ```
 pip install pycolmap==0.6.1
