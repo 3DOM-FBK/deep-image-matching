@@ -84,6 +84,9 @@ def geometric_verification(
             f"Invalid Geometry Verification method. It must be a GeometricVerification enum, a string with the method name among {gv_names} or an integer corresponding to the method index."
         )
 
+    if method == GeometricVerification.NONE:
+        return None, np.ones(len(kpts0), dtype=bool)
+
     fallback = False
     F = None
     inlMask = np.ones(len(kpts0), dtype=bool)
