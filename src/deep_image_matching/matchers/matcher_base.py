@@ -930,8 +930,9 @@ def tile_selection(
     tile_overlap: int,
     tile_preselection_size: int = 1024,
     min_matches_per_tile: int = 5,
-    do_geometric_verification: bool = True,
-    device: str = "cpu",
+    do_geometric_verification: bool = False,
+    device: str = "cuda",
+    debug_dir: Path = None,
 ):
     """
     Selects tile pairs for matching based on the specified method.
@@ -944,6 +945,8 @@ def tile_selection(
     Returns:
         List[Tuple[int, int]]: The selected tile pairs.
     """
+
+    timer = Timer(log_level="debug")
 
     # Compute tiles limits and origin
     tiler = Tiler(tiling_mode="size")
@@ -981,8 +984,8 @@ def tile_selection(
         # match downsampled images with roma
         from ..thirdparty.RoMa.roma import roma_outdoor
 
-        n_matches = 5000
-        matcher = roma_outdoor(device, coarse_res=448)
+        n_matches = 2000
+        matcher = roma_outdoor(device, coarse_res=280, upsample_res=420)
         H_A, W_A = i0_new_size
         H_B, W_B = i1_new_size
         warp, certainty = matcher.match(str(img0), str(img1), device=device)
@@ -1026,8 +1029,8 @@ def tile_selection(
             _, inlMask = geometric_verification(
                 kpts0=kp0,
                 kpts1=kp1,
-                threshold=5,
-                confidence=0.9999,
+                threshold=10,
+                confidence=0.99999,
                 quiet=True,
             )
             kp0 = kp0[inlMask]
@@ -1044,34 +1047,38 @@ def tile_selection(
                 tile_pairs.add((tidx0, tidx1))
         tile_pairs = sorted(tile_pairs)
 
-        # For Debugging...
-        # if False:
-        from matplotlib import pyplot as plt
+        timer.update("preselection")
 
-        out_dir = Path("sandbox/preselection")
-        out_dir.mkdir(parents=True, exist_ok=True)
-        image0 = cv2.imread(str(img0), cv2.IMREAD_GRAYSCALE)
-        image1 = cv2.imread(str(img1), cv2.IMREAD_GRAYSCALE)
-        image0 = resize_image(image0, (i0_new_size[1], i0_new_size[0]))
-        image1 = resize_image(image1, (i1_new_size[1], i1_new_size[0]))
-        c = "r"
-        s = 5
-        fig, axes = plt.subplots(1, 2)
-        for ax, img, kp in zip(axes, [image0, image1], [kp0, kp1]):
-            ax.imshow(cv2.cvtColor(img, cv2.COLOR_BAYER_BG2BGR))
-            ax.scatter(kp[:, 0], kp[:, 1], s=s, c=c)
-            ax.axis("off")
-            ax.set_aspect("equal")
-        for lim0, lim1 in zip(t_orig0.values(), t_orig0.values()):
-            axes[0].axvline(lim0[0])
-            axes[0].axhline(lim0[1])
-            axes[1].axvline(lim1[0])
-            axes[1].axhline(lim1[1])
-        axes[1].get_yaxis().set_visible(False)
-        fig.tight_layout()
-        # plt.show()
-        fig.savefig(out_dir / f"{img0.name}-{img1.name}.jpg")
-        plt.close()
+        # For Debugging...
+        if debug_dir:
+            from matplotlib import pyplot as plt
+
+            out_dir = Path(debug_dir) / "preselection"
+            out_dir.mkdir(parents=True, exist_ok=True)
+            image0 = cv2.imread(str(img0), cv2.IMREAD_GRAYSCALE)
+            image1 = cv2.imread(str(img1), cv2.IMREAD_GRAYSCALE)
+            image0 = resize_image(image0, (i0_new_size[1], i0_new_size[0]))
+            image1 = resize_image(image1, (i1_new_size[1], i1_new_size[0]))
+            c = "r"
+            s = 2
+            fig, axes = plt.subplots(1, 2)
+            for ax, img, kp in zip(axes, [image0, image1], [kp0, kp1]):
+                ax.imshow(cv2.cvtColor(img, cv2.COLOR_BAYER_BG2BGR))
+                ax.scatter(kp[:, 0], kp[:, 1], s=s, c=c)
+                ax.axis("off")
+                ax.set_aspect("equal")
+            for lim0, lim1 in zip(t_orig0.values(), t_orig0.values()):
+                axes[0].axvline(lim0[0])
+                axes[0].axhline(lim0[1])
+                axes[1].axvline(lim1[0])
+                axes[1].axhline(lim1[1])
+            axes[1].get_yaxis().set_visible(False)
+            fig.tight_layout()
+            fig.savefig(out_dir / f"{img0.name}-{img1.name}.jpg")
+            plt.close()
+
+    timer.update("Tile selection")
+    timer.print("Tile selection")
 
     return tile_pairs
 

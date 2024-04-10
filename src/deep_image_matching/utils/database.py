@@ -225,6 +225,7 @@ class COLMAPDatabase(sqlite3.Connection):
                 camera_id,
             ),
         )
+        self.commit()
         return cursor.lastrowid
 
     def add_image(

@@ -54,26 +54,26 @@ class RomaMatcher(DetectorFreeMatcherBase):
         # Set up RoMa matcher
         if self.config["general"]["tile_selection"] == TileSelection.NONE:
             logger.info(
-                f"RoMa always use a coarse resolution of {self.config['matcher']['coarse_res']} pixels, regardless of the quality parameter resolution."
+                f"RoMa always use a coarse resolution of {self.config['matcher']['upsample_res']} pixels, regardless of the quality parameter resolution."
             )
         else:
             logger.info("Running RoMa by tile..")
             logger.info(
-                f"RoMa uses a fixed tile size of {self.config['matcher']['coarse_res']} pixels. This can result in a large number of tiles for high-resolution images. If the number of tiles is too high, consider reducing the image resolution via the 'Quality' parameter."
+                f"RoMa uses a fixed tile size of {self.config['matcher']['upsample_res']} pixels. This can result in a large number of tiles for high-resolution images. If the number of tiles is too high, consider reducing the image resolution via the 'Quality' parameter."
             )
 
-        if isinstance(self.config["matcher"]["coarse_res"], tuple):
+        if isinstance(self.config["matcher"]["upsample_res"], tuple):
             tile_size = (
-                self.config["matcher"]["coarse_res"][1],
-                self.config["matcher"]["coarse_res"][0],
+                self.config["matcher"]["upsample_res"][1],
+                self.config["matcher"]["upsample_res"][0],
             )
-        elif isinstance(self.config["matcher"]["coarse_res"], int):
+        elif isinstance(self.config["matcher"]["upsample_res"], int):
             tile_size = (
-                self.config["matcher"]["coarse_res"],
-                self.config["matcher"]["coarse_res"],
+                self.config["matcher"]["upsample_res"],
+                self.config["matcher"]["upsample_res"],
             )
         else:
-            raise ValueError("Invalid type for 'coarse_res'. It should be an integer or a tuple of two integers.")
+            raise ValueError("Invalid type for 'upsample_res'. It should be an integer or a tuple of two integers.")
         # Force the tile size to be the same as the RoMa coarse_res
         self.config["general"]["tile_size"] = tile_size
 
@@ -265,10 +265,11 @@ class RomaMatcher(DetectorFreeMatcherBase):
             tile_preselection_size=self.tile_preselection_size,
             min_matches_per_tile=self.min_matches_per_tile,
             device=self._device,
+            debug_dir=self.config["general"]["output_dir"] / "debug",
         )
         if len(tile_pairs) > self.max_tile_pairs:
             raise RuntimeError(
-                f"Too many tile pairs ({len(tile_pairs)}) to match, the matching process will be too slow and it may be inaccurate. Try to reduce the image resolution using a lower 'Quality' value (or change the 'max_tile_pairs' class attribute, if you know what you are doing)."
+                f"Too many tile pairs ({len(tile_pairs)}) to match, the matching process will be too slow and it may be inaccurate. Try to reduce the image resolution using a lower 'Quality' parameter."
             )
         else:
             logger.info(f"Matching {len(tile_pairs)} tile pairs")
