@@ -17,6 +17,7 @@ pydegesac_default_params = {
     "enable_degeneracy_check": True,
 }
 opencv_methods_mapping = {
+    "NONE": None,
     "LMEDS": cv2.LMEDS,
     "RANSAC": cv2.RANSAC,
     "RHO": cv2.RHO,
