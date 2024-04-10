@@ -379,6 +379,7 @@ class MatcherBase(metaclass=ABCMeta):
             tile_preselection_size=self.tile_preselection_size,
             min_matches_per_tile=self.min_matches_per_tile,
             device=self._device,
+            debug_dir=self.config["general"]["output_dir"] / "debug",
         )
         timer.update("tile selection")
 
