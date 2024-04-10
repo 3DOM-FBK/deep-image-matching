@@ -242,3 +242,56 @@ def import_verifed_matches(
 
     db.commit()
     db.close()
+
+
+def db_from_existing_poses(
+    new_db: Path,
+    features_h5: Path,
+    matches_h5: Path,
+    sfm_rec_path: Path,
+    pair_file: Path,
+    do_geometric_verification: bool = False,
+    max_error: float = 4.0,
+):
+    """
+    db_from_existing_poses _summary_
+
+    Args:
+        new_db (Path): _description_
+        features_h5 (Path): _description_
+        matches_h5 (Path): _description_
+        sfm_rec_path (Path): _description_
+        pair_file (Path): _description_
+        do_geometric_verification (bool, optional): _description_. Defaults to False.
+        max_error (float, optional): _description_. Defaults to 4.0.
+    """
+
+    # Import the sparse reconstruction
+    sfm_rec = pycolmap.Reconstruction(sfm_rec_path)
+
+    # Create an empty database from the sparse reconstruction
+    image_ids = create_db_from_model(sfm_rec, new_db)
+
+    # Add keypoints to the database
+    import_keypoints(features_h5, image_ids, new_db)
+
+    # Add matches to the database, but do not add two-view geometry
+    import_matches(
+        matches_h5,
+        image_ids,
+        new_db,
+        pair_file,
+        add_two_view_geometry=not do_geometric_verification,
+    )
+
+    if do_geometric_verification:
+        # Run the geometric verification with the knwon camera poses and add the inliers matches to the database in the two-view geometry table
+        import_verifed_matches(
+            image_ids,
+            sfm_rec,
+            new_db,
+            features_h5,
+            matches_h5,
+            pair_file,
+            max_error=max_error,
+        )
