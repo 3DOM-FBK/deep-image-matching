@@ -1025,8 +1025,10 @@ def tile_selection(
             # match downsampled images with roma
             from ..thirdparty.RoMa.roma import roma_outdoor
 
-            n_matches = 2000
-            matcher = roma_outdoor(device, coarse_res=280, upsample_res=420)
+            n_matches = 5000
+            coarse_res = 420
+            upsample_res = 560
+            matcher = roma_outdoor(device, coarse_res=coarse_res, upsample_res=upsample_res)
             H_A, W_A = i0_new_size
             H_B, W_B = i1_new_size
             warp, certainty = matcher.match(str(img0), str(img1), device=device)

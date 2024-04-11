@@ -42,10 +42,9 @@ class RomaMatcher(DetectorFreeMatcherBase):
 
     grayscale = False
     as_float = True
-    max_tile_pairs = 150  # Maximum number of tile pairs to match, raise an error if more than this number to avoid slow and likely inaccurate matching
-    # max_matches_per_pair = 10000
+    max_tile_pairs = 250  # Maximum number of tile pairs to match, raise an error if more than this number to avoid slow and likely inaccurate matching
     min_matches_per_tile = 3
-    max_matches_per_tile = 5000
+    max_matches_per_tile = 10000
     keep_tiles = True  # False
 
     def __init__(self, config={}) -> None:
