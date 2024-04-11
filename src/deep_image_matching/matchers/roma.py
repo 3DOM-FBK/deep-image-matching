@@ -258,15 +258,17 @@ class RomaMatcher(DetectorFreeMatcherBase):
             img1,
             method=method,
             quality=self._quality,
-            preselction_extractor=self._preselction_extractor,
-            preselction_matcher=self._preselction_matcher,
             tile_size=tile_size,
             tile_overlap=overlap,
+            preselction_extractor=self._preselction_extractor,
+            preselction_matcher=self._preselction_matcher,
+            pipeline=self.config["general"]["preselection_pipeline"],
             tile_preselection_size=self.tile_preselection_size,
             min_matches_per_tile=self.min_matches_per_tile,
             device=self._device,
-            debug_dir=self.config["general"]["output_dir"] / "debug",
+            debug_dir=self.config["general"]["output_dir"] / "debug" if self.config["general"]["do_viz"] else None,
         )
+
         if len(tile_pairs) > self.max_tile_pairs:
             raise RuntimeError(
                 f"Too many tile pairs ({len(tile_pairs)}) to match, the matching process will be too slow and it may be inaccurate. Try to reduce the image resolution using a lower 'Quality' parameter."

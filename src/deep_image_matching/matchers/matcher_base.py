@@ -372,14 +372,15 @@ class MatcherBase(metaclass=ABCMeta):
             img1,
             method=method,
             quality=self.config["general"]["quality"],
-            preselction_extractor=self._preselction_extractor,
-            preselction_matcher=self._preselction_matcher,
             tile_size=self.config["general"]["tile_size"],
             tile_overlap=self.config["general"]["tile_overlap"],
+            preselction_extractor=self._preselction_extractor,
+            preselction_matcher=self._preselction_matcher,
+            pipeline=self.config["general"]["preselection_pipeline"],
             tile_preselection_size=self.tile_preselection_size,
             min_matches_per_tile=self.min_matches_per_tile,
             device=self._device,
-            debug_dir=self.config["general"]["output_dir"] / "debug",
+            debug_dir=self.config["general"]["output_dir"] / "debug" if self.config["general"]["do_viz"] else None,
         )
         timer.update("tile selection")
 
@@ -925,10 +926,11 @@ def tile_selection(
     img1: Path,
     method: TileSelection,
     quality: Quality,
-    preselction_extractor: ExtractorBase,
-    preselction_matcher: MatcherBase,
     tile_size: Tuple[int, int],
     tile_overlap: int,
+    preselction_extractor: ExtractorBase = None,
+    preselction_matcher: MatcherBase = None,
+    pipeline: str = "superpoint+lightglue",
     tile_preselection_size: int = 1024,
     min_matches_per_tile: int = 5,
     do_geometric_verification: bool = False,
@@ -982,48 +984,60 @@ def tile_selection(
         # Match tiles by preselection running matching on downsampled images
         logger.debug("Matching tiles by downsampling preselection")
 
-        # match downsampled images with roma
-        from ..thirdparty.RoMa.roma import roma_outdoor
+        if pipeline == "superpoint+lightglue":
+            if not preselction_extractor or not preselction_matcher:
+                raise ValueError(
+                    "Preselection extractor and matcher must be provided for superpoint+lightglue pipeline"
+                )
 
-        n_matches = 2000
-        matcher = roma_outdoor(device, coarse_res=280, upsample_res=420)
-        H_A, W_A = i0_new_size
-        H_B, W_B = i1_new_size
-        warp, certainty = matcher.match(str(img0), str(img1), device=device)
-        matches, certainty = matcher.sample(warp, certainty, num=n_matches)
-        kp0, kp1 = matcher.to_pixel_coordinates(matches, H_A, W_A, H_B, W_B)
-        kp0, kp1 = kp0.cpu().numpy(), kp1.cpu().numpy()
+            # Downsampled images
+            size0 = i0.shape[:2][::-1]
+            size1 = i1.shape[:2][::-1]
+            scale0 = tile_preselection_size / max(size0)
+            scale1 = tile_preselection_size / max(size1)
+            size0_new = tuple(int(round(x * scale0)) for x in size0)
+            size1_new = tuple(int(round(x * scale1)) for x in size1)
+            i0 = cv2.resize(i0, size0_new, interpolation=cv2.INTER_AREA)
+            i1 = cv2.resize(i1, size1_new, interpolation=cv2.INTER_AREA)
 
-        # # Downsampled images
-        # size0 = i0.shape[:2][::-1]
-        # size1 = i1.shape[:2][::-1]
-        # scale0 = tile_preselection_size / max(size0)
-        # scale1 = tile_preselection_size / max(size1)
-        # size0_new = tuple(int(round(x * scale0)) for x in size0)
-        # size1_new = tuple(int(round(x * scale1)) for x in size1)
-        # i0 = cv2.resize(i0, size0_new, interpolation=cv2.INTER_AREA)
-        # i1 = cv2.resize(i1, size1_new, interpolation=cv2.INTER_AREA)
+            # Run SuperPoint on downsampled images
+            with torch.inference_mode():
+                feats0 = preselction_extractor({"image": frame2tensor(i0, device)})
+                feats1 = preselction_extractor({"image": frame2tensor(i1, device)})
 
-        # # Run SuperPoint on downsampled images
-        # with torch.inference_mode():
-        #     feats0 = preselction_extractor({"image": frame2tensor(i0, device)})
-        #     feats1 = preselction_extractor({"image": frame2tensor(i1, device)})
+                # Match features with LightGlue
+                feats0 = sp2lg(feats0)
+                feats1 = sp2lg(feats1)
+                res = preselction_matcher({"image0": feats0, "image1": feats1})
+                res = rbd2np(res)
 
-        #     # Match features with LightGlue
-        #     feats0 = sp2lg(feats0)
-        #     feats1 = sp2lg(feats1)
-        #     res = preselction_matcher({"image0": feats0, "image1": feats1})
-        #     res = rbd2np(res)
+            # Get keypoints in original image
+            kp0 = feats0["keypoints"].cpu().numpy()[0]
+            kp0 = kp0[res["matches"][:, 0], :]
+            kp1 = feats1["keypoints"].cpu().numpy()[0]
+            kp1 = kp1[res["matches"][:, 1], :]
 
-        # # Get keypoints in original image
-        # kp0 = feats0["keypoints"].cpu().numpy()[0]
-        # kp0 = kp0[res["matches"][:, 0], :]
-        # kp1 = feats1["keypoints"].cpu().numpy()[0]
-        # kp1 = kp1[res["matches"][:, 1], :]
+            # Scale up keypoints
+            kp0 = kp0 / scale0
+            kp1 = kp1 / scale1
 
-        # # Scale up keypoints
-        # kp0 = kp0 / scale0
-        # kp1 = kp1 / scale1
+        elif pipeline == "roma":
+            # match downsampled images with roma
+            from ..thirdparty.RoMa.roma import roma_outdoor
+
+            n_matches = 2000
+            matcher = roma_outdoor(device, coarse_res=280, upsample_res=420)
+            H_A, W_A = i0_new_size
+            H_B, W_B = i1_new_size
+            warp, certainty = matcher.match(str(img0), str(img1), device=device)
+            matches, certainty = matcher.sample(warp, certainty, num=n_matches)
+            kp0, kp1 = matcher.to_pixel_coordinates(matches, H_A, W_A, H_B, W_B)
+            kp0, kp1 = kp0.cpu().numpy(), kp1.cpu().numpy()
+
+        else:
+            raise ValueError(
+                f"Invalid tile selection method: {method}. Only superpoint+lightglue and roma are supported so far"
+            )
 
         # geometric verification
         if do_geometric_verification:

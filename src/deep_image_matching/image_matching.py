@@ -66,6 +66,7 @@ class ImageMatcher:
         "fast_viz": True,
         "hide_matching_track": True,
         "do_viz_tiles": False,
+        "preselection_pipeline": "superpoint+lightglue",
     }
 
     def __init__(
