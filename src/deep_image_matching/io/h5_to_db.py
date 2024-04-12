@@ -24,6 +24,7 @@ from pathlib import Path
 
 import h5py
 import numpy as np
+import yaml
 from PIL import ExifTags, Image
 from tqdm import tqdm
 
@@ -44,7 +45,7 @@ def export_to_colmap(
     feature_path: Path,
     match_path: Path,
     database_path: str = "database.db",
-    camera_options: dict = default_camera_options,
+    camera_config_path: Path = None,
 ):
     """
     Exports image features and matches to a COLMAP database.
@@ -54,7 +55,7 @@ def export_to_colmap(
         feature_path (Path): Path to the feature file (in HDF5 format) containing the extracted keypoints.
         match_path (Path): Path to the match file (in HDF5 format) containing the matches between keypoints.
         database_path (str, optional): Path to the COLMAP database file. Defaults to "colmap.db".
-        camera_options (dict, optional): Flag indicating whether to use camera options. Defaults to default_camera_options.
+        # camera_options (dict, optional): Flag indicating whether to use camera options. Defaults to default_camera_options.
 
     Returns:
         None
@@ -79,6 +80,14 @@ def export_to_colmap(
         logger.warning(f"Database path {database_path} already exists - deleting it")
         database_path.unlink()
 
+    # If a config file is provided, read camera options, otherwise use defaults
+    if camera_config_path is not None:
+        with open(camera_config_path, "r") as file:
+            camera_options = yaml.safe_load(file)
+    else:
+        camera_options = default_camera_options
+
+    # Create the database and add keypoints and matches
     db = COLMAPDatabase.connect(database_path)
     db.create_tables()
     fname_to_id = add_keypoints(db, feature_path, img_dir, camera_options)

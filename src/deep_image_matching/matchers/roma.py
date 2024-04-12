@@ -265,7 +265,7 @@ class RomaMatcher(DetectorFreeMatcherBase):
             tile_preselection_size=self.tile_preselection_size,
             min_matches_per_tile=self.min_matches_per_tile,
             device=self._device,
-            debug_dir=self.config["general"]["output_dir"] / "debug" if self.config["general"]["do_viz"] else None,
+            debug_dir=self.config["general"]["output_dir"] / "debug" if self.config["general"]["verbose"] else None,
         )
 
         if len(tile_pairs) > self.max_tile_pairs:
@@ -300,7 +300,7 @@ class RomaMatcher(DetectorFreeMatcherBase):
         mkpts1_full = np.array([], dtype=np.float32).reshape(0, 2)
         conf_full = np.array([], dtype=np.float32)
 
-        for tidx0, tidx1 in tqdm(tile_pairs, leave=False, desc="Matching tiles"):
+        for tidx0, tidx1 in tqdm(tile_pairs, leave=True, desc="Matching tiles"):
             logger.debug(f"  - Matching tile pair ({tidx0}, {tidx1})")
 
             tile_path0 = tiles_dir / img0.name / f"tile_{tidx0}.png"
@@ -366,8 +366,9 @@ class RomaMatcher(DetectorFreeMatcherBase):
                     & (kp[:, 1] < img_size[0] - border_thr)
                 )
 
-            maskA = kps_in_image(kptsA, image0.shape[:2])
-            maskB = kps_in_image(kptsB, image1.shape[:2])
+            border_thr = 50
+            maskA = kps_in_image(kptsA, image0.shape[:2], border_thr)
+            maskB = kps_in_image(kptsB, image1.shape[:2], border_thr)
             msk = maskA & maskB
             kptsA = kptsA[msk]
             kptsB = kptsB[msk]
@@ -376,6 +377,9 @@ class RomaMatcher(DetectorFreeMatcherBase):
             mkpts0_full = np.vstack((mkpts0_full, kptsA))
             mkpts1_full = np.vstack((mkpts1_full, kptsB))
             conf_full = np.concatenate((conf_full, conf))
+
+        logger.info("Tiles completed")
+        logger.info(f"Total matches before geometric verification: {len(mkpts0_full)}")
 
         # Rescale keypoints to original image size
         mkpts0_full = self._resize_keypoints(self._quality, mkpts0_full)
