@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Tuple, Union
@@ -8,8 +9,12 @@ import numpy as np
 import PIL
 from PIL import Image
 
-from .. import IMAGE_EXT, logger
 from .sensor_width_database import SensorWidthDatabase
+
+logger = logging.getLogger("dim")
+
+
+IMAGE_EXT = [".jpg", ".JPG", ".png", ".PNG", ".tif", "TIF"]
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -157,9 +162,7 @@ class Image:
     def height(self) -> int:
         """Returns the height of the image in pixels"""
         if self._height is None:
-            logger.error(
-                f"Image height not available for {self.name}. Try to read it from the image file."
-            )
+            logger.error(f"Image height not available for {self.name}. Try to read it from the image file.")
             try:
                 img = PIL.Image.open(self._path)
                 self._width, self._height = img.size
@@ -172,9 +175,7 @@ class Image:
     def width(self) -> int:
         """Returns the width of the image in pixels"""
         if self._width is None:
-            logger.error(
-                f"Image width not available for {self.name}. Try to read it from the image file."
-            )
+            logger.error(f"Image width not available for {self.name}. Try to read it from the image file.")
             try:
                 img = PIL.Image.open(self._path)
                 self._width, self._height = img.size
@@ -188,9 +189,7 @@ class Image:
     def size(self) -> tuple:
         """Returns the size of the image in pixels as a tuple (width, height)"""
         if self._width is None or self._height is None:
-            logger.warning(
-                f"Image size not available for {self.name}. Trying to read it from the image file."
-            )
+            logger.warning(f"Image size not available for {self.name}. Trying to read it from the image file.")
             try:
                 img = PIL.Image.open(self._path)
                 self._width, self._height = img.size
@@ -281,19 +280,14 @@ class Image:
             raise ValueError("Exif error")
 
         if len(exif) == 0:
-            logger.info(
-                f"No exif data available for image {self.name} (this will probably not affect the matching)."
-            )
+            logger.info(f"No exif data available for image {self.name} (this will probably not affect the matching).")
             raise ValueError("Exif error")
 
         # Get image size
         if "Image ImageWidth" in exif.keys() and "Image ImageLength" in exif.keys():
             self._width = exif["Image ImageWidth"].printable
             self._height = exif["Image ImageLength"].printable
-        elif (
-            "EXIF ExifImageWidth" in exif.keys()
-            and "EXIF ExifImageLength" in exif.keys()
-        ):
+        elif "EXIF ExifImageWidth" in exif.keys() and "EXIF ExifImageLength" in exif.keys():
             self._width = exif["EXIF ExifImageWidth"].printable
             self._height = exif["EXIF ExifImageLength"].printable
 
@@ -325,9 +319,7 @@ class Image:
                 else:
                     self._focal_length = float(focal_length_str)
             except ValueError:
-                logger.info(
-                    f"Unable to get focal length from exif for image {self.name}"
-                )
+                logger.info(f"Unable to get focal length from exif for image {self.name}")
 
         # Store exif data
         self._exif_data = exif
@@ -416,9 +408,7 @@ class ImageList:
         self.images = []
         self.current_idx = 0
         i = 0
-        all_imgs = [
-            image for image in img_dir.glob("*") if image.suffix in self.IMAGE_EXT
-        ]
+        all_imgs = [image for image in img_dir.glob("*") if image.suffix in self.IMAGE_EXT]
         all_imgs.sort()
 
         if len(all_imgs) == 0:

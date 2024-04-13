@@ -1,64 +1,47 @@
-from enum import Enum
-from typing import Tuple
+__version__ = "1.2.1"
 
-from .utils.logger import change_logger_level, get_logger, setup_logger  # noqa: F401
-from .utils.timer import Timer, timeit  # noqa: F401
+import logging
+from time import time
+from collections import OrderedDict
 
-__version__ = "1.0.0"
+time_dict = OrderedDict()
+time_dict["start"] = time()
 
-logger = setup_logger(name="deep-image-matching", log_level="info")
-timer = Timer(logger=logger)
+# Check if pycolmap is installed
+try:
+    import pycolmap
 
-IMAGE_EXT = [".jpg", ".JPG", ".png", ".PNG", ".tif", "TIF"]
+    NO_PYCOLMAP = False
+except ImportError:
+    logging.warning(
+        "pycolmap is not installed, some advanced features may not work, but you will be able to run deep-image-matching and export the matched features in a sqlite3 database to be opened in COLMAP GUI."
+    )
+    NO_PYCOLMAP = True
 
+# Import submodules
+from . import extractors
+from . import matchers
+from . import io
+from . import utils
+from . import visualization
+from . import thirdparty
 
-class TileSelection(Enum):
-    """Enumeration for tile selection methods."""
+if not NO_PYCOLMAP:
+    # Import submodules that require pycolmap
+    from . import reconstruction
+    from . import triangulation
+try:
+    from . import graph
+except ImportError:
+    logging.warning("pyvis is not available. Unable to visualize view graph.")
 
-    NONE = 0
-    EXHAUSTIVE = 1
-    GRID = 2
-    PRESELECTION = 3
+# Import functions
+from .parser import parse_cli
 
+# Import classes and variables
+from .image_matching import ImageMatcher
+from .pairs_generator import PairsGenerator
+from .constants import *
+from .config import Config
 
-class GeometricVerification(Enum):
-    """Enumeration for geometric verification methods."""
-
-    NONE = 0
-    PYDEGENSAC = 1
-    MAGSAC = 2
-    RANSAC = 3
-    LMEDS = 4
-    RHO = 5
-    USAC_DEFAULT = 6
-    USAC_PARALLEL = 7
-    USAC_FM_8PTS = 8
-    USAC_FAST = 9
-    USAC_ACCURATE = 10
-    USAC_PROSAC = 11
-    USAC_MAGSAC = 12
-
-
-class Quality(Enum):
-    """Enumeration for matching quality."""
-
-    LOWEST = 0
-    LOW = 1
-    MEDIUM = 2
-    HIGH = 3
-    HIGHEST = 4
-
-
-def get_size_by_quality(
-    quality: Quality,
-    size: Tuple[int, int],  # usually (width, height)
-):
-    quality_size_map = {
-        Quality.HIGHEST: 2,
-        Quality.HIGH: 1,
-        Quality.MEDIUM: 1 / 2,
-        Quality.LOW: 1 / 4,
-        Quality.LOWEST: 1 / 8,
-    }
-    f = quality_size_map[quality]
-    return (int(size[0] * f), int(size[1] * f))
+print("Deep Image Matching loaded in {:.3f} seconds.".format(time() - time_dict["start"]))

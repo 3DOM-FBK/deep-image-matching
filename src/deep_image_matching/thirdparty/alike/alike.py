@@ -1,3 +1,4 @@
+import logging
 import math
 import os
 import time
@@ -6,9 +7,10 @@ from copy import deepcopy
 import cv2
 import torch
 
-from ... import logger
 from .alnet import ALNet
 from .soft_detect import DKD
+
+logger = logging.getLogger("dim")
 
 configs = {
     "alike-t": {
@@ -149,22 +151,14 @@ class ALike(ALNet):
             image = cv2.resize(image, dsize=None, fx=ratio, fy=ratio)
 
         # ==================== convert image to tensor
-        image = (
-            torch.from_numpy(image)
-            .to(self.device)
-            .to(torch.float32)
-            .permute(2, 0, 1)[None]
-            / 255.0
-        )
+        image = torch.from_numpy(image).to(self.device).to(torch.float32).permute(2, 0, 1)[None] / 255.0
 
         # ==================== extract keypoints
         start = time.time()
 
         with torch.no_grad():
             descriptor_map, scores_map = self.extract_dense_map(image)
-            keypoints, descriptors, scores, _ = self.dkd(
-                scores_map, descriptor_map, sub_pixel=sub_pixel
-            )
+            keypoints, descriptors, scores, _ = self.dkd(scores_map, descriptor_map, sub_pixel=sub_pixel)
             keypoints, descriptors, scores = keypoints[0], descriptors[0], scores[0]
             keypoints = (keypoints + 1) / 2 * keypoints.new_tensor([[W - 1, H - 1]])
 

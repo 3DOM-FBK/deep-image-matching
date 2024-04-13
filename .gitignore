@@ -11,6 +11,10 @@ sb_*
 config.yaml
 run_casalbagliano.sh
 config/cameras_test.yaml
+sandbox*
+requirements.txt
+belv_*
+egu/
 
 # VScode
 .vscode/
@@ -43,6 +47,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+.pypirc
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

@@ -9,7 +9,7 @@ from .extractor_base import ExtractorBase
 
 class AlikedExtractor(ExtractorBase):
     # config from original ALIKED implementation
-    # default_conf = {
+    # _default_conf = {
     #     "name:": "aliked",
     #     "model": "aliked-n16rot",
     #     "device": "cuda",
@@ -19,7 +19,7 @@ class AlikedExtractor(ExtractorBase):
     # }
 
     # config from LightGlue implementation of ALIKED
-    default_conf = {
+    _default_conf = {
         "name:": "aliked",
         "model": "aliked-n16rot",
         "device": "cuda",
@@ -36,8 +36,8 @@ class AlikedExtractor(ExtractorBase):
         super().__init__(config)
 
         # Load extractor
-        cfg = self._config.get("extractor")
-        if cfg["device"] == "cuda" and torch.cuda.is_available():
+        cfg = self.config.get("extractor")
+        if self._device == "cuda" and torch.cuda.is_available():
             self._extractor = ALIKED(**cfg).cuda()
         else:
             self._extractor = ALIKED(**cfg)
@@ -79,10 +79,7 @@ class AlikedExtractor(ExtractorBase):
 
     def _rbd(self, data: dict) -> dict:
         """Remove batch dimension from elements in data"""
-        return {
-            k: v[0] if isinstance(v, (torch.Tensor, np.ndarray, list)) else v
-            for k, v in data.items()
-        }
+        return {k: v[0] if isinstance(v, (torch.Tensor, np.ndarray, list)) else v for k, v in data.items()}
 
 
 if __name__ == "__main__":

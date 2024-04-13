@@ -1,3 +1,4 @@
+import logging
 import os
 import shutil
 from pathlib import Path
@@ -10,21 +11,19 @@ import torch
 from tqdm import tqdm
 
 from . import (
-    GeometricVerification,
-    Quality,
-    TileSelection,
-    Timer,
     extractors,
-    logger,
     matchers,
 )
-from .extractors.extractor_base import extractor_loader
-from .extractors.superpoint import SuperPointExtractor
-from .io.h5 import get_features
-from .matchers.lightglue import LightGlueMatcher
-from .matchers.matcher_base import matcher_loader
+from .config import Config
+from .constants import GeometricVerification, Quality, TileSelection, Timer
+from .extractors import SuperPointExtractor, extractor_loader
+from .io import get_features
+from .matchers import LightGlueMatcher, matcher_loader
 from .pairs_generator import PairsGenerator
-from .utils.image import ImageList
+from .utils import ImageList, get_pairs_from_file
+
+logger = logging.getLogger("dim")
+timer = Timer(logger=logger)
 
 
 def make_correspondence_matrix(matches: np.ndarray) -> np.ndarray:
@@ -35,23 +34,13 @@ def make_correspondence_matrix(matches: np.ndarray) -> np.ndarray:
     return correspondences
 
 
-def get_pairs_from_file(pair_file: Path) -> list:
-    pairs = []
-    with open(pair_file, "r") as txt_file:
-        lines = txt_file.readlines()
-        for line in lines:
-            im1, im2 = line.strip().split(" ", 1)
-            pairs.append((im1, im2))
-    return pairs
-
-
-class ImageMatching:
+class ImageMatcher:
     """
-    ImageMatching class for performing image matching and feature extraction.
+    ImageMatcher class for performing image matching and feature extraction.
 
     Methods:
         __init__(self, imgs_dir, output_dir, matching_strategy, local_features, matching_method, retrieval_option=None, pair_file=None, overlap=None, existing_colmap_model=None, custom_config={})
-            Initializes the ImageMatching class.
+            Initializes the ImageMatcher class.
         generate_pairs(self, **kwargs) -> Path:
             Generates pairs of images for matching.
         rotate_upright_images(self)
@@ -77,28 +66,25 @@ class ImageMatching:
         "fast_viz": True,
         "hide_matching_track": True,
         "do_viz_tiles": False,
+        "preselection_pipeline": "superpoint+lightglue",
     }
-    # pair_file=pair_file,
-    # retrieval_option=retrieval_option,
-    # overlap=overlap,
-    # existing_colmap_model=existing_colmap_model,
 
     def __init__(
-        # TODO: add default values for not necessary parameters
         self,
-        imgs_dir: Path,
-        output_dir: Path,
-        matching_strategy: str,
-        local_features: str,
-        matching_method: str,
-        retrieval_option: str = None,
-        pair_file: Path = None,
-        overlap: int = None,
-        existing_colmap_model: Path = None,
-        custom_config: dict = {},
+        config: Config,
+        # imgs_dir: Path,
+        # output_dir: Path,
+        # matching_strategy: str,
+        # local_features: str,
+        # matching_method: str,
+        # retrieval_option: str = None,
+        # pair_file: Path = None,
+        # overlap: int = None,
+        # existing_colmap_model: Path = None,
+        # custom_config: dict = {},
     ):
         """
-        Initializes the ImageMatching class.
+        Initializes the ImageMatcher class.
 
         Parameters:
             imgs_dir (Path): Path to the directory containing the images.
@@ -123,50 +109,26 @@ class ImageMatching:
         Returns:
             None
         """
-        self.image_dir = Path(imgs_dir)
-        self.output_dir = Path(output_dir)
-        self.matching_strategy = matching_strategy
-        self.retrieval_option = retrieval_option
-        self.local_features = local_features
-        self.matching_method = matching_method
-        self.pair_file = Path(pair_file) if pair_file else None
-        self.overlap = overlap
-        self.existing_colmap_model = existing_colmap_model
 
-        # Merge default and custom config
-        self.custom_config = custom_config
-        self.custom_config["general"] = {
-            **self.default_conf_general,
-            **custom_config["general"],
-        }
+        # Store configuration
+        self.config = config
+        self.image_dir = Path(config.general["image_dir"])
+        self.output_dir = Path(config.general["output_dir"])
+        self.strategy = config.general["matching_strategy"]
+        self.extraction = config.extractor["name"]
+        self.matching = config.matcher["name"]
+        self.pair_file = config.general["pair_file"]
 
-        # Check that parameters are valid
-        if retrieval_option == "sequential":
-            if overlap is None:
-                raise ValueError(
-                    "'overlap' option is required when 'strategy' is set to sequential"
-                )
-        elif retrieval_option == "custom_pairs":
-            if self.pair_file is None:
-                raise ValueError(
-                    "'pair_file' option is required when 'strategy' is set to custom_pairs"
-                )
-            else:
-                if not self.pair_file.exists():
-                    raise ValueError(f"File {self.pair_file} does not exist")
-        elif retrieval_option == "covisibility":
-            if self.existing_colmap_model is None:
-                raise ValueError(
-                    "'existing_colmap_model' option is required when 'strategy' is set to covisibility"
-                )
-            else:
-                if not self.existing_colmap_model.exists():
-                    raise ValueError(
-                        f"File {self.existing_colmap_model} does not exist"
-                    )
+        # self.existing_colmap_model = config.general["db_path"]
+        # if config.general["retrieval"] == "covisibility":
+        #     if self.existing_colmap_model is None:
+        #         raise ValueError("'existing_colmap_model' option is required when 'strategy' is set to covisibility")
+        #     else:
+        #         if not self.existing_colmap_model.exists():
+        #             raise ValueError(f"File {self.existing_colmap_model} does not exist")
 
         # Initialize ImageList class
-        self.image_list = ImageList(imgs_dir)
+        self.image_list = ImageList(self.image_dir)
         images = self.image_list.img_names
         if len(images) == 0:
             raise ValueError(f"Image folder empty. Supported formats: {self.image_ext}")
@@ -178,47 +140,73 @@ class ImageMatching:
 
         # Initialize extractor
         try:
-            Extractor = extractor_loader(extractors, self.local_features)
+            Extractor = extractor_loader(extractors, self.extraction)
         except AttributeError:
-            raise ValueError(
-                f"Invalid local feature extractor. {self.local_features} is not supported."
-            )
-        self._extractor = Extractor(self.custom_config)
+            raise ValueError(f"Invalid local feature extractor. {self.extraction} is not supported.")
+        self._extractor = Extractor(self.config)
 
         # Initialize matcher
         try:
-            Matcher = matcher_loader(matchers, self.matching_method)
+            Matcher = matcher_loader(matchers, self.matching)
         except AttributeError:
-            raise ValueError(
-                f"Invalid matcher. {self.matching_method} is not supported."
-            )
-        if self.matching_method == "lightglue":
-            self._matcher = Matcher(
-                local_features=self.local_features, config=self.custom_config
-            )
+            raise ValueError(f"Invalid matcher. {self.matching} is not supported.")
+        if self.matching == "lightglue":
+            self._matcher = Matcher(local_features=self.extraction, config=self.config)
         else:
-            self._matcher = Matcher(self.custom_config)
+            self._matcher = Matcher(self.config)
 
         # Print configuration
         logger.info("Running image matching with the following configuration:")
         logger.info(f"  Image folder: {self.image_dir}")
         logger.info(f"  Output folder: {self.output_dir}")
         logger.info(f"  Number of images: {len(self.image_list)}")
-        logger.info(f"  Matching strategy: {self.matching_strategy}")
-        logger.info(f"  Image quality: {self.custom_config['general']['quality'].name}")
-        logger.info(
-            f"  Tile selection: {self.custom_config['general']['tile_selection'].name}"
-        )
-        logger.info(f"  Feature extraction method: {self.local_features}")
-        logger.info(f"  Matching method: {self.matching_method}")
-        logger.info(
-            f"  Geometric verification: {self.custom_config['general']['geom_verification'].name}"
-        )
+        logger.info(f"  Matching strategy: {self.strategy}")
+        logger.info(f"  Image quality: {self.config.general['quality'].name}")
+        logger.info(f"  Tile selection: {self.config.general['tile_selection'].name}")
+        logger.info(f"  Feature extraction method: {self.extraction}")
+        logger.info(f"  Matching method: {self.matching}")
+        logger.info(f"  Geometric verification: {self.config.general['geom_verification'].name}")
         logger.info(f"  CUDA available: {torch.cuda.is_available()}")
 
     @property
     def img_names(self):
         return self.image_list.img_names
+
+    def run(self):
+        """
+        Runs the image matching pipeline.
+
+        Returns:
+            None
+
+        Raises:
+            None
+        """
+        # Generate pairs to be matched
+        pair_path = self.generate_pairs()
+        timer.update("generate_pairs")
+
+        # Try to rotate images so they will be all "upright", useful for deep-learning approaches that usually are not rotation invariant
+        if self.config.general["upright"]:
+            self.rotate_upright_images()
+            timer.update("rotate_upright_images")
+
+        # Extract features
+        feature_path = self.extract_features()
+        timer.update("extract_features")
+
+        # Matching
+        match_path = self.match_pairs(feature_path)
+
+        # If features have been extracted on "upright" images, this function bring features back to their original image orientation
+        if self.config.general["upright"]:
+            self.rotate_back_features(feature_path)
+            timer.update("rotate_back_features")
+
+        # Print timing
+        timer.print("Deep Image Matching")
+
+        return feature_path, match_path
 
     def generate_pairs(self, **kwargs) -> Path:
         """
@@ -227,25 +215,22 @@ class ImageMatching:
         Returns:
             Path: The path to the pair file containing the generated pairs of images.
         """
-        if self.pair_file is not None and self.matching_strategy == "custom_pairs":
+        if self.pair_file is not None and self.strategy == "custom_pairs":
             if not self.pair_file.exists():
                 raise FileExistsError(f"File {self.pair_file} does not exist")
 
             pairs = get_pairs_from_file(self.pair_file)
-            self.pairs = [
-                (self.image_dir / im1, self.image_dir / im2) for im1, im2 in pairs
-            ]
+            self.pairs = [(self.image_dir / im1, self.image_dir / im2) for im1, im2 in pairs]
 
         else:
             pairs_generator = PairsGenerator(
                 self.image_list.img_paths,
                 self.pair_file,
-                self.matching_strategy,
-                self.retrieval_option,
-                self.overlap,
+                self.strategy,
+                self.config.general["retrieval"],
+                self.config.general["overlap"],
                 self.image_dir,
                 self.output_dir,
-                self.existing_colmap_model,
                 **kwargs,
             )
             self.pairs = pairs_generator.run()
@@ -333,13 +318,9 @@ class ImageMatching:
                     if rotation != 0:
                         _image1 = cv2.rotate(_image1, cv2rotation)
                     features["feat1"] = SPextractor._extract(_image1)
-                    matches = LGmatcher._match_pairs(
-                        features["feat0"], features["feat1"]
-                    )
+                    matches = LGmatcher._match_pairs(features["feat0"], features["feat1"])
                     matchesXrotation.append((rotation, matches.shape[0]))
-                index_of_max = max(
-                    range(len(matchesXrotation)), key=lambda i: matchesXrotation[i][1]
-                )
+                index_of_max = max(range(len(matchesXrotation)), key=lambda i: matchesXrotation[i][1])
                 n_matches = matchesXrotation[index_of_max][1]
                 if index_of_max != 0 and n_matches > 100:
                     processed_images.append(target_img)
@@ -372,9 +353,9 @@ class ImageMatching:
             ValueError: If the local feature extraction method is invalid or not supported.
 
         """
-        logger.info(f"Extracting features with {self.local_features}...")
-        logger.info(f"{self.local_features} configuration: ")
-        pprint(self.custom_config["extractor"])
+        logger.info(f"Extracting features with {self.extraction}...")
+        logger.info(f"{self.extraction} configuration: ")
+        pprint(self.config.extractor)
 
         # Extract features
         for img in tqdm(self.image_list):
@@ -399,11 +380,11 @@ class ImageMatching:
         Raises:
             ValueError: If the feature path does not exist.
         """
-        timer = Timer(log_level="debug")
 
-        logger.info(f"Matching features with {self.matching_method}...")
-        logger.info(f"{self.matching_method} configuration: ")
-        pprint(self.custom_config["matcher"])
+        logger.info(f"Matching features with {self.matching}...")
+        logger.info(f"{self.matching} configuration: ")
+        pprint(self.config.matcher)
+
         # Check that feature_path exists
         feature_path = Path(feature_path)
         if not feature_path.exists():
@@ -434,8 +415,6 @@ class ImageMatching:
             timer.update("Match pair")
 
             # NOTE: Geometric verif. has been moved to the end of the matching process
-
-        # TODO: Clean up features with no matches
 
         torch.cuda.empty_cache()
         timer.print("matching")

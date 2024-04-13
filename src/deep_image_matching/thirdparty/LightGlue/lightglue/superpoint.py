@@ -54,9 +54,7 @@ def simple_nms(scores, nms_radius: int):
     assert nms_radius >= 0
 
     def max_pool(x):
-        return torch.nn.functional.max_pool2d(
-            x, kernel_size=nms_radius * 2 + 1, stride=1, padding=nms_radius
-        )
+        return torch.nn.functional.max_pool2d(x, kernel_size=nms_radius * 2 + 1, stride=1, padding=nms_radius)
 
     zeros = torch.zeros_like(scores)
     max_mask = scores == max_pool(scores)
@@ -81,17 +79,11 @@ def sample_descriptors(keypoints, descriptors, s: int = 8):
     keypoints = keypoints - s / 2 + 0.5
     keypoints /= torch.tensor(
         [(w * s - s / 2 - 0.5), (h * s - s / 2 - 0.5)],
-    ).to(
-        keypoints
-    )[None]
+    ).to(keypoints)[None]
     keypoints = keypoints * 2 - 1  # normalize to (-1, 1)
     args = {"align_corners": True} if torch.__version__ >= "1.3" else {}
-    descriptors = torch.nn.functional.grid_sample(
-        descriptors, keypoints.view(b, 1, -1, 2), mode="bilinear", **args
-    )
-    descriptors = torch.nn.functional.normalize(
-        descriptors.reshape(b, c, -1), p=2, dim=1
-    )
+    descriptors = torch.nn.functional.grid_sample(descriptors, keypoints.view(b, 1, -1, 2), mode="bilinear", **args)
+    descriptors = torch.nn.functional.normalize(descriptors.reshape(b, c, -1), p=2, dim=1)
     return descriptors
 
 
@@ -104,7 +96,7 @@ class SuperPoint(Extractor):
 
     """
 
-    default_conf = {
+    _default_conf = {
         "descriptor_dim": 256,
         "nms_radius": 4,
         "max_num_keypoints": None,
@@ -137,9 +129,7 @@ class SuperPoint(Extractor):
         self.convPb = nn.Conv2d(c5, 65, kernel_size=1, stride=1, padding=0)
 
         self.convDa = nn.Conv2d(c4, c5, kernel_size=3, stride=1, padding=1)
-        self.convDb = nn.Conv2d(
-            c5, self.conf.descriptor_dim, kernel_size=1, stride=1, padding=0
-        )
+        self.convDb = nn.Conv2d(c5, self.conf.descriptor_dim, kernel_size=1, stride=1, padding=0)
 
         url = "https://github.com/cvg/LightGlue/releases/download/v0.1_arxiv/superpoint_v1.pth"  # noqa
         self.load_state_dict(torch.hub.load_state_dict_from_url(url))
@@ -190,20 +180,13 @@ class SuperPoint(Extractor):
         scores = scores[best_kp]
 
         # Separate into batches
-        keypoints = [
-            torch.stack(best_kp[1:3], dim=-1)[best_kp[0] == i] for i in range(b)
-        ]
+        keypoints = [torch.stack(best_kp[1:3], dim=-1)[best_kp[0] == i] for i in range(b)]
         scores = [scores[best_kp[0] == i] for i in range(b)]
 
         # Keep the k keypoints with highest score
         if self.conf.max_num_keypoints is not None:
             keypoints, scores = list(
-                zip(
-                    *[
-                        top_k_keypoints(k, s, self.conf.max_num_keypoints)
-                        for k, s in zip(keypoints, scores)
-                    ]
-                )
+                zip(*[top_k_keypoints(k, s, self.conf.max_num_keypoints) for k, s in zip(keypoints, scores)])
             )
 
         # Convert (h, w) to (x, y)
@@ -215,10 +198,7 @@ class SuperPoint(Extractor):
         descriptors = torch.nn.functional.normalize(descriptors, p=2, dim=1)
 
         # Extract descriptors
-        descriptors = [
-            sample_descriptors(k[None], d[None], 8)[0]
-            for k, d in zip(keypoints, descriptors)
-        ]
+        descriptors = [sample_descriptors(k[None], d[None], 8)[0] for k, d in zip(keypoints, descriptors)]
 
         return {
             "keypoints": torch.stack(keypoints, 0),

@@ -1,10 +1,16 @@
-import sqlite3
+import logging
 import os
-import numpy as np
+import sqlite3
+
 import networkx as nx
+import numpy as np
 from pyvis.network import Network
+
 from deep_image_matching.utils.database import pair_id_to_image_ids
-from . import logger
+
+logger = logging.getLogger("dim")
+
+TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "utils/templates")
 
 
 def view_graph(db, output_dir, imgs_dir):
@@ -19,8 +25,7 @@ def view_graph(db, output_dir, imgs_dir):
     nt = Network()
 
     # HTML template for view graph details panel
-    current_directory = os.path.dirname(os.path.realpath(__file__))
-    nt.set_template(os.path.join(current_directory, "templates", "template.html"))
+    nt.set_template(os.path.join(TEMPLATE_DIR, "template.html"))
 
     # Add nodes
     G = nx.Graph()
@@ -59,22 +64,17 @@ def view_graph(db, output_dir, imgs_dir):
             aligned_nodes.append(n)
             G.nodes[n]["aligned"] = 1
 
-    maxnodes, _, attributes = max(
-        G.edges(data=True), key=lambda edge: edge[2]["matches"]
-    )
+    maxnodes, _, attributes = max(G.edges(data=True), key=lambda edge: edge[2]["matches"])
     max_edge_value = attributes["matches"]
 
-    minnodes, _, attributes = min(
-        G.edges(data=True), key=lambda edge: edge[2]["matches"]
-    )
+    minnodes, _, attributes = min(G.edges(data=True), key=lambda edge: edge[2]["matches"])
     min_edge_value = attributes["matches"]
 
     # Scale edge width and assign label to edge popup
     for e in G.edges():
         G.edges[e]["weight"] = (
             np.power(
-                ((G.edges[e]["matches"] - min_edge_value) + 1)
-                / (max_edge_value - min_edge_value),
+                ((G.edges[e]["matches"] - min_edge_value) + 1) / (max_edge_value - min_edge_value),
                 2,
             )
             * 10
@@ -84,9 +84,7 @@ def view_graph(db, output_dir, imgs_dir):
     # Compute node positions using the spring layout
 
     AG = nx.subgraph(G, aligned_nodes)
-    pos_aligned = nx.spring_layout(
-        AG, seed=0, weight="matches", iterations=100, scale=800
-    )
+    pos_aligned = nx.spring_layout(AG, seed=0, weight="matches", iterations=100, scale=800)
 
     for n, pos in pos_aligned.items():
         G.nodes[n]["x"] = pos[0]
@@ -124,9 +122,7 @@ def view_graph(db, output_dir, imgs_dir):
       "communities": {}
       }}
     }}
-    """.format(
-            G.number_of_edges(), len(aligned_nodes), len(na_nodes), Cs
-        )
+    """.format(G.number_of_edges(), len(aligned_nodes), len(na_nodes), Cs)
     )
 
     # Write graph.html

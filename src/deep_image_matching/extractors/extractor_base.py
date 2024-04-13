@@ -1,4 +1,5 @@
 import inspect
+import logging
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
 from typing import Optional, Tuple, TypedDict, Union
@@ -8,9 +9,12 @@ import h5py
 import numpy as np
 import torch
 
-from .. import Quality, TileSelection, get_size_by_quality, logger
+from ..config import Config
+from ..constants import Quality, TileSelection, get_size_by_quality
 from ..utils.image import Image, resize_image
 from ..utils.tiling import Tiler
+
+logger = logging.getLogger("dim")
 
 
 class FeaturesDict(TypedDict):
@@ -48,9 +52,7 @@ def extractor_loader(root, model):
     # return getattr(module, 'Model')
 
 
-def save_features_h5(
-    feature_path: Path, features: FeaturesDict, im_name: str, as_half: bool = True
-):
+def save_features_h5(feature_path: Path, features: FeaturesDict, im_name: str, as_half: bool = True):
     # If as_half is True then the features are converted to float16.
     if as_half:
         feat_dtype = np.float16
@@ -80,9 +82,7 @@ def save_features_h5(
                         compression_opts=9,
                     )
                 else:
-                    raise TypeError(
-                        f"Features data must be of type np.ndarray, not {type(v)}"
-                    )
+                    raise TypeError(f"Features data must be of type np.ndarray, not {type(v)}")
 
         except OSError as error:
             if "No space left on device" in error.args[0]:
@@ -95,8 +95,7 @@ def save_features_h5(
 
 
 class ExtractorBase(metaclass=ABCMeta):
-    general_conf = {
-        "output_dir": None,
+    _default_general_conf = {
         "quality": Quality.HIGH,
         "tile_selection": TileSelection.NONE,
         "tile_size": (1024, 1024),  # (x, y) or (width, height)
@@ -104,7 +103,7 @@ class ExtractorBase(metaclass=ABCMeta):
         "force_cpu": False,
         "do_viz": False,
     }
-    default_conf = {}
+    _default_conf = {}
     required_inputs = []
     grayscale = True
     as_float = True
@@ -112,52 +111,39 @@ class ExtractorBase(metaclass=ABCMeta):
     descriptor_size = 128
     features_as_half = True
 
-    def __init__(self, custom_config: dict):
+    def __init__(self, custom_config: Config) -> None:
         """
         Initialize the instance with a custom config. This is the method to be called by subclasses
 
         Args:
-                custom_config: a dictionary of options to
+            custom_config: A Config object with custom configuration parameters
         """
         # If a custom config is passed, update the default config
-        if not isinstance(custom_config, dict):
-            raise TypeError("opt must be a dictionary")
-        # self._update_config(custom_config)
+        if not isinstance(custom_config, Config):
+            raise TypeError("Invalid config object. 'custom_config' must be a Config object")
 
-        # Update default config
-        self._config = {
+        # Update default config with custom config
+        # NOTE: This is done to keep backward compatibility with the old config format that was a dictionary, it should be replaced with the new config object
+        self.config = {
             "general": {
-                **self.general_conf,
-                **custom_config.get("general", {}),
+                **self._default_general_conf,
+                **custom_config.general,
             },
             "extractor": {
-                **self.default_conf,
-                **custom_config.get("extractor", {}),
+                **self._default_conf,
+                **custom_config.extractor,
             },
         }
 
         # Get main processing parameters and save them as class members
-        self._quality = self._config["general"]["quality"]
-        self._tiling = self._config["general"]["tile_selection"]
-        logger.debug(
-            f"Matching options: Quality: {self._quality.name} - Tiling: {self._tiling.name}"
-        )
-
-        # Define saving directory
-        output_dir = self._config["general"]["output_dir"]
-        if output_dir is not None:
-            self._output_dir = Path(output_dir)
-            self._output_dir.mkdir(parents=True, exist_ok=True)
-        else:
-            self._output_dir = None
-        logger.debug(f"Saving directory: {self._output_dir}")
+        # NOTE: this is used for backward compatibility, it should be removed
+        self._quality = self.config["general"]["quality"]
+        self._tiling = self.config["general"]["tile_selection"]
+        logger.debug(f"Matching options: Quality: {self._quality.name} - Tiling: {self._tiling.name}")
+        logger.debug(f"Saving directory: {self.config['general']['output_dir']}")
 
         # Get device
-        self._device = (
-            "cuda"
-            if torch.cuda.is_available() and not self._config["general"]["force_cpu"]
-            else "cpu"
-        )
+        self._device = "cuda" if torch.cuda.is_available() and not self.config["general"]["force_cpu"] else "cpu"
         logger.debug(f"Running inference on device {self._device}")
 
     def extract(self, img: Union[Image, Path, str]) -> np.ndarray:
@@ -178,14 +164,12 @@ class ExtractorBase(metaclass=ABCMeta):
         elif isinstance(img, Path):
             im_path = img
         else:
-            raise TypeError(
-                "Invalid image path. 'img' must be a string, a Path or an Image object"
-            )
+            raise TypeError("Invalid image path. 'img' must be a string, a Path or an Image object")
         if not im_path.exists():
             raise ValueError(f"Image {im_path} does not exist")
 
-        output_dir = Path(self._config["general"]["output_dir"])
-        feature_path = output_dir / "features.h5"
+        # Define feature path
+        feature_path = self.config["general"]["output_dir"] / "features.h5"
 
         # Load image
         image = cv2.imread(str(im_path))
@@ -197,14 +181,12 @@ class ExtractorBase(metaclass=ABCMeta):
         # Resize images if needed
         image_ = self._resize_image(self._quality, image, interp=self.interp)
 
-        if self._config["general"]["tile_selection"] == TileSelection.NONE:
+        if self.config["general"]["tile_selection"] == TileSelection.NONE:
             # Extract features from the whole image
             features = self._extract(image_)
             # features["feature_path"] = str(feature_path)
             # features["im_path"] = str(im_path)
-            features["tile_idx"] = np.zeros(
-                features["keypoints"].shape[0], dtype=np.float32
-            )
+            features["tile_idx"] = np.zeros(features["keypoints"].shape[0], dtype=np.float32)
 
         else:
             # Extract features by tiles
@@ -228,8 +210,8 @@ class ExtractorBase(metaclass=ABCMeta):
         )
 
         # For debug: visualize keypoints and save to disk
-        if self._config["general"]["verbose"]:
-            viz_dir = output_dir / "debug" / "keypoints"
+        if self.config["general"]["verbose"]:
+            viz_dir = self.config["general"]["output_dir"] / "debug" / "keypoints"
             viz_dir.mkdir(parents=True, exist_ok=True)
             image = cv2.imread(str(im_path))
             self.viz_keypoints(
@@ -278,18 +260,14 @@ class ExtractorBase(metaclass=ABCMeta):
             select_unique: If True the unique values of keypoints are selected
         """
         # Compute tiles limits
-        tile_size = self._config["general"]["tile_size"]
-        overlap = self._config["general"]["tile_overlap"]
+        tile_size = self.config["general"]["tile_size"]
+        overlap = self.config["general"]["tile_overlap"]
         tiler = Tiler(tiling_mode="size")
-        tiles, tiles_origins, padding = tiler.compute_tiles_by_size(
-            input=image, window_size=tile_size, overlap=overlap
-        )
+        tiles, tiles_origins, padding = tiler.compute_tiles_by_size(input=image, window_size=tile_size, overlap=overlap)
 
         # Initialize empty arrays
         kpts_full = np.array([], dtype=np.float32).reshape(0, 2)
-        descriptors_full = np.array([], dtype=np.float32).reshape(
-            self.descriptor_size, 0
-        )
+        descriptors_full = np.array([], dtype=np.float32).reshape(self.descriptor_size, 0)
         scores_full = np.array([], dtype=np.float32)
         tile_idx_full = np.array([], dtype=np.float32)
 
@@ -307,9 +285,9 @@ class ExtractorBase(metaclass=ABCMeta):
                 scor_tile = None
 
             # For debug: visualize keypoints and save to disk
-            if self._config["general"]["verbose"]:
+            if self.config["general"]["verbose"]:
                 tile = np.uint8(tile)
-                viz_dir = self._output_dir / "debug" / "tiles"
+                viz_dir = self.config["general"]["output_dir"] / "debug" / "tiles"
                 viz_dir.mkdir(parents=True, exist_ok=True)
                 self.viz_keypoints(
                     tile,
@@ -367,9 +345,7 @@ class ExtractorBase(metaclass=ABCMeta):
 
         return features
 
-    def _resize_image(
-        self, quality: Quality, image: np.ndarray, interp: str = "cv2_area"
-    ) -> Tuple[np.ndarray]:
+    def _resize_image(self, quality: Quality, image: np.ndarray, interp: str = "cv2_area") -> Tuple[np.ndarray]:
         """
         Resize images based on the specified quality.
 
@@ -389,9 +365,7 @@ class ExtractorBase(metaclass=ABCMeta):
         new_size = get_size_by_quality(quality, image.shape[:2])
         return resize_image(image, (new_size[1], new_size[0]), interp=interp)
 
-    def _resize_features(
-        self, quality: Quality, features: FeaturesDict
-    ) -> Tuple[FeaturesDict]:
+    def _resize_features(self, quality: Quality, features: FeaturesDict) -> Tuple[FeaturesDict]:
         """
         Resize features based on the specified quality.
 

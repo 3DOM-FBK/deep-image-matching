@@ -10,7 +10,7 @@ import torch
 
 
 class ImagePreprocessor:
-    default_conf = {
+    _default_conf = {
         "resize": None,  # target edge length, None for no resizing
         "side": "long",
         "interpolation": "bilinear",
@@ -20,7 +20,7 @@ class ImagePreprocessor:
 
     def __init__(self, **conf) -> None:
         super().__init__()
-        self.conf = {**self.default_conf, **conf}
+        self.conf = {**self._default_conf, **conf}
         self.conf = SimpleNamespace(**self.conf)
 
     def __call__(self, img: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -63,10 +63,7 @@ def batch_to_device(batch: dict, device: str = "cpu", non_blocking: bool = True)
 
 def rbd(data: dict) -> dict:
     """Remove batch dimension from elements in data"""
-    return {
-        k: v[0] if isinstance(v, (torch.Tensor, np.ndarray, list)) else v
-        for k, v in data.items()
-    }
+    return {k: v[0] if isinstance(v, (torch.Tensor, np.ndarray, list)) else v for k, v in data.items()}
 
 
 def read_image(path: Path, grayscale: bool = False) -> np.ndarray:
@@ -131,7 +128,7 @@ def load_image(path: Path, resize: int = None, **kwargs) -> torch.Tensor:
 class Extractor(torch.nn.Module):
     def __init__(self, **conf):
         super().__init__()
-        self.conf = SimpleNamespace(**{**self.default_conf, **conf})
+        self.conf = SimpleNamespace(**{**self._default_conf, **conf})
 
     @torch.no_grad()
     def extract(self, img: torch.Tensor, **conf) -> dict:

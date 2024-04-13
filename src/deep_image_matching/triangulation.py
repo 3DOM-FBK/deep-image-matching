@@ -1,163 +1,203 @@
-import argparse
-import contextlib
-import io
-import sys
+import logging
+from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict
 
 import h5py
 import numpy as np
 import pycolmap
 from tqdm import tqdm
 
-from . import logger
-from .hloc.utils.database import COLMAPDatabase, image_ids_to_pair_id
-from .hloc.utils.geometry import compute_epipolar_errors
-from .hloc.utils.io import get_keypoints, get_matches
-from .hloc.utils.parsers import parse_retrieval
+from deep_image_matching.utils import (
+    COLMAPDatabase,
+    compute_epipolar_errors,
+    get_pairs_from_file,
+)
+
+logger = logging.getLogger("dim")
 
 
-class OutputCapture:
-    def __init__(self, verbose: bool):
-        self.verbose = verbose
-
-    def __enter__(self):
-        if not self.verbose:
-            self.capture = contextlib.redirect_stdout(io.StringIO())
-            self.out = self.capture.__enter__()
-
-    def __exit__(self, exc_type, *args):
-        if not self.verbose:
-            self.capture.__exit__(exc_type, *args)
-            if exc_type is not None:
-                logger.error("Failed with output:\n%s", self.out.getvalue())
-        sys.stdout.flush()
+def parse_retrieval(path):
+    retrieval = defaultdict(list)
+    with open(path, "r") as f:
+        for p in f.read().rstrip("\n").split("\n"):
+            if len(p) == 0:
+                continue
+            q, r = p.split()
+            retrieval[q].append(r)
+    return dict(retrieval)
 
 
-def create_db_from_model(
-    reconstruction: pycolmap.Reconstruction, database_path: Path
-) -> Dict[str, int]:
+def create_db_from_model(reconstruction: pycolmap.Reconstruction, database_path: Path) -> Dict[str, int]:
+    """
+    Creates a COLMAP database from a PyCOLMAP reconstruction (it deletes an existing database if found at the specified path). The function
+    populates the database with camera parameters and image information, but does not add 2D and 3D points.
+
+    Args:
+        reconstruction (pycolmap.Reconstruction): The input PyCOLMAP reconstruction.
+        database_path (Path): Path to the COLMAP database file.
+
+    Returns:
+        Dict[str, int]: A dictionary mapping image names to their corresponding
+                        image IDs in the database.
+    """
     if database_path.exists():
         logger.warning("The database already exists, deleting it.")
         database_path.unlink()
 
-    db = COLMAPDatabase.connect(database_path)
-    db.create_tables()
+    with COLMAPDatabase.connect(database_path) as db:
+        db.create_tables()
 
-    for i, camera in reconstruction.cameras.items():
-        db.add_camera(
-            camera.model_id,
-            camera.width,
-            camera.height,
-            camera.params,
-            camera_id=i,
-            prior_focal_length=True,
-        )
+        for i, camera in reconstruction.cameras.items():
+            db.add_camera(
+                camera.model.value,
+                camera.width,
+                camera.height,
+                camera.params,
+                camera_id=i,
+                prior_focal_length=True,
+            )
 
-    for i, image in reconstruction.images.items():
-        db.add_image(image.name, image.camera_id, image_id=i)
+        for i, image in reconstruction.images.items():
+            db.add_image(image.name, image.camera_id, image_id=i)
 
-    db.commit()
-    db.close()
+        db.commit()
+
     return {image.name: i for i, image in reconstruction.images.items()}
 
 
-def import_features(
-    image_ids: Dict[str, int], database_path: Path, features_path: Path
-):
-    logger.info("Importing features into the database...")
-    db = COLMAPDatabase.connect(database_path)
+def get_keypoints(features_h5: Path, name: str) -> np.ndarray:
+    """
+    Loads keypoints from an HDF5 file.
 
-    for image_name, image_id in tqdm(image_ids.items()):
-        keypoints = get_keypoints(features_path, image_name)
-        keypoints += 0.5  # COLMAP origin
-        db.add_keypoints(image_id, keypoints)
+    Args:
+        features_h5 (Path): Path to the HDF5 file containing image features.
+        name (str): The name of the image whose keypoints are to be retrieved.
 
-    db.commit()
-    db.close()
+    Returns:
+        np.ndarray: An array of keypoints.
+
+    Raises:
+        KeyError: If the specified image name is not found within the HDF5 file.
+    """
+    with h5py.File(str(features_h5), "r", libver="latest") as f:
+        if name not in f:
+            raise KeyError(f"Key '{name}' not found in '{features_h5}'")
+        return f[name]["keypoints"][:]
+
+
+def get_matches(matches_h5: Path, name0: str, name1) -> np.ndarray:
+    """
+    Retrieves feature matches between two images from an HDF5 file.
+
+    Args:
+        matches_h5 (Path): Path to the HDF5 file storing feature matches.
+        name0 (str): Name of the first image.
+        name1 (str): Name of the second image.
+
+    Returns:
+        np.ndarray: An array representing the feature matches.
+
+    Raises:
+        KeyError: If either image name is not found in the HDF5 file.
+    """
+    with h5py.File(str(matches_h5), "r", libver="latest") as f:
+        if name0 not in f:
+            if name1 in f:
+                name0, name1 = name1, name0
+            else:
+                raise KeyError(f"Key '{name0}' and '{name1}' not found in '{matches_h5}'")
+        return f[name0][name1][:]
+
+
+def import_keypoints(features_h5: Path, image_ids: Dict[str, int], database_path: Path) -> None:
+    """
+    Imports keypoints from an HDF5 file into a COLMAP database.
+
+    Args:
+        features_h5 (Path): Path to the HDF5 file containing image features.
+        image_ids (Dict[str, int]):  A dictionary mapping image names to image IDs.
+        database_path (Path): Path to the COLMAP database file.
+    """
+    with COLMAPDatabase.connect(database_path) as db:
+        for name, image_id in tqdm(image_ids.items(), desc="Importing keypoints"):
+            keypoints = get_keypoints(features_h5, name)
+            keypoints += 0.5  # COLMAP origin
+            db.add_keypoints(image_id, keypoints)
+        db.commit()
 
 
 def import_matches(
+    matches_h5: Path,
     image_ids: Dict[str, int],
     database_path: Path,
-    matches_path: Path,
-    skip_geometric_verification: bool = False,
+    pair_file: Path,
+    add_two_view_geometry: bool = False,
 ):
-    logger.info("Importing matches into the database...")
+    """
+    Imports feature matches into a COLMAP database.
 
-    db = COLMAPDatabase.connect(database_path)
-    match_file = h5py.File(str(matches_path), "r")
+    Reads image pairs from a file and retrieves corresponding matches from
+    an HDF5 file, adding them to the specified database.
 
-    added = set()
-    n_keys = len(match_file.keys())
-    n_total = (n_keys * (n_keys - 1)) // 2
-
-    with tqdm(total=n_total) as pbar:
-        for key_1 in match_file.keys():
-            group = match_file[key_1]
-            for key_2 in group.keys():
-                id_1 = image_ids[key_1]
-                id_2 = image_ids[key_2]
-
-                pair_id = image_ids_to_pair_id(id_1, id_2)
-                if pair_id in added:
-                    logger.warning(f"Pair {pair_id} ({id_1}, {id_2}) already added!")
-                    continue
-
-                matches = group[key_2][()]
-                db.add_matches(id_1, id_2, matches)
-
-                if skip_geometric_verification:
-                    db.add_two_view_geometry(id_1, id_2, matches)
-
-                added.add(pair_id)
-
-                pbar.update(1)
-
-    db.commit()
-    db.close()
-    match_file.close()
+    Args:
+        matches_h5 (Path): Path to the HDF5 file containing feature matches.
+        image_ids (Dict[str, int]): A dictionary mapping image names to their corresponding image IDs.
+        database_path (Path): Path to the COLMAP database file.
+        pair_file (Path): Path to a file containing image pairs (one pair per line).
+        add_two_view_geometry (bool): If True, calculates and adds two-view geometry to the database. Defaults to False.
+    """
+    pairs = get_pairs_from_file(pair_file)
+    with COLMAPDatabase.connect(database_path) as db:
+        for name0, name1 in tqdm(pairs, desc="Importing matches"):
+            matches = get_matches(matches_h5, name0=name0, name1=name1)
+            id0, id1 = image_ids[name0], image_ids[name1]
+            db.add_matches(id0, id1, matches)
+            if add_two_view_geometry:
+                db.add_two_view_geometry(id0, id1, matches)
+        db.commit()
 
 
-def estimation_and_geometric_verification(
-    database_path: Path, pairs_path: Path, verbose: bool = False
-):
-    logger.info("Performing geometric verification of the matches...")
-    with OutputCapture(verbose):
-        with pycolmap.ostream():
-            pycolmap.verify_matches(
-                database_path,
-                pairs_path,
-                pycolmap.TwoViewGeometryOptions(
-                    compute_relative_pose=True, min_num_inliers=15
-                ),
-            )
-
-
-def geometric_verification(
+def import_verifed_matches(
     image_ids: Dict[str, int],
     reference: pycolmap.Reconstruction,
     database_path: Path,
     features_path: Path,
-    pairs_path: Path,
     matches_path: Path,
+    pairs_path: Path,
     max_error: float = 4.0,
 ):
+    """
+    Imports geometrically verified matches into a COLMAP database.
+
+    Performs geometric verification of matches using epipolar constraints.
+    Only matches that pass the verification are added to the database.
+
+    Args:
+        image_ids (Dict[str, int]): A dictionary mapping image names to their corresponding image IDs.
+        reference (pycolmap.Reconstruction): The reference PyCOLMAP reconstruction.
+        database_path (Path): Path to the COLMAP database file.
+        features_path (Path): Path to the HDF5 file containing image features.
+        matches_path (Path): Path to the HDF5 file containing feature matches.
+        pairs_path (Path): Path to a file specifying image pairs for retrieval.
+        max_error (float): Maximum allowable epipolar error (in pixels) for a match to be considered valid. Defaults to 4.0.
+    """
     logger.info("Performing geometric verification of the matches...")
 
     pairs = parse_retrieval(pairs_path)
+
     db = COLMAPDatabase.connect(database_path)
 
     inlier_ratios = []
     matched = set()
-    for name0 in tqdm(pairs):
+    for name0 in tqdm(pairs, desc="Importing verified matches"):
         id0 = image_ids[name0]
         image0 = reference.images[id0]
         cam0 = reference.cameras[image0.camera_id]
-        kps0, noise0 = get_keypoints(features_path, name0, return_uncertainty=True)
-        noise0 = 1.0 if noise0 is None else noise0
+        kps0 = get_keypoints(features_path, name0)
+        noise0 = 1.0
         if len(kps0) > 0:
-            kps0 = np.stack(cam0.image_to_world(kps0))
+            kps0 = np.stack(cam0.cam_from_img(kps0))
         else:
             kps0 = np.zeros((0, 2))
 
@@ -165,14 +205,14 @@ def geometric_verification(
             id1 = image_ids[name1]
             image1 = reference.images[id1]
             cam1 = reference.cameras[image1.camera_id]
-            kps1, noise1 = get_keypoints(features_path, name1, return_uncertainty=True)
-            noise1 = 1.0 if noise1 is None else noise1
+            kps1 = get_keypoints(features_path, name1)
+            noise1 = 1.0
             if len(kps1) > 0:
-                kps1 = np.stack(cam1.image_to_world(kps1))
+                kps1 = np.stack(cam1.cam_from_img(kps1))
             else:
                 kps1 = np.zeros((0, 2))
 
-            matches = get_matches(matches_path, name0, name1)[0]
+            matches = get_matches(matches_path, name0, name1)
 
             if len({(id0, id1), (id1, id0)} & matched) > 0:
                 continue
@@ -182,15 +222,11 @@ def geometric_verification(
                 db.add_two_view_geometry(id0, id1, matches)
                 continue
 
-            qvec_01, tvec_01 = pycolmap.relative_pose(
-                image0.qvec, image0.tvec, image1.qvec, image1.tvec
-            )
-            _, errors0, errors1 = compute_epipolar_errors(
-                qvec_01, tvec_01, kps0[matches[:, 0]], kps1[matches[:, 1]]
-            )
+            cam1_from_cam0 = image1.cam_from_world * image0.cam_from_world.inverse()
+            errors0, errors1 = compute_epipolar_errors(cam1_from_cam0, kps0[matches[:, 0]], kps1[matches[:, 1]])
             valid_matches = np.logical_and(
-                errors0 <= max_error * noise0 / cam0.mean_focal_length(),
-                errors1 <= max_error * noise1 / cam1.mean_focal_length(),
+                errors0 <= cam0.cam_from_img_threshold(noise0 * max_error),
+                errors1 <= cam1.cam_from_img_threshold(noise1 * max_error),
             )
             # TODO: We could also add E to the database, but we need
             # to reverse the transformations if id0 > id1 in utils/database.py.
@@ -208,113 +244,54 @@ def geometric_verification(
     db.close()
 
 
-def run_triangulation(
-    model_path: Path,
-    database_path: Path,
-    image_dir: Path,
-    reference_model: pycolmap.Reconstruction,
-    verbose: bool = False,
-    options: Optional[Dict[str, Any]] = None,
-) -> pycolmap.Reconstruction:
-    model_path.mkdir(parents=True, exist_ok=True)
-    logger.info("Running 3D triangulation...")
-    if options is None:
-        options = {}
-    with OutputCapture(verbose):
-        with pycolmap.ostream():
-            reconstruction = pycolmap.triangulate_points(
-                reference_model, database_path, image_dir, model_path, options=options
-            )
-    return reconstruction
+def db_from_existing_poses(
+    new_db: Path,
+    features_h5: Path,
+    matches_h5: Path,
+    sfm_rec_path: Path,
+    pair_file: Path,
+    do_geometric_verification: bool = False,
+    max_error: float = 4.0,
+):
+    """
+    db_from_existing_poses _summary_
 
+    Args:
+        new_db (Path): _description_
+        features_h5 (Path): _description_
+        matches_h5 (Path): _description_
+        sfm_rec_path (Path): _description_
+        pair_file (Path): _description_
+        do_geometric_verification (bool, optional): _description_. Defaults to False.
+        max_error (float, optional): _description_. Defaults to 4.0.
+    """
 
-def main(
-    sfm_dir: Path,
-    reference_model: Path,
-    image_dir: Path,
-    pairs: Path,
-    features: Path,
-    matches: Path,
-    skip_geometric_verification: bool = False,
-    estimate_two_view_geometries: bool = False,
-    min_match_score: Optional[float] = None,
-    verbose: bool = False,
-    mapper_options: Optional[Dict[str, Any]] = None,
-) -> pycolmap.Reconstruction:
-    assert reference_model.exists(), reference_model
-    assert features.exists(), features
-    assert pairs.exists(), pairs
-    assert matches.exists(), matches
+    # Import the sparse reconstruction
+    sfm_rec = pycolmap.Reconstruction(sfm_rec_path)
 
-    sfm_dir.mkdir(parents=True, exist_ok=True)
-    database = sfm_dir / "database.db"
-    reference = pycolmap.Reconstruction(reference_model)
+    # Create an empty database from the sparse reconstruction
+    image_ids = create_db_from_model(sfm_rec, new_db)
 
-    image_ids = create_db_from_model(reference, database)
-    import_features(image_ids, database, features)
+    # Add keypoints to the database
+    import_keypoints(features_h5, image_ids, new_db)
+
+    # Add matches to the database, but do not add two-view geometry
     import_matches(
+        matches_h5,
         image_ids,
-        database,
-        pairs,
-        matches,
-        min_match_score,
-        skip_geometric_verification,
-    )
-    if not skip_geometric_verification:
-        if estimate_two_view_geometries:
-            estimation_and_geometric_verification(database, pairs, verbose)
-        else:
-            geometric_verification(
-                image_ids, reference, database, features, pairs, matches
-            )
-    reconstruction = run_triangulation(
-        sfm_dir, database, image_dir, reference, verbose, mapper_options
-    )
-    logger.info(
-        "Finished the triangulation with statistics:\n%s", reconstruction.summary()
-    )
-    return reconstruction
-
-
-def parse_option_args(args: List[str], default_options) -> Dict[str, Any]:
-    options = {}
-    for arg in args:
-        idx = arg.find("=")
-        if idx == -1:
-            raise ValueError("Options format: key1=value1 key2=value2 etc.")
-        key, value = arg[:idx], arg[idx + 1 :]
-        if not hasattr(default_options, key):
-            raise ValueError(
-                f'Unknown option "{key}", allowed options and default values'
-                f" for {default_options.summary()}"
-            )
-        value = eval(value)
-        target_type = type(getattr(default_options, key))
-        if not isinstance(value, target_type):
-            raise ValueError(
-                f'Incorrect type for option "{key}":' f" {type(value)} vs {target_type}"
-            )
-        options[key] = value
-    return options
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--sfm_dir", type=Path, required=True)
-    parser.add_argument("--reference_sfm_model", type=Path, required=True)
-    parser.add_argument("--image_dir", type=Path, required=True)
-
-    parser.add_argument("--pairs", type=Path, required=True)
-    parser.add_argument("--features", type=Path, required=True)
-    parser.add_argument("--matches", type=Path, required=True)
-
-    parser.add_argument("--skip_geometric_verification", action="store_true")
-    parser.add_argument("--min_match_score", type=float)
-    parser.add_argument("--verbose", action="store_true")
-    args = parser.parse_args().__dict__
-
-    mapper_options = parse_option_args(
-        args.pop("mapper_options"), pycolmap.IncrementalMapperOptions()
+        new_db,
+        pair_file,
+        add_two_view_geometry=not do_geometric_verification,
     )
 
-    main(**args, mapper_options=mapper_options)
+    if do_geometric_verification:
+        # Run the geometric verification with the knwon camera poses and add the inliers matches to the database in the two-view geometry table
+        import_verifed_matches(
+            image_ids,
+            sfm_rec,
+            new_db,
+            features_h5,
+            matches_h5,
+            pair_file,
+            max_error=max_error,
+        )

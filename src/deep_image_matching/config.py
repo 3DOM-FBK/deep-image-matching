@@ -1,5 +1,6 @@
 import ast
 import json
+import logging
 import shutil
 from copy import deepcopy
 from enum import Enum
@@ -9,13 +10,10 @@ from typing import Tuple
 
 import yaml
 
-from deep_image_matching import (
-    GeometricVerification,
-    Quality,
-    TileSelection,
-    change_logger_level,
-    logger,
-)
+from .constants import GeometricVerification, Quality, TileSelection
+from .utils.logger import change_logger_level
+
+logger = logging.getLogger("dim")
 
 # General configuration for the matching process.
 # It defines the quality of the matching process, the tile selection strategy, the tiling grid, the overlap between tiles, the geometric verification method, and the geometric verification parameters.
@@ -54,10 +52,11 @@ conf_general = {
     "min_inlier_ratio_per_pair": 0.25,
     # Even if the features are extracted by tiles, you can try to match the features of the entire image first (if the number of features is not too high and they can fit into memory). Default is False.
     "try_match_full_images": False,
+    "preselection_pipeline": "superpoint+lightglue",
 }
 
 
-# The configuration for DeepImageMatching is defined as a dictionary with the following keys:
+# The configuration for DeepImageMatcher is defined as a dictionary with the following keys:
 # - 'extractor': extractor configuration
 # - 'matcher': matcher configuration
 # The 'extractor' and 'matcher' values must contain a 'name' key with the name of the extractor/matcher to be used. Additionally, the other parameters of the extractor/matcher can be specified.
@@ -220,7 +219,7 @@ class Config:
     the configuration to a file.
 
     Attributes:
-        default_cli_opts (dict): The default command-line options.
+        _default_cli_opts (dict): The default command-line options.
         cfg (dict): The configuration dictionary with the following keys: general, extractor, matcher.
 
     Methods:
@@ -241,7 +240,7 @@ class Config:
         save: Save the configuration to a file.
     """
 
-    default_cli_opts = {
+    _default_cli_opts = {
         "gui": False,
         "dir": None,
         "images": None,
@@ -260,8 +259,10 @@ class Config:
         "force": True,
         "verbose": False,
         "graph": True,
+        "openmvg": None,
+        "camera_options": None,
     }
-    cfg = {
+    _cfg = {
         "general": {},
         "extractor": {},
         "matcher": {},
@@ -269,15 +270,18 @@ class Config:
 
     @property
     def general(self):
-        return self.cfg["general"]
+        return self._cfg["general"]
 
     @property
     def extractor(self):
-        return self.cfg["extractor"]
+        return self._cfg["extractor"]
 
     @property
     def matcher(self):
-        return self.cfg["matcher"]
+        return self._cfg["matcher"]
+
+    def __repr__(self) -> str:
+        return f"DeepImageMatching Configuration Object"
 
     def __init__(self, args: dict):
         """
@@ -290,10 +294,10 @@ class Config:
         general = self.parse_general_config(args)
 
         # Build configuration dictionary
-        self.cfg["general"] = {**conf_general, **general}
+        self._cfg["general"] = {**conf_general, **general}
         features_config = self.get_config(args["pipeline"])
-        self.cfg["extractor"] = features_config["extractor"]
-        self.cfg["matcher"] = features_config["matcher"]
+        self._cfg["extractor"] = features_config["extractor"]
+        self._cfg["matcher"] = features_config["matcher"]
 
         # If the user has provided a configuration file, update the configuration
         if "config_file" in args and args["config_file"] is not None:
@@ -303,8 +307,8 @@ class Config:
             self.update_from_yaml(config_file)
             self.print()
 
-        self._config_file = self.cfg["general"]["output_dir"] / "config.json"
-        self.save(self._config_file)
+        self.config_file = self._cfg["general"]["output_dir"] / "config.json"
+        self.save(self.config_file)
 
     def as_dict(self) -> dict:
         """
@@ -313,7 +317,7 @@ class Config:
         Returns:
             dict: The configuration dictionary.
         """
-        return self.cfg
+        return self._cfg
 
     @staticmethod
     def get_config(name: str) -> dict:
@@ -366,25 +370,19 @@ class Config:
             dict: The configuration dictionary with the following keys: general, extractor, matcher.
 
         """
-        args = {**Config.default_cli_opts, **input_args}
+        args = {**Config._default_cli_opts, **input_args}
 
         # Check that at least one of the two options is provided
         if args["images"] is None and args["dir"] is None:
-            raise ValueError(
-                "Invalid input. Either '--images' or '--dir' option must be provided."
-            )
+            raise ValueError("Invalid input. Either '--images' or '--dir' option must be provided.")
 
         # If the project directory is not provided, check that the image folder is provided (and it valid)
         if args["dir"] is None:
             args["images"] = Path(args["images"])
             if not args["images"]:
-                raise ValueError(
-                    "Invalid input. '--images' option is required when '--dir' option is not provided."
-                )
+                raise ValueError("Invalid input. '--images' option is required when '--dir' option is not provided.")
             if not args["images"].exists() or not args["images"].is_dir():
-                raise ValueError(
-                    f"Invalid images folder {args['images']}. Direcotry does not exist"
-                )
+                raise ValueError(f"Invalid images folder {args['images']}. Direcotry does not exist")
             args["dir"] = args["images"].parent
         else:
             args["dir"] = Path(args["dir"])
@@ -405,22 +403,15 @@ class Config:
         else:
             args["images"] = Path(args["images"])
             if not args["images"].exists() or not args["images"].is_dir():
-                raise ValueError(
-                    f"Invalid images folder {args['images']}. Direcotry does not exist"
-                )
+                raise ValueError(f"Invalid images folder {args['images']}. Direcotry does not exist")
 
         # if output folder is not provided, use the default one
         if args["outs"] is None:
-            args["outs"] = (
-                args["dir"]
-                / f"results_{args['pipeline']}_{args['strategy']}_quality_{args['quality']}"
-            )
+            args["outs"] = args["dir"] / f"results_{args['pipeline']}_{args['strategy']}_quality_{args['quality']}"
 
         if args["outs"].exists():
             if args["force"]:
-                logger.warning(
-                    f"{args['outs']} already exists, but the '--force' option is used. Deleting the folder."
-                )
+                logger.warning(f"{args['outs']} already exists, but the '--force' option is used. Deleting the folder.")
                 shutil.rmtree(args["outs"])
             else:
                 logger.warning(
@@ -437,14 +428,10 @@ class Config:
         pipeline = args["pipeline"]
         extractor = confs[pipeline]["extractor"]["name"]
         if extractor not in opt_zoo["extractors"]:
-            raise ValueError(
-                f"Invalid extractor option: {extractor}. Valid options are: {opt_zoo['extractors']}"
-            )
+            raise ValueError(f"Invalid extractor option: {extractor}. Valid options are: {opt_zoo['extractors']}")
         matcher = confs[pipeline]["matcher"]["name"]
         if matcher not in opt_zoo["matchers"]:
-            raise ValueError(
-                f"Invalid matcher option: {matcher}. Valid options are: {opt_zoo['matchers']}"
-            )
+            raise ValueError(f"Invalid matcher option: {matcher}. Valid options are: {opt_zoo['matchers']}")
 
         # Check matching strategy and related options
         if args["strategy"] not in opt_zoo["matching_strategy"]:
@@ -459,19 +446,13 @@ class Config:
                     "Invalid overlap. --overlap 'int' option is required when --strategy is set to sequential"
                 )
             elif args["overlap"] < 1:
-                raise ValueError(
-                    "Invalid overlap. --overlap must be a positive integer greater than 0"
-                )
+                raise ValueError("Invalid overlap. --overlap must be a positive integer greater than 0")
             elif args["overlap"] >= num_imgs - 1:
-                raise ValueError(
-                    "Invalid overlap. --overlap must be less than the number of images-1"
-                )
+                raise ValueError("Invalid overlap. --overlap must be less than the number of images-1")
 
         elif args["strategy"] == "retrieval":
             if args["global_feature"] is None:
-                raise ValueError(
-                    "--global_feature option is required when --strategy is set to retrieval"
-                )
+                raise ValueError("--global_feature option is required when --strategy is set to retrieval")
             elif args["global_feature"] not in opt_zoo["retrieval"]:
                 raise ValueError(
                     f"Invalid global_feature option: {args['global_feature']}. Valid options are: {opt_zoo['retrieval']}"
@@ -479,18 +460,14 @@ class Config:
 
         elif args["strategy"] == "covisibility":
             if args["db_path"] is None:
-                raise ValueError(
-                    "--db_path option is required when --strategy is set to covisibility"
-                )
+                raise ValueError("--db_path option is required when --strategy is set to covisibility")
             args["db_path"] = Path(args["db_path"])
             if not args["db_path"].exists():
                 raise ValueError(f"File {args['db_path']} does not exist")
 
         elif args["strategy"] == "custom_pairs":
             if args["pair_file"] is None:
-                raise ValueError(
-                    "--pair_file option is required when --strategy is set to custom_pairs"
-                )
+                raise ValueError("--pair_file option is required when --strategy is set to custom_pairs")
             args["pair_file"] = Path(args["pair_file"])
             if not args["pair_file"].exists():
                 raise ValueError(f"File {args['pair_file']} does not exist")
@@ -505,14 +482,16 @@ class Config:
             args["openmvg"] = Path(args["openmvg"])
             if not args["openmvg"].exists():
                 raise ValueError(f"File {args['openmvg']} does not exist")
-        
+
         if args["camera_options"] is not None:
-            if Path(args["camera_options"]).suffix != '.yaml':
-                raise ValueError(f"File passed to --camera_options must be .yaml file")
-        
-        if args["upright"] == True:
+            if Path(args["camera_options"]).suffix != ".yaml":
+                raise ValueError("File passed to --camera_options must be .yaml file")
+
+        if args["upright"] is True:
             if args["strategy"] == "matching_lowres":
-                raise ValueError(f"With option '--upright' is not possible to use '--strategy matching_lowres', since pairs are chosen with superpoint+lightglue that is not rotation invariant. Use another strategy, e.g. 'bruteforce'.")
+                raise ValueError(
+                    "With option '--upright' is not possible to use '--strategy matching_lowres', since pairs are chosen with superpoint+lightglue that is not rotation invariant. Use another strategy, e.g. 'bruteforce'."
+                )
 
         # Build configuration dictionary
         cfg = {
@@ -561,13 +540,9 @@ class Config:
             if "quality" in cfg["general"]:
                 cfg["general"]["quality"] = Quality[cfg["general"]["quality"].upper()]
             if "tile_selection" in cfg["general"]:
-                cfg["general"]["tile_selection"] = TileSelection[
-                    cfg["general"]["tile_selection"].upper()
-                ]
+                cfg["general"]["tile_selection"] = TileSelection[cfg["general"]["tile_selection"].upper()]
             if "geom_verification" in cfg["general"]:
-                cfg["general"]["geom_verification"] = GeometricVerification[
-                    cfg["general"]["geom_verification"].upper()
-                ]
+                cfg["general"]["geom_verification"] = GeometricVerification[cfg["general"]["geom_verification"].upper()]
             if "tile_size" in cfg["general"]:
                 tile_sz = cfg["general"]["tile_size"]
                 if isinstance(tile_sz, Tuple):
@@ -582,7 +557,7 @@ class Config:
                         f"Invalid tile_size option: {tile_sz} in the configuration file {path}. Valid options are: Tuple[int, int], str, list"
                     )
 
-            self.cfg["general"].update(cfg["general"])
+            self._cfg["general"].update(cfg["general"])
 
         if "extractor" in cfg:
             if "name" not in cfg["extractor"]:
@@ -590,22 +565,22 @@ class Config:
                     f"Extractor name is missing in configuration file {path}. Please specify the extractor name for which you want to update the configuration."
                 )
                 exit(1)
-            if cfg["extractor"]["name"] != self.cfg["extractor"]["name"]:
+            if cfg["extractor"]["name"] != self._cfg["extractor"]["name"]:
                 logger.warning(
                     f"Extractor name in configuration file {path} does not match with the extractor chosen from CLI or GUI. The custom configuration is not set, but matching is run with the default options."
                 )
-            self.cfg["extractor"].update(cfg["extractor"])
+            self._cfg["extractor"].update(cfg["extractor"])
         if "matcher" in cfg:
             if "name" not in cfg["matcher"]:
                 logger.error(
                     f"Matcher name is missing in configuration file {path}. Please specify the matcher name for which you want to update the configuration."
                 )
                 exit(1)
-            if cfg["matcher"]["name"] != self.cfg["matcher"]["name"]:
+            if cfg["matcher"]["name"] != self._cfg["matcher"]["name"]:
                 logger.warning(
                     f"Matcher name in configuration file {path} does not match with the matcher chosen from CLI or GUI. The custom configuration is not set, but matching is run with the default options."
                 )
-            self.cfg["matcher"].update(cfg["matcher"])
+            self._cfg["matcher"].update(cfg["matcher"])
 
     def print(self):
         """
@@ -632,12 +607,12 @@ class Config:
 
         """
         if path is None:
-            path = self._config_file
+            path = self.config_file
         else:
             path = Path(path)
             path.parent.mkdir(parents=True, exist_ok=True)
 
-        cfg = deepcopy(self.cfg)
+        cfg = deepcopy(self._cfg)
 
         # Convert enums to strings
         for k, v in cfg.items():

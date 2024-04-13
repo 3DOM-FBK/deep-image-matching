@@ -1,7 +1,7 @@
 import os
 import shutil
 
-from .hloc import extract_features, pairs_from_retrieval
+from .thirdparty.hloc import extract_features, pairs_from_retrieval
 
 
 def ImageRetrieval(imgs_dir, outs_dir, retrieval_option, sfm_pairs):

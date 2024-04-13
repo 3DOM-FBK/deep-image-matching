@@ -9,9 +9,9 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from deep_image_matching import Timer, logger
-from deep_image_matching.hloc.extractors.superpoint import SuperPoint
+from deep_image_matching.constants import Timer, logger
 from deep_image_matching.io.h5 import get_features
+from deep_image_matching.thirdparty.hloc.extractors.superpoint import SuperPoint
 from deep_image_matching.thirdparty.LightGlue.lightglue import LightGlue
 from deep_image_matching.utils.geometric_verification import geometric_verification
 
@@ -22,9 +22,7 @@ class FeaturesDict(TypedDict):
     scores: Optional[np.ndarray]
 
 
-def read_tensor_image(
-    path: Path, resize_to: int = 500, device="cuda"
-) -> Tuple[np.ndarray, float]:
+def read_tensor_image(path: Path, resize_to: int = 500, device="cuda") -> Tuple[np.ndarray, float]:
     device = torch.device(device) if torch.cuda.is_available() else torch.device("cpu")
     img = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
     size = img.shape[:2][::-1]
@@ -167,12 +165,8 @@ def match_low_resolution(
     logger.info("Matching downsampled images...")
     for im0_path, im1_path in tqdm(brute_pairs):
         # Load features from disk
-        feats0 = feats2LG(
-            get_features(feature_path, im0_path.name, as_tensor=True, device=device)
-        )
-        feats1 = feats2LG(
-            get_features(feature_path, im1_path.name, as_tensor=True, device=device)
-        )
+        feats0 = feats2LG(get_features(feature_path, im0_path.name, as_tensor=True, device=device))
+        feats1 = feats2LG(get_features(feature_path, im1_path.name, as_tensor=True, device=device))
         # Match
         with torch.inference_mode():
             res = matcher({"image0": feats0, "image1": feats1})
@@ -196,9 +190,7 @@ def match_low_resolution(
             mkpts1 = mkpts1[inlMask]
 
         if len(matches) < min_matches:
-            logger.debug(
-                f"Not enough matches, skipping pair {im0_path.name} - {im1_path.name}"
-            )
+            logger.debug(f"Not enough matches, skipping pair {im0_path.name} - {im1_path.name}")
             continue
 
         with h5py.File(str(matches_path), "a", libver="latest") as fd:

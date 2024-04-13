@@ -5,52 +5,65 @@ This database if used when we construct camera intrinsics from exif data.
 Authors: Ayush Baid
 """
 
+import csv
+import shutil
+import urllib.request
 from pathlib import Path
-
-import pandas as pd
-
-DEFAULT_SENSOR_DB_PATH = (
-    Path(__file__).resolve().parents[1]
-    / "thirdparty/CameraSensorSizeDatabase/sensor_database.csv"
-)
 
 
 class SensorWidthDatabase:
     """Database class for sensor-width, reading data from a csv file."""
 
-    def __init__(self, csv_path: str = DEFAULT_SENSOR_DB_PATH):
+    DEFAULT_SENSOR_DB_PATH = Path(__file__).resolve().parents[1] / "thirdparty/sensor_width_camera_database.csv"
+    DATABASE_URL = url = (
+        "https://raw.githubusercontent.com/openMVG/openMVG/6d6b1dd70bded094ba06024e481dd5a5c662dc83/src/openMVG/exif/sensor_width_database/sensor_width_camera_database.txt"
+    )
+    DATABASE_DETAIL_ULR = ""
+
+    def __init__(self, csv_path: str = None):
         """Initializes the database from a csv file"""
 
-        assert Path(csv_path).exists(), f"csv_path='{csv_path}' does not exist"
+        if csv_path is None or not Path(csv_path).exists():
+            csv_path = Path(self.DEFAULT_SENSOR_DB_PATH)
+            url = self.DATABASE_URL
+            with urllib.request.urlopen(url) as response, open(csv_path, "wb") as out_file:
+                shutil.copyfileobj(response, out_file)
 
-        self.df = pd.read_csv(csv_path)
+        if not csv_path.exists():
+            raise FileNotFoundError(f"Sensor-width database not found at '{csv_path}'")
 
-        # convert string to lower-case
-        self.df["CameraMaker"] = self.df["CameraMaker"].str.lower()
-        self.df["CameraModel"] = self.df["CameraModel"].str.lower()
+        # Store data in a dictionary for efficient lookup
+        self.data = {}
+        with open(csv_path, "r") as file:
+            reader = csv.reader(file, delimiter=";")
+            for row in reader:
+                try:
+                    key = row[0].lower()
+                    self.data[key] = float(row[1])
+                except ValueError:
+                    continue
 
-    def lookup(self, make: str, model: str) -> float:
+    def lookup(self, camera: str) -> float:
         """Look-up the sensor width given the camera make and model.
 
         Args:
-            make: make of the camera
-            model: model of the camera
+            camera: camera model
 
         Returns:
             sensor-width in mm
         """
 
         # preprocess query strings
-        lower_make = make.split()[0].lower()
-        lower_model = model.lower()
+        key = camera.lower()
+        if key not in self.data:
+            raise LookupError(f"Camera {key} not found in sensor database")
 
-        selection_condition = (self.df["CameraMaker"] == lower_make) & (
-            self.df["CameraModel"] == lower_model
-        )
-        selected = self.df.loc[selection_condition, "SensorWidth(mm)"]
-        if len(selected) != 1:
-            raise LookupError(
-                f"make='{make}' and model='{model}' not found in sensor database"
-            )
+        return self.data[key]
 
-        return self.df.loc[selection_condition, "SensorWidth(mm)"].values[0]
+
+if __name__ == "__main__":
+    db = SensorWidthDatabase()
+
+    db.lookup("Canon EOS 5D Mark II")
+
+    print("done.")
