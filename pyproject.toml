@@ -23,7 +23,7 @@
     "numpy",
     "scipy",
     "matplotlib",
-    "torch<=2.2.1",
+    "torch",
     "torchvision",
     "pillow",
     "opencv-python",
@@ -41,8 +41,7 @@
     "yacs>=0.1.8",
     "e2cnn",
     "pytorch_lightning",
-    "xformers",
-  ]
+]
 
   [project.optional-dependencies]
     dev = [
