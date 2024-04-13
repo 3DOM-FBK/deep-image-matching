@@ -14,6 +14,7 @@ from pathlib import Path
 
 import h5py
 import numpy as np
+import yaml
 from PIL import Image
 from tqdm import tqdm
 
@@ -24,6 +25,13 @@ logger = logging.getLogger("dim")
 __OPENMVG_DIST_NAME_MAP = {
     "pinhole_radial_k3": "disto_k3",
     "pinhole_brown_t2": "disto_t2",
+}
+
+DEFAULT_CAM_OPTIONS = {
+    "general": {
+        "single_camera": False,
+        "openmvg_camera_model": "pinhole_radial_k3",
+    },
 }
 
 
@@ -331,7 +339,7 @@ def export_to_openmvg(
     feature_path: Path,
     match_path: Path,
     openmvg_out_path: Path,
-    camera_options: dict,
+    camera_config_path: Path,
     openmvg_sfm_bin: Path = None,
     openmvg_database: Path = None,
 ) -> None:
@@ -345,7 +353,7 @@ def export_to_openmvg(
         feature_path (Path): Path to the feature file (HDF5 format).
         match_path (Path): Path to the match file (HDF5 format).
         openmvg_out_path (Path): Path to the desired output directory for the OpenMVG project.
-        camera_options (dict): Camera configuration options.
+        camera_config_path (Path): Path to the camera options yaml file.
         openmvg_sfm_bin (Path, optional): Path to the OpenMVG SfM executable. If not provided,
                                           attempts to find it automatically (Linux only).
         openmvg_database (Path, optional): Path to the OpenMVG sensor width database.
@@ -357,6 +365,22 @@ def export_to_openmvg(
         logger.warning(f"OpenMVG output folder {openmvg_out_path} already exists - deleting it")
         os.rmdir(openmvg_out_path)
     openmvg_out_path.mkdir(parents=True)
+
+    if not img_dir.exists():
+        raise FileNotFoundError(f"Image directory {img_dir} does not exist.")
+    if not feature_path.exists():
+        raise FileNotFoundError(f"Feature file {feature_path} does not exist.")
+    if not match_path.exists():
+        raise FileNotFoundError(f"Match file {match_path} does not exist.")
+    if not camera_config_path.exists():
+        raise FileNotFoundError(f"Camera options file {camera_config_path} does not exist.")
+
+    # If a config file is provided, read camera options, otherwise use defaults
+    if camera_config_path is not None:
+        with open(camera_config_path, "r") as file:
+            camera_options = yaml.safe_load(file)
+    else:
+        camera_options = DEFAULT_CAM_OPTIONS
 
     # NOTE: this part meybe is not needed here...
     if openmvg_sfm_bin is None:

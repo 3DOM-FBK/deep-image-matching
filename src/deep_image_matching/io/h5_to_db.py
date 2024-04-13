@@ -32,7 +32,7 @@ from ..utils.database import COLMAPDatabase, image_ids_to_pair_id
 
 logger = logging.getLogger("dim")
 
-default_camera_options = {
+DEFAULT_CAM_OPTIONS = {
     "general": {
         "single_camera": False,
         "camera_model": "simple-radial",
@@ -85,7 +85,7 @@ def export_to_colmap(
         with open(camera_config_path, "r") as file:
             camera_options = yaml.safe_load(file)
     else:
-        camera_options = default_camera_options
+        camera_options = DEFAULT_CAM_OPTIONS
 
     # Create the database and add keypoints and matches
     db = COLMAPDatabase.connect(database_path)

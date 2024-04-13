@@ -21,15 +21,13 @@ matcher = dim.ImageMatcher(config)
 feature_path, match_path = matcher.run()
 
 # Export in colmap format
-with open(config.general["camera_options"], "r") as file:
-    camera_options = yaml.safe_load(file)
 database_path = output_dir / "database.db"
 dim.io.export_to_colmap(
     img_dir=imgs_dir,
     feature_path=feature_path,
     match_path=match_path,
     database_path=database_path,
-    camera_options=camera_options,
+    camera_config_path=config.general["camera_options"],
 )
 
 # Visualize view graph
@@ -56,7 +54,7 @@ if config.general["openmvg_conf"]:
         openmvg_out_path=openmvg_out_path,
         openmvg_sfm_bin=openmvg_sfm_bin,
         openmvg_database=openmvg_database,
-        camera_options=camera_options,
+        camera_config_path=config.general["camera_options"],
     )
 
     # Reconstruction with OpenMVG
