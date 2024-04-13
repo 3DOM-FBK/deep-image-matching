@@ -4,7 +4,7 @@
 
 [project]
   name = "deep_image_matching"
-  version = "1.2.2"
+  version = "1.2.4"
   description = "Multiview matching with deep-learning and hand-crafted local features for COLMAP and other SfM software."
   readme = "README.md"
   authors = [
@@ -69,7 +69,7 @@
   ]
     
 [tool.bumpver]
-  current_version = "1.2.2"
+  current_version = "1.2.4"
   version_pattern = "MAJOR.MINOR.PATCH"
   commit_message = "bump version {old_version} -> {new_version}"
   commit = true
