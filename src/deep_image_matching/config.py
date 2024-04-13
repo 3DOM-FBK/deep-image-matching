@@ -52,6 +52,7 @@ conf_general = {
     "min_inlier_ratio_per_pair": 0.25,
     # Even if the features are extracted by tiles, you can try to match the features of the entire image first (if the number of features is not too high and they can fit into memory). Default is False.
     "try_match_full_images": False,
+    "preselection_pipeline": "superpoint+lightglue",
 }
 
 
@@ -258,6 +259,8 @@ class Config:
         "force": True,
         "verbose": False,
         "graph": True,
+        "openmvg": None,
+        "camera_options": None,
     }
     _cfg = {
         "general": {},
