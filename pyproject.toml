@@ -41,6 +41,7 @@
     "yacs>=0.1.8",
     "e2cnn",
     "pytorch_lightning",
+    "pytest"
 ]
 
   [project.optional-dependencies]
