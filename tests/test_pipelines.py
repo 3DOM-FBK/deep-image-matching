@@ -286,7 +286,7 @@ def test_keynet(data_dir):
     assert match_path.exists()
 
 
-def test_dedode_nn(data_dir, script):
+def test_dedode_nn(data_dir):
     if not torch.cuda.is_available():
         pytest.skip("DeDoDe is not available without CUDA GPU.")
     prm = {
