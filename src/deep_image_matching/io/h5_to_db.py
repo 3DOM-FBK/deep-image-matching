@@ -55,7 +55,7 @@ def export_to_colmap(
         feature_path (Path): Path to the feature file (in HDF5 format) containing the extracted keypoints.
         match_path (Path): Path to the match file (in HDF5 format) containing the matches between keypoints.
         database_path (str, optional): Path to the COLMAP database file. Defaults to "colmap.db".
-        # camera_options (dict, optional): Flag indicating whether to use camera options. Defaults to default_camera_options.
+        camera_config_path (Path, optional): Path to the camera options yaml file. If none is passesed, the default camera configuration is used.
 
     Returns:
         None
