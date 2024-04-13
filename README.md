@@ -68,15 +68,22 @@ DIM can also be utilized as a library instead of being executed through the Comm
 
 For installing deep-image-matching, first create a conda environment:
 
-```
+```bash
 conda create -n deep-image-matching python=3.9
 conda activate deep-image-matching
 pip install --upgrade pip
 ```
 
+Then, you can install deep-image-matching using pip with the following command:
+
+```bash
+pip install deep-image-matching
+```
+
+If there is any issue with the installation, you can also install the package from the source code.
 Clone the repository and install deep-image-matching in editable mode:
 
-```
+```bash
 git clone https://github.com/3DOM-FBK/deep-image-matching.git
 cd deep-image-matching
 pip install -e .
@@ -84,10 +91,16 @@ pip install -e .
 
 Install pycolmap (optional, but recommended):
 
-```
+```bash
 pip install pycolmap==0.6.1
 ```
 Pycolmap is optional to run reconstruction directly in DIM. If pycolmap is not available, matches will be written both in a h5 and colmap database for later processing with COLMAP GUI or API, or other processing.
+
+Try to run the tests to check if deep-image-matching is correctly installed, try to import the package in a Python shell:
+
+```python
+import deep_image_matching as dim
+```
 
 For more information, check the [documentation](https://3dom-fbk.github.io/deep-image-matching/installation/).
 

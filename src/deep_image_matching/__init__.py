@@ -20,28 +20,16 @@ except ImportError:
 
 # Import submodules
 from . import extractors
-
-time_dict["extractors"] = time() - time_dict["start"]
 from . import matchers
-
-time_dict["matchers"] = time() - time_dict["extractors"]
-
-from . import reconstruction
-
-time_dict["reconstruction"] = time() - time_dict["matchers"]
-
 from . import io
 from . import utils
 from . import visualization
 from . import thirdparty
 
-time_dict["aux"] = time() - time_dict["reconstruction"]
-
 if not NO_PYCOLMAP:
-    from . import triangulation  # the triangulation module strictly requires pycolmap
-
-    time_dict["triangulation"] = time() - time_dict["aux"]
-
+    # Import submodules that require pycolmap
+    from . import reconstruction
+    from . import triangulation
 try:
     from . import graph
 except ImportError:
@@ -57,6 +45,3 @@ from .constants import *
 from .config import Config
 
 print("Deep Image Matching loaded in {:.3f} seconds.".format(time() - time_dict["start"]))
-# print("Time breakdown:")
-# for key in time_dict:
-#     print(f"{key}: {time_dict[key]:.3f}")
