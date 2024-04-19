@@ -110,6 +110,15 @@ confs = {
             "sinkhorn_iterations": 100,
         },
     },
+    "superpoint+kornia_matcher": {
+        "extractor": {
+            "name": "superpoint",
+            "nms_radius": 3,
+            "keypoint_threshold": 0.0005,
+            "max_keypoints": 4096,
+        },
+        "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.95},
+    },
     "disk+lightglue": {
         "extractor": {
             "name": "disk",
