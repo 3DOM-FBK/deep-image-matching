@@ -17,6 +17,8 @@ def featuresDict2Lightglue(feats: FeaturesDict, device: torch.device) -> dict:
         del feats["feature_path"]
     if "im_path" in feats.keys():
         del feats["im_path"]
+    #if "time" in feats.keys():
+    #    del feats["time"]
 
     # Add batch dimension
     feats = {k: v[None] for k, v in feats.items()}
@@ -47,9 +49,8 @@ class LightGlueMatcher(MatcherBase):
     min_matches = 20
     max_feat_no_tiling = 200000
 
-    def __init__(self, local_features="superpoint", config={}) -> None:
+    def __init__(self, config, local_features="superpoint") -> None:
         """Initializes a LightGlueMatcher"""
-
         self._localfeatures = local_features
         super().__init__(config)
 
