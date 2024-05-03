@@ -47,7 +47,7 @@ if __name__ == '__main__':
 
     # Try to rotate images so they will be all "upright", useful for deep-learning approaches that usually are not rotation invariant
     if config.general["upright"]:
-        img_matching.rotate_upright_images()
+        img_matching.rotate_upright_images(config.general["upright"])
         timer.update("rotate_upright_images")
 
     # Extract features

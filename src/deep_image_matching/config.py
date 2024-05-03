@@ -46,7 +46,7 @@ conf_general = {
     #   GeometricVerification.PYDEGENSAC (use pydegensac),
     #   GeometricVerification.MAGSAC (use opencv MAGSAC),
     "geom_verification": GeometricVerification.PYDEGENSAC,
-    "gv_threshold": 4,
+    "gv_threshold": 1,
     "gv_confidence": 0.99999,
     # Minimum number of inliers matches and minumum inlier ratio per pair
     "min_inliers_per_pair": 15,
@@ -207,6 +207,7 @@ opt_zoo = {
         "matching_lowres",
         "covisibility",
     ],
+    "upright_strategy": ["custom", "2-clusters"]
 }
 
 
@@ -352,6 +353,10 @@ class Config:
     @staticmethod
     def get_retrieval_names() -> list:
         return opt_zoo["retrieval"]
+    
+    @staticmethod
+    def get_upright_options() -> list:
+        return opt_zoo["upright_strategy"]
 
     @staticmethod
     def parse_general_config(input_args: dict) -> dict:

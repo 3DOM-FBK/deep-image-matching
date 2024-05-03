@@ -416,7 +416,7 @@ class ImageMatching:
         return self.pair_file
 
     def rotate_upright_images(
-        self, resize_size=500, n_cores=1, multi_processing=False
+        self, strategy, resize_size=500, n_cores=4, multi_processing=False
     ) -> None:
         """
         Try to rotate upright images. Useful for not rotation invariant approaches.
@@ -450,120 +450,136 @@ class ImageMatching:
             180,
             90,
         ]
+
         self.rotated_images = []
 
-        logger.info(f"Initializing Superpoint + LIghtGlue..")
-        SPextractor = SuperPointExtractor(
-            config={
-                "general": {},
-                "extractor": {
-                    "keypoint_threshold": 0.005,
-                    "max_keypoints": 1024,
+        if strategy == "2clusters":
+            logger.info(f"Initializing Superpoint + LIghtGlue..")
+            SPextractor = SuperPointExtractor(
+                config={
+                    "general": {},
+                    "extractor": {
+                        "keypoint_threshold": 0.005,
+                        "max_keypoints": 1024,
+                    },
+                }
+            )
+            LGmatcher = LightGlueMatcher(
+                config={
+                    "general": {},
+                    "matcher": {
+                        "depth_confidence": 0.95,  # early stopping, disable with -1
+                        "width_confidence": 0.99,  # point pruning, disable with -1
+                        "filter_threshold": 0.1,  # match threshold
+                    },
                 },
-            }
-        )
-        LGmatcher = LightGlueMatcher(
-            config={
-                "general": {},
-                "matcher": {
-                    "depth_confidence": 0.95,  # early stopping, disable with -1
-                    "width_confidence": 0.99,  # point pruning, disable with -1
-                    "filter_threshold": 0.1,  # match threshold
+            )
+
+            cluster0 = []
+            cluster1 = os.listdir(path_to_upright_dir)
+
+            SPextractor = SuperPointExtractor(
+                config={
+                    "general": {},
+                    "extractor": {
+                        "keypoint_threshold": 0.005,
+                        "max_keypoints": 1024,
+                    },
+                }
+            )
+            LGmatcher = LightGlueMatcher(
+                config={
+                    "general": {},
+                    "matcher": {
+                        "depth_confidence": 0.95,  # early stopping, disable with -1
+                        "width_confidence": 0.99,  # point pruning, disable with -1
+                        "filter_threshold": 0.1,  # match threshold
+                    },
                 },
-            },
-        )
+            )
 
-        cluster0 = []
-        cluster1 = os.listdir(path_to_upright_dir)
+            # Random init
+            random_first_img = random.randint(0, len(cluster1))
+            # Choose first image
+            # random_first_img = 1
 
-        SPextractor = SuperPointExtractor(
-            config={
-                "general": {},
-                "extractor": {
-                    "keypoint_threshold": 0.005,
-                    "max_keypoints": 1024,
-                },
-            }
-        )
-        LGmatcher = LightGlueMatcher(
-            config={
-                "general": {},
-                "matcher": {
-                    "depth_confidence": 0.95,  # early stopping, disable with -1
-                    "width_confidence": 0.99,  # point pruning, disable with -1
-                    "filter_threshold": 0.1,  # match threshold
-                },
-            },
-        )
+            cluster0.append(cluster1[random_first_img])
+            cluster1.pop(random_first_img)
 
-        # Random init
-        random_first_img = random.randint(0, len(cluster1))
-        # Choose first image
-        # random_first_img = 1
+            # Main loop
+            processed_pairs = []
+            max_iter = len(images)
+            logger.info(f"Max n iter: {max_iter}")
+            for iter in tqdm(range(max_iter)):
+                rotated = []
+                print(f"len(cluster0): {len(cluster0)}\t len(cluster1): {len(cluster1)}")
+                last_cluster1_len = len(cluster1)
 
-        cluster0.append(cluster1[random_first_img])
-        cluster1.pop(random_first_img)
+                # rotated.sort
+                ##cluster0 = []
+                # for r in reversed(rotated):
+                #    cluster0.append(cluster1[r])
+                # for r in reversed(rotated):
+                #    cluster1.pop(r)
 
-        # Main loop
-        processed_pairs = []
-        max_iter = len(images)
-        logger.info(f"Max n iter: {max_iter}")
-        for iter in tqdm(range(max_iter)):
-            rotated = []
-            print(f"len(cluster0): {len(cluster0)}\t len(cluster1): {len(cluster1)}")
-            last_cluster1_len = len(cluster1)
+                if multi_processing:
+                    partial_upright = partial(
+                        upright,
+                        cluster0,
+                        path_to_upright_dir,
+                        rotations,
+                        cv2_rot_params,
+                        SPextractor,
+                        LGmatcher,
+                        pairs,
+                        resize_size,
+                    )
+                    sublists = np.array_split(cluster1, n_cores)
+                    with Pool(n_cores) as p:
+                        results = p.map(partial_upright, sublists)
 
-            # rotated.sort
-            ##cluster0 = []
-            # for r in reversed(rotated):
-            #    cluster0.append(cluster1[r])
-            # for r in reversed(rotated):
-            #    cluster1.pop(r)
+                    processed = [item[0] for item in results]
+                    rotated = [item[1] for item in results]
 
-            if multi_processing:
-                partial_upright = partial(
-                    upright,
-                    cluster0,
-                    path_to_upright_dir,
-                    rotations,
-                    cv2_rot_params,
-                    SPextractor,
-                    LGmatcher,
-                    pairs,
-                    resize_size,
-                )
-                sublists = np.array_split(cluster1, n_cores)
-                with Pool(n_cores) as p:
-                    results = p.map(partial_upright, sublists)
+                    processed = [item for sublist in processed for item in sublist if item]
+                    self.rotated_images = self.rotated_images + [
+                        item[0] for item in rotated if item != []
+                    ]
 
-                processed = [item[0] for item in results]
-                rotated = [item[1] for item in results]
+                else:
+                    processed, rotated = upright(
+                        cluster0,
+                        path_to_upright_dir,
+                        rotations,
+                        cv2_rot_params,
+                        SPextractor,
+                        LGmatcher,
+                        pairs,
+                        resize_size,
+                        processed_pairs,
+                        cluster1,
+                    )
 
-                processed = [item for sublist in processed for item in sublist if item]
-                self.rotated_images = self.rotated_images + [
-                    item[0] for item in rotated if item != []
-                ]
+                    self.rotated_images = self.rotated_images + rotated
 
-            else:
-                processed, rotated = upright(
-                    cluster0,
-                    path_to_upright_dir,
-                    rotations,
-                    cv2_rot_params,
-                    SPextractor,
-                    LGmatcher,
-                    pairs,
-                    resize_size,
-                    processed_pairs,
-                    cluster1,
-                )
+                for r in processed:
+                    cluster0.append(r)
+                cluster1 = [name for name in cluster1 if name not in cluster0]
 
-            for r in processed:
-                cluster0.append(r)
-            cluster1 = [name for name in cluster1 if name not in cluster0]
+                if last_cluster1_len == len(cluster1) or len(cluster1) == 0:
+                    break
 
-            if last_cluster1_len == len(cluster1) or len(cluster1) == 0:
-                break
+        if strategy == "custom":
+            with open("./config/rotations.txt") as f:
+                lines = f.readlines()
+                for line in lines:
+                    img, rot = line.strip().split(" ", 1)
+                    self.rotated_images.append((img, int(rot)))
+
+                    if int(rot) != 0:
+                        image1 = Image.open(str(path_to_upright_dir / img)).convert("L")
+                        p = image1.rotate(int(rot), expand=True)
+                        p.save(str(path_to_upright_dir / img))
 
         out_file = self.pair_file.parent / f"{self.pair_file.stem}_rot.txt"
         with open(out_file, "w") as txt_file:
@@ -692,14 +708,14 @@ class ImageMatching:
                     x_rot = W - x
                     rotated_keypoints[r, 0], rotated_keypoints[r, 1] = x_rot, y_rot
 
-            if theta == 90:
+            if theta == 270:
                 for r in range(keypoints.shape[0]):
                     x, y = keypoints[r, 0], keypoints[r, 1]
                     y_rot = W - x
                     x_rot = y
                     rotated_keypoints[r, 0], rotated_keypoints[r, 1] = x_rot, y_rot
 
-            if theta == 270:
+            if theta == 90:
                 for r in range(keypoints.shape[0]):
                     x, y = keypoints[r, 0], keypoints[r, 1]
                     y_rot = x
