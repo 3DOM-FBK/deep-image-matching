@@ -29,7 +29,7 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
         _match_pairs(self, feats0: FeaturesDict, feats1: FeaturesDict) -> np.ndarray: Perform matching between feature pairs.
         _match_by_tile(self, img0: Path, img1: Path, features0: FeaturesDict, features1: FeaturesDict, method: TileSelection = TileSelection.PRESELECTION, select_unique: bool = True) -> np.ndarray: Match features between two images using a tiling approach.
         _load_image_np(self, img_path): Load image as numpy array.
-        _frame2tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor: Convert image to tensor.
+        _preprocess_tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor: Convert image to tensor.
         _resize_image(self, quality: Quality, image: np.ndarray) -> Tuple[np.ndarray]: Resize images based on the specified quality.
         _resize_keypoints(self, quality: Quality, keypoints: np.ndarray) -> np.ndarray: Resize features based on the specified quality.
         _update_features_h5(self, feature_path, im0_name, im1_name, new_keypoints0, new_keypoints1, matches0) -> np.ndarray: Update features in h5 file.
@@ -105,8 +105,8 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
         image1_ = self._resize_image(self._quality, image1)
 
         # Covert images to tensor
-        timg0_ = self._frame2tensor(image0_, self._device)
-        timg1_ = self._frame2tensor(image1_, self._device)
+        timg0_ = self._preprocess_tensor(image0_, self._device)
+        timg1_ = self._preprocess_tensor(image1_, self._device)
 
         # Run inference
         try:
@@ -224,8 +224,8 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
             logger.debug(f"  - Matching tile pair ({tidx0}, {tidx1})")
 
             # Get tiles and covert to tensor
-            timg0_ = self._frame2tensor(tiles0[tidx0], self._device)
-            timg1_ = self._frame2tensor(tiles1[tidx1], self._device)
+            timg0_ = self._preprocess_tensor(tiles0[tidx0], self._device)
+            timg1_ = self._preprocess_tensor(tiles1[tidx1], self._device)
 
             # Run inference
             try:
@@ -276,7 +276,7 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
 
         return matches
 
-    def _frame2tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor:
+    def _preprocess_tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor:
         image = K.image_to_tensor(np.array(image), False).float() / 255.0
         image = image.to(device)
         if image.shape[1] > 2:

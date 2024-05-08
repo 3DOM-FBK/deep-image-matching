@@ -93,7 +93,7 @@ class DeDoDe(ExtractorBase):
 
         return feats
 
-    def _frame2tensor(self, image: np.ndarray, device: str = "cuda"):
+    def _preprocess_tensor(self, image: np.ndarray, device: str = "cuda"):
         """
         Convert a frame to a tensor.
 

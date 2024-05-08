@@ -31,7 +31,7 @@ class DiskExtractor(ExtractorBase):
     @torch.no_grad()
     def _extract(self, image: np.ndarray) -> np.ndarray:
         # Convert image from numpy array to tensor
-        image_ = self._frame2tensor(image, self._device)
+        image_ = self._preprocess_tensor(image, self._device)
 
         # Extract features
         feats = self._extractor({"image": image_})
@@ -46,7 +46,7 @@ class DiskExtractor(ExtractorBase):
 
         return feats
 
-    def _frame2tensor(self, image: np.ndarray, device: str = "cuda"):
+    def _preprocess_tensor(self, image: np.ndarray, device: str = "cuda"):
         """
         Convert a frame to a tensor.
 

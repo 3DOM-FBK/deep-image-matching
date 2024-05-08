@@ -245,7 +245,7 @@ class ExtractorBase(metaclass=ABCMeta):
         raise NotImplementedError("Subclasses should implement _extract method!")
 
     @abstractmethod
-    def _frame2tensor(self, image: np.ndarray, device: str = "cpu"):
+    def _preprocess_tensor(self, image: np.ndarray, device: str = "cpu"):
         """
         Convert a frame to a tensor. This is a low - level method to be used by subclasses that need to convert an image to a tensor with the required format. This method must be implemented by subclasses.
 
@@ -254,7 +254,7 @@ class ExtractorBase(metaclass=ABCMeta):
             device: The device to convert to (defaults to 'cpu')
         """
         raise NotImplementedError(
-            "Subclasses should implement _frame2tensor method to adapt the input image to the required format!"
+            "Subclasses should implement _preprocess_tensor method to adapt the input image to the required format!"
         )
 
     def _extract_by_tile(self, image: np.ndarray, select_unique: bool = True):

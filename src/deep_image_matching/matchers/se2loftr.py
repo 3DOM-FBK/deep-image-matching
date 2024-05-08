@@ -70,7 +70,7 @@ class SE2LOFTRMatcher(DetectorFreeMatcherBase):
             return yacs_cfg
         return {k.lower(): self._lower_config(v) for k, v in yacs_cfg.items()}
 
-    def _frame2tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor:
+    def _preprocess_tensor(self, image: np.ndarray, device: str = "cpu") -> torch.Tensor:
         image = K.image_to_tensor(np.array(image), False).float() / 255.0
         image = image.to(device)
         if image.shape[1] > 2:
@@ -113,8 +113,8 @@ class SE2LOFTRMatcher(DetectorFreeMatcherBase):
         # image1_ = self._resize_image(self._quality, image1)
 
         # # Covert images to tensor
-        # timg0_ = self._frame2tensor(image0_, self._device)
-        # timg1_ = self._frame2tensor(image1_, self._device)
+        # timg0_ = self._preprocess_tensor(image0_, self._device)
+        # timg1_ = self._preprocess_tensor(image1_, self._device)
 
         # # Run inference
         # try:
@@ -269,8 +269,8 @@ class SE2LOFTRMatcher(DetectorFreeMatcherBase):
             logger.debug(f"  - Matching tile pair ({tidx0}, {tidx1})")
 
             # Get tiles and covert to tensor
-            timg0_ = self._frame2tensor(tiles0[tidx0], self._device)
-            timg1_ = self._frame2tensor(tiles1[tidx1], self._device)
+            timg0_ = self._preprocess_tensor(tiles0[tidx0], self._device)
+            timg1_ = self._preprocess_tensor(tiles1[tidx1], self._device)
 
             # Run inference
             try:
