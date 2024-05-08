@@ -321,11 +321,11 @@ def export_to_micmac(
 
 def main():
     parser = argparse.ArgumentParser(description="Export to MicMac.")
-    parser.add_argument("--image_dir", type=str, required=True, help="Path to the image directory.")
-    parser.add_argument("--features_h5", type=str, required=True, help="Path to the features.h5 file.")
-    parser.add_argument("--matches_h5", type=str, required=True, help="Path to the matches.h5 file.")
-    parser.add_argument("--out_dir", type=str, default="micmac", help="Path to the output directory.")
-    parser.add_argument("--img_ext", type=str, default=IMAGE_EXT, help="Image extension.")
+    parser.add_argument("-i", "--image_dir", type=str, required=True, help="Path to the image directory.")
+    parser.add_argument("-f", "--features_h5", type=str, required=True, help="Path to the features.h5 file.")
+    parser.add_argument("-m", "--matches_h5", type=str, required=True, help="Path to the matches.h5 file.")
+    parser.add_argument("-o", "--out_dir", type=str, default="micmac", help="Path to the output directory.")
+    parser.add_argument("-x", "--img_ext", type=str, default=IMAGE_EXT, help="Image extension.")
     parser.add_argument(
         "--run_Tapas",
         action="store_true",

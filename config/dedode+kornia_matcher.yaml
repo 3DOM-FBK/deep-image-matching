@@ -1,0 +1,23 @@
+# User configuration file
+
+general:
+  tile_size: (2400, 2200)
+  tile_overlap: 50
+  geom_verification: pydegensac
+  gv_threshold: 6
+  gv_confidence: 0.9999
+  min_matches_per_tile: 10
+  min_inliers_per_pair: 2
+  min_inlier_ratio_per_pair: 0.01
+  refine_intrinsics: False
+  preselection_pipeline: roma
+
+extractor:
+  name: "dedode"
+  n_features: 10000
+  upright: False
+
+matcher:
+  name: kornia_matcher
+  match_mode: mnn
+  th: 0.999

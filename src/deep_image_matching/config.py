@@ -123,6 +123,9 @@ confs = {
         "extractor": {
             "name": "disk",
             "max_keypoints": 4096,
+            "nms_window_size": 5,
+            "detection_threshold": 0.0,
+            "pad_if_not_divisible": True,
         },
         "matcher": {
             "name": "lightglue",
@@ -184,6 +187,30 @@ confs = {
         },
         "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.99},
     },
+    "dedode+kornia_matcher": {
+        "extractor": {
+            "name": "dedode",
+            "n_features": 1000,
+            "upright": False,
+        },
+        "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.99},
+    },
+    # "sift+lightglue": {
+    #     "extractor": {
+    #         "name": "sift",
+    #         "model_name": "aliked-n16rot",
+    #         "max_num_keypoints": 4000,
+    #         "detection_threshold": 0.2,
+    #         "nms_radius": 3,
+    #     },
+    #     "matcher": {
+    #         "name": "lightglue",
+    #         "n_layers": 9,
+    #         "depth_confidence": 0.95,  # early stopping, disable with -1
+    #         "width_confidence": 0.99,  # point pruning, disable with -1
+    #         "filter_threshold": 0.1,  # match threshold
+    #     },
+    # },
 }
 
 opt_zoo = {
