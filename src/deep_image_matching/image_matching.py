@@ -573,18 +573,20 @@ class ImageMatching:
             with open("./config/rotations.txt") as f:
                 lines = f.readlines()
                 for line in lines:
-                    img, rot = line.strip().split(" ", 1)
-                    self.rotated_images.append((img, int(rot)))
+                    try:
+                        img, rot = line.strip().split(" ", 1)
+                        self.rotated_images.append((img, int(rot)))
 
-                    if int(rot) != 0:
-                        image1 = Image.open(str(path_to_upright_dir / img)).convert("L")
-                        p = image1.rotate(int(rot), expand=True)
-                        p.save(str(path_to_upright_dir / img))
+                        if int(rot) != 0:
+                            image1 = Image.open(str(path_to_upright_dir / img)).convert("L")
+                            p = image1.rotate(int(rot), expand=True)
+                            p.save(str(path_to_upright_dir / img))
+                    except:
+                        pass
 
         out_file = self.pair_file.parent / f"{self.pair_file.stem}_rot.txt"
         with open(out_file, "w") as txt_file:
             for element in self.rotated_images:
-                print(element)
                 txt_file.write(f"{element[0]} {element[1]}\n")
 
         # Update image directory to the dir with upright images
@@ -700,6 +702,13 @@ class ImageMatching:
             rotated_keypoints = np.empty(keypoints.shape)
             im = cv2.imread(str(self.image_dir / img))
             H, W = im.shape[:2]
+
+            if theta == 0:
+                for r in range(keypoints.shape[0]):
+                    x, y = keypoints[r, 0], keypoints[r, 1]
+                    y_rot = y
+                    x_rot = x
+                    rotated_keypoints[r, 0], rotated_keypoints[r, 1] = x_rot, y_rot
 
             if theta == 180:
                 for r in range(keypoints.shape[0]):

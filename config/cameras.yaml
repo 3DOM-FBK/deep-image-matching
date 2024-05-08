@@ -5,8 +5,8 @@ general:
 
 cam0:
   camera_model: "pinhole"
-  images : "DSC_6468.JPG"
+  images : ""
 
 cam1:
   camera_model: "pinhole"
-  images : "DSC_6471.JPG"
+  images : ""

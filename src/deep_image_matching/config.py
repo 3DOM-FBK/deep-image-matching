@@ -46,7 +46,7 @@ conf_general = {
     #   GeometricVerification.PYDEGENSAC (use pydegensac),
     #   GeometricVerification.MAGSAC (use opencv MAGSAC),
     "geom_verification": GeometricVerification.PYDEGENSAC,
-    "gv_threshold": 1,
+    "gv_threshold": 4,
     "gv_confidence": 0.99999,
     # Minimum number of inliers matches and minumum inlier ratio per pair
     "min_inliers_per_pair": 15,

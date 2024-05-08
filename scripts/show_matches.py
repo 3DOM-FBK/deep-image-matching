@@ -89,8 +89,8 @@ class ShowPairMatches:
             im1 = self.imgs_dict["data"][1]
             id1 = inverted_dict[im1]
 
-        keypoints0 = self.keypoints[id0]
-        keypoints1 = self.keypoints[id1]
+        keypoints0 = self.keypoints[id0][:,:2]
+        keypoints1 = self.keypoints[id1][:,:2]
         print(f"Img {id0}: kpts shape = {keypoints0.shape}")
         print(f"Img {id1}: kpts shape = {keypoints1.shape}")
         print("raw matches shape", np.shape(self.matches[(id0, id1)]))

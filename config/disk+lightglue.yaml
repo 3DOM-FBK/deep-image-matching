@@ -1,19 +1,15 @@
 # User configuration file
 
 general:
-  tile_size: (2500, 2500)
+  tile_size: (2000, 1500)
   geom_verification: pydegensac
   min_inliers_per_pair: 10
   min_inlier_ratio_per_pair: 0.15
   gv_threshold: 1
 
 extractor:
-  name: "superpoint"
-  max_keypoints: 1500 # -1 no limits
-  nms_radius: 4
-  keypoint_threshold: 0.005
-  remove_borders: 4
-  fix_sampling: False
+  name: "disk"
+  max_keypoints: 720 # -1 no limits
 
 matcher:
   name: "lightglue"
