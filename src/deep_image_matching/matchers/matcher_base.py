@@ -150,7 +150,11 @@ class MatcherBase(metaclass=ABCMeta):
             self._preselction_extractor = None
             self._preselction_matcher = None
 
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}"
+
     @abstractmethod
+    @torch.inference_mode()
     def _match_pairs(
         self,
         feats0: dict,
@@ -171,6 +175,7 @@ class MatcherBase(metaclass=ABCMeta):
         """
         raise NotImplementedError("Subclasses must implement _match_pairs() method.")
 
+    @torch.inference_mode()
     def match(
         self,
         feature_path: Path,
@@ -615,6 +620,12 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
             self._preselction_extractor = None
             self._preselction_matcher = None
 
+        return f"{self.__class__.__name__}"
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}"
+
+    @torch.inference_mode()
     def match(
         self,
         feature_path: Path,
@@ -715,6 +726,7 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         return matches
 
     @abstractmethod
+    @torch.inference_mode()
     def _match_pairs(
         self,
         feature_path: Path,
@@ -740,6 +752,7 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         raise NotImplementedError("Subclasses must implement _match_pairs() method.")
 
     @abstractmethod
+    @torch.inference_mode()
     def _match_by_tile(
         self,
         feature_path: Path,

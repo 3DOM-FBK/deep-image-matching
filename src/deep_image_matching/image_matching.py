@@ -168,6 +168,9 @@ class ImageMatcher:
         logger.info(f"  Geometric verification: {self.config.general['geom_verification'].name}")
         logger.info(f"  CUDA available: {torch.cuda.is_available()}")
 
+    def __repr__(self):
+        return f"ImageMatcher(strategy={self.strategy}, extraction={self.extraction}, matching={self.matching})"
+
     @property
     def img_names(self):
         return self.image_list.img_names

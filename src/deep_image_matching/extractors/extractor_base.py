@@ -95,7 +95,7 @@ def save_features_h5(feature_path: Path, features: FeaturesDict, im_name: str, a
             raise error
 
 
-class ExtractorBase(nn.Module):
+class ExtractorBase(metaclass=ABCMeta):
     _default_general_conf = {
         "quality": Quality.HIGH,
         "tile_selection": TileSelection.NONE,
@@ -147,6 +147,10 @@ class ExtractorBase(nn.Module):
         self._device = "cuda" if torch.cuda.is_available() and not self.config["general"]["force_cpu"] else "cpu"
         logger.debug(f"Running inference on device {self._device}")
 
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}"
+
+    @torch.inference_mode()
     def extract(self, img: Union[Image, Path, str]) -> np.ndarray:
         """
         Extract features from an image. This is the main method of the feature extractor.
@@ -227,6 +231,7 @@ class ExtractorBase(nn.Module):
         return feature_path
 
     @abstractmethod
+    @torch.inference_mode()
     def _extract(self, image: np.ndarray) -> dict:
         """
         Extract features from an image. This is called by ` extract ` method to extract features from the image. This method must be implemented by subclasses.
