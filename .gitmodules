@@ -1,0 +1,3 @@
+[submodule "src/deep_image_matching/thirdparty/accelerated_features"]
+	path = src/deep_image_matching/thirdparty/accelerated_features
+	url = git@github.com:verlab/accelerated_features.git

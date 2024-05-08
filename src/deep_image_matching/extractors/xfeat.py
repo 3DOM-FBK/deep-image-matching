@@ -5,72 +5,21 @@ import numpy as np
 import torch
 from torch import nn
 
-from ..thirdparty.SuperGluePretrainedNetwork.models import superpoint
+from ..thirdparty.accelerated_features.modules.model import XFeatModel
 from .extractor_base import ExtractorBase
 
-# TODO: Use Superpoint implementation from KORNIA
 
-
-# The original keypoint sampling is incorrect. We patch it here but
-# we don't fix it upstream to not impact exisiting evaluations.
-def sample_descriptors_fix_sampling(keypoints, descriptors, s: int = 8):
-    """Interpolate descriptors at keypoint locations"""
-    b, c, h, w = descriptors.shape
-    keypoints = (keypoints + 0.5) / (keypoints.new_tensor([w, h]) * s)
-    keypoints = keypoints * 2 - 1  # normalize to (-1, 1)
-    descriptors = torch.nn.functional.grid_sample(
-        descriptors, keypoints.view(b, 1, -1, 2), mode="bilinear", align_corners=False
-    )
-    descriptors = torch.nn.functional.normalize(descriptors.reshape(b, c, -1), p=2, dim=1)
-    return descriptors
-
-
-class SuperPoint(nn.Module):
-    _default_conf = {
-        "nms_radius": 4,
-        "keypoint_threshold": 0.005,
-        "max_keypoints": -1,
-        "remove_borders": 4,
-        "fix_sampling": True,
-    }
-    required_inputs = ["image"]
-    detection_noise = 2.0
-
-    def __init__(self, conf):
-        """Perform some logic and call the _init method of the child model."""
-        super().__init__()
-        self.conf = conf = {**self._default_conf, **conf}
-        self.required_inputs = copy(self.required_inputs)
-        self._init(conf)
-        sys.stdout.flush()
-
-    def forward(self, data):
-        """Check the data and call the _forward method of the child model."""
-        for key in self.required_inputs:
-            assert key in data, "Missing key {} in data".format(key)
-        return self._forward(data)
-
-    def _init(self, conf):
-        if conf["fix_sampling"]:
-            superpoint.sample_descriptors = sample_descriptors_fix_sampling
-        self.net = superpoint.SuperPoint(conf)
-
-    def _forward(self, data):
-        return self.net(data)
-
-
-class SuperPointExtractor(ExtractorBase):
+class XfeatExtractor(ExtractorBase):
     """
-    Class: SuperPointExtractor
+    Class: XfeatExtractor
 
     This class is a subclass of ExtractorBase and represents a feature extractor using the SuperPoint algorithm.
 
     Attributes:
         _default_conf (dict): Default configuration for the SuperPointExtractor.
-        required_inputs (list): List of required inputs for the SuperPointExtractor.
+        required_inputs (list): List of required inputs for the extract method.
         grayscale (bool): Flag indicating whether the input images should be converted to grayscale.
-        descriptor_size (int): Size of the descriptors extracted by the SuperPoint algorithm.
-        detection_noise (float): Noise level for keypoint detection.
+        descriptor_size (int): Size of the descriptors size
 
     Methods:
         __init__(self, config: dict): Initializes the SuperPointExtractor instance with a custom configuration.
@@ -90,19 +39,18 @@ class SuperPointExtractor(ExtractorBase):
         "fix_sampling": False,
     }
     required_inputs = ["image"]
-    grayscale = True
-    descriptor_size = 256
-    detection_noise = 2.0
+    grayscale = False
+    descriptor_size = 64
 
     def __init__(self, config: dict):
         # Init the base class
         super().__init__(config)
 
         # Load extractor
-        SP_cfg = self.config.get("extractor")
-        self._extractor = SuperPoint(SP_cfg).eval().to(self._device)
+        cfg = self.config.get("extractor")
+        self._extractor = XFeatModel(cfg).eval().to(self._device)
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def _extract(self, image: np.ndarray) -> np.ndarray:
         """
         Extract features from an image using the SuperPoint model.

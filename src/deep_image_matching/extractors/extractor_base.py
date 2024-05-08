@@ -8,6 +8,7 @@ import cv2
 import h5py
 import numpy as np
 import torch
+from torch import nn
 
 from ..config import Config
 from ..constants import Quality, TileSelection, get_size_by_quality
@@ -94,7 +95,7 @@ def save_features_h5(feature_path: Path, features: FeaturesDict, im_name: str, a
             raise error
 
 
-class ExtractorBase(metaclass=ABCMeta):
+class ExtractorBase(nn.Module):
     _default_general_conf = {
         "quality": Quality.HIGH,
         "tile_selection": TileSelection.NONE,
