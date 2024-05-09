@@ -1,3 +1,5 @@
+from typing import Union
+
 import numpy as np
 import torch
 
@@ -33,8 +35,8 @@ class AlikeExtractor(ExtractorBase):
             n_limit=cfg["n_limit"],
         )
 
-    @torch.no_grad()
-    def _extract(self, image: np.ndarray) -> np.ndarray:
+    @torch.inference_mode()
+    def _extract(self, image: Union[np.ndarray, torch.Tensor]) -> dict:
         # Extract features
         feats = self._extractor(image, sub_pixel=True)
 

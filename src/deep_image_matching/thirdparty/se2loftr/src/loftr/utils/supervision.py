@@ -1,16 +1,16 @@
 from math import log
-from loguru import logger
 
 import torch
 from einops import repeat
 from kornia.utils import create_meshgrid
+from loguru import logger
 
 from .geometry import warp_kpts
 
 ##############  ↓  Coarse-Level supervision  ↓  ##############
 
 
-@torch.no_grad()
+@torch.inference_mode()
 def mask_pts_at_padded_regions(grid_pt, mask):
     """For megadepth dataset, zero-padding exists in images"""
     mask = repeat(mask, "n h w -> n (h w) c", c=2)
@@ -18,7 +18,7 @@ def mask_pts_at_padded_regions(grid_pt, mask):
     return grid_pt
 
 
-@torch.no_grad()
+@torch.inference_mode()
 def spvs_coarse(data, config):
     """
     Update:
@@ -46,13 +46,9 @@ def spvs_coarse(data, config):
 
     # 2. warp grids
     # create kpts in meshgrid and resize them to image resolution
-    grid_pt0_c = (
-        create_meshgrid(h0, w0, False, device).reshape(1, h0 * w0, 2).repeat(N, 1, 1)
-    )  # [N, hw, 2]
+    grid_pt0_c = create_meshgrid(h0, w0, False, device).reshape(1, h0 * w0, 2).repeat(N, 1, 1)  # [N, hw, 2]
     grid_pt0_i = scale0 * grid_pt0_c
-    grid_pt1_c = (
-        create_meshgrid(h1, w1, False, device).reshape(1, h1 * w1, 2).repeat(N, 1, 1)
-    )
+    grid_pt1_c = create_meshgrid(h1, w1, False, device).reshape(1, h1 * w1, 2).repeat(N, 1, 1)
     grid_pt1_i = scale1 * grid_pt1_c
 
     # mask padded region to (0, 0), so no need to manually mask conf_matrix_gt
@@ -90,16 +86,12 @@ def spvs_coarse(data, config):
 
     # corner case: out of boundary
     def out_bound_mask(pt, w, h):
-        return (
-            (pt[..., 0] < 0) + (pt[..., 0] >= w) + (pt[..., 1] < 0) + (pt[..., 1] >= h)
-        )
+        return (pt[..., 0] < 0) + (pt[..., 0] >= w) + (pt[..., 1] < 0) + (pt[..., 1] >= h)
 
     nearest_index1[out_bound_mask(w_pt0_c_round, w1, h1)] = 0
     nearest_index0[out_bound_mask(w_pt1_c_round, w0, h0)] = 0
 
-    loop_back = torch.stack(
-        [nearest_index0[_b][_i] for _b, _i in enumerate(nearest_index1)], dim=0
-    )
+    loop_back = torch.stack([nearest_index0[_b][_i] for _b, _i in enumerate(nearest_index1)], dim=0)
     correct_0to1 = loop_back == torch.arange(h0 * w0, device=device)[None].repeat(N, 1)
     correct_0to1[:, 0] = False  # ignore the top-left corner
 
@@ -126,9 +118,7 @@ def spvs_coarse(data, config):
 
 
 def compute_supervision_coarse(data, config):
-    assert (
-        len(set(data["dataset_name"])) == 1
-    ), "Do not support mixed datasets training!"
+    assert len(set(data["dataset_name"])) == 1, "Do not support mixed datasets training!"
     data_source = data["dataset_name"][0]
     if data_source.lower() in ["scannet", "megadepth"]:
         spvs_coarse(data, config)
@@ -139,7 +129,7 @@ def compute_supervision_coarse(data, config):
 ##############  ↓  Fine-Level supervision  ↓  ##############
 
 
-@torch.no_grad()
+@torch.inference_mode()
 def spvs_fine(data, config):
     """
     Update:
@@ -158,9 +148,7 @@ def spvs_fine(data, config):
     # 3. compute gt
     scale = scale * data["scale1"][b_ids] if "scale0" in data else scale
     # `expec_f_gt` might exceed the window, i.e. abs(*) > 1, which would be filtered later
-    expec_f_gt = (
-        (w_pt0_i[b_ids, i_ids] - pt1_i[b_ids, j_ids]) / scale / radius
-    )  # [M, 2]
+    expec_f_gt = (w_pt0_i[b_ids, i_ids] - pt1_i[b_ids, j_ids]) / scale / radius  # [M, 2]
     data.update({"expec_f_gt": expec_f_gt})
 
 

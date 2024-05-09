@@ -1,30 +1,35 @@
-import cv2
+from typing import Union
+
+import kornia.feature as KF
 import numpy as np
 import torch
-import torchvision.transforms as transforms
 
-from ..thirdparty.DeDoDe.DeDoDe import dedode_descriptor_G, dedode_detector_L
 from .extractor_base import ExtractorBase, FeaturesDict
 
 
-class DeDoDe(ExtractorBase):
-    dedode_detector_L_url = (
-        "https://github.com/Parskatt/DeDoDe/releases/download/dedode_pretrained_models/dedode_detector_L.pth"
-    )
-    dedode_descriptor_G_url = (
-        "https://github.com/Parskatt/DeDoDe/releases/download/dedode_pretrained_models/dedode_descriptor_G.pth"
-    )
-    dedode_descriptor_B_url = (
-        "https://github.com/Parskatt/DeDoDe/releases/download/dedode_pretrained_models/dedode_descriptor_B.pth"
-    )
+class DeDoDeExtractor(ExtractorBase):
+    # The DeDoDe extractor.
+    # detector_weights: The weights to load for the detector. One of:
+    #     'L-upright' (original paper, https://arxiv.org/abs/2308.08479),
+    #     'L-C4', 'L-SO2' (from steerers, better for rotations, https://arxiv.org/abs/2312.02152),
+    #     'L-C4-v2' (from dedode v2, better at rotations, less clustering, https://arxiv.org/abs/2404.08928)
+    #     Default is 'L-C4-v2', but perhaps it should be 'L-C4-v2'?
+    # descriptor_weights: The weights to load for the descriptor. One of:
+    #     'B-upright','G-upright' (original paper, https://arxiv.org/abs/2308.08479),
+    #     'B-C4', 'B-SO2', 'G-C4' (from steerers, better for rotations, https://arxiv.org/abs/2312.02152).
+    #     Default is 'G-upright'.
+    # amp_dtype: the dtype to use for the model. One of torch.float16 or torch.float32.
+    # Default is torch.float16, suitable for CUDA. Use torch.float32 for CPU or MPS
 
     _default_conf = {
-        "name:": "",
+        "name:": "dedode",
+        "max_keypoints": 4000,
+        "detector_weights": "L-C4",  # [L, L-C4, L-SO2, L-C4-v2]
+        "descriptor_weights": "G-upright",  # [B-upright, G-upright, B-C4, B-SO2, G-C4]
+        "amp_dtype": torch.float16,
     }
-    required_inputs = ["image"]
+    required_inputs = []
     grayscale = False
-    descriptor_size = 256
-    detection_noise = 2.0
 
     def __init__(self, config: dict):
         # Init the base class
@@ -32,64 +37,52 @@ class DeDoDe(ExtractorBase):
 
         cfg = self.config.get("extractor")
 
-        # Load extractor and descriptor
-        device = torch.device(self._device if torch.cuda.is_available() else "cpu")
-        self.detector = dedode_detector_L(
-            weights=torch.hub.load_state_dict_from_url(self.dedode_detector_L_url, map_location=device)
-        )
-        self.descriptor = dedode_descriptor_G(
-            weights=torch.hub.load_state_dict_from_url(self.dedode_descriptor_G_url, map_location=device)
-        )
-
-        # Old way of loading the weights from disk
-        # if (
-        #     not Path(
-        #         "./src/deep_image_matching/thirdparty/weights/dedode/dedode_detector_L.pth"
-        #     ).is_file()
-        #     or not Path(
-        #         "./src/deep_image_matching/thirdparty/weights/dedode/dedode_descriptor_G.pth"
-        #     ).is_file()
-        # ):
-        #     print(
-        #         "DeDoDe weights not found:\n dedode_detector_L.pth and/or dedode_detector_L.pth missing."
-        #     )
-        #     print(
-        #         "Please download them and put them in ./src/deep_image_matching/thirdparty/weights/dedode"
-        #     )
-        #     print("Exit")
-        #     quit()
-        # self.detector = dedode_detector_L(
-        #     weights=torch.load(
-        #         "./src/deep_image_matching/thirdparty/weights/dedode/dedode_detector_L.pth",
-        #         map_location=self._device,
-        #     )
+        # Load extractor
+        # self._extractor = KF.DeDoDe.from_pretrained(
+        #     detector_weights=cfg["detector_weights"],
+        #     descriptor_weights=cfg["descriptor_weights"],
+        #     amp_dtype=cfg["amp_dtype"],
         # )
-        # self.descriptor = dedode_descriptor_G(
-        #     weights=torch.load(
-        #         "./src/deep_image_matching/thirdparty/weights/dedode/dedode_descriptor_G.pth",
-        #         map_location=self._device,
-        #     )
+        self.config["extractor"]["max_keypoints"] = 10_000
+        self.config["extractor"]["amp_dtype"] = torch.float
+        self._extractor = (
+            KF.DeDoDe.from_pretrained(
+                detector_weights="L-SO2",
+                descriptor_weights="G-C4",
+                amp_dtype=torch.float16,
+            )
+            .eval()
+            .to(self._device)
+        )
+
+    @torch.inference_mode()
+    def _extract(self, image: Union[np.ndarray, torch.Tensor]) -> dict:
+        # Convert image from numpy array to tensor
+        image_ = self._preprocess_tensor(image, self._device)
+
+        # Extract features
+        cfg = self.config.get("extractor")
+        # keypoints, scores = self._extractor.detect(
+        #     image_,
+        #     n=cfg["max_keypoints"],
+        #     apply_imagenet_normalization=True,
+        #     pad_if_not_divisible=True,
+        #     crop_h=cfg["crop_h"],
+        #     crop_w=cfg["crop_w"],
         # )
+        # descriptions = self._extractor.describe(image_, keypoints=keypoints, apply_imagenet_normalization=True)
+        kpts, scores, descr = self._extractor(
+            image_,
+            n=cfg["max_keypoints"],
+            apply_imagenet_normalization=True,
+            pad_if_not_divisible=True,
+        )
 
-        self.normalizer = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        self.num_features = cfg["n_features"]
-
-    @torch.no_grad()
-    def _extract(self, image: np.ndarray) -> np.ndarray:
-        H, W, C = image.shape
-        resized_image = cv2.resize(image, (784, 784))
-        standard_im = np.array(resized_image) / 255.0
-        norm_image = self.normalizer(torch.from_numpy(standard_im).permute(2, 0, 1)).float().to(self._device)[None]
-        batch = {"image": norm_image}
-        detections_A = self.detector.detect(batch, num_keypoints=self.num_features)
-        keypoints_A, P_A = detections_A["keypoints"], detections_A["confidence"]
-        description_A = self.descriptor.describe_keypoints(batch, keypoints_A)["descriptions"]
-        kpts = keypoints_A.cpu().detach().numpy()[0]
-        des = description_A.cpu().detach().numpy()[0]
-
-        kpts[:, 0] = (kpts[:, 0] + 1) * W / 2
-        kpts[:, 1] = (kpts[:, 1] + 1) * H / 2
-        feats = FeaturesDict(keypoints=kpts, descriptors=des.T)
+        # Convert to numpy
+        kpts = kpts.cpu().detach().numpy()[0]
+        descr = descr.cpu().detach().numpy()[0]
+        scores = scores.cpu().detach().numpy()[0]
+        feats = FeaturesDict(keypoints=kpts, descriptors=descr.T, scores=scores)
 
         return feats
 
@@ -101,8 +94,10 @@ class DeDoDe(ExtractorBase):
             image: The image to be converted
             device: The device to convert to (defaults to 'cuda')
         """
-        if len(image.shape) == 2:
-            image = image[None][None]
-        elif len(image.shape) == 3:
+        if image.ndim == 3:
             image = image.transpose(2, 0, 1)[None]
-        return torch.tensor(image / 255.0, dtype=torch.float).to(device)
+        elif image.ndim == 2:
+            # Repeat the image 3 times to make it RGB and add a batch dimension
+            image = np.repeat(image[None], 3, axis=0)[None]
+
+        return torch.tensor(image, dtype=self.config["extractor"]["amp_dtype"]).to(device)

@@ -220,7 +220,7 @@ class ImageDataset(torch.utils.data.Dataset):
         return len(self.names)
 
 
-@torch.no_grad()
+@torch.inference_mode()
 def main(
     conf: Dict,
     image_dir: Path,

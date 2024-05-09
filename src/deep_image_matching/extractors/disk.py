@@ -1,3 +1,5 @@
+from typing import Union
+
 import numpy as np
 import torch
 
@@ -28,8 +30,8 @@ class DiskExtractor(ExtractorBase):
         # Load extractor
         self._extractor = DISK(disk_cfg).eval().to(self._device)
 
-    @torch.no_grad()
-    def _extract(self, image: np.ndarray) -> np.ndarray:
+    @torch.inference_mode()
+    def _extract(self, image: Union[np.ndarray, torch.Tensor]) -> dict:
         # Convert image from numpy array to tensor
         image_ = self._preprocess_tensor(image, self._device)
 

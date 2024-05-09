@@ -1,18 +1,18 @@
 import argparse
-from typing import Union, Optional, Dict, List, Tuple
-from pathlib import Path
 import pprint
+from functools import partial
+from pathlib import Path
 from queue import Queue
 from threading import Thread
-from functools import partial
-from tqdm import tqdm
+from typing import Dict, List, Optional, Tuple, Union
+
 import h5py
 import torch
+from tqdm import tqdm
 
-from . import matchers, logger
+from . import logger, matchers
 from .utils.base_model import dynamic_load
 from .utils.parsers import names_to_pair, names_to_pair_old, parse_retrieval
-
 
 """
 A set of standard configurations that can be directly selected from the command
@@ -84,9 +84,7 @@ confs = {
 class WorkQueue:
     def __init__(self, work_fn, num_threads=1):
         self.queue = Queue(num_threads)
-        self.threads = [
-            Thread(target=self.thread_fn, args=(work_fn,)) for _ in range(num_threads)
-        ]
+        self.threads = [Thread(target=self.thread_fn, args=(work_fn,)) for _ in range(num_threads)]
         for thread in self.threads:
             thread.start()
 
@@ -157,14 +155,10 @@ def main(
     if isinstance(features, Path) or Path(features).exists():
         features_q = features
         if matches is None:
-            raise ValueError(
-                "Either provide both features and matches as Path" " or both as names."
-            )
+            raise ValueError("Either provide both features and matches as Path" " or both as names.")
     else:
         if export_dir is None:
-            raise ValueError(
-                "Provide an export_dir if features is not" f" a file path: {features}."
-            )
+            raise ValueError("Provide an export_dir if features is not" f" a file path: {features}.")
         features_q = Path(export_dir, features + ".h5")
         if matches is None:
             matches = Path(export_dir, f'{features}_{conf["output"]}_{pairs.stem}.h5')
@@ -199,7 +193,7 @@ def find_unique_new_pairs(pairs_all: List[Tuple[str]], match_path: Path = None):
     return pairs
 
 
-@torch.no_grad()
+@torch.inference_mode()
 def match_from_paths(
     conf: Dict,
     pairs_path: Path,
@@ -208,9 +202,7 @@ def match_from_paths(
     feature_path_ref: Path,
     overwrite: bool = False,
 ) -> Path:
-    logger.info(
-        "Matching local features with configuration:" f"\n{pprint.pformat(conf)}"
-    )
+    logger.info("Matching local features with configuration:" f"\n{pprint.pformat(conf)}")
 
     if not feature_path_q.exists():
         raise FileNotFoundError(f"Query feature file {feature_path_q}.")
@@ -231,16 +223,11 @@ def match_from_paths(
     model = Model(conf["model"]).eval().to(device)
 
     dataset = FeaturePairsDataset(pairs, feature_path_q, feature_path_ref)
-    loader = torch.utils.data.DataLoader(
-        dataset, num_workers=5, batch_size=1, shuffle=False, pin_memory=True
-    )
+    loader = torch.utils.data.DataLoader(dataset, num_workers=5, batch_size=1, shuffle=False, pin_memory=True)
     writer_queue = WorkQueue(partial(writer_fn, match_path=match_path), 5)
 
     for idx, data in enumerate(tqdm(loader, smoothing=0.1)):
-        data = {
-            k: v if k.startswith("image") else v.to(device, non_blocking=True)
-            for k, v in data.items()
-        }
+        data = {k: v if k.startswith("image") else v.to(device, non_blocking=True) for k, v in data.items()}
         pred = model(data)
         pair = names_to_pair(*pairs[idx])
         writer_queue.put((pair, pred))
@@ -254,8 +241,6 @@ if __name__ == "__main__":
     parser.add_argument("--export_dir", type=Path)
     parser.add_argument("--features", type=str, default="feats-superpoint-n4096-r1024")
     parser.add_argument("--matches", type=Path)
-    parser.add_argument(
-        "--conf", type=str, default="superglue", choices=list(confs.keys())
-    )
+    parser.add_argument("--conf", type=str, default="superglue", choices=list(confs.keys()))
     args = parser.parse_args()
     main(confs[args.conf], args.pairs, args.features, args.export_dir)

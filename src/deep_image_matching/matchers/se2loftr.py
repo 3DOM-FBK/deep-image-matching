@@ -78,7 +78,7 @@ class SE2LOFTRMatcher(DetectorFreeMatcherBase):
             image = K.color.rgb_to_grayscale(image)
         return image
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def _match_pairs(
         self,
         feature_path: Path,

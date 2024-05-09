@@ -71,7 +71,7 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
                 "The tile size is large, this may cause out-of-memory error during matching. You should consider using a smaller tile size or a lower image resolution."
             )
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def _match_pairs(
         self,
         feature_path: Path,

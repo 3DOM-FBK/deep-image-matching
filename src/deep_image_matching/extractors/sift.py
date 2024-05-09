@@ -1,5 +1,8 @@
+from typing import Union
+
 import cv2
 import numpy as np
+import torch
 
 from .extractor_base import ExtractorBase, FeaturesDict
 
@@ -32,7 +35,7 @@ class SIFTExtractor(ExtractorBase):
             sigma=cfg["sigma"],
         )
 
-    def _extract(self, image: np.ndarray) -> np.ndarray:
+    def _extract(self, image: Union[np.ndarray, torch.Tensor]) -> dict:
         kp, des = self._extractor.detectAndCompute(image, None)
         if kp:
             kpts = cv2.KeyPoint_convert(kp)

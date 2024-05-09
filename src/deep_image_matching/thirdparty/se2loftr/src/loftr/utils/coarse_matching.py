@@ -77,9 +77,7 @@ class CoarseMatching(nn.Module):
             except ImportError:
                 raise ImportError("download superglue.py first!")
             self.log_optimal_transport = log_optimal_transport
-            self.bin_score = nn.Parameter(
-                torch.tensor(config["skh_init_bin_score"], requires_grad=True)
-            )
+            self.bin_score = nn.Parameter(torch.tensor(config["skh_init_bin_score"], requires_grad=True))
             self.skh_iters = config["skh_iters"]
             self.skh_prefilter = config["skh_prefilter"]
         else:
@@ -107,32 +105,22 @@ class CoarseMatching(nn.Module):
         N, L, S, C = feat_c0.size(0), feat_c0.size(1), feat_c1.size(1), feat_c0.size(2)
 
         # normalize
-        feat_c0, feat_c1 = map(
-            lambda feat: feat / feat.shape[-1] ** 0.5, [feat_c0, feat_c1]
-        )
+        feat_c0, feat_c1 = map(lambda feat: feat / feat.shape[-1] ** 0.5, [feat_c0, feat_c1])
 
         if self.match_type == "dual_softmax":
-            sim_matrix = (
-                torch.einsum("nlc,nsc->nls", feat_c0, feat_c1) / self.temperature
-            )
+            sim_matrix = torch.einsum("nlc,nsc->nls", feat_c0, feat_c1) / self.temperature
             if mask_c0 is not None:
-                sim_matrix.masked_fill_(
-                    ~(mask_c0[..., None] * mask_c1[:, None]).bool(), -INF
-                )
+                sim_matrix.masked_fill_(~(mask_c0[..., None] * mask_c1[:, None]).bool(), -INF)
             conf_matrix = F.softmax(sim_matrix, 1) * F.softmax(sim_matrix, 2)
 
         elif self.match_type == "sinkhorn":
             # sinkhorn, dustbin included
             sim_matrix = torch.einsum("nlc,nsc->nls", feat_c0, feat_c1)
             if mask_c0 is not None:
-                sim_matrix[:, :L, :S].masked_fill_(
-                    ~(mask_c0[..., None] * mask_c1[:, None]).bool(), -INF
-                )
+                sim_matrix[:, :L, :S].masked_fill_(~(mask_c0[..., None] * mask_c1[:, None]).bool(), -INF)
 
             # build uniform prior & use sinkhorn
-            log_assign_matrix = self.log_optimal_transport(
-                sim_matrix, self.bin_score, self.skh_iters
-            )
+            log_assign_matrix = self.log_optimal_transport(sim_matrix, self.bin_score, self.skh_iters)
             assign_matrix = log_assign_matrix.exp()
             conf_matrix = assign_matrix[:, :-1, :-1]
 
@@ -151,7 +139,7 @@ class CoarseMatching(nn.Module):
         # predict coarse matches from conf_matrix
         data.update(**self.get_coarse_match(conf_matrix, data))
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def get_coarse_match(self, conf_matrix, data):
         """
         Args:
@@ -177,18 +165,12 @@ class CoarseMatching(nn.Module):
         _device = conf_matrix.device
         # 1. confidence thresholding
         mask = conf_matrix > self.thr
-        mask = rearrange(
-            mask, "b (h0c w0c) (h1c w1c) -> b h0c w0c h1c w1c", **axes_lengths
-        )
+        mask = rearrange(mask, "b (h0c w0c) (h1c w1c) -> b h0c w0c h1c w1c", **axes_lengths)
         if "mask0" not in data:
             mask_border(mask, self.border_rm, False)
         else:
-            mask_border_with_padding(
-                mask, self.border_rm, False, data["mask0"], data["mask1"]
-            )
-        mask = rearrange(
-            mask, "b h0c w0c h1c w1c -> b (h0c w0c) (h1c w1c)", **axes_lengths
-        )
+            mask_border_with_padding(mask, self.border_rm, False, data["mask0"], data["mask1"])
+        mask = rearrange(mask, "b h0c w0c h1c w1c -> b (h0c w0c) (h1c w1c)", **axes_lengths)
 
         # 2. mutual nearest
         mask = (
@@ -213,14 +195,10 @@ class CoarseMatching(nn.Module):
             if "mask0" not in data:
                 num_candidates_max = mask.size(0) * max(mask.size(1), mask.size(2))
             else:
-                num_candidates_max = compute_max_candidates(
-                    data["mask0"], data["mask1"]
-                )
+                num_candidates_max = compute_max_candidates(data["mask0"], data["mask1"])
             num_matches_train = int(num_candidates_max * self.train_coarse_percent)
             num_matches_pred = len(b_ids)
-            assert (
-                self.train_pad_num_gt_min < num_matches_train
-            ), "min-num-gt-pad should be less than num-train-matches"
+            assert self.train_pad_num_gt_min < num_matches_train, "min-num-gt-pad should be less than num-train-matches"
 
             # pred_indices is to select from prediction
             if num_matches_pred <= num_matches_train - self.train_pad_num_gt_min:
@@ -238,9 +216,7 @@ class CoarseMatching(nn.Module):
                 (max(num_matches_train - num_matches_pred, self.train_pad_num_gt_min),),
                 device=_device,
             )
-            mconf_gt = torch.zeros(
-                len(data["spv_b_ids"]), device=_device
-            )  # set conf of gt paddings to all zero
+            mconf_gt = torch.zeros(len(data["spv_b_ids"]), device=_device)  # set conf of gt paddings to all zero
 
             b_ids, i_ids, j_ids, mconf = map(
                 lambda x, y: torch.cat([x[pred_indices], y[gt_pad_indices]], dim=0),
@@ -259,14 +235,8 @@ class CoarseMatching(nn.Module):
         scale = data["hw0_i"][0] / data["hw0_c"][0]
         scale0 = scale * data["scale0"][b_ids] if "scale0" in data else scale
         scale1 = scale * data["scale1"][b_ids] if "scale1" in data else scale
-        mkpts0_c = (
-            torch.stack([i_ids % data["hw0_c"][1], i_ids // data["hw0_c"][1]], dim=1)
-            * scale0
-        )
-        mkpts1_c = (
-            torch.stack([j_ids % data["hw1_c"][1], j_ids // data["hw1_c"][1]], dim=1)
-            * scale1
-        )
+        mkpts0_c = torch.stack([i_ids % data["hw0_c"][1], i_ids // data["hw0_c"][1]], dim=1) * scale0
+        mkpts1_c = torch.stack([j_ids % data["hw1_c"][1], j_ids // data["hw1_c"][1]], dim=1) * scale1
 
         # These matches is the current prediction (for visualization)
         coarse_matches.update(

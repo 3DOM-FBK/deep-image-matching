@@ -16,9 +16,15 @@ from . import (
 )
 from .config import Config
 from .constants import GeometricVerification, Quality, TileSelection, Timer
-from .extractors import SuperPointExtractor, extractor_loader
+
+# from .extractors import SuperPointExtractor, extractor_loader
+from .extractors import extractor_loader
+from .extractors.superpoint import SuperPointExtractor
 from .io import get_features
-from .matchers import LightGlueMatcher, matcher_loader
+
+# from .matchers import LightGlueMatcher, matcher_loader
+from .matchers import matcher_loader
+from .matchers.lightglue import LightGlueMatcher
 from .pairs_generator import PairsGenerator
 from .utils import ImageList, get_pairs_from_file
 

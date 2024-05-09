@@ -37,9 +37,7 @@ def estimate_pose(kpts0, kpts1, K0, K1, norm_thresh, conf=0.99999):
 
     kpts0 = (K0inv @ (kpts0 - K0[None, :2, 2]).T).T
     kpts1 = (K1inv @ (kpts1 - K1[None, :2, 2]).T).T
-    E, mask = cv2.findEssentialMat(
-        kpts0, kpts1, np.eye(3), threshold=norm_thresh, prob=conf
-    )
+    E, mask = cv2.findEssentialMat(kpts0, kpts1, np.eye(3), threshold=norm_thresh, prob=conf)
 
     ret = None
     if E is not None:
@@ -76,9 +74,7 @@ def estimate_pose_uncalibrated(kpts0, kpts1, K0, K1, norm_thresh, conf=0.99999):
         kpts1_n = (K1inv @ (kpts1 - K1[None, :2, 2]).T).T
 
         for _E in np.split(E, len(E) / 3):
-            n, R, t, _ = cv2.recoverPose(
-                _E, kpts0_n, kpts1_n, np.eye(3), 1e9, mask=mask
-            )
+            n, R, t, _ = cv2.recoverPose(_E, kpts0_n, kpts1_n, np.eye(3), 1e9, mask=mask)
             if n > best_num_inliers:
                 best_num_inliers = n
                 ret = (R, t, mask.ravel() > 0)
@@ -86,9 +82,7 @@ def estimate_pose_uncalibrated(kpts0, kpts1, K0, K1, norm_thresh, conf=0.99999):
 
 
 def unnormalize_coords(x_n, h, w):
-    x = torch.stack(
-        (w * (x_n[..., 0] + 1) / 2, h * (x_n[..., 1] + 1) / 2), dim=-1
-    )  # [-1+1/h, 1-1/h] -> [0.5, h-0.5]
+    x = torch.stack((w * (x_n[..., 0] + 1) / 2, h * (x_n[..., 1] + 1) / 2), dim=-1)  # [-1+1/h, 1-1/h] -> [0.5, h-0.5]
     return x
 
 
@@ -173,17 +167,13 @@ def get_depth_tuple_transform_ops(resize=None, normalize=True, unscale=False):
     return TupleCompose(ops)
 
 
-def get_tuple_transform_ops(
-    resize=None, normalize=True, unscale=False, clahe=False, colorjiggle_params=None
-):
+def get_tuple_transform_ops(resize=None, normalize=True, unscale=False, clahe=False, colorjiggle_params=None):
     ops = []
     if resize:
         ops.append(TupleResize(resize))
     ops.append(TupleToTensorScaled())
     if normalize:
-        ops.append(
-            TupleNormalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        )  # Imagenet mean/std
+        ops.append(TupleNormalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]))  # Imagenet mean/std
     return TupleCompose(ops)
 
 
@@ -241,9 +231,7 @@ class TupleResizeNearestExact:
         self.size = size
 
     def __call__(self, im_tuple):
-        return [
-            F.interpolate(im, size=self.size, mode="nearest-exact") for im in im_tuple
-        ]
+        return [F.interpolate(im, size=self.size, mode="nearest-exact") for im in im_tuple]
 
     def __repr__(self):
         return "TupleResizeNearestExact(size={})".format(self.size)
@@ -302,48 +290,34 @@ class TupleCompose(object):
         return format_string
 
 
-@torch.no_grad()
+@torch.inference_mode()
 def cls_to_flow(cls, deterministic_sampling=True):
     B, C, H, W = cls.shape
     device = cls.device
     res = round(math.sqrt(C))
-    G = torch.meshgrid(
-        *[
-            torch.linspace(-1 + 1 / res, 1 - 1 / res, steps=res, device=device)
-            for _ in range(2)
-        ]
-    )
+    G = torch.meshgrid(*[torch.linspace(-1 + 1 / res, 1 - 1 / res, steps=res, device=device) for _ in range(2)])
     G = torch.stack([G[1], G[0]], dim=-1).reshape(C, 2)
     if deterministic_sampling:
         sampled_cls = cls.max(dim=1).indices
     else:
-        sampled_cls = torch.multinomial(
-            cls.permute(0, 2, 3, 1).reshape(B * H * W, C).softmax(dim=-1), 1
-        ).reshape(B, H, W)
+        sampled_cls = torch.multinomial(cls.permute(0, 2, 3, 1).reshape(B * H * W, C).softmax(dim=-1), 1).reshape(
+            B, H, W
+        )
     flow = G[sampled_cls]
     return flow
 
 
-@torch.no_grad()
+@torch.inference_mode()
 def cls_to_flow_refine(cls):
     B, C, H, W = cls.shape
     device = cls.device
     res = round(math.sqrt(C))
-    G = torch.meshgrid(
-        *[
-            torch.linspace(-1 + 1 / res, 1 - 1 / res, steps=res, device=device)
-            for _ in range(2)
-        ]
-    )
+    G = torch.meshgrid(*[torch.linspace(-1 + 1 / res, 1 - 1 / res, steps=res, device=device) for _ in range(2)])
     G = torch.stack([G[1], G[0]], dim=-1).reshape(C, 2)
     cls = cls.softmax(dim=1)
     mode = cls.max(dim=1).indices
 
-    index = (
-        torch.stack((mode - 1, mode, mode + 1, mode - res, mode + res), dim=1)
-        .clamp(0, C - 1)
-        .long()
-    )
+    index = torch.stack((mode - 1, mode, mode + 1, mode - res, mode + res), dim=1).clamp(0, C - 1).long()
     neighbours = torch.gather(cls, dim=1, index=index)[..., None]
     flow = (
         neighbours[:, 0] * G[index[:, 0]]
@@ -373,12 +347,7 @@ def get_gt_warp(
     else:
         B = depth1.shape[0]
     with torch.no_grad():
-        x1_n = torch.meshgrid(
-            *[
-                torch.linspace(-1 + 1 / n, 1 - 1 / n, n, device=depth1.device)
-                for n in (B, H, W)
-            ]
-        )
+        x1_n = torch.meshgrid(*[torch.linspace(-1 + 1 / n, 1 - 1 / n, n, device=depth1.device) for n in (B, H, W)])
         x1_n = torch.stack((x1_n[2], x1_n[1]), dim=-1).reshape(B, H * W, 2)
         mask, x2 = warp_kpts(
             x1_n.double(),
@@ -395,7 +364,7 @@ def get_gt_warp(
         return x2, prob
 
 
-@torch.no_grad()
+@torch.inference_mode()
 def warp_kpts(
     kpts0,
     depth0,
@@ -458,9 +427,7 @@ def warp_kpts(
         )
         nearest_valid_bilinear_invalid = (~valid_bilinear).logical_and(valid_nearest)
         warp = warp_bilinear.clone()
-        warp[nearest_valid_bilinear_invalid] = warp_nearest[
-            nearest_valid_bilinear_invalid
-        ]
+        warp[nearest_valid_bilinear_invalid] = warp_nearest[nearest_valid_bilinear_invalid]
         valid = valid_bilinear | valid_nearest
         return valid, warp
 
@@ -477,10 +444,7 @@ def warp_kpts(
     nonzero_mask = kpts0_depth != 0
 
     # Unproject
-    kpts0_h = (
-        torch.cat([kpts0, torch.ones_like(kpts0[:, :, [0]])], dim=-1)
-        * kpts0_depth[..., None]
-    )  # (N, L, 3)
+    kpts0_h = torch.cat([kpts0, torch.ones_like(kpts0[:, :, [0]])], dim=-1) * kpts0_depth[..., None]  # (N, L, 3)
     kpts0_n = K0.inverse() @ kpts0_h.transpose(2, 1)  # (N, 3, L)
     kpts0_cam = kpts0_n
 
@@ -490,17 +454,12 @@ def warp_kpts(
 
     # Project
     w_kpts0_h = (K1 @ w_kpts0_cam).transpose(2, 1)  # (N, L, 3)
-    w_kpts0 = w_kpts0_h[:, :, :2] / (
-        w_kpts0_h[:, :, [2]] + 1e-4
-    )  # (N, L, 2), +1e-4 to avoid zero depth
+    w_kpts0 = w_kpts0_h[:, :, :2] / (w_kpts0_h[:, :, [2]] + 1e-4)  # (N, L, 2), +1e-4 to avoid zero depth
 
     # Covisible Check
     h, w = depth1.shape[1:3]
     covisible_mask = (
-        (w_kpts0[:, :, 0] > 0)
-        * (w_kpts0[:, :, 0] < w - 1)
-        * (w_kpts0[:, :, 1] > 0)
-        * (w_kpts0[:, :, 1] < h - 1)
+        (w_kpts0[:, :, 0] > 0) * (w_kpts0[:, :, 0] < w - 1) * (w_kpts0[:, :, 1] > 0) * (w_kpts0[:, :, 1] < h - 1)
     )
     w_kpts0 = torch.stack(
         (2 * w_kpts0[..., 0] / w - 1, 2 * w_kpts0[..., 1] / h - 1), dim=-1
@@ -514,9 +473,7 @@ def warp_kpts(
         align_corners=False,
     )[:, 0, :, 0]
 
-    relative_depth_error = (
-        (w_kpts0_depth - w_kpts0_depth_computed) / w_kpts0_depth
-    ).abs()
+    relative_depth_error = ((w_kpts0_depth - w_kpts0_depth_computed) / w_kpts0_depth).abs()
     if not smooth_mask:
         consistent_mask = relative_depth_error < relative_depth_error_threshold
     else:
@@ -547,9 +504,7 @@ def numpy_to_pil(x: np.ndarray):
 
 def tensor_to_pil(x, unnormalize=False):
     if unnormalize:
-        x = x * (imagenet_std[:, None, None].to(x.device)) + (
-            imagenet_mean[:, None, None].to(x.device)
-        )
+        x = x * (imagenet_std[:, None, None].to(x.device)) + (imagenet_mean[:, None, None].to(x.device))
     x = x.detach().permute(1, 2, 0).cpu().numpy()
     x = np.clip(x, 0.0, 1.0)
     return numpy_to_pil(x)
@@ -580,7 +535,7 @@ def compute_relative_pose(R1, t1, R2, t2):
     return rots, trans
 
 
-@torch.no_grad()
+@torch.inference_mode()
 def reset_opt(opt):
     for group in opt.param_groups:
         for p in group["params"]:
@@ -662,9 +617,7 @@ def signed_point_line_distance(point, line, eps: float = 1e-9):
     if not line.shape[-1] == 3:
         raise ValueError(f"lines must be a (*, 3) tensor. Got {line.shape}")
 
-    numerator = (
-        line[..., 0] * point[..., 0] + line[..., 1] * point[..., 1] + line[..., 2]
-    )
+    numerator = line[..., 0] * point[..., 0] + line[..., 1] * point[..., 1] + line[..., 2]
     denominator = line[..., :2].norm(dim=-1)
 
     return numerator / (denominator + eps)
@@ -700,8 +653,6 @@ def signed_left_to_right_epipolar_distance(pts1, pts2, Fm):
 
 
 def get_grid(b, h, w, device):
-    grid = torch.meshgrid(
-        *[torch.linspace(-1 + 1 / n, 1 - 1 / n, n, device=device) for n in (b, h, w)]
-    )
+    grid = torch.meshgrid(*[torch.linspace(-1 + 1 / n, 1 - 1 / n, n, device=device) for n in (b, h, w)])
     grid = torch.stack((grid[2], grid[1]), dim=-1).reshape(b, h, w, 2)
     return grid

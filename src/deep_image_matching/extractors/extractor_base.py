@@ -151,15 +151,15 @@ class ExtractorBase(metaclass=ABCMeta):
         return f"{self.__class__.__name__}"
 
     @torch.inference_mode()
-    def extract(self, img: Union[Image, Path, str]) -> np.ndarray:
+    def extract(self, img: Union[Image, Path, str]) -> Path:
         """
-        Extract features from an image. This is the main method of the feature extractor.
+        Extract features from an image.
 
         Args:
-                img: Image to extract features from. It can be either a path to an image or an Image object
+            image (Union[Image, Path, str]): The image to extract features from. It can be an Image object, a Path object or a string with the image path.
 
         Returns:
-                List of features extracted from the image. Each feature is a 2D NumPy array
+            Path: The path to the saved features file.
         """
 
         if isinstance(img, str):
@@ -232,26 +232,29 @@ class ExtractorBase(metaclass=ABCMeta):
 
     @abstractmethod
     @torch.inference_mode()
-    def _extract(self, image: np.ndarray) -> dict:
+    def _extract(self, image: Union[np.ndarray, torch.Tensor]) -> dict:
         """
-        Extract features from an image. This is called by ` extract ` method to extract features from the image. This method must be implemented by subclasses.
+        Extract features from an image.
 
         Args:
-            image: A NumPy array of shape ( height width 3 )
+            image [np.ndarray, torch.Tensor]: Image to extract features from. Shape: [H, W, C] or [B, C, H, W]
 
         Returns:
-            A dictionary of extracted features
+            dict: A dictionary containing the extracted features with the following keys:
+                - 'keypoints' -> np.ndarray: keypoints (n_features, 2): keypoints
+                - 'scores' -> np.ndarray: keypoint scores (n_features,): keypoint scores
+                - 'descriptors' -> np.ndarray: local features (descr_size, n_features): local features
+
         """
         raise NotImplementedError("Subclasses should implement _extract method!")
 
     @abstractmethod
-    def _preprocess_tensor(self, image: np.ndarray, device: str = "cpu"):
+    def _preprocess_tensor(self, image: np.ndarray):
         """
         Convert a frame to a tensor. This is a low - level method to be used by subclasses that need to convert an image to a tensor with the required format. This method must be implemented by subclasses.
 
         Args:
             image: The image to be converted
-            device: The device to convert to (defaults to 'cpu')
         """
         raise NotImplementedError(
             "Subclasses should implement _preprocess_tensor method to adapt the input image to the required format!"

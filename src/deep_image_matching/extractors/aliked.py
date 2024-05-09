@@ -1,3 +1,5 @@
+from typing import Union
+
 import numpy as np
 import torch
 
@@ -42,8 +44,8 @@ class AlikedExtractor(ExtractorBase):
         else:
             self._extractor = ALIKED(**cfg)
 
-    @torch.no_grad()
-    def _extract(self, image: np.ndarray) -> np.ndarray:
+    @torch.inference_mode()
+    def _extract(self, image: Union[np.ndarray, torch.Tensor]) -> dict:
         image_ = self._preprocess_tensor(image, self._device)
 
         # Extract features

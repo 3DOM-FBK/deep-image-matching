@@ -1,3 +1,5 @@
+from typing import Union
+
 import kornia as K
 import kornia.feature as KF
 import numpy as np
@@ -6,7 +8,7 @@ import torch
 from .extractor_base import ExtractorBase, FeaturesDict
 
 
-class KeyNet(ExtractorBase):
+class KeyNetExtractor(ExtractorBase):
     _default_conf = {
         "name:": "",
     }
@@ -28,8 +30,8 @@ class KeyNet(ExtractorBase):
             device=self._device,
         )
 
-    @torch.no_grad()
-    def _extract(self, image: np.ndarray) -> np.ndarray:
+    @torch.inference_mode()
+    def _extract(self, image: Union[np.ndarray, torch.Tensor]) -> dict:
         image = K.image_to_tensor(image, False).float() / 255.0
         if self._device == "cpu":
             image = image.cpu()

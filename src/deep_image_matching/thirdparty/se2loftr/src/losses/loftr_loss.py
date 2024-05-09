@@ -1,7 +1,6 @@
-from loguru import logger
-
 import torch
 import torch.nn as nn
+from loguru import logger
 
 
 class LoFTRLoss(nn.Module):
@@ -41,9 +40,7 @@ class LoFTRLoss(nn.Module):
             c_neg_w = 0.0
 
         if self.loss_config["coarse_type"] == "cross_entropy":
-            assert (
-                not self.sparse_spvs
-            ), "Sparse Supervision for cross-entropy not implemented!"
+            assert not self.sparse_spvs, "Sparse Supervision for cross-entropy not implemented!"
             conf = torch.clamp(conf, 1e-6, 1 - 1e-6)
             loss_pos = -torch.log(conf[pos_mask])
             loss_neg = -torch.log(1 - conf[neg_mask])
@@ -57,18 +54,12 @@ class LoFTRLoss(nn.Module):
             gamma = self.loss_config["focal_gamma"]
 
             if self.sparse_spvs:
-                pos_conf = (
-                    conf[:, :-1, :-1][pos_mask]
-                    if self.match_type == "sinkhorn"
-                    else conf[pos_mask]
-                )
+                pos_conf = conf[:, :-1, :-1][pos_mask] if self.match_type == "sinkhorn" else conf[pos_mask]
                 loss_pos = -alpha * torch.pow(1 - pos_conf, gamma) * pos_conf.log()
                 # calculate losses for negative samples
                 if self.match_type == "sinkhorn":
                     neg0, neg1 = conf_gt.sum(-1) == 0, conf_gt.sum(1) == 0
-                    neg_conf = torch.cat(
-                        [conf[:, :-1, -1][neg0], conf[:, -1, :-1][neg1]], 0
-                    )
+                    neg_conf = torch.cat([conf[:, :-1, -1][neg0], conf[:, -1, :-1][neg1]], 0)
                     loss_neg = -alpha * torch.pow(1 - neg_conf, gamma) * neg_conf.log()
                 else:
                     # These is no dustbin for dual_softmax, so we left unmatchable patches without supervision.
@@ -93,27 +84,15 @@ class LoFTRLoss(nn.Module):
                 return loss
                 # positive and negative elements occupy similar propotions. => more balanced loss weights needed
             else:  # dense supervision (in the case of match_type=='sinkhorn', the dustbin is not supervised.)
-                loss_pos = (
-                    -alpha
-                    * torch.pow(1 - conf[pos_mask], gamma)
-                    * (conf[pos_mask]).log()
-                )
-                loss_neg = (
-                    -alpha
-                    * torch.pow(conf[neg_mask], gamma)
-                    * (1 - conf[neg_mask]).log()
-                )
+                loss_pos = -alpha * torch.pow(1 - conf[pos_mask], gamma) * (conf[pos_mask]).log()
+                loss_neg = -alpha * torch.pow(conf[neg_mask], gamma) * (1 - conf[neg_mask]).log()
                 if weight is not None:
                     loss_pos = loss_pos * weight[pos_mask]
                     loss_neg = loss_neg * weight[neg_mask]
                 return c_pos_w * loss_pos.mean() + c_neg_w * loss_neg.mean()
                 # each negative element occupy a smaller propotion than positive elements. => higher negative loss weight needed
         else:
-            raise ValueError(
-                "Unknown coarse loss: {type}".format(
-                    type=self.loss_config["coarse_type"]
-                )
-            )
+            raise ValueError("Unknown coarse loss: {type}".format(type=self.loss_config["coarse_type"]))
 
     def compute_fine_loss(self, expec_f, expec_f_gt):
         if self.fine_type == "l2_with_std":
@@ -129,13 +108,9 @@ class LoFTRLoss(nn.Module):
             expec_f (torch.Tensor): [M, 2] <x, y>
             expec_f_gt (torch.Tensor): [M, 2] <x, y>
         """
-        correct_mask = (
-            torch.linalg.norm(expec_f_gt, ord=float("inf"), dim=1) < self.correct_thr
-        )
+        correct_mask = torch.linalg.norm(expec_f_gt, ord=float("inf"), dim=1) < self.correct_thr
         if correct_mask.sum() == 0:
-            if (
-                self.training
-            ):  # this seldomly happen when training, since we pad prediction with gt
+            if self.training:  # this seldomly happen when training, since we pad prediction with gt
                 logger.warning("assign a false supervision to avoid ddp deadlock")
                 correct_mask[0] = True
             else:
@@ -150,22 +125,16 @@ class LoFTRLoss(nn.Module):
             expec_f_gt (torch.Tensor): [M, 2] <x, y>
         """
         # correct_mask tells you which pair to compute fine-loss
-        correct_mask = (
-            torch.linalg.norm(expec_f_gt, ord=float("inf"), dim=1) < self.correct_thr
-        )
+        correct_mask = torch.linalg.norm(expec_f_gt, ord=float("inf"), dim=1) < self.correct_thr
 
         # use std as weight that measures uncertainty
         std = expec_f[:, 2]
         inverse_std = 1.0 / torch.clamp(std, min=1e-10)
-        weight = (
-            inverse_std / torch.mean(inverse_std)
-        ).detach()  # avoid minizing loss through increase std
+        weight = (inverse_std / torch.mean(inverse_std)).detach()  # avoid minizing loss through increase std
 
         # corner case: no correct coarse match found
         if not correct_mask.any():
-            if (
-                self.training
-            ):  # this seldomly happen during training, since we pad prediction with gt
+            if self.training:  # this seldomly happen during training, since we pad prediction with gt
                 # sometimes there is not coarse-level gt at all.
                 logger.warning("assign a false supervision to avoid ddp deadlock")
                 correct_mask[0] = True
@@ -174,21 +143,16 @@ class LoFTRLoss(nn.Module):
                 return None
 
         # l2 loss with std
-        offset_l2 = ((expec_f_gt[correct_mask] - expec_f[correct_mask, :2]) ** 2).sum(
-            -1
-        )
+        offset_l2 = ((expec_f_gt[correct_mask] - expec_f[correct_mask, :2]) ** 2).sum(-1)
         loss = (offset_l2 * weight[correct_mask]).mean()
 
         return loss
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def compute_c_weight(self, data):
         """compute element-wise weights for computing coarse-level loss."""
         if "mask0" in data:
-            c_weight = (
-                data["mask0"].flatten(-2)[..., None]
-                * data["mask1"].flatten(-2)[:, None]
-            ).float()
+            c_weight = (data["mask0"].flatten(-2)[..., None] * data["mask1"].flatten(-2)[:, None]).float()
         else:
             c_weight = None
         return c_weight
@@ -207,9 +171,7 @@ class LoFTRLoss(nn.Module):
 
         # 1. coarse-level loss
         loss_c = self.compute_coarse_loss(
-            data["conf_matrix_with_bin"]
-            if self.sparse_spvs and self.match_type == "sinkhorn"
-            else data["conf_matrix"],
+            data["conf_matrix_with_bin"] if self.sparse_spvs and self.match_type == "sinkhorn" else data["conf_matrix"],
             data["conf_matrix_gt"],
             weight=c_weight,
         )

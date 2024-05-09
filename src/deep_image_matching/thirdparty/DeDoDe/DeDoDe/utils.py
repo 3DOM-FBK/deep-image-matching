@@ -1,15 +1,15 @@
-import warnings
-import numpy as np
 import math
+import warnings
+from time import perf_counter
+
 import cv2
+import numpy as np
 import torch
+import torch.nn.functional as F
+from einops import rearrange
+from PIL import Image
 from torchvision import transforms
 from torchvision.transforms.functional import InterpolationMode
-import torch.nn.functional as F
-from PIL import Image
-from einops import rearrange
-import torch
-from time import perf_counter
 
 
 def get_best_device(verbose=False):
@@ -51,9 +51,7 @@ def estimate_pose(kpts0, kpts1, K0, K1, norm_thresh, conf=0.99999):
 
     kpts0 = (K0inv @ (kpts0 - K0[None, :2, 2]).T).T
     kpts1 = (K1inv @ (kpts1 - K1[None, :2, 2]).T).T
-    E, mask = cv2.findEssentialMat(
-        kpts0, kpts1, np.eye(3), threshold=norm_thresh, prob=conf
-    )
+    E, mask = cv2.findEssentialMat(kpts0, kpts1, np.eye(3), threshold=norm_thresh, prob=conf)
 
     ret = None
     if E is not None:
@@ -68,21 +66,15 @@ def estimate_pose(kpts0, kpts1, K0, K1, norm_thresh, conf=0.99999):
 
 
 def get_grid(B, H, W, device=get_best_device()):
-    x1_n = torch.meshgrid(
-        *[torch.linspace(-1 + 1 / n, 1 - 1 / n, n, device=device) for n in (B, H, W)]
-    )
+    x1_n = torch.meshgrid(*[torch.linspace(-1 + 1 / n, 1 - 1 / n, n, device=device) for n in (B, H, W)])
     x1_n = torch.stack((x1_n[2], x1_n[1]), dim=-1).reshape(B, H * W, 2)
     return x1_n
 
 
-@torch.no_grad()
+@torch.inference_mode()
 def finite_diff_hessian(f: tuple(["B", "H", "W"]), device=get_best_device()):
-    dxx = (
-        torch.tensor([[0, 0, 0], [1, -2, 1], [0, 0, 0]], device=device)[None, None] / 2
-    )
-    dxy = (
-        torch.tensor([[1, 0, -1], [0, 0, 0], [-1, 0, 1]], device=device)[None, None] / 4
-    )
+    dxx = torch.tensor([[0, 0, 0], [1, -2, 1], [0, 0, 0]], device=device)[None, None] / 2
+    dxy = torch.tensor([[1, 0, -1], [0, 0, 0], [-1, 0, 1]], device=device)[None, None] / 4
     dyy = dxx.mT
     Hxx = F.conv2d(f[:, None], dxx, padding=1)[:, 0]
     Hxy = F.conv2d(f[:, None], dxy, padding=1)[:, 0]
@@ -127,7 +119,7 @@ def newton_step(f: tuple["B", "H", "W"], inds, device=get_best_device()):
     return step[..., 0]
 
 
-@torch.no_grad()
+@torch.inference_mode()
 def sample_keypoints(
     scoremap,
     num_samples=8192,
@@ -142,56 +134,40 @@ def sample_keypoints(
     # scoremap = scoremap**2
     log_scoremap = (scoremap + 1e-10).log()
     if upsample:
-        log_scoremap = F.interpolate(
-            log_scoremap[:, None], scale_factor=3, mode="bicubic", align_corners=False
-        )[
+        log_scoremap = F.interpolate(log_scoremap[:, None], scale_factor=3, mode="bicubic", align_corners=False)[
             :, 0
         ]  # .clamp(min = 0)
         scoremap = log_scoremap.exp()
     B, H, W = scoremap.shape
     if increase_coverage:
-        weights = (-torch.linspace(-2, 2, steps=51, device=device) ** 2).exp()[
-            None, None
-        ]
+        weights = (-(torch.linspace(-2, 2, steps=51, device=device) ** 2)).exp()[None, None]
         # 10000 is just some number for maybe numerical stability, who knows. :), result is invariant anyway
         local_density_x = F.conv2d(
             (scoremap[:, None] + 1e-6) * 10000,
             weights[..., None, :],
             padding=(0, 51 // 2),
         )
-        local_density = F.conv2d(
-            local_density_x, weights[..., None], padding=(51 // 2, 0)
-        )[:, 0]
+        local_density = F.conv2d(local_density_x, weights[..., None], padding=(51 // 2, 0))[:, 0]
         scoremap = scoremap * (local_density + 1e-8) ** (-1 / 2)
     grid = get_grid(B, H, W, device=device).reshape(B, H * W, 2)
     if sharpen:
-        laplace_operator = (
-            torch.tensor([[[[0, 1, 0], [1, -4, 1], [0, 1, 0]]]], device=device) / 4
-        )
-        scoremap = scoremap[:, None] - 0.5 * F.conv2d(
-            scoremap[:, None], weight=laplace_operator, padding=1
-        )
+        laplace_operator = torch.tensor([[[[0, 1, 0], [1, -4, 1], [0, 1, 0]]]], device=device) / 4
+        scoremap = scoremap[:, None] - 0.5 * F.conv2d(scoremap[:, None], weight=laplace_operator, padding=1)
         scoremap = scoremap[:, 0].clamp(min=0)
     if use_nms:
-        scoremap = scoremap * (
-            scoremap == F.max_pool2d(scoremap, (3, 3), stride=1, padding=1)
-        )
+        scoremap = scoremap * (scoremap == F.max_pool2d(scoremap, (3, 3), stride=1, padding=1))
     if sample_topk:
         inds = torch.topk(scoremap.reshape(B, H * W), k=num_samples).indices
     else:
-        inds = torch.multinomial(
-            scoremap.reshape(B, H * W), num_samples=num_samples, replacement=False
-        )
+        inds = torch.multinomial(scoremap.reshape(B, H * W), num_samples=num_samples, replacement=False)
     kps = torch.gather(grid, dim=1, index=inds[..., None].expand(B, num_samples, 2))
     if return_scoremap:
         return kps, torch.gather(scoremap.reshape(B, H * W), dim=1, index=inds)
     return kps
 
 
-@torch.no_grad()
-def jacobi_determinant(
-    warp, certainty, R=3, device=get_best_device(), dtype=torch.float32
-):
+@torch.inference_mode()
+def jacobi_determinant(warp, certainty, R=3, device=get_best_device(), dtype=torch.float32):
     t = perf_counter()
     *dims, _ = warp.shape
     warp = warp.to(dtype)
@@ -200,24 +176,17 @@ def jacobi_determinant(
     dtype = warp.dtype
     match_regions = torch.zeros((*dims, 4, R, R), device=device).to(dtype)
     match_regions[:, 1:-1, 1:-1] = warp.unfold(1, R, 1).unfold(2, R, 1)
-    match_regions = (
-        rearrange(match_regions, "B H W D R1 R2 -> B H W (R1 R2) D")
-        - warp[..., None, :]
-    )
+    match_regions = rearrange(match_regions, "B H W D R1 R2 -> B H W (R1 R2) D") - warp[..., None, :]
 
     match_regions_cert = torch.zeros((*dims, R, R), device=device).to(dtype)
     match_regions_cert[:, 1:-1, 1:-1] = certainty.unfold(1, R, 1).unfold(2, R, 1)
-    match_regions_cert = rearrange(match_regions_cert, "B H W R1 R2 -> B H W (R1 R2)")[
-        ..., None
-    ]
+    match_regions_cert = rearrange(match_regions_cert, "B H W R1 R2 -> B H W (R1 R2)")[..., None]
 
     # print("Time for unfold", perf_counter()-t)
     # t = perf_counter()
     *dims, N, D = match_regions.shape
     # standardize:
-    mu, sigma = match_regions.mean(dim=(-2, -1), keepdim=True), match_regions.std(
-        dim=(-2, -1), keepdim=True
-    )
+    mu, sigma = match_regions.mean(dim=(-2, -1), keepdim=True), match_regions.std(dim=(-2, -1), keepdim=True)
     match_regions = (match_regions - mu) / (sigma + 1e-6)
     x_a, x_b = match_regions.chunk(2, -1)
 
@@ -247,9 +216,7 @@ def jacobi_determinant(
     abs_J_logdet = (abs_J_det + 1e-12).log()
     B = certainty.shape[0]
     # Handle outliers
-    robust_abs_J_logdet = abs_J_logdet.clamp(
-        -3, 3
-    )  # Shouldn't be more that exp(3) \approx 8 times zoom
+    robust_abs_J_logdet = abs_J_logdet.clamp(-3, 3)  # Shouldn't be more that exp(3) \approx 8 times zoom
     # print("Time for logdet", perf_counter()-t)
     # t = perf_counter()
 
@@ -272,12 +239,7 @@ def get_gt_warp(
     else:
         B = depth1.shape[0]
     with torch.no_grad():
-        x1_n = torch.meshgrid(
-            *[
-                torch.linspace(-1 + 1 / n, 1 - 1 / n, n, device=depth1.device)
-                for n in (B, H, W)
-            ]
-        )
+        x1_n = torch.meshgrid(*[torch.linspace(-1 + 1 / n, 1 - 1 / n, n, device=depth1.device) for n in (B, H, W)])
         x1_n = torch.stack((x1_n[2], x1_n[1]), dim=-1).reshape(B, H * W, 2)
         mask, x2 = warp_kpts(
             x1_n.double(),
@@ -295,9 +257,7 @@ def get_gt_warp(
 
 
 def unnormalize_coords(x_n, h, w):
-    x = torch.stack(
-        (w * (x_n[..., 0] + 1) / 2, h * (x_n[..., 1] + 1) / 2), dim=-1
-    )  # [-1+1/h, 1-1/h] -> [0.5, h-0.5]
+    x = torch.stack((w * (x_n[..., 0] + 1) / 2, h * (x_n[..., 1] + 1) / 2), dim=-1)  # [-1+1/h, 1-1/h] -> [0.5, h-0.5]
     return x
 
 
@@ -367,9 +327,7 @@ def pose_auc(errors, thresholds):
 def get_depth_tuple_transform_ops(resize=None, normalize=True, unscale=False):
     ops = []
     if resize:
-        ops.append(
-            TupleResize(resize, mode=InterpolationMode.BILINEAR, antialias=False)
-        )
+        ops.append(TupleResize(resize, mode=InterpolationMode.BILINEAR, antialias=False))
     return TupleCompose(ops)
 
 
@@ -381,9 +339,7 @@ def get_tuple_transform_ops(resize=None, normalize=True, unscale=False, clahe=Fa
         ops.append(TupleClahe())
     if normalize:
         ops.append(TupleToTensorScaled())
-        ops.append(
-            TupleNormalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        )  # Imagenet mean/std
+        ops.append(TupleNormalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]))  # Imagenet mean/std
     else:
         if unscale:
             ops.append(TupleToTensorUnscaled())
@@ -514,7 +470,7 @@ class TupleCompose(object):
         return format_string
 
 
-@torch.no_grad()
+@torch.inference_mode()
 def warp_kpts(
     kpts0,
     depth0,
@@ -577,9 +533,7 @@ def warp_kpts(
         )
         nearest_valid_bilinear_invalid = (~valid_bilinear).logical_and(valid_nearest)
         warp = warp_bilinear.clone()
-        warp[nearest_valid_bilinear_invalid] = warp_nearest[
-            nearest_valid_bilinear_invalid
-        ]
+        warp[nearest_valid_bilinear_invalid] = warp_nearest[nearest_valid_bilinear_invalid]
         valid = valid_bilinear | valid_nearest
         return valid, warp
 
@@ -596,10 +550,7 @@ def warp_kpts(
     nonzero_mask = kpts0_depth != 0
 
     # Unproject
-    kpts0_h = (
-        torch.cat([kpts0, torch.ones_like(kpts0[:, :, [0]])], dim=-1)
-        * kpts0_depth[..., None]
-    )  # (N, L, 3)
+    kpts0_h = torch.cat([kpts0, torch.ones_like(kpts0[:, :, [0]])], dim=-1) * kpts0_depth[..., None]  # (N, L, 3)
     kpts0_n = K0.inverse() @ kpts0_h.transpose(2, 1)  # (N, 3, L)
     kpts0_cam = kpts0_n
 
@@ -609,17 +560,12 @@ def warp_kpts(
 
     # Project
     w_kpts0_h = (K1 @ w_kpts0_cam).transpose(2, 1)  # (N, L, 3)
-    w_kpts0 = w_kpts0_h[:, :, :2] / (
-        w_kpts0_h[:, :, [2]] + 1e-4
-    )  # (N, L, 2), +1e-4 to avoid zero depth
+    w_kpts0 = w_kpts0_h[:, :, :2] / (w_kpts0_h[:, :, [2]] + 1e-4)  # (N, L, 2), +1e-4 to avoid zero depth
 
     # Covisible Check
     h, w = depth1.shape[1:3]
     covisible_mask = (
-        (w_kpts0[:, :, 0] > 0)
-        * (w_kpts0[:, :, 0] < w - 1)
-        * (w_kpts0[:, :, 1] > 0)
-        * (w_kpts0[:, :, 1] < h - 1)
+        (w_kpts0[:, :, 0] > 0) * (w_kpts0[:, :, 0] < w - 1) * (w_kpts0[:, :, 1] > 0) * (w_kpts0[:, :, 1] < h - 1)
     )
     w_kpts0 = torch.stack(
         (2 * w_kpts0[..., 0] / w - 1, 2 * w_kpts0[..., 1] / h - 1), dim=-1
@@ -633,9 +579,7 @@ def warp_kpts(
         align_corners=False,
     )[:, 0, :, 0]
 
-    relative_depth_error = (
-        (w_kpts0_depth - w_kpts0_depth_computed) / w_kpts0_depth
-    ).abs()
+    relative_depth_error = ((w_kpts0_depth - w_kpts0_depth_computed) / w_kpts0_depth).abs()
     if not smooth_mask:
         consistent_mask = relative_depth_error < relative_depth_error_threshold
     else:
@@ -666,9 +610,7 @@ def numpy_to_pil(x: np.ndarray):
 
 def tensor_to_pil(x, unnormalize=False, autoscale=False):
     if unnormalize:
-        x = x * (imagenet_std[:, None, None].to(x.device)) + (
-            imagenet_mean[:, None, None].to(x.device)
-        )
+        x = x * (imagenet_std[:, None, None].to(x.device)) + (imagenet_mean[:, None, None].to(x.device))
     if autoscale:
         if x.max() == x.min():
             warnings.warn("x max == x min, cant autoscale")

@@ -130,7 +130,7 @@ class Extractor(torch.nn.Module):
         super().__init__()
         self.conf = SimpleNamespace(**{**self._default_conf, **conf})
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def extract(self, img: torch.Tensor, **conf) -> dict:
         """Perform extraction with online resizing"""
         if img.dim() == 3:

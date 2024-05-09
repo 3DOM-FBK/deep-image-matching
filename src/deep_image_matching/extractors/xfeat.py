@@ -55,7 +55,7 @@ class XFeatExtractor(ExtractorBase):
     @torch.inference_mode()
     def _extract(self, image: Union[np.ndarray, torch.Tensor]) -> dict:
         """
-        Extract features from an image using the SuperPoint model.
+        Extract features from an image.
 
         Args:
             image [np.ndarray, torch.Tensor]: Image to extract features from. Shape: [H, W, C] or [B, C, H, W]

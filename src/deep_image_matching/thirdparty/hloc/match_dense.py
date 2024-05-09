@@ -228,7 +228,7 @@ class ImagePairDataset(torch.utils.data.Dataset):
         return image0, image1, scale0, scale1, name0, name1
 
 
-@torch.no_grad()
+@torch.inference_mode()
 def match_dense(
     conf: Dict,
     pairs: List[Tuple[str, str]],
@@ -459,7 +459,7 @@ def assign_matches(
             grp.create_dataset("matching_scores0", data=scores0)
 
 
-@torch.no_grad()
+@torch.inference_mode()
 def match_and_assign(
     conf: Dict,
     pairs_path: Path,
@@ -521,7 +521,7 @@ def match_and_assign(
         assign_matches(pairs, match_path, cpdict, max_error=conf["max_error"])
 
 
-@torch.no_grad()
+@torch.inference_mode()
 def main(
     conf: Dict,
     pairs: Path,

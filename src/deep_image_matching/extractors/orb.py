@@ -1,5 +1,8 @@
+from typing import Union
+
 import cv2
 import numpy as np
+import torch
 
 from .extractor_base import ExtractorBase, FeaturesDict
 
@@ -40,7 +43,7 @@ class ORBExtractor(ExtractorBase):
             fastThreshold=cfg["fastThreshold"],
         )
 
-    def _extract(self, image: np.ndarray) -> np.ndarray:
+    def _extract(self, image: Union[np.ndarray, torch.Tensor]) -> dict:
         kp = self._extractor.detect(image, None)
         kp, des = self._extractor.compute(image, kp)
         if kp:

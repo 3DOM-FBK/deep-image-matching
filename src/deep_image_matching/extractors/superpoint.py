@@ -1,5 +1,6 @@
 import sys
 from copy import copy
+from typing import Union
 
 import numpy as np
 import torch
@@ -102,8 +103,8 @@ class SuperPointExtractor(ExtractorBase):
         SP_cfg = self.config.get("extractor")
         self._extractor = SuperPoint(SP_cfg).eval().to(self._device)
 
-    @torch.no_grad()
-    def _extract(self, image: np.ndarray) -> np.ndarray:
+    @torch.inference_mode()
+    def _extract(self, image: Union[np.ndarray, torch.Tensor]) -> dict:
         """
         Extract features from an image using the SuperPoint model.
 

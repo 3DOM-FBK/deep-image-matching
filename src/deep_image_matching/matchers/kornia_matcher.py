@@ -23,7 +23,7 @@ class KorniaMatcher(MatcherBase):
         cfg = {**self._default_conf, **self.config.get("matcher", {})}
         self._matcher = KF.DescriptorMatcher(cfg["match_mode"], cfg["th"])
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def _match_pairs(
         self,
         feats0: FeaturesDict,

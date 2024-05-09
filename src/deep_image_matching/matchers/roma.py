@@ -168,7 +168,7 @@ class RomaMatcher(DetectorFreeMatcherBase):
 
         timer_match.print(f"{__class__.__name__} match")
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def _match_pairs(
         self,
         feature_path: Path,

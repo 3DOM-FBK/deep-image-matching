@@ -17,7 +17,7 @@ def featuresDict2Lightglue(feats: FeaturesDict, device: torch.device) -> dict:
         del feats["feature_path"]
     if "im_path" in feats.keys():
         del feats["im_path"]
-    #if "time" in feats.keys():
+    # if "time" in feats.keys():
     #    del feats["time"]
 
     # Add batch dimension
@@ -61,7 +61,7 @@ class LightGlueMatcher(MatcherBase):
         if self._localfeatures == "disk":
             self.max_feat_no_tiling = 50000
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def _match_pairs(
         self,
         feats0: FeaturesDict,

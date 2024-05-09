@@ -78,8 +78,8 @@ class NoExtractor(ExtractorBase):
 
         return feature_path
 
-    @torch.no_grad()
-    def _extract(self, image: np.ndarray) -> np.ndarray:
+    @torch.inference_mode()
+    def _extract(self, image: Union[np.ndarray, torch.Tensor]) -> dict:
         feats = {}
         feats["keypoints"] = np.array([])
         feats["descriptors"] = np.array([])

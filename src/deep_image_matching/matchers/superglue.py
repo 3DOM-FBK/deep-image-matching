@@ -65,7 +65,7 @@ class SuperGlueMatcher(MatcherBase):
         cfg = {**self._default_conf, **self.config.get("matcher", {})}
         self._matcher = SuperGlue(cfg).eval().to(self._device)
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def _match_pairs(
         self,
         feats0: FeaturesDict,
