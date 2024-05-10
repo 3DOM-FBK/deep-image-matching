@@ -113,6 +113,9 @@ class XFeatExtractor(ExtractorBase):
         # Convert tensors to numpy arrays and remove batch dimension
         out = {k: v.cpu().numpy() for k, v in out[0].items()}
 
+        # Transpose descriptors
+        out["descriptors"] = out["descriptors"].T
+
         return out
 
     def _preprocess_input(self, x: Union[np.ndarray, torch.Tensor]):

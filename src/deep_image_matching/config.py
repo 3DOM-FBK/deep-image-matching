@@ -18,6 +18,27 @@ logger = logging.getLogger("dim")
 # General configuration for the matching process.
 # It defines the quality of the matching process, the tile selection strategy, the tiling grid, the overlap between tiles, the geometric verification method, and the geometric verification parameters.
 conf_general = {
+    # run GUI
+    "gui": False,
+    # Project directory containing all the data (it must contain the "images" folder)
+    "dir": None,
+    # Path to the images folder (if not provided, it is assumed that the images are in the project directory)
+    "images": None,
+    # Output directory where the results will be saved (if not provided, it is created in the project directory)
+    "outs": None,
+    # Flag to force the execution even if the output folder already exists (default is True)
+    "force": True,
+    # Pipeline to use for feature extraction and matching
+    "pipeline": None,
+    # External configuration file to use for feature extraction and matching
+    "config_file": None,
+    # Matching strategy to use for the matching process
+    #   bruteforce (match all the images with all the other images),
+    #   matching_lowres (match images using low resolution features),
+    #   sequential (match each image with the next n images, where n is the overlap parameter),
+    #   retrieval (match images using global features),
+    #   custom_pairs (match images using a custom pair file),
+    "strategy": "matching_lowres",
     # Image resolution presets:
     #   Quality.HIGHEST (x2)
     #   Quality.HIGH (x1 - full resolutions)
@@ -31,6 +52,26 @@ conf_general = {
     #   TileSelection.GRID (match all the corresponding tiles in a grid)
     #   TileSelection.EXHAUSTIVE (match all the possible pairs of tiles)
     "tile_selection": TileSelection.PRESELECTION,
+    # File containing the pairs to match (used only if strategy is set to custom_pairs)
+    "pair_file": None,
+    # Overlap between images (used only if strategy is set to sequential)
+    "overlap": None,
+    # Global feature to use for the retrieval strategy (used only if strategy is set to retrieval)
+    "global_feature": None,
+    # Path to the database file (used only if strategy is set to covisibility)
+    "db_path": None,
+    # Flag to indicate if hthe best image roation must be estiamted prior the matching (default is False)
+    "upright": False,
+    # Flag to skip the reconstruction step with pycolmap (default is False)
+    "skip_reconstruction": False,
+    # Flag to enable/disable the verbose mode (default is False)
+    "verbose": False,
+    # Flag to enable/disable the graph visualization (default is True)
+    "graph": True,
+    # Path to the OpenMVG configuration file (used only if the reconstruction step is enabled)
+    "openmvg_conf": None,
+    # Path to the camera options file (used only if the reconstruction step is enabled)
+    "camera_options": None,
     # Size of the tiles in pixels (width, height) or (x, y)
     "tile_size": (2400, 2000),
     # Overlap between tiles in pixels
@@ -52,6 +93,7 @@ conf_general = {
     "min_inlier_ratio_per_pair": 0.25,
     # Even if the features are extracted by tiles, you can try to match the features of the entire image first (if the number of features is not too high and they can fit into memory). Default is False.
     "try_match_full_images": False,
+    # Pipeline to use for tile preselection
     "preselection_pipeline": "superpoint+lightglue",
 }
 
@@ -72,23 +114,6 @@ confs = {
             # Refer to https://github.com/cvg/LightGlue/tree/main for the meaning of the parameters
             "name": "lightglue",
             "n_layers": 9,
-            "mp": False,  # enable mixed precision
-            "flash": True,  # enable FlashAttention if available.
-            "depth_confidence": 0.95,  # early stopping, disable with -1
-            "width_confidence": 0.99,  # point pruning, disable with -1
-            "filter_threshold": 0.1,  # match threshold
-        },
-    },
-    "superpoint+lightglue_fast": {
-        "extractor": {
-            "name": "superpoint",
-            "nms_radius": 3,
-            "keypoint_threshold": 0.001,
-            "max_keypoints": 1024,
-        },
-        "matcher": {
-            "name": "lightglue",
-            "n_layers": 7,
             "mp": False,  # enable mixed precision
             "flash": True,  # enable FlashAttention if available.
             "depth_confidence": 0.95,  # early stopping, disable with -1
@@ -188,6 +213,13 @@ confs = {
         },
         "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.99},
     },
+    "xfeat+kornia_matcher": {
+        "extractor": {
+            "name": "xfeat",
+            "top_k": 1000,
+        },
+        "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.99},
+    },
     # "sift+lightglue": {
     #     "extractor": {
     #         "name": "sift",
@@ -207,26 +239,6 @@ confs = {
 }
 
 opt_zoo = {
-    "extractors": [
-        "superpoint",
-        "alike",
-        "aliked",
-        "disk",
-        "dedode",
-        "keynetaffnethardnet",
-        "orb",
-        "sift",
-        "no_extractor",
-    ],
-    "matchers": [
-        "superglue",
-        "lightglue",
-        "loftr",
-        "se2loftr",
-        "adalam",
-        "kornia_matcher",
-        "roma",
-    ],
     "retrieval": ["netvlad", "openibl", "cosplace", "dir"],
     "matching_strategy": [
         "bruteforce",
@@ -248,8 +260,7 @@ class Config:
     the configuration to a file.
 
     Attributes:
-        _default_cli_opts (dict): The default command-line options.
-        cfg (dict): The configuration dictionary with the following keys: general, extractor, matcher.
+        _cfg (dict): The configuration dictionary with the following keys: general, extractor, matcher.
 
     Methods:
         general: Get the general configuration options.
@@ -268,29 +279,6 @@ class Config:
         print: Print the configuration settings.
         save: Save the configuration to a file.
     """
-
-    _default_cli_opts = {
-        "gui": False,
-        "dir": None,
-        "images": None,
-        "outs": None,
-        "pipeline": None,
-        "config_file": None,
-        "quality": "high",
-        "tiling": "none",
-        "strategy": "matching_lowres",
-        "pair_file": None,
-        "overlap": None,
-        "global_feature": None,
-        "db_path": None,
-        "upright": False,
-        "skip_reconstruction": False,
-        "force": True,
-        "verbose": False,
-        "graph": True,
-        "openmvg": None,
-        "camera_options": None,
-    }
     _cfg = {
         "general": {},
         "extractor": {},
@@ -376,30 +364,22 @@ class Config:
         return opt_zoo["matching_strategy"]
 
     @staticmethod
-    def get_extractor_names() -> list:
-        return opt_zoo["extractors"]
-
-    @staticmethod
-    def get_matcher_names() -> list:
-        return opt_zoo["matchers"]
-
-    @staticmethod
     def get_retrieval_names() -> list:
         return opt_zoo["retrieval"]
 
     @staticmethod
-    def parse_general_config(input_args: dict) -> dict:
+    def parse_general_config(args: dict) -> dict:
         """
         Parses the user configuration and performs checks on the input arguments.
 
         Args:
-            input_args (dict): The input arguments provided by the user (e.g., from CLI parser).
+            args (dict): The input arguments provided by the user (e.g., from CLI parser).
 
         Returns:
             dict: The configuration dictionary with the following keys: general, extractor, matcher.
 
         """
-        args = {**Config._default_cli_opts, **input_args}
+        args = {**conf_general, **args}
 
         # Check that at least one of the two options is provided
         if args["images"] is None and args["dir"] is None:
@@ -456,11 +436,7 @@ class Config:
             )
         pipeline = args["pipeline"]
         extractor = confs[pipeline]["extractor"]["name"]
-        if extractor not in opt_zoo["extractors"]:
-            raise ValueError(f"Invalid extractor option: {extractor}. Valid options are: {opt_zoo['extractors']}")
         matcher = confs[pipeline]["matcher"]["name"]
-        if matcher not in opt_zoo["matchers"]:
-            raise ValueError(f"Invalid matcher option: {matcher}. Valid options are: {opt_zoo['matchers']}")
 
         # Check matching strategy and related options
         if args["strategy"] not in opt_zoo["matching_strategy"]:
