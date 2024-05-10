@@ -35,7 +35,7 @@ class XFeatExtractor(ExtractorBase):
 
     _default_conf = {
         "name": "xfeat",
-        "top_k": 1000,
+        "top_k": 4000,
     }
     grayscale = False
     descriptor_size = 64

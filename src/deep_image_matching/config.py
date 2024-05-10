@@ -216,7 +216,7 @@ confs = {
     "xfeat+kornia_matcher": {
         "extractor": {
             "name": "xfeat",
-            "top_k": 1000,
+            "top_k": 4000,
         },
         "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.99},
     },
@@ -279,6 +279,7 @@ class Config:
         print: Print the configuration settings.
         save: Save the configuration to a file.
     """
+
     _cfg = {
         "general": {},
         "extractor": {},
