@@ -9,7 +9,7 @@ from .extractor_base import ExtractorBase, FeaturesDict
 
 class SIFTExtractor(ExtractorBase):
     _default_conf = {
-        "name:": "sift",
+        "name": "sift",
         "n_features": 4000,
         "nOctaveLayers": 3,
         "contrastThreshold": 0.04,
@@ -52,7 +52,7 @@ class SIFTExtractor(ExtractorBase):
 
         return feats
 
-    def _preprocess_tensor(self, image: np.ndarray, device: str = "cuda"):
+    def _preprocess_input(self, image: np.ndarray, device: str = "cuda"):
         pass
 
 

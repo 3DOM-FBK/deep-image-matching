@@ -12,7 +12,7 @@ from .extractor_base import ExtractorBase
 class AlikedExtractor(ExtractorBase):
     # config from original ALIKED implementation
     # _default_conf = {
-    #     "name:": "aliked",
+    #     "name": "aliked",
     #     "model": "aliked-n16rot",
     #     "device": "cuda",
     #     "top_k": 2000,
@@ -22,7 +22,7 @@ class AlikedExtractor(ExtractorBase):
 
     # config from LightGlue implementation of ALIKED
     _default_conf = {
-        "name:": "aliked",
+        "name": "aliked",
         "model": "aliked-n16rot",
         "device": "cuda",
         "max_num_keypoints": 4000,
@@ -46,7 +46,7 @@ class AlikedExtractor(ExtractorBase):
 
     @torch.inference_mode()
     def _extract(self, image: Union[np.ndarray, torch.Tensor]) -> dict:
-        image_ = self._preprocess_tensor(image, self._device)
+        image_ = self._preprocess_input(image, self._device)
 
         # Extract features
         feats = self._extractor({"image": image_})
@@ -65,7 +65,7 @@ class AlikedExtractor(ExtractorBase):
 
         return feats
 
-    def _preprocess_tensor(self, image: np.ndarray, device: str = "cuda"):
+    def _preprocess_input(self, image: np.ndarray, device: str = "cuda"):
         """
         Convert a frame to a tensor.
 

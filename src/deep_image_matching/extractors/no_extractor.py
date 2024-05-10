@@ -87,7 +87,7 @@ class NoExtractor(ExtractorBase):
 
         return feats
 
-    def _preprocess_tensor(self, image: np.ndarray, device: str = "cuda"):
+    def _preprocess_input(self, image: np.ndarray, device: str = "cuda"):
         """
         Convert a frame to a tensor.
 

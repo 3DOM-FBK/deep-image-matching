@@ -76,7 +76,7 @@ class SuperPointExtractor(ExtractorBase):
     Methods:
         __init__(self, config: dict): Initializes the SuperPointExtractor instance with a custom configuration.
         _extract(self, image: np.ndarray) -> dict: Extracts features from an image using the SuperPoint algorithm.
-        _preprocess_tensor(self, image: np.ndarray, device: str = "cpu"): Converts an image to a tensor.
+        _preprocess_input(self, image: np.ndarray, device: str = "cpu"): Converts an image to a tensor.
         _resize_image(self, quality: Quality, image: np.ndarray, interp: str = "cv2_area") -> Tuple[np.ndarray]: Resizes an image based on the specified quality.
         _resize_features(self, quality: Quality, features: FeaturesDict) -> Tuple[FeaturesDict]: Resizes features based on the specified quality.
         viz_keypoints(self, image: np.ndarray, keypoints: np.ndarray, output_dir: Path, im_name: str = "keypoints", resize_to: int = 2000, img_format: str = "jpg", jpg_quality: int = 90, ...): Visualizes keypoints on an image and saves the visualization to the specified output directory.
@@ -116,7 +116,7 @@ class SuperPointExtractor(ExtractorBase):
 
         """
         # Convert image from numpy array to tensor
-        image_ = self._preprocess_tensor(image, self._device)
+        image_ = self._preprocess_input(image, self._device)
 
         # Extract features
         feats = self._extractor({"image": image_})
@@ -128,7 +128,7 @@ class SuperPointExtractor(ExtractorBase):
 
         return feats
 
-    def _preprocess_tensor(self, image: np.ndarray, device: str = "cuda"):
+    def _preprocess_input(self, image: np.ndarray, device: str = "cuda"):
         """
         Convert a frame to a tensor.
 

@@ -182,16 +182,9 @@ confs = {
     "dedode+kornia_matcher": {
         "extractor": {
             "name": "dedode",
-            "n_features": 1000,
-            "upright": False,
-        },
-        "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.99},
-    },
-    "dedode+kornia_matcher": {
-        "extractor": {
-            "name": "dedode",
-            "n_features": 1000,
-            "upright": False,
+            "max_keypoints": 10_000,
+            "detector_weights": "L-SO2",  # [L, L-C4, L-SO2, L-C4-v2]
+            "descriptor_weights": "G-C4",  # [B-upright, G-upright, B-C4, B-SO2, G-C4]
         },
         "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.99},
     },

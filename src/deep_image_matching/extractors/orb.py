@@ -9,7 +9,7 @@ from .extractor_base import ExtractorBase, FeaturesDict
 
 class ORBExtractor(ExtractorBase):
     _default_conf = {
-        "name:": "orb",
+        "name": "orb",
         "n_features": 4000,
         "scaleFactor": 1.2,
         "nlevels": 1,
@@ -61,7 +61,7 @@ class ORBExtractor(ExtractorBase):
 
         return feats
 
-    def _preprocess_tensor(self, image: np.ndarray, device: str = "cuda"):
+    def _preprocess_input(self, image: np.ndarray, device: str = "cuda"):
         pass
 
 

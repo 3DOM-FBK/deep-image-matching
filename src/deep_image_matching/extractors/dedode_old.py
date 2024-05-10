@@ -22,7 +22,7 @@ class DeDoDeExtractor(ExtractorBase):
     )
 
     _default_conf = {
-        "name:": "dedode",
+        "name": "dedode",
     }
     required_inputs = ["image"]
     grayscale = False
@@ -66,7 +66,7 @@ class DeDoDeExtractor(ExtractorBase):
 
         return feats
 
-    def _preprocess_tensor(self, image: np.ndarray, device: str = "cuda"):
+    def _preprocess_input(self, image: np.ndarray, device: str = "cuda"):
         """
         Convert a frame to a tensor.
 

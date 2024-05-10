@@ -27,7 +27,7 @@ class XFeatExtractor(ExtractorBase):
     Methods:
         __init__(self, config: dict): Initializes the SuperPointExtractor instance with a custom configuration.
         _extract(self, image: np.ndarray) -> dict: Extracts features from an image using the SuperPoint algorithm.
-        _preprocess_tensor(self, image: np.ndarray, device: str = "cpu"): Converts an image to a tensor.
+        _preprocess_input(self, image: np.ndarray, device: str = "cpu"): Converts an image to a tensor.
         _resize_image(self, quality: Quality, image: np.ndarray, interp: str = "cv2_area") -> Tuple[np.ndarray]: Resizes an image based on the specified quality.
         _resize_features(self, quality: Quality, features: FeaturesDict) -> Tuple[FeaturesDict]: Resizes features based on the specified quality.
         viz_keypoints(self, image: np.ndarray, keypoints: np.ndarray, output_dir: Path, im_name: str = "keypoints", resize_to: int = 2000, img_format: str = "jpg", jpg_quality: int = 90, ...): Visualizes keypoints on an image and saves the visualization to the specified output directory.
@@ -69,7 +69,7 @@ class XFeatExtractor(ExtractorBase):
         """
         top_k = self.config["extractor"]["top_k"]
 
-        image_, rh1, rw1 = self._preprocess_tensor(image)
+        image_, rh1, rw1 = self._preprocess_input(image)
 
         B, _, _H1, _W1 = image_.shape
 
@@ -115,7 +115,7 @@ class XFeatExtractor(ExtractorBase):
 
         return out
 
-    def _preprocess_tensor(self, x: Union[np.ndarray, torch.Tensor]):
+    def _preprocess_input(self, x: Union[np.ndarray, torch.Tensor]):
         """Guarantee that image is divisible by 32 to avoid aliasing artifacts."""
         if isinstance(x, np.ndarray) and x.ndim == 3:
             x = torch.tensor(x).permute(2, 0, 1)[None]

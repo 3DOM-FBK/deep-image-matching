@@ -22,55 +22,40 @@ class DeDoDeExtractor(ExtractorBase):
     # Default is torch.float16, suitable for CUDA. Use torch.float32 for CPU or MPS
 
     _default_conf = {
-        "name:": "dedode",
-        "max_keypoints": 4000,
-        "detector_weights": "L-C4",  # [L, L-C4, L-SO2, L-C4-v2]
-        "descriptor_weights": "G-upright",  # [B-upright, G-upright, B-C4, B-SO2, G-C4]
+        "name": "dedode",
+        "max_keypoints": 10_000,
+        "detector_weights": "L-SO2",  # [L-upright, L-C4, L-SO2]
+        "descriptor_weights": "G-C4",  # [B-upright, G-upright, B-C4, B-SO2, G-C4]
         "amp_dtype": torch.float16,
     }
     required_inputs = []
     grayscale = False
 
+    # descriptor_size = 512 if "G" in _default_conf["descriptor_weights"] else 256
+    descriptor_size = 256
+
     def __init__(self, config: dict):
         # Init the base class
         super().__init__(config)
 
-        cfg = self.config.get("extractor")
+        # Update the descriptor size based on the config
+        # self.descriptor_size = 512 if "G" in self._default_conf["descriptor_weights"] else 256
 
         # Load extractor
-        # self._extractor = KF.DeDoDe.from_pretrained(
-        #     detector_weights=cfg["detector_weights"],
-        #     descriptor_weights=cfg["descriptor_weights"],
-        #     amp_dtype=cfg["amp_dtype"],
-        # )
-        self.config["extractor"]["max_keypoints"] = 10_000
-        self.config["extractor"]["amp_dtype"] = torch.float
-        self._extractor = (
-            KF.DeDoDe.from_pretrained(
-                detector_weights="L-SO2",
-                descriptor_weights="G-C4",
-                amp_dtype=torch.float16,
-            )
-            .eval()
-            .to(self._device)
-        )
+        cfg = self.config.get("extractor")
+        self._extractor = KF.DeDoDe.from_pretrained(
+            detector_weights=cfg["detector_weights"],
+            descriptor_weights=cfg["descriptor_weights"],
+            amp_dtype=cfg["amp_dtype"],
+        ).to(self._device)
 
     @torch.inference_mode()
     def _extract(self, image: Union[np.ndarray, torch.Tensor]) -> dict:
         # Convert image from numpy array to tensor
-        image_ = self._preprocess_tensor(image, self._device)
+        image_ = self._preprocess_input(image, self._device)
 
         # Extract features
-        cfg = self.config.get("extractor")
-        # keypoints, scores = self._extractor.detect(
-        #     image_,
-        #     n=cfg["max_keypoints"],
-        #     apply_imagenet_normalization=True,
-        #     pad_if_not_divisible=True,
-        #     crop_h=cfg["crop_h"],
-        #     crop_w=cfg["crop_w"],
-        # )
-        # descriptions = self._extractor.describe(image_, keypoints=keypoints, apply_imagenet_normalization=True)
+        cfg = self.config["extractor"]
         kpts, scores, descr = self._extractor(
             image_,
             n=cfg["max_keypoints"],
@@ -86,7 +71,7 @@ class DeDoDeExtractor(ExtractorBase):
 
         return feats
 
-    def _preprocess_tensor(self, image: np.ndarray, device: str = "cuda"):
+    def _preprocess_input(self, image: np.ndarray, device: str = "cuda"):
         """
         Convert a frame to a tensor.
 
@@ -100,4 +85,4 @@ class DeDoDeExtractor(ExtractorBase):
             # Repeat the image 3 times to make it RGB and add a batch dimension
             image = np.repeat(image[None], 3, axis=0)[None]
 
-        return torch.tensor(image, dtype=self.config["extractor"]["amp_dtype"]).to(device)
+        return torch.tensor(image / 255.0, dtype=self.config["extractor"]["amp_dtype"]).to(device)

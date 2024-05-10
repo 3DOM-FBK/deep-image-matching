@@ -9,7 +9,7 @@ from .extractor_base import ExtractorBase
 
 class AlikeExtractor(ExtractorBase):
     _default_conf = {
-        "name:": "alike",
+        "name": "alike",
         "model": "alike-s",
         "device": "cuda",
         "top_k": 15000,
@@ -45,7 +45,7 @@ class AlikeExtractor(ExtractorBase):
 
         return feats
 
-    def _preprocess_tensor(self, image: np.ndarray, device: str = "cuda"):
+    def _preprocess_input(self, image: np.ndarray, device: str = "cuda"):
         """
         Convert a frame to a tensor.
 

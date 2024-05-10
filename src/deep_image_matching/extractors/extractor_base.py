@@ -50,7 +50,6 @@ def extractor_loader(root, model):
     classes = [c for c in classes if issubclass(c[1], ExtractorBase)]
     assert len(classes) == 1, classes
     return classes[0][1]
-    # return getattr(module, 'Model')
 
 
 def save_features_h5(feature_path: Path, features: FeaturesDict, im_name: str, as_half: bool = True):
@@ -249,7 +248,7 @@ class ExtractorBase(metaclass=ABCMeta):
         raise NotImplementedError("Subclasses should implement _extract method!")
 
     @abstractmethod
-    def _preprocess_tensor(self, image: np.ndarray):
+    def _preprocess_input(self, image: np.ndarray):
         """
         Convert a frame to a tensor. This is a low - level method to be used by subclasses that need to convert an image to a tensor with the required format. This method must be implemented by subclasses.
 
@@ -257,7 +256,7 @@ class ExtractorBase(metaclass=ABCMeta):
             image: The image to be converted
         """
         raise NotImplementedError(
-            "Subclasses should implement _preprocess_tensor method to adapt the input image to the required format!"
+            "Subclasses should implement _preprocess_input method to adapt the input image to the required format!"
         )
 
     def _extract_by_tile(self, image: np.ndarray, select_unique: bool = True):
