@@ -387,8 +387,8 @@ class Config:
             "openmvg_conf": "openmvg",
         }
         for k, v in dict_map.items():
-            if k in args:
-                args[v] = args.pop(k)
+            if v in args:
+                args[k] = args.pop(v)
 
         args = {**conf_general, **args}
 
@@ -437,7 +437,8 @@ class Config:
                 logger.warning(
                     f"{args['outs']} already exists. Use '--force' option to overwrite the folder. Using existing features is not yet fully implemented (it will be implemented in a future release). Exiting."
                 )
-                exit(1)
+                # TODO: implement the option to use existing features
+                # exit(1)
         args["outs"].mkdir(parents=True, exist_ok=True)
 
         # Check extraction and matching configuration
