@@ -60,21 +60,6 @@ class ImageMatcher:
 
     """
 
-    default_conf_general = {
-        "quality": Quality.MEDIUM,
-        "tile_selection": TileSelection.NONE,
-        "geom_verification": GeometricVerification.PYDEGENSAC,
-        "output_dir": "output",
-        "tile_size": [2048, 1365],
-        "tile_overlap": 0,
-        "force_cpu": False,
-        "do_viz": False,
-        "fast_viz": True,
-        "hide_matching_track": True,
-        "do_viz_tiles": False,
-        "preselection_pipeline": "superpoint+lightglue",
-    }
-
     def __init__(
         self,
         config: Config,

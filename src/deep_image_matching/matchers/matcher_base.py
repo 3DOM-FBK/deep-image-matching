@@ -364,7 +364,7 @@ class MatcherBase(metaclass=ABCMeta):
             tile_preselection_size=self.tile_preselection_size,
             min_matches_per_tile=self.min_matches_per_tile,
             device=self._device,
-            debug_dir=self.config.general["output_dir"] / "debug" if self.config.general["do_viz"] else None,
+            debug_dir=self.config.general["output_dir"] / "debug" if self.config.general["verbose"] else None,
         )
         timer.update("tile selection")
 
@@ -524,17 +524,6 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         tile_preselection_size (int): Maximum resize dimension for preselection.
     """
 
-    _default_general_conf = {
-        "quality": Quality.LOW,
-        "tile_selection": TileSelection.NONE,
-        "tile_size": [1024, 1024],
-        "tile_overlap": 0,
-        "force_cpu": False,
-        "do_viz": False,
-        "min_inliers_per_pair": 15,
-        "min_inlier_ratio_per_pair": 0.2,
-        "min_matches_per_tile": 5,
-    }
     _default_conf = {}
     required_inputs = []
 
@@ -549,18 +538,11 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         if not isinstance(custom_config, Config):
             raise TypeError("Invalid config object. 'custom_config' must be a Config object")
 
-        # Update default config with custom config
-        # NOTE: This is done to keep backward compatibility with the old config format that was a dictionary, it should be replaced with the new config object
-        self.config = {
-            "general": {
-                **self._default_general_conf,
-                **custom_config.general,
-            },
-            "matcher": {
-                **self._default_conf,
-                **custom_config.matcher,
-            },
-        }
+        # Update the default configuration of each specific matcher the with custom configation
+        # TODO: this is not the best way to update the configuration, it should be improved
+        custom_config._cfg["matcher"] = {**self._default_conf, **custom_config.matcher}
+        self.config = custom_config
+
         # Get main processing parameters and save them as class members
         # NOTE: this is used for backward compatibility, it should be removed
         self._quality = self.config.general["quality"]
