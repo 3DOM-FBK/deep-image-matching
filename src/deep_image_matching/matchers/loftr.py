@@ -53,16 +53,16 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
 
         super().__init__(config)
 
-        model = self.config["matcher"]["pretrained"]
+        model = self.config.matcher["pretrained"]
         self.matcher = KF.LoFTR(pretrained=model).to(self._device).eval()
 
-        tile_size = self.config["general"]["tile_size"]
+        tile_size = self.config.general["tile_size"]
         if max(tile_size) > self.max_tile_size:
             logger.warning(
                 f"The tile size is too large large ({tile_size}) for running LOFTR. Using a maximum tile size of {self.max_tile_size} px (this may take some time...)."
             )
             ratio = max(tile_size) / self.max_tile_size
-            self.config["general"]["tile_size"] = (
+            self.config.general["tile_size"] = (
                 int(tile_size[0] / ratio),
                 int(tile_size[1] / ratio),
             )
@@ -171,8 +171,8 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
 
         timer = Timer(log_level="debug", cumulate_by_key=True)
 
-        tile_size = self.config["general"]["tile_size"]
-        overlap = self.config["general"]["tile_overlap"]
+        tile_size = self.config.general["tile_size"]
+        overlap = self.config.general["tile_overlap"]
 
         # Select tile pairs to match
         tile_pairs = tile_selection(

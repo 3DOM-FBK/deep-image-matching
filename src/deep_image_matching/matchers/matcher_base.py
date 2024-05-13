@@ -71,18 +71,6 @@ class MatcherBase(metaclass=ABCMeta):
         tile_preselection_size (int): Maximum resize dimension for preselection.
     """
 
-    _default_general_conf = {
-        "quality": Quality.LOW,
-        "tile_selection": TileSelection.NONE,
-        "tile_size": [2048, 1365],
-        "tile_overlap": 0,
-        "force_cpu": False,
-        "do_viz": False,
-        "min_inliers_per_pair": 15,
-        "min_inlier_ratio_per_pair": 0.2,
-        "min_matches_per_tile": 5,
-        "tile_preselection_size": 1000,
-    }
     _default_conf = {}
     required_inputs = []
     max_feat_no_tiling = 20000
@@ -98,39 +86,30 @@ class MatcherBase(metaclass=ABCMeta):
         if not isinstance(custom_config, Config):
             raise TypeError("Invalid config object. 'custom_config' must be a Config object")
 
-        # Update default config with custom config
-        # NOTE: This is done to keep backward compatibility with the old config format that was a dictionary, it should be replaced with the new config object
-        self.config = {
-            "general": {
-                **self._default_general_conf,
-                **custom_config.general,
-            },
-            "matcher": {
-                **self._default_conf,
-                **custom_config.matcher,
-            },
-        }
-        # Get main processing parameters and save them as class members
-        # NOTE: this is used for backward compatibility, it should be removed
-        self._quality = self.config["general"]["quality"]
-        self._tiling = self.config["general"]["tile_selection"]
-        self.min_inliers_per_pair = self.config["general"]["min_inliers_per_pair"]
-        self.min_inlier_ratio_per_pair = self.config["general"]["min_inlier_ratio_per_pair"]
-        self.min_matches_per_tile = self.config["general"]["min_matches_per_tile"]
-        self.tile_preselection_size = self.config["general"]["tile_preselection_size"]
+        # Update the default configuration of each specific matcher the with custom configation
+        # TODO: this is not the best way to update the configuration, it should be improved
+        custom_config._cfg["matcher"] = {**self._default_conf, **custom_config.matcher}
+        self.config = custom_config
 
         # Get main processing parameters and save them as class members
-        self._tiling = self.config["general"]["tile_selection"]
+        # NOTE: this is used for backward compatibility, it should be removed
+        self._quality = self.config.general["quality"]
+        self._tiling = self.config.general["tile_selection"]
+        self.min_inliers_per_pair = self.config.general["min_inliers_per_pair"]
+        self.min_inlier_ratio_per_pair = self.config.general["min_inlier_ratio_per_pair"]
+        self.min_matches_per_tile = self.config.general["min_matches_per_tile"]
+        self.tile_preselection_size = self.config.general["tile_preselection_size"]
+
+        # Get main processing parameters and save them as class members
+        self._tiling = self.config.general["tile_selection"]
         logger.debug(f"Matching options: Tiling: {self._tiling.name}")
-        logger.debug(f"Saving directory: {self.config['general']['output_dir']}")
+        logger.debug(f"Saving directory: {self.config.general['output_dir']}")
         # Get device
-        self._device = torch.device(
-            "cuda" if torch.cuda.is_available() and not self.config["general"]["force_cpu"] else "cpu"
-        )
+        self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         logger.debug(f"Running inference on device {self._device}")
 
         # Load extractor and matcher for the preselction
-        if self.config["general"]["tile_selection"] != TileSelection.NONE:
+        if self.config.general["tile_selection"] != TileSelection.NONE:
             sp_cfg = {
                 "nms_radius": 5,  # 3
                 "max_keypoints": 4000,  # 2048
@@ -290,15 +269,15 @@ class MatcherBase(metaclass=ABCMeta):
             Quality.LOW: 2.0,
             Quality.LOWEST: 3.0,
         }
-        gv_threshold = self.config["general"]["gv_threshold"] * scales[self.config["general"]["quality"]]
+        gv_threshold = self.config.general["gv_threshold"] * scales[self.config.general["quality"]]
 
         # Apply geometric verification
         _, inlMask = geometric_verification(
             kpts0=features0["keypoints"][matches[:, 0]],
             kpts1=features1["keypoints"][matches[:, 1]],
-            method=self.config["general"]["geom_verification"],
+            method=self.config.general["geom_verification"],
             threshold=gv_threshold,
-            confidence=self.config["general"]["gv_confidence"],
+            confidence=self.config.general["gv_confidence"],
         )
         num_inliers = np.sum(inlMask)
         inliers_ratio = num_inliers / len(matches)
@@ -327,8 +306,8 @@ class MatcherBase(metaclass=ABCMeta):
         logger.debug(f"Matching {img0_name}-{img1_name} done!")
 
         # # For debugging
-        if self.config["general"]["verbose"]:
-            viz_dir = self.config["general"]["output_dir"] / "debug" / "matches"
+        if self.config.general["verbose"]:
+            viz_dir = self.config.general["output_dir"] / "debug" / "matches"
             viz_dir.mkdir(parents=True, exist_ok=True)
             self.viz_matches(
                 feature_path,
@@ -376,16 +355,16 @@ class MatcherBase(metaclass=ABCMeta):
             img0,
             img1,
             method=method,
-            quality=self.config["general"]["quality"],
-            tile_size=self.config["general"]["tile_size"],
-            tile_overlap=self.config["general"]["tile_overlap"],
+            quality=self.config.general["quality"],
+            tile_size=self.config.general["tile_size"],
+            tile_overlap=self.config.general["tile_overlap"],
             preselction_extractor=self._preselction_extractor,
             preselction_matcher=self._preselction_matcher,
-            pipeline=self.config["general"]["preselection_pipeline"],
+            pipeline=self.config.general["preselection_pipeline"],
             tile_preselection_size=self.tile_preselection_size,
             min_matches_per_tile=self.min_matches_per_tile,
             device=self._device,
-            debug_dir=self.config["general"]["output_dir"] / "debug" if self.config["general"]["do_viz"] else None,
+            debug_dir=self.config.general["output_dir"] / "debug" if self.config.general["do_viz"] else None,
         )
         timer.update("tile selection")
 
@@ -420,9 +399,9 @@ class MatcherBase(metaclass=ABCMeta):
                 logger.warning(f"Found {sum(counts>1)} duplicate matches in tile pair ({tidx0}, {tidx1})")
 
         # Viz for debugging
-        # if self.config["general"]["verbose"]:
+        # if self.config.general["verbose"]:
         #     tile_match_dir = (
-        #         Path(self.config["general"]["output_dir"])
+        #         Path(self.config.general["output_dir"])
         #         / "debug"
         #         / "matches_by_tile"
         #     )
@@ -584,23 +563,21 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         }
         # Get main processing parameters and save them as class members
         # NOTE: this is used for backward compatibility, it should be removed
-        self._quality = self.config["general"]["quality"]
-        self._tiling = self.config["general"]["tile_selection"]
-        self.min_inliers_per_pair = self.config["general"]["min_inliers_per_pair"]
-        self.min_matches_per_tile = self.config["general"]["min_matches_per_tile"]
-        self.tile_preselection_size = self.config["general"]["tile_preselection_size"]
+        self._quality = self.config.general["quality"]
+        self._tiling = self.config.general["tile_selection"]
+        self.min_inliers_per_pair = self.config.general["min_inliers_per_pair"]
+        self.min_matches_per_tile = self.config.general["min_matches_per_tile"]
+        self.tile_preselection_size = self.config.general["tile_preselection_size"]
 
         logger.debug(f"Matching options: Tiling: {self._tiling.name}")
-        logger.debug(f"Saving directory: {self.config['general']['output_dir']}")
+        logger.debug(f"Saving directory: {self.config.general['output_dir']}")
 
         # Get device
-        self._device = torch.device(
-            "cuda" if torch.cuda.is_available() and not self.config["general"]["force_cpu"] else "cpu"
-        )
+        self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         logger.debug(f"Running inference on device {self._device}")
 
         # Load extractor and matcher for the preselction
-        if self.config["general"]["tile_selection"] == TileSelection.PRESELECTION:
+        if self.config.general["tile_selection"] == TileSelection.PRESELECTION:
             sp_cfg = {
                 "nms_radius": 5,
                 "max_keypoints": 4000,
@@ -685,15 +662,15 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         # Rescale threshold according the image original image size
         img_shape = cv2.imread(str(img0)).shape
         scale_fct = np.floor(max(img_shape) / self.max_tile_size / 2)
-        gv_threshold = self.config["general"]["gv_threshold"] * scale_fct
+        gv_threshold = self.config.general["gv_threshold"] * scale_fct
 
         # Apply geometric verification
         _, inlMask = geometric_verification(
             kpts0=features0["keypoints"][matches[:, 0]],
             kpts1=features1["keypoints"][matches[:, 1]],
-            method=self.config["general"]["geom_verification"],
+            method=self.config.general["geom_verification"],
             threshold=gv_threshold,
-            confidence=self.config["general"]["gv_confidence"],
+            confidence=self.config.general["gv_confidence"],
         )
         matches = matches[inlMask]
         timer_match.update("Geom. verification")
@@ -711,7 +688,7 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         timer_match.print(f"{__class__.__name__} match")
 
         # For debugging
-        # viz_dir = self.config["general"]["output_dir"] / "viz"
+        # viz_dir = self.config.general["output_dir"] / "viz"
         # viz_dir.mkdir(parents=True, exist_ok=True)
         # self.viz_matches(
         #     feature_path,

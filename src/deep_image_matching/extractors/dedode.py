@@ -42,7 +42,7 @@ class DeDoDeExtractor(ExtractorBase):
         # self.descriptor_size = 512 if "G" in self._default_conf["descriptor_weights"] else 256
 
         # Load extractor
-        cfg = self.config.get("extractor")
+        cfg = self.config.extractor
         self._extractor = KF.DeDoDe.from_pretrained(
             detector_weights=cfg["detector_weights"],
             descriptor_weights=cfg["descriptor_weights"],
@@ -55,7 +55,7 @@ class DeDoDeExtractor(ExtractorBase):
         image_ = self._preprocess_input(image, self._device)
 
         # Extract features
-        cfg = self.config["extractor"]
+        cfg = self.config.extractor
         kpts, scores, descr = self._extractor(
             image_,
             n=cfg["max_keypoints"],
@@ -85,4 +85,4 @@ class DeDoDeExtractor(ExtractorBase):
             # Repeat the image 3 times to make it RGB and add a batch dimension
             image = np.repeat(image[None], 3, axis=0)[None]
 
-        return torch.tensor(image / 255.0, dtype=self.config["extractor"]["amp_dtype"]).to(device)
+        return torch.tensor(image / 255.0, dtype=self.config.extractor["amp_dtype"]).to(device)

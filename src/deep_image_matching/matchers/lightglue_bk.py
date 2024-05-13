@@ -55,8 +55,7 @@ class LightGlueMatcher(MatcherBase):
         super().__init__(config)
 
         # load the matcher
-        cfg = {**self._default_conf, **self.config.get("matcher", {})}
-        self._matcher = LightGlue(self._localfeatures, **cfg).eval().to(self._device)
+        self._matcher = LightGlue(self._localfeatures, **self.config.matcher).eval().to(self._device)
 
         if self._localfeatures == "disk":
             self.max_feat_no_tiling = 50000

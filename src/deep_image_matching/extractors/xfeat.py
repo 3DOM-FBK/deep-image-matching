@@ -67,7 +67,7 @@ class XFeatExtractor(ExtractorBase):
                 - 'descriptors' -> np.ndarray: local features (64, top_k): local features
 
         """
-        top_k = self.config["extractor"]["top_k"]
+        top_k = self.config.extractor["top_k"]
 
         image_, rh1, rw1 = self._preprocess_input(image)
 

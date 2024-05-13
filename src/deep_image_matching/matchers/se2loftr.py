@@ -50,13 +50,13 @@ class SE2LOFTRMatcher(DetectorFreeMatcherBase):
         self.matcher.load_state_dict(torch.load(str(self.se2loftr_path), map_location=self._device)["state_dict"])
         self.matcher = self.matcher.eval().to(device=self._device)
 
-        tile_size = self.config["general"]["tile_size"]
+        tile_size = self.config.general["tile_size"]
         if max(tile_size) > self.max_tile_size:
             logger.warning(
                 f"The tile size is too large large ({tile_size}) for running LOFTR. Using a maximum tile size of {self.max_tile_size} px (this may take some time...)."
             )
             ratio = max(tile_size) / self.max_tile_size
-            self.config["general"]["tile_size"] = (
+            self.config.general["tile_size"] = (
                 int(tile_size[0] / ratio),
                 int(tile_size[1] / ratio),
             )
@@ -216,8 +216,8 @@ class SE2LOFTRMatcher(DetectorFreeMatcherBase):
 
         timer = Timer(log_level="debug", cumulate_by_key=True)
 
-        tile_size = self.config["general"]["tile_size"]
-        overlap = self.config["general"]["tile_overlap"]
+        tile_size = self.config.general["tile_size"]
+        overlap = self.config.general["tile_overlap"]
 
         # Select tile pairs to match
         tile_pairs = tile_selection(

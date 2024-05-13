@@ -21,7 +21,7 @@ class KeyNetExtractor(ExtractorBase):
         # Init the base class
         super().__init__(config)
 
-        cfg = self.config.get("extractor")
+        cfg = self.config.extractor
 
         # Load extractor
         self._extractor = KF.KeyNetAffNetHardNet(

@@ -220,22 +220,37 @@ confs = {
         },
         "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.99},
     },
-    # "sift+lightglue": {
-    #     "extractor": {
-    #         "name": "sift",
-    #         "model_name": "aliked-n16rot",
-    #         "max_num_keypoints": 4000,
-    #         "detection_threshold": 0.2,
-    #         "nms_radius": 3,
-    #     },
-    #     "matcher": {
-    #         "name": "lightglue",
-    #         "n_layers": 9,
-    #         "depth_confidence": 0.95,  # early stopping, disable with -1
-    #         "width_confidence": 0.99,  # point pruning, disable with -1
-    #         "filter_threshold": 0.1,  # match threshold
-    #     },
-    # },
+    "sift+lightglue": {
+        "extractor": {
+            "name": "sift",
+            "model_name": "aliked-n16rot",
+            "max_num_keypoints": 4000,
+            "detection_threshold": 0.2,
+            "nms_radius": 3,
+        },
+        "matcher": {
+            "name": "lightglue",
+            "n_layers": 9,
+            "depth_confidence": 0.95,  # early stopping, disable with -1
+            "width_confidence": 0.99,  # point pruning, disable with -1
+            "filter_threshold": 0.1,  # match threshold
+        },
+    },
+    "dedode+lightglue": {
+        "extractor": {
+            "name": "dedode",
+            "max_keypoints": 10_000,
+            "detector_weights": "L-SO2",  # [L, L-C4, L-SO2, L-C4-v2]
+            "descriptor_weights": "G-C4",  # [B-upright, G-upright, B-C4, B-SO2, G-C4]
+        },
+        "matcher": {
+            "name": "lightglue",
+            "n_layers": 9,
+            "depth_confidence": 0.95,  # early stopping, disable with -1
+            "width_confidence": 0.99,  # point pruning, disable with -1
+            "filter_threshold": 0.1,  # match threshold
+        },
+    },
 }
 
 opt_zoo = {

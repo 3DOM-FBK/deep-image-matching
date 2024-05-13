@@ -26,7 +26,7 @@ class AlikeExtractor(ExtractorBase):
         super().__init__(config)
 
         # Load extractor
-        cfg = self.config.get("extractor")
+        cfg = self.config.extractor
         self._extractor = ALike(
             **configs[cfg["model"]],
             device=cfg["device"],

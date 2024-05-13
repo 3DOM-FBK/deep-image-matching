@@ -26,7 +26,7 @@ class SIFTExtractor(ExtractorBase):
         super().__init__(config)
 
         # Load extractor
-        cfg = self.config.get("extractor")
+        cfg = self.config.extractor
         self._extractor = cv2.SIFT_create(
             nfeatures=cfg["n_features"],
             nOctaveLayers=cfg["nOctaveLayers"],

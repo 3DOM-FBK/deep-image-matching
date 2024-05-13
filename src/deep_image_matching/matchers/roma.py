@@ -51,35 +51,35 @@ class RomaMatcher(DetectorFreeMatcherBase):
         super().__init__(config)
 
         # Set up RoMa matcher
-        if self.config["general"]["tile_selection"] == TileSelection.NONE:
+        if self.config.general["tile_selection"] == TileSelection.NONE:
             logger.info(
-                f"RoMa always use a coarse resolution of {self.config['matcher']['upsample_res']} pixels, regardless of the quality parameter resolution."
+                f"RoMa always use a coarse resolution of {self.config.matcher['upsample_res']} pixels, regardless of the quality parameter resolution."
             )
         else:
             logger.info("Running RoMa by tile..")
             logger.info(
-                f"RoMa uses a fixed tile size of {self.config['matcher']['upsample_res']} pixels. This can result in a large number of tiles for high-resolution images. If the number of tiles is too high, consider reducing the image resolution via the 'Quality' parameter."
+                f"RoMa uses a fixed tile size of {self.config.matcher['upsample_res']} pixels. This can result in a large number of tiles for high-resolution images. If the number of tiles is too high, consider reducing the image resolution via the 'Quality' parameter."
             )
 
-        if isinstance(self.config["matcher"]["upsample_res"], tuple):
+        if isinstance(self.config.matcher["upsample_res"], tuple):
             tile_size = (
-                self.config["matcher"]["upsample_res"][1],
-                self.config["matcher"]["upsample_res"][0],
+                self.config.matcher["upsample_res"][1],
+                self.config.matcher["upsample_res"][0],
             )
-        elif isinstance(self.config["matcher"]["upsample_res"], int):
+        elif isinstance(self.config.matcher["upsample_res"], int):
             tile_size = (
-                self.config["matcher"]["upsample_res"],
-                self.config["matcher"]["upsample_res"],
+                self.config.matcher["upsample_res"],
+                self.config.matcher["upsample_res"],
             )
         else:
             raise ValueError("Invalid type for 'upsample_res'. It should be an integer or a tuple of two integers.")
         # Force the tile size to be the same as the RoMa coarse_res
-        self.config["general"]["tile_size"] = tile_size
+        self.config.general["tile_size"] = tile_size
 
         self.matcher = roma_outdoor(
             device=self._device,
-            coarse_res=self.config["matcher"]["coarse_res"],
-            upsample_res=self.config["matcher"]["upsample_res"],
+            coarse_res=self.config.matcher["coarse_res"],
+            upsample_res=self.config.matcher["upsample_res"],
         )
 
     def match(
@@ -140,17 +140,17 @@ class RomaMatcher(DetectorFreeMatcherBase):
 
         # Rescale threshold according the image original image size
         img_shape = cv2.imread(str(img0)).shape
-        tile_size = max(self.config["general"]["tile_size"])
+        tile_size = max(self.config.general["tile_size"])
         scale_fct = np.floor(max(img_shape) / tile_size / 2)
-        gv_threshold = self.config["general"]["gv_threshold"] * scale_fct
+        gv_threshold = self.config.general["gv_threshold"] * scale_fct
 
         # Apply geometric verification
         _, inlMask = geometric_verification(
             kpts0=features0["keypoints"][matches[:, 0]],
             kpts1=features1["keypoints"][matches[:, 1]],
-            method=self.config["general"]["geom_verification"],
+            method=self.config.general["geom_verification"],
             threshold=gv_threshold,
-            confidence=self.config["general"]["gv_confidence"],
+            confidence=self.config.general["gv_confidence"],
         )
         matches = matches[inlMask]
         timer_match.update("Geom. verification")
@@ -246,8 +246,8 @@ class RomaMatcher(DetectorFreeMatcherBase):
 
         timer = Timer(log_level="debug", cumulate_by_key=True)
 
-        tile_size = self.config["general"]["tile_size"]
-        overlap = self.config["general"]["tile_overlap"]
+        tile_size = self.config.general["tile_size"]
+        overlap = self.config.general["tile_overlap"]
         img0_name = img0.name
         img1_name = img1.name
 
@@ -261,11 +261,11 @@ class RomaMatcher(DetectorFreeMatcherBase):
             tile_overlap=overlap,
             preselction_extractor=self._preselction_extractor,
             preselction_matcher=self._preselction_matcher,
-            pipeline=self.config["general"]["preselection_pipeline"],
+            pipeline=self.config.general["preselection_pipeline"],
             tile_preselection_size=self.tile_preselection_size,
             min_matches_per_tile=self.min_matches_per_tile,
             device=self._device,
-            debug_dir=self.config["general"]["output_dir"] / "debug" if self.config["general"]["verbose"] else None,
+            debug_dir=self.config.general["output_dir"] / "debug" if self.config.general["verbose"] else None,
         )
 
         if len(tile_pairs) > self.max_tile_pairs:
@@ -290,7 +290,7 @@ class RomaMatcher(DetectorFreeMatcherBase):
         tiles1, t_origins1, t_padding1 = tiler.compute_tiles_by_size(
             input=image1, window_size=tile_size, overlap=overlap
         )
-        tiles_dir = Path(self.config["general"]["output_dir"]) / "tiles"
+        tiles_dir = Path(self.config.general["output_dir"]) / "tiles"
         write_tiles_disk(tiles_dir / img0.name, tiles0)
         write_tiles_disk(tiles_dir / img1.name, tiles1)
         logger.debug(f"Tiles saved to {tiles_dir}")
@@ -311,7 +311,7 @@ class RomaMatcher(DetectorFreeMatcherBase):
 
             # Run inference
             warp, certainty = self.matcher.match(str(tile_path0), str(tile_path1), device=self._device, batched=False)
-            matches, certainty = self.matcher.sample(warp, certainty, num=self.config["matcher"]["num_sampled_points"])
+            matches, certainty = self.matcher.sample(warp, certainty, num=self.config.matcher["num_sampled_points"])
             kptsA, kptsB = self.matcher.to_pixel_coordinates(matches, H_A, W_A, H_B, W_B)
             kptsA, kptsB = kptsA.cpu().numpy(), kptsB.cpu().numpy()
 
@@ -337,8 +337,8 @@ class RomaMatcher(DetectorFreeMatcherBase):
             logger.debug(f"     Found {len(kptsA)} matches")
 
             # Viz for debugging
-            if self.config["general"]["verbose"]:
-                tile_match_dir = Path(self.config["general"]["output_dir"]) / "debug" / "matches_by_tile"
+            if self.config.general["verbose"]:
+                tile_match_dir = Path(self.config.general["output_dir"]) / "debug" / "matches_by_tile"
                 tile_match_dir.mkdir(parents=True, exist_ok=True)
                 t0 = cv2.imread(str(tile_path0))
                 t1 = cv2.imread(str(tile_path1))
@@ -393,8 +393,8 @@ class RomaMatcher(DetectorFreeMatcherBase):
             mkpts1_full = mkpts1_full[unique_idx]
 
         # Viz for debugging
-        if self.config["general"]["verbose"]:
-            tile_match_dir = Path(self.config["general"]["output_dir"]) / "debug" / "matches_by_tile"
+        if self.config.general["verbose"]:
+            tile_match_dir = Path(self.config.general["output_dir"]) / "debug" / "matches_by_tile"
             tile_match_dir.mkdir(parents=True, exist_ok=True)
             image0 = cv2.imread(str(img0))
             image1 = cv2.imread(str(img1))

@@ -20,7 +20,7 @@ class KorniaMatcher(MatcherBase):
         super().__init__(config)
 
         # load the matcher
-        cfg = {**self._default_conf, **self.config.get("matcher", {})}
+        cfg = self.config.matcher
         self._matcher = KF.DescriptorMatcher(cfg["match_mode"], cfg["th"])
 
     @torch.inference_mode()

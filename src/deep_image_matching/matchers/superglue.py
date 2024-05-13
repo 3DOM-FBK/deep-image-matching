@@ -62,8 +62,7 @@ class SuperGlueMatcher(MatcherBase):
         super().__init__(config)
 
         # initialize the Matching object with given configuration
-        cfg = {**self._default_conf, **self.config.get("matcher", {})}
-        self._matcher = SuperGlue(cfg).eval().to(self._device)
+        self._matcher = SuperGlue(self.config.matcher).eval().to(self._device)
 
     @torch.inference_mode()
     def _match_pairs(
