@@ -380,6 +380,16 @@ class Config:
             dict: The configuration dictionary with the following keys: general, extractor, matcher.
 
         """
+
+        # Rename some input arguments
+        dict_map = {
+            "tile_selection": "tiling",
+            "openmvg_conf": "openmvg",
+        }
+        for k, v in dict_map.items():
+            if k in args:
+                args[v] = args.pop(k)
+
         args = {**conf_general, **args}
 
         # Check that at least one of the two options is provided
@@ -481,13 +491,27 @@ class Config:
         if args["strategy"] != "custom_pairs":
             args["pair_file"] = args["outs"] / "pairs.txt"
 
+        # Check quality and tile selection options
+        if isinstance(args["quality"], str):
+            args["quality"] = Quality[args["quality"].upper()]
+        elif isinstance(args["quality"], int):
+            args["quality"] = Quality(args["quality"])
+        elif not isinstance(args["quality"], Quality):
+            raise ValueError(f"Invalid quality option: {args['quality']}")
+        if isinstance(args["tile_selection"], str):
+            args["tile_selection"] = TileSelection[args["tile_selection"].upper()]
+        elif isinstance(args["tile_selection"], int):
+            args["tile_selection"] = TileSelection(args["tile_selection"])
+        elif not isinstance(args["tile_selection"], TileSelection):
+            raise ValueError(f"Invalid tile_selection option: {args['tile_selection']}")
+
         if args["verbose"]:
             change_logger_level(logger.name, "debug")
 
-        if args["openmvg"] is not None:
-            args["openmvg"] = Path(args["openmvg"])
-            if not args["openmvg"].exists():
-                raise ValueError(f"File {args['openmvg']} does not exist")
+        if args["openmvg_conf"] is not None:
+            args["openmvg_conf"] = Path(args["openmvg_conf"])
+            if not args["openmvg_conf"].exists():
+                raise ValueError(f"File {args['openmvg_conf']} does not exist")
 
         if args["camera_options"] is not None:
             if Path(args["camera_options"]).suffix != ".yaml":
@@ -503,8 +527,8 @@ class Config:
         cfg = {
             "image_dir": args["images"],
             "output_dir": args["outs"],
-            "quality": Quality[args["quality"].upper()],
-            "tile_selection": TileSelection[args["tiling"].upper()],
+            "quality": args["quality"],
+            "tile_selection": args["tile_selection"],
             "matching_strategy": args["strategy"],
             "retrieval": args["global_feature"],
             "pair_file": args["pair_file"],
@@ -514,7 +538,7 @@ class Config:
             "verbose": args["verbose"],
             "graph": args["graph"],
             "skip_reconstruction": args["skip_reconstruction"],
-            "openmvg_conf": args["openmvg"],
+            "openmvg_conf": args["openmvg_conf"],
             "camera_options": args["camera_options"],
         }
 

@@ -10,9 +10,7 @@ def parse_cli() -> dict:
     parser = argparse.ArgumentParser(
         description="Matching with hand-crafted and deep-learning based local features and image retrieval."
     )
-    parser.add_argument(
-        "--gui", action="store_true", help="Run GUI interface", default=False
-    )
+    parser.add_argument("--gui", action="store_true", help="Run GUI interface", default=False)
     parser.add_argument(
         "-d",
         "--dir",
@@ -81,9 +79,7 @@ def parse_cli() -> dict:
         default="matching_lowres",
         help="Matching strategy",
     )
-    parser.add_argument(
-        "--pair_file", type=str, default=None, help="Specify pairs for matching"
-    )
+    parser.add_argument("--pair_file", type=str, default=None, help="Specify pairs for matching")
     parser.add_argument(
         "--overlap",
         type=int,

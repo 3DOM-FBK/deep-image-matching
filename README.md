@@ -19,11 +19,9 @@
 
 Multivew matcher for SfM software. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. Now, it supports both OpenMVG and MicMac. Feel free to collaborate!
 
-While `dev` branch is more frequently updated, `master` is the default more stable branch and is updated from `dev` less frequently. If you are looking for the newest developments, please switch to `dev`. 
+While `dev` branch is more frequently updated, `master` is the default more stable branch and is updated from `dev` less frequently. If you are looking for the newest developments, please switch to `dev`.
 
-
-For how to use DIM, check the <a href="https://3dom-fbk.github.io/deep-image-matching/">Documentation</a> (updated for the master branch). 
-
+For how to use DIM, check the <a href="https://3dom-fbk.github.io/deep-image-matching/">Documentation</a> (updated for the master branch).
 
 **Please, note that `deep-image-matching` is under active development** and it is still in an experimental stage. If you find any bug, please open an issue.
 
@@ -45,7 +43,8 @@ Key features:
 | &check; ALIKED                     | &check; SE2-LoFTR (no tiling and only GPU)                |
 | &check; KeyNet + OriNet + HardNet8 | &check; RoMa                                              |
 | &check; DeDoDe (only GPU)          | &#x2610; GlueStick                                        |
-| &check; SIFT (from Opencv)         | 
+| &check; XFeat (only GPU)           |                                                           |
+| &check; SIFT (from Opencv)         |
 | &check; ORB (from Opencv)          |
 
 | Supported SfM software                        |
@@ -84,7 +83,7 @@ If there is any issue with the installation, you can also install the package fr
 Clone the repository and install deep-image-matching in editable mode:
 
 ```bash
-git clone https://github.com/3DOM-FBK/deep-image-matching.git
+git clone --recursive https://github.com/3DOM-FBK/deep-image-matching.git
 cd deep-image-matching
 pip install -e .
 ```
@@ -94,6 +93,7 @@ Install pycolmap (optional, but recommended):
 ```bash
 pip install pycolmap==0.6.1
 ```
+
 Pycolmap is optional to run reconstruction directly in DIM. If pycolmap is not available, matches will be written both in a h5 and colmap database for later processing with COLMAP GUI or API, or other processing.
 
 Try to run the tests to check if deep-image-matching is correctly installed, try to import the package in a Python shell:
@@ -151,9 +151,9 @@ For example, to run the matching with SuperPoint and LightGlue on a dataset, you
 python main.py --dir assets/example_cyprus --pipeline superpoint+lightglue
 ```
 
-The `--dir` parameter defines the processing directory, where all the results will be saved. This directory must constain a subfolder named **images** in which all the images must be stored. We currentely do not support image retrieval from multiple directories or subdirectories, but we may add this feature in the future. 
+The `--dir` parameter defines the processing directory, where all the results will be saved. This directory must constain a subfolder named **images** in which all the images must be stored. We currentely do not support image retrieval from multiple directories or subdirectories, but we may add this feature in the future.
 
-The `--pipeline` parameter defines the combaination of local feature extractor and matcher. 
+The `--pipeline` parameter defines the combaination of local feature extractor and matcher.
 
 For all the usage instructions and configurations, refer to the [documenation](https://3dom-fbk.github.io/deep-image-matching/getting_started) or check the example notebooks.
 
@@ -235,6 +235,7 @@ Dynamics Monitoring},
 ```
 
 Depending on the options used, consider citing the corresponding work of:
+
 - [KORNIA](https://github.com/kornia/kornia)
 - [HLOC](https://github.com/cvg/Hierarchical-Localization)
 - [COLMAP](https://github.com/colmap/colmap)
