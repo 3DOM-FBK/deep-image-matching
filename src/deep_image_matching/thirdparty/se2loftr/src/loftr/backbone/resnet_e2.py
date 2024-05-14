@@ -2,9 +2,8 @@
 
 import torch
 import torch.nn.functional as F
-
-from e2cnn import nn as enn
 from e2cnn import gspaces
+from e2cnn import nn as enn
 
 
 def conv1x1(in_type, out_type, stride=1):
@@ -70,26 +69,15 @@ class E2_ResNetFPN_8_2(torch.nn.Module):
             dim_reduction = nbr_rotations
         else:
             dim_reduction = 2
-        self.in_type = enn.FieldType(
-            self.r2_act, (initial_dim // dim_reduction) * [self.r2_act.regular_repr]
-        )
+        self.in_type = enn.FieldType(self.r2_act, (initial_dim // dim_reduction) * [self.r2_act.regular_repr])
         # dummy variable used to track input types to each block
-        self._in_type = enn.FieldType(
-            self.r2_act, (initial_dim // dim_reduction) * [self.r2_act.regular_repr]
-        )
+        self._in_type = enn.FieldType(self.r2_act, (initial_dim // dim_reduction) * [self.r2_act.regular_repr])
 
         reg_repr_blocks = [
-            enn.FieldType(
-                self.r2_act, (bd // dim_reduction) * [self.r2_act.regular_repr]
-            )
-            for bd in block_dims
+            enn.FieldType(self.r2_act, (bd // dim_reduction) * [self.r2_act.regular_repr]) for bd in block_dims
         ]
-        b1_triv_repr = enn.FieldType(
-            self.r2_act, block_dims[0] * [self.r2_act.trivial_repr]
-        )
-        b3_triv_repr = enn.FieldType(
-            self.r2_act, block_dims[2] * [self.r2_act.trivial_repr]
-        )
+        b1_triv_repr = enn.FieldType(self.r2_act, block_dims[0] * [self.r2_act.trivial_repr])
+        b3_triv_repr = enn.FieldType(self.r2_act, block_dims[2] * [self.r2_act.trivial_repr])
 
         # Networks
         self.conv1 = enn.R2Conv(

@@ -1,13 +1,13 @@
-import os
 import contextlib
-import joblib
-from typing import Union
-from loguru import _Logger, logger
+import os
 from itertools import chain
+from typing import Union
 
+import joblib
 import torch
-from yacs.config import CfgNode as CN
+from loguru import _Logger, logger
 from pytorch_lightning.utilities import rank_zero_only
+from yacs.config import CfgNode as CN
 
 
 def lower_config(yacs_cfg):
@@ -60,9 +60,7 @@ def setup_gpus(gpus: Union[str, int]) -> int:
             f"[Temporary Fix] manually set CUDA_VISIBLE_DEVICES when specifying gpus to use: {visible_devices}"
         )
     else:
-        logger.warning(
-            "[Temporary Fix] CUDA_VISIBLE_DEVICES already set by user or the main process."
-        )
+        logger.warning("[Temporary Fix] CUDA_VISIBLE_DEVICES already set by user or the main process.")
     return len(gpu_ids)
 
 

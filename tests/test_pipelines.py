@@ -2,29 +2,12 @@ import platform
 import subprocess
 from pathlib import Path
 
-# import deep_image_matching as dim
 import pytest
 import torch
 import yaml
 from deep_image_matching import Config, ImageMatcher
 from deep_image_matching.io import export_to_colmap
 from deep_image_matching.reconstruction import pycolmap_reconstruction
-
-# def run_pipeline(cmd, verbose: bool = False) -> None:
-#     # Run the script using subprocess
-#     process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-#     stdout, stderr = process.communicate()
-
-#     if verbose:
-#         print(stdout.decode("utf-8"))
-
-#     # Check if the process exited successfully (return code 0)
-#     assert process.returncode == 0, f"Script execution failed with error: {stderr.decode('utf-8')}"
-
-
-# @pytest.fixture
-# def script():
-#     return (Path(__file__).parents[1] / "main.py").resolve()
 
 
 @pytest.fixture

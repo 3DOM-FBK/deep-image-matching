@@ -3,7 +3,6 @@ from math import log
 import torch
 from einops import repeat
 from kornia.utils import create_meshgrid
-from loguru import logger
 
 from .geometry import warp_kpts
 
@@ -105,7 +104,6 @@ def spvs_coarse(data, config):
 
     # 5. save coarse matches(gt) for training fine level
     if len(b_ids) == 0:
-        logger.warning(f"No groundtruth coarse match found for: {data['pair_names']}")
         # this won't affect fine-level loss calculation
         b_ids = torch.tensor([0], device=device)
         i_ids = torch.tensor([0], device=device)

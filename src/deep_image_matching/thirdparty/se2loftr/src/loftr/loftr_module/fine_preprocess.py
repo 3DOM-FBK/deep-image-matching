@@ -37,13 +37,9 @@ class FinePreprocess(nn.Module):
             return feat0, feat1
 
         # 1. unfold(crop) all local windows
-        feat_f0_unfold = F.unfold(
-            feat_f0, kernel_size=(W, W), stride=stride, padding=W // 2
-        )
+        feat_f0_unfold = F.unfold(feat_f0, kernel_size=(W, W), stride=stride, padding=W // 2)
         feat_f0_unfold = rearrange(feat_f0_unfold, "n (c ww) l -> n l ww c", ww=W**2)
-        feat_f1_unfold = F.unfold(
-            feat_f1, kernel_size=(W, W), stride=stride, padding=W // 2
-        )
+        feat_f1_unfold = F.unfold(feat_f1, kernel_size=(W, W), stride=stride, padding=W // 2)
         feat_f1_unfold = rearrange(feat_f1_unfold, "n (c ww) l -> n l ww c", ww=W**2)
 
         # 2. select only the predicted matches

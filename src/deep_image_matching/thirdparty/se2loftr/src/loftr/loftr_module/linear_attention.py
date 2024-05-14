@@ -4,7 +4,7 @@ Modified from: https://github.com/idiap/fast-transformers/blob/master/fast_trans
 """
 
 import torch
-from torch.nn import Module, Dropout
+from torch.nn import Dropout, Module
 
 
 def elu_feature_map(x):
@@ -68,9 +68,7 @@ class FullAttention(Module):
         # Compute the unnormalized attention and apply the masks
         QK = torch.einsum("nlhd,nshd->nlsh", queries, keys)
         if kv_mask is not None:
-            QK.masked_fill_(
-                ~(q_mask[:, :, None, None] * kv_mask[:, None, :, None]), float("-inf")
-            )
+            QK.masked_fill_(~(q_mask[:, :, None, None] * kv_mask[:, None, :, None]), float("-inf"))
 
         # Compute the attention and the weighted average
         softmax_temp = 1.0 / queries.size(3) ** 0.5  # sqrt(D)

@@ -26,32 +26,6 @@ class FeaturesDict(TypedDict):
     tile_idx: Optional[np.ndarray]
 
 
-def extractor_loader(root, model):
-    """
-    Load and return the specified extractor class from the given root module.
-
-    Args:
-        root (module): The root module where the extractor module is located.
-        model (str): The name of the extractor module.
-
-    Returns:
-        class: The specified extractor class.
-
-    Raises:
-        AssertionError: If no or multiple extractor classes are found.
-
-    """
-    module_path = f"{root.__name__}.{model}"
-    module = __import__(module_path, fromlist=[""])
-    classes = inspect.getmembers(module, inspect.isclass)
-    # Filter classes defined in the module
-    classes = [c for c in classes if c[1].__module__ == module_path]
-    # Filter classes inherited from BaseModel
-    classes = [c for c in classes if issubclass(c[1], ExtractorBase)]
-    assert len(classes) == 1, classes
-    return classes[0][1]
-
-
 def save_features_h5(feature_path: Path, features: FeaturesDict, im_name: str, as_half: bool = True):
     # If as_half is True then the features are converted to float16.
     if as_half:
