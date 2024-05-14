@@ -115,7 +115,9 @@ def viz_matches_cv2(
                 thickness=line_thickness,
                 lineType=cv2.LINE_AA,
             )
-        # display line end-points as circles
+
+    # display line end-points as circles
+    for (x0, y0), (x1, y1) in zip(mkpts0, mkpts1):
         cv2.circle(out, (x0, y0), point_size, pts_col, -1, lineType=cv2.LINE_AA)
         cv2.circle(
             out,

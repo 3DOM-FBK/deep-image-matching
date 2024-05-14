@@ -1,99 +1,59 @@
+import contextlib
+import io
+import logging
 import multiprocessing
+import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import pycolmap
 
-from . import logger
-from .triangulation import (
-    OutputCapture,
-)
-from .utils.database import COLMAPDatabase
+logger = logging.getLogger("dim")
 
 
-def create_empty_db(database_path: Path):
-    if database_path.exists():
-        logger.warning("The database already exists, deleting it.")
-        database_path.unlink()
-    logger.info("Creating an empty database...")
-    db = COLMAPDatabase.connect(database_path)
-    db.create_tables()
-    db.commit()
-    db.close()
+class OutputCapture:
+    def __init__(self, verbose: bool):
+        self.verbose = verbose
 
+    def __enter__(self):
+        if not self.verbose:
+            self.capture = contextlib.redirect_stdout(io.StringIO())
+            self.out = self.capture.__enter__()
 
-def import_images(
-    image_dir: Path,
-    database_path: Path,
-    camera_mode: pycolmap.CameraMode,
-    image_list: Optional[List[str]] = None,
-    options: Optional[Dict[str, Any]] = None,
-):
-    logger.info("Importing images into the database...")
-    if options is None:
-        options = {}
-    images = list(image_dir.iterdir())
-    if len(images) == 0:
-        raise IOError(f"No images found in {image_dir}.")
-    with pycolmap.ostream():
-        pycolmap.import_images(
-            database_path,
-            image_dir,
-            camera_mode,
-            image_list=image_list or [],
-            options=options,
-        )
-
-
-def update_cameras(database_path: Path, cameras: [List[pycolmap.Camera]]):
-    if not all([isinstance(cam, pycolmap.Camera) for cam in cameras]):
-        raise ValueError("cameras must be a list of pycolmap.Camera objects.")
-
-    db = COLMAPDatabase.connect(database_path)
-
-    num_cameras = len(db.execute("SELECT * FROM cameras;").fetchall())
-    if num_cameras != len(cameras):
-        raise ValueError(
-            f"Number of cameras in the database ({num_cameras}) "
-            f"does not match the number of cameras provided ({len(cameras)})."
-        )
-
-    for camera_id, cam in enumerate(cameras, start=1):
-        db.update_camera(
-            camera_id, cam.model.value, cam.width, cam.height, cam.params, True
-        )
-    db.commit()
-    db.close()
-
-
-def get_image_ids(database_path: Path) -> Dict[str, int]:
-    db = COLMAPDatabase.connect(database_path)
-    images = {}
-    for name, image_id in db.execute("SELECT name, image_id FROM images;"):
-        images[name] = image_id
-    db.close()
-    return images
+    def __exit__(self, exc_type, *args):
+        if not self.verbose:
+            self.capture.__exit__(exc_type, *args)
+            if exc_type is not None:
+                logger.error("Failed with output:\n%s", self.out.getvalue())
+        sys.stdout.flush()
 
 
 def pycolmap_reconstruction(
-    sfm_dir: Path,
     database_path: Path,
+    sfm_dir: Path,
     image_dir: Path,
+    refine_intrinsics: bool = True,
+    options: Optional[Dict[str, Any]] = {},
+    export_text: bool = True,
+    export_bundler: bool = True,
+    export_ply: bool = True,
     verbose: bool = False,
-    options: Optional[Dict[str, Any]] = None,
 ) -> pycolmap.Reconstruction:
     models_path = sfm_dir / "models"
     models_path.mkdir(exist_ok=True, parents=True)
     logger.info("Running 3D reconstruction...")
-    # options = {"ignore_two_view_track": False}
-    if options is None:
-        options = {}
+
+    if not refine_intrinsics:
+        options = {
+            "ba_refine_focal_length": False,
+            "ba_refine_principal_point": False,
+            "ba_refine_extra_params": False,
+            **options,
+        }
     options = {"num_threads": min(multiprocessing.cpu_count(), 16), **options}
     with OutputCapture(verbose):
         with pycolmap.ostream():
-            reconstructions = pycolmap.incremental_mapping(
-                database_path, image_dir, models_path, options=options
-            )
+            reconstructions = pycolmap.incremental_mapping(database_path, image_dir, models_path, options=options)
 
     if len(reconstructions) == 0:
         logger.error("Could not reconstruct any model!")
@@ -108,70 +68,15 @@ def pycolmap_reconstruction(
             largest_index = index
             largest_num_images = num_images
     assert largest_index is not None
-    logger.info(
-        f"Largest model is #{largest_index} " f"with {largest_num_images} images."
-    )
+    logger.info(f"Largest model is #{largest_index} " f"with {largest_num_images} images.")
 
-    return reconstructions[largest_index]
-
-
-def main(
-    database: Path,
-    image_dir: Path,
-    sfm_dir: Path,
-    feature_path: Path = None,
-    match_path: Path = None,
-    pair_path: Path = None,
-    camera_mode: pycolmap.CameraMode = pycolmap.CameraMode.AUTO,
-    cameras=None,
-    skip_geometric_verification: bool = False,
-    export_text: bool = True,
-    export_bundler: bool = True,
-    export_ply: bool = True,
-    reconst_opts: Optional[Dict[str, Any]] = None,
-    verbose: bool = True,
-) -> pycolmap.Reconstruction:
-    ## Create empty database
-    # create_empty_db(database)
-    # import_images(image_dir, database, camera_mode)
-    #
-    ## Update cameras intrinsics in the database
-    # if cameras:
-    #    update_cameras(database, cameras)
-    #
-    ## Import features and matches
-    # image_ids = get_image_ids(database)
-    # import_features(image_ids, database, feature_path)
-    # import_matches(
-    #    image_ids,
-    #    database,
-    #    match_path,
-    #    skip_geometric_verification=skip_geometric_verification,
-    # )
-    #
-    ## Run geometric verification
-    # if not skip_geometric_verification:
-    #    estimation_and_geometric_verification(database, pair_path, verbose=verbose)
-
-    # Run reconstruction
-    model = pycolmap_reconstruction(
-        sfm_dir=sfm_dir,
-        database_path=database,
-        image_dir=image_dir,
-        verbose=verbose,
-        options=reconst_opts,
-    )
-    if model is not None:
-        # logger.info(
-        #    f"Reconstruction statistics:\n{model.summary()}"
-        #    + f"\n\tnum_input_images = {len(image_ids)}"
-        # )
-
-        # Copy images to sfm_dir (for debugging)
-        # shutil.copytree(image_dir, sfm_dir / "images", dirs_exist_ok=True)
-
-        # Create reconstruction directory
-        reconstruction_dir = sfm_dir / "reconstruction"
+    for index, model in reconstructions.items():
+        if len(reconstructions) > 1:
+            logger.info(f"Exporting model #{index}...")
+            reconstruction_dir = sfm_dir / "reconstruction" / f"model_{index}"
+        else:
+            logger.info("Exporting model...")
+            reconstruction_dir = sfm_dir / "reconstruction"
         reconstruction_dir.mkdir(exist_ok=True, parents=True)
 
         # Export reconstruction in Colmap format
@@ -194,10 +99,4 @@ def main(
                 skip_distortion=True,
             )
 
-    else:
-        logger.error("Pycolmap reconstruction failed")
-    return model
-
-
-if __name__ == "__main__":
-    pass
+    return reconstructions[largest_index]

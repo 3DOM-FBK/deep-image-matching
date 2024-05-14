@@ -11,8 +11,8 @@ def roma_model(
     resolution, upsample_preds, device=None, weights=None, dinov2_weights=None, **kwargs
 ):
     # roma weights and dinov2 weights are loaded seperately, as dinov2 weights are not parameters
-    torch.backends.cuda.matmul.allow_tf32 = True  # allow tf32 on matmul
-    torch.backends.cudnn.allow_tf32 = True  # allow tf32 on cudnn
+    # torch.backends.cuda.matmul.allow_tf32 = True # allow tf32 on matmul TODO: these probably ruin stuff, should be careful
+    # torch.backends.cudnn.allow_tf32 = True # allow tf32 on cudnn
     warnings.filterwarnings(
         "ignore", category=UserWarning, message="TypedStorage is deprecated"
     )
@@ -163,6 +163,7 @@ def roma_model(
     h, w = resolution
     symmetric = True
     attenuate_cert = True
+    sample_mode = "threshold_balanced"
     matcher = RegressionMatcher(
         encoder,
         decoder,
@@ -171,6 +172,7 @@ def roma_model(
         upsample_preds=upsample_preds,
         symmetric=symmetric,
         attenuate_cert=attenuate_cert,
+        sample_mode=sample_mode,
         **kwargs,
     ).to(device)
     matcher.load_state_dict(weights)

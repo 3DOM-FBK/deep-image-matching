@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Tuple, Union
@@ -8,8 +9,12 @@ import numpy as np
 import PIL
 from PIL import Image
 
-from .. import IMAGE_EXT, logger
 from .sensor_width_database import SensorWidthDatabase
+
+logger = logging.getLogger("dim")
+
+
+IMAGE_EXT = [".jpg", ".JPG", ".png", ".PNG", ".tif", "TIF"]
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -110,9 +115,6 @@ class Image:
         try:
             self.read_exif()
         except Exception:
-            logger.info(
-                "Unable to read image exif, loading only image size (this will likely not affect the matching results)."
-            )
             img = PIL.Image.open(path)
             self._width, self._height = img.size
 
@@ -160,9 +162,7 @@ class Image:
     def height(self) -> int:
         """Returns the height of the image in pixels"""
         if self._height is None:
-            logger.error(
-                f"Image height not available for {self.name}. Try to read it from the image file."
-            )
+            logger.error(f"Image height not available for {self.name}. Try to read it from the image file.")
             try:
                 img = PIL.Image.open(self._path)
                 self._width, self._height = img.size
@@ -175,9 +175,7 @@ class Image:
     def width(self) -> int:
         """Returns the width of the image in pixels"""
         if self._width is None:
-            logger.error(
-                f"Image width not available for {self.name}. Try to read it from the image file."
-            )
+            logger.error(f"Image width not available for {self.name}. Try to read it from the image file.")
             try:
                 img = PIL.Image.open(self._path)
                 self._width, self._height = img.size
@@ -191,9 +189,7 @@ class Image:
     def size(self) -> tuple:
         """Returns the size of the image in pixels as a tuple (width, height)"""
         if self._width is None or self._height is None:
-            logger.warning(
-                f"Image size not available for {self.name}. Trying to read it from the image file."
-            )
+            logger.warning(f"Image size not available for {self.name}. Trying to read it from the image file.")
             try:
                 img = PIL.Image.open(self._path)
                 self._width, self._height = img.size
@@ -274,27 +270,24 @@ class Image:
             with open(self._path, "rb") as f:
                 exif = exifread.process_file(f, details=False, debug=False)
         except IOError as e:
-            logger.warning(f"{e}. Unable to read exif data for image {self.name}.")
-            raise ValueError("Exif error")
+            logger.info(f"{e}. Unable to read exif data for image {self.name}.")
+            raise InvalidExif("Exif error")
         except InvalidExif as e:
-            logger.warning(f"Unable to read exif data for image {self.name}. {e}")
+            logger.info(f"Unable to read exif data for image {self.name}. {e}")
             raise ValueError("Exif error")
         except ExifNotFound as e:
-            logger.warning(f"Unable to read exif data for image {self.name}. {e}")
+            logger.info(f"Unable to read exif data for image {self.name}. {e}")
             raise ValueError("Exif error")
 
         if len(exif) == 0:
-            logger.warning(f"No exif data available for image {self.name}")
+            logger.info(f"No exif data available for image {self.name} (this will probably not affect the matching).")
             raise ValueError("Exif error")
 
         # Get image size
         if "Image ImageWidth" in exif.keys() and "Image ImageLength" in exif.keys():
             self._width = exif["Image ImageWidth"].printable
             self._height = exif["Image ImageLength"].printable
-        elif (
-            "EXIF ExifImageWidth" in exif.keys()
-            and "EXIF ExifImageLength" in exif.keys()
-        ):
+        elif "EXIF ExifImageWidth" in exif.keys() and "EXIF ExifImageLength" in exif.keys():
             self._width = exif["EXIF ExifImageWidth"].printable
             self._height = exif["EXIF ExifImageLength"].printable
 
@@ -304,7 +297,7 @@ class Image:
         elif "EXIF DateTimeOriginal" in exif.keys():
             date_str = exif["EXIF DateTimeOriginal"].printable
         else:
-            logger.warning(f"Date not available in exif for {self.name}")
+            logger.info(f"Date not available in exif for {self.name}")
             date_str = None
         if date_str is not None:
             for format in self.DATE_FORMATS:
@@ -317,11 +310,16 @@ class Image:
         # Get Focal Length
         if "EXIF FocalLength" in exif.keys():
             try:
-                self._focal_length = float(exif["EXIF FocalLength"].printable)
-            except KeyError:
-                logger.warning(
-                    f"Unable to get focal length from exif for image {self.name}"
-                )
+                focal_length_str = exif["EXIF FocalLength"].printable
+
+                # Check if it's a ratio
+                if "/" in focal_length_str:
+                    numerator, denominator = focal_length_str.split("/")
+                    self._focal_length = float(numerator) / float(denominator)
+                else:
+                    self._focal_length = float(focal_length_str)
+            except ValueError:
+                logger.info(f"Unable to get focal length from exif for image {self.name}")
 
         # Store exif data
         self._exif_data = exif
@@ -381,9 +379,26 @@ class Image:
 
 
 class ImageList:
+    """
+    Represents a collection of Image objects
+
+    Attributes:
+        IMAGE_EXT (tuple): Supported image file extensions.
+    """
+
     IMAGE_EXT = IMAGE_EXT
 
     def __init__(self, img_dir: Path):
+        """
+        Initializes an ImageList object
+
+        Args:
+            img_dir (Path): The path to the directory containing the images.
+
+        Raises:
+            ValueError: If the directory does not exist, is not a directory, or
+                does not contain any valid images.
+        """
         if not img_dir.exists():
             raise ValueError(f"Directory {img_dir} does not exist")
 
@@ -393,9 +408,7 @@ class ImageList:
         self.images = []
         self.current_idx = 0
         i = 0
-        all_imgs = [
-            image for image in img_dir.glob("*") if image.suffix in self.IMAGE_EXT
-        ]
+        all_imgs = [image for image in img_dir.glob("*") if image.suffix in self.IMAGE_EXT]
         all_imgs.sort()
 
         if len(all_imgs) == 0:
@@ -425,15 +438,34 @@ class ImageList:
         return self.images[cur]
 
     def add_image(self, path: Path, img_id: int):
+        """
+        Adds a new Image object to the ImageList.
+
+        Args:
+            path (Path): The path to the image file.
+            img_id (int): The ID to assign to the image.
+        """
         new_image = Image(path, img_id)
         self.images.append(new_image)
 
     @property
     def img_names(self):
+        """
+        Returns a list of image names in the ImageList.
+
+        Returns:
+            list: A list of image names (strings).
+        """
         return [im.name for im in self.images]
 
     @property
     def img_paths(self):
+        """
+        Returns a list of image paths in the ImageList
+
+        Returns:
+            list: A list of image paths (Path objects).
+        """
         return [im.path for im in self.images]
 
 

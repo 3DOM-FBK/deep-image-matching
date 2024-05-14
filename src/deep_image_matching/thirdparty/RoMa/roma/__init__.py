@@ -1,5 +1,6 @@
 import os
-from .models import roma_outdoor, roma_indoor
+
+from .models import roma_indoor, roma_outdoor  # noqa: F401
 
 DEBUG_MODE = False
 RANK = int(os.environ.get("RANK", default=0))

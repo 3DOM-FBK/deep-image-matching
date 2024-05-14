@@ -7,7 +7,7 @@ from .matcher_base import FeaturesDict, MatcherBase
 
 # Refer to https://kornia.readthedocs.io/en/latest/feature.html#kornia.feature.DescriptorMatcher for more information
 class KorniaMatcher(MatcherBase):
-    default_conf = {
+    _default_conf = {
         "name": "kornia_matcher",
         "match_mode": "smnn",
         "th": 0.8,
@@ -20,7 +20,7 @@ class KorniaMatcher(MatcherBase):
         super().__init__(config)
 
         # load the matcher
-        cfg = {**self.default_conf, **self._config.get("matcher", {})}
+        cfg = {**self._default_conf, **self.config.get("matcher", {})}
         self._matcher = KF.DescriptorMatcher(cfg["match_mode"], cfg["th"])
 
     @torch.no_grad()

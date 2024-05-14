@@ -53,7 +53,7 @@ class HpatchesHomogBenchmark:
         )
         return im_A_coords, im_A_to_im_B
 
-    def benchmark(self, model, model_name=None):
+    def benchmark(self, model, model_name = None):
         n_matches = []
         homog_dists = []
         for seq_idx, seq_name in tqdm(
@@ -69,7 +69,9 @@ class HpatchesHomogBenchmark:
                 H = np.loadtxt(
                     os.path.join(self.seqs_path, seq_name, "H_1_" + str(im_idx))
                 )
-                dense_matches, dense_certainty = model.match(im_A_path, im_B_path)
+                dense_matches, dense_certainty = model.match(
+                    im_A_path, im_B_path
+                )
                 good_matches, _ = model.sample(dense_matches, dense_certainty, 5000)
                 pos_a, pos_b = self.convert_coordinates(
                     good_matches[:, :2], good_matches[:, 2:], w1, h1, w2, h2
@@ -78,9 +80,9 @@ class HpatchesHomogBenchmark:
                     H_pred, inliers = cv2.findHomography(
                         pos_a,
                         pos_b,
-                        method=cv2.RANSAC,
-                        confidence=0.99999,
-                        ransacReprojThreshold=3 * min(w2, h2) / 480,
+                        method = cv2.RANSAC,
+                        confidence = 0.99999,
+                        ransacReprojThreshold = 3 * min(w2, h2) / 480,
                     )
                 except:
                     H_pred = None

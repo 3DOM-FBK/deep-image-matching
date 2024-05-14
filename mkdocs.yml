@@ -20,20 +20,32 @@ plugins:
       handlers:
         python:
           paths: [src] # search packages in the src folder
+          docstring_style: google
+          docstring_options: true
           options:
+            docstring_section_style: spacy
             show_source: false
-            # heading_level: 2
+            heading_level: 2
+            group_by_category: true
+            filters: ["!^_", "^__init__$"]
+            show_root_full_path: false
 
 nav:
   - Home: index.md
   - Installation: installation.md
   - Getting started: getting_started.md
-  - Advanced usage: advanced_usage.md
   - Examples: examples.md
+
+  - Advanced usage:
+      - advanced_configuration.md
+      - camera_models.md
+      - scripts.md
+
   - Use DIM with:
       - COLMAP: colmap.md
       - OpenMVG: openmvg.md
       - MICMAC: micmac.md
+      - Agisoft Metashape: agisoft_metashape.md
   - API Reference:
       - Image_matching: image_matching.md
       - Configuration: config.md
@@ -41,4 +53,5 @@ nav:
       - Matchers: matchers.md
       - IO: io.md
       - Utils: utils.md
+
   - About: about.md

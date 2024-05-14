@@ -1,9 +1,11 @@
+import logging
 import shutil
 from pathlib import Path
 from pprint import pprint
 
-from . import logger
 from .config import confs
+
+logger = logging.getLogger("dim")
 
 try:
     import tkinter as tk
@@ -27,22 +29,16 @@ class MatcherApp:
 
         self.out_dir = self.create_folder_button("Output directory")
 
-        self.config = self.create_combobox(
-            "Choose available matching configuration:", list(confs.keys())
-        )
+        self.config = self.create_combobox("Choose available matching configuration:", list(confs.keys()))
 
         self.strategy = self.create_combobox(
             "Matching strategy:",
             ["bruteforce", "sequential", "retrieval", "custom_pairs"],
         )
 
-        self.pair_file = self.create_file_button(
-            "If matching strategy == 'custom_pairs':", "Choose pairs file"
-        )
+        self.pair_file = self.create_file_button("If matching strategy == 'custom_pairs':", "Choose pairs file")
 
-        self.overlap = self.create_int_entry(
-            "If matching strategy == 'sequential', insert image overlap:"
-        )
+        self.overlap = self.create_int_entry("If matching strategy == 'sequential', insert image overlap:")
 
         additional_text_label = tk.Label(
             master,
@@ -145,9 +141,7 @@ class MatcherApp:
 
     def create_folder_button(self, text):
         var = tk.StringVar()
-        folder_button = tk.Button(
-            self.master, text=text, command=lambda: self.choose_folder(var)
-        )
+        folder_button = tk.Button(self.master, text=text, command=lambda: self.choose_folder(var))
         folder_button.pack()
         folder_label = tk.Label(self.master, textvariable=var)
         folder_label.pack()
@@ -157,9 +151,7 @@ class MatcherApp:
         label = tk.Label(self.master, text=label_text)
         label.pack()
         var = tk.StringVar()
-        file_button = tk.Button(
-            self.master, text=text, command=lambda: self.choose_file(var)
-        )
+        file_button = tk.Button(self.master, text=text, command=lambda: self.choose_file(var))
         file_button.pack()
         file_label = tk.Label(self.master, textvariable=var)
         file_label.pack()

@@ -21,14 +21,12 @@ def sample_descriptors_fix_sampling(keypoints, descriptors, s: int = 8):
     descriptors = torch.nn.functional.grid_sample(
         descriptors, keypoints.view(b, 1, -1, 2), mode="bilinear", align_corners=False
     )
-    descriptors = torch.nn.functional.normalize(
-        descriptors.reshape(b, c, -1), p=2, dim=1
-    )
+    descriptors = torch.nn.functional.normalize(descriptors.reshape(b, c, -1), p=2, dim=1)
     return descriptors
 
 
 class SuperPoint(nn.Module):
-    default_conf = {
+    _default_conf = {
         "nms_radius": 4,
         "keypoint_threshold": 0.005,
         "max_keypoints": -1,
@@ -41,7 +39,7 @@ class SuperPoint(nn.Module):
     def __init__(self, conf):
         """Perform some logic and call the _init method of the child model."""
         super().__init__()
-        self.conf = conf = {**self.default_conf, **conf}
+        self.conf = conf = {**self._default_conf, **conf}
         self.required_inputs = copy(self.required_inputs)
         self._init(conf)
         sys.stdout.flush()
@@ -62,7 +60,28 @@ class SuperPoint(nn.Module):
 
 
 class SuperPointExtractor(ExtractorBase):
-    default_conf = {
+    """
+    Class: SuperPointExtractor
+
+    This class is a subclass of ExtractorBase and represents a feature extractor using the SuperPoint algorithm.
+
+    Attributes:
+        _default_conf (dict): Default configuration for the SuperPointExtractor.
+        required_inputs (list): List of required inputs for the SuperPointExtractor.
+        grayscale (bool): Flag indicating whether the input images should be converted to grayscale.
+        descriptor_size (int): Size of the descriptors extracted by the SuperPoint algorithm.
+        detection_noise (float): Noise level for keypoint detection.
+
+    Methods:
+        __init__(self, config: dict): Initializes the SuperPointExtractor instance with a custom configuration.
+        _extract(self, image: np.ndarray) -> dict: Extracts features from an image using the SuperPoint algorithm.
+        _frame2tensor(self, image: np.ndarray, device: str = "cpu"): Converts an image to a tensor.
+        _resize_image(self, quality: Quality, image: np.ndarray, interp: str = "cv2_area") -> Tuple[np.ndarray]: Resizes an image based on the specified quality.
+        _resize_features(self, quality: Quality, features: FeaturesDict) -> Tuple[FeaturesDict]: Resizes features based on the specified quality.
+        viz_keypoints(self, image: np.ndarray, keypoints: np.ndarray, output_dir: Path, im_name: str = "keypoints", resize_to: int = 2000, img_format: str = "jpg", jpg_quality: int = 90, ...): Visualizes keypoints on an image and saves the visualization to the specified output directory.
+    """
+
+    _default_conf = {
         "name": "superpoint",
         "nms_radius": 4,
         "keypoint_threshold": 0.005,
@@ -80,11 +99,21 @@ class SuperPointExtractor(ExtractorBase):
         super().__init__(config)
 
         # Load extractor
-        SP_cfg = self._config.get("extractor")
+        SP_cfg = self.config.get("extractor")
         self._extractor = SuperPoint(SP_cfg).eval().to(self._device)
 
     @torch.no_grad()
     def _extract(self, image: np.ndarray) -> np.ndarray:
+        """
+        Extract features from an image using the SuperPoint model.
+
+        Args:
+            image (np.ndarray): The input image as a numpy array.
+
+        Returns:
+            np.ndarray: A dictionary containing the extracted features. The keys represent different feature types, and the values are numpy arrays.
+
+        """
         # Convert image from numpy array to tensor
         image_ = self._frame2tensor(image, self._device)
 
@@ -92,9 +121,7 @@ class SuperPointExtractor(ExtractorBase):
         feats = self._extractor({"image": image_})
 
         # Remove elements from list/tuple
-        feats = {
-            k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()
-        }
+        feats = {k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()}
         # Convert tensors to numpy arrays
         feats = {k: v.cpu().numpy() for k, v in feats.items()}
 

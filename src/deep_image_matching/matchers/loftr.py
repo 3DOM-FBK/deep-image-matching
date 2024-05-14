@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 import kornia as K
@@ -5,9 +6,11 @@ import numpy as np
 import torch
 from kornia import feature as KF
 
-from .. import TileSelection, Timer, logger
+from ..constants import TileSelection, Timer
 from ..utils.tiling import Tiler
 from .matcher_base import DetectorFreeMatcherBase, tile_selection
+
+logger = logging.getLogger("dim")
 
 
 class LOFTRMatcher(DetectorFreeMatcherBase):
@@ -15,7 +18,7 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
     LOFTRMatcher class for feature matching using the LOFTR method.
 
     Attributes:
-        default_conf (dict): Default configuration options.
+        _default_conf (dict): Default configuration options.
         max_feat_no_tiling (int): Maximum number of features when tiling is not used.
         grayscale (bool): Flag indicating whether images are processed in grayscale.
         as_float (bool): Flag indicating whether to use float for image pixel values.
@@ -33,7 +36,7 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
         viz_matches(self, feature_path: Path, matchings_path: Path, img0: Path, img1: Path, save_path: str = None, fast_viz: bool = True, interactive_viz: bool = False, **config) -> None: Visualize matches.
     """
 
-    default_conf = {"pretrained": "outdoor"}
+    _default_conf = {"pretrained": "outdoor"}
     grayscale = False
     as_float = True
     min_matches = 100
@@ -50,16 +53,16 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
 
         super().__init__(config)
 
-        model = config["matcher"]["pretrained"]
+        model = self.config["matcher"]["pretrained"]
         self.matcher = KF.LoFTR(pretrained=model).to(self._device).eval()
 
-        tile_size = self._config["general"]["tile_size"]
+        tile_size = self.config["general"]["tile_size"]
         if max(tile_size) > self.max_tile_size:
             logger.warning(
                 f"The tile size is too large large ({tile_size}) for running LOFTR. Using a maximum tile size of {self.max_tile_size} px (this may take some time...)."
             )
             ratio = max(tile_size) / self.max_tile_size
-            self._config["general"]["tile_size"] = (
+            self.config["general"]["tile_size"] = (
                 int(tile_size[0] / ratio),
                 int(tile_size[1] / ratio),
             )
@@ -168,8 +171,8 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
 
         timer = Timer(log_level="debug", cumulate_by_key=True)
 
-        tile_size = self._config["general"]["tile_size"]
-        overlap = self._config["general"]["tile_overlap"]
+        tile_size = self.config["general"]["tile_size"]
+        overlap = self.config["general"]["tile_overlap"]
 
         # Select tile pairs to match
         tile_pairs = tile_selection(
@@ -255,9 +258,7 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
         # Select uniue features on image 0, on rounded coordinates
         if select_unique is True:
             decimals = 1
-            _, unique_idx = np.unique(
-                np.round(mkpts0_full, decimals), axis=0, return_index=True
-            )
+            _, unique_idx = np.unique(np.round(mkpts0_full, decimals), axis=0, return_index=True)
             mkpts0_full = mkpts0_full[unique_idx]
             mkpts1_full = mkpts1_full[unique_idx]
 

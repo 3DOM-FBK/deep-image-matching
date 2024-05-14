@@ -21,13 +21,8 @@ from datetime import date, datetime
 from pathlib import Path
 
 
-def get_logger(name: str = None):
-    logger = logging.getLogger(name)
-    return logger
-
-
 def change_logger_level(name: str = None, level: str = "warning"):
-    logger = get_logger(name)
+    logger = logging.getLogger(name)
     log_level = logging.getLevelName(level.upper())
     for handler in logger.handlers:
         handler.setLevel(log_level)
@@ -39,6 +34,27 @@ def setup_logger(
     log_folder: str = None,
     logfile_basename: str = "log",
 ) -> logging.Logger:
+    """
+    Configures and returns a logging.Logger instance.
+
+    This function checks for existing loggers with the same name. It provides
+    flexible configuration for both console and file-based logging with customizable
+    log levels, formats, and an optional log file.
+
+    Args:
+        name (str, optional): The name of the logger. If None, the root logger
+            will be used. Defaults to None.
+        log_level (str, optional): The logging level for both console and file
+            outputs. Valid options are 'debug', 'info', 'warning', 'error',
+            'critical'. Defaults to 'info'.
+        log_folder (str, optional): The path to the directory for storing log files.
+            If None, no file output will be generated. Defaults to None.
+        logfile_basename (str, optional): The base name for the log file. A timestamp
+            will be appended. Defaults to "log".
+
+    Returns:
+        logging.Logger: A configured logger instance.
+    """
     # Check if logger already exists
     if logging.getLogger(name).hasHandlers():
         logger = logging.getLogger(name)
@@ -49,9 +65,7 @@ def setup_logger(
     if log_level == "debug":
         log_line_template = "%(color_on)s%(asctime)s | | [%(filename)s -> %(funcName)s], line %(lineno)d - [%(levelname)-8s] %(message)s%(color_off)s"
     else:
-        log_line_template = (
-            "%(color_on)s%(asctime)s | [%(levelname)-8s] %(message)s%(color_off)s"
-        )
+        log_line_template = "%(color_on)s%(asctime)s | [%(levelname)-8s] %(message)s%(color_off)s"
 
     # Set log file
     if log_folder is not None:
@@ -135,20 +149,14 @@ def configure_logging(
 
     # Set console log level
     try:
-        console_handler.setLevel(
-            console_log_level.upper()
-        )  # only accepts uppercase level names
+        console_handler.setLevel(console_log_level.upper())  # only accepts uppercase level names
     except Exception as exception:
-        print(
-            f"Failed to set console log level: invalid level: {console_log_level}. {exception}"
-        )
+        print(f"Failed to set console log level: invalid level: {console_log_level}. {exception}")
         return False
 
     # Create and set formatter, add console handler to logger
     datefmt = "%Y-%m-%d %H:%M:%S"
-    console_formatter = LogFormatter(
-        fmt=log_line_template, color=console_log_color, datefmt=datefmt
-    )
+    console_formatter = LogFormatter(fmt=log_line_template, color=console_log_color, datefmt=datefmt)
     console_handler.setFormatter(console_formatter)
     logger.addHandler(console_handler)
 
@@ -162,13 +170,9 @@ def configure_logging(
 
         # Set log file log level
         try:
-            logfile_handler.setLevel(
-                logfile_log_level.upper()
-            )  # only accepts uppercase level names
+            logfile_handler.setLevel(logfile_log_level.upper())  # only accepts uppercase level names
         except Exception as exception:
-            print(
-                f"Failed to set log file log level: invalid level: '{ logfile_log_level}. {exception}"
-            )
+            print(f"Failed to set log file log level: invalid level: '{ logfile_log_level}. {exception}")
             return False
 
         # Create and set formatter, add log file handler to logger

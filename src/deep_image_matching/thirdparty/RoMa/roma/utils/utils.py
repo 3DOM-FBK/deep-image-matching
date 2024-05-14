@@ -1,13 +1,14 @@
-import warnings
-import numpy as np
-import cv2
 import math
+import warnings
+
+import cv2
+import kornia
+import numpy as np
 import torch
-from torchvision import transforms
-from torchvision.transforms.functional import InterpolationMode
 import torch.nn.functional as F
 from PIL import Image
-import kornia
+from torchvision import transforms
+from torchvision.transforms.functional import InterpolationMode
 
 
 def recover_pose(E, kpts0, kpts1, K0, K1, mask):
@@ -606,6 +607,9 @@ def flow_to_pixel_coords(flow, h1, w1):
     return flow
 
 
+to_pixel_coords = flow_to_pixel_coords  # just an alias
+
+
 def flow_to_normalized_coords(flow, h1, w1):
     flow = torch.stack(
         (
@@ -615,6 +619,9 @@ def flow_to_normalized_coords(flow, h1, w1):
         axis=-1,
     )
     return flow
+
+
+to_normalized_coords = flow_to_normalized_coords  # just an alias
 
 
 def warp_to_pixel_coords(warp, h1, w1, h2, w2):
@@ -649,7 +656,7 @@ def signed_point_line_distance(point, line, eps: float = 1e-9):
         the computed distance with shape :math:`(*, N)`.
     """
 
-    if not point.shape[-1] in (2, 3):
+    if point.shape[-1] not in (2, 3):
         raise ValueError(f"pts must be a (*, 2 or 3) tensor. Got {point.shape}")
 
     if not line.shape[-1] == 3:
@@ -680,8 +687,6 @@ def signed_left_to_right_epipolar_distance(pts1, pts2, Fm):
     Returns:
         the computed Symmetrical distance with shape :math:`(*, N)`.
     """
-    import kornia
-
     if (len(Fm.shape) < 3) or not Fm.shape[-2:] == (3, 3):
         raise ValueError(f"Fm must be a (*, 3, 3) tensor. Got {Fm.shape}")
 

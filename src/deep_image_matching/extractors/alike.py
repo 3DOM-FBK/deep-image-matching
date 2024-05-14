@@ -6,7 +6,7 @@ from .extractor_base import ExtractorBase
 
 
 class AlikeExtractor(ExtractorBase):
-    default_conf = {
+    _default_conf = {
         "name:": "alike",
         "model": "alike-s",
         "device": "cuda",
@@ -24,7 +24,7 @@ class AlikeExtractor(ExtractorBase):
         super().__init__(config)
 
         # Load extractor
-        cfg = self._config.get("extractor")
+        cfg = self.config.get("extractor")
         self._extractor = ALike(
             **configs[cfg["model"]],
             device=cfg["device"],

@@ -18,8 +18,8 @@ def local_correlation(
         # If flow is None, assume feature0 and feature1 are aligned
         coords = torch.meshgrid(
             (
-                torch.linspace(-1 + 1 / h, 1 - 1 / h, h, device="cuda"),
-                torch.linspace(-1 + 1 / w, 1 - 1 / w, w, device="cuda"),
+                torch.linspace(-1 + 1 / h, 1 - 1 / h, h, device=feature0.device),
+                torch.linspace(-1 + 1 / w, 1 - 1 / w, w, device=feature0.device),
             )
         )
         coords = torch.stack((coords[1], coords[0]), dim=-1)[None].expand(B, h, w, 2)
@@ -28,10 +28,16 @@ def local_correlation(
     local_window = torch.meshgrid(
         (
             torch.linspace(
-                -2 * local_radius / h, 2 * local_radius / h, 2 * r + 1, device="cuda"
+                -2 * local_radius / h,
+                2 * local_radius / h,
+                2 * r + 1,
+                device=feature0.device,
             ),
             torch.linspace(
-                -2 * local_radius / w, 2 * local_radius / w, 2 * r + 1, device="cuda"
+                -2 * local_radius / w,
+                2 * local_radius / w,
+                2 * r + 1,
+                device=feature0.device,
             ),
         )
     )

@@ -2,7 +2,7 @@
  
  [![Static Badge](https://img.shields.io/badge/Matches_for-COLMAP-red)](https://github.com/colmap/colmap) [![Static Badge](https://img.shields.io/badge/Matches_for-OpenMVG-red)](https://github.com/openMVG/openMVG) [![Static Badge](https://img.shields.io/badge/Matches_for-MICMAC-red)](https://github.com/micmacIGN/micmac) ![Static Badge](https://img.shields.io/badge/Matches_for-Metashape-red) 
  
- [![Static Badge](https://img.shields.io/badge/Powered_by-Kornia-green)](https://github.com/kornia/kornia) [![Static Badge](https://img.shields.io/badge/Powered_by-hloc-green)](https://github.com/kornia/kornia) [![GitHub Release](https://img.shields.io/github/v/release/3DOM-FBK/deep-image-matching)](https://github.com/3DOM-FBK/deep-image-matching/releases) [![Static Badge](https://img.shields.io/badge/docs-DeepImageMatching-blue
+ [![Static Badge](https://img.shields.io/badge/Powered_by-Kornia-green)](https://github.com/kornia/kornia) [![Static Badge](https://img.shields.io/badge/Powered_by-hloc-green)](https://github.com/kornia/kornia) [![GitHub Release](https://img.shields.io/github/v/release/3DOM-FBK/deep-image-matching)](https://github.com/3DOM-FBK/deep-image-matching/releases) [![Static Badge](https://img.shields.io/badge/docs-DeepImageMatcher-blue
  )](https://3dom-fbk.github.io/deep-image-matching/)
 
 </div>
@@ -56,36 +56,51 @@ Key features:
 | &check; Agisoft Metashape                     |
 | &check; Software that supports bundler format |
 
-## Colab demo
+## Colab demo and notebooks
 
 Want to run on a sample dataset? ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/colab_run_from_bash_example.ipynb)
 
 Want to run on your images? ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/colab_run_from_bash_custom_images.ipynb)
 
+DIM can also be utilized as a library instead of being executed through the Command Line Interface (refer to the `Usage Instructions`). For an illustrative example, please see `notebooks/sfm_pipeline.ipynb`.
+
 ## Local Installation
 
 For installing deep-image-matching, first create a conda environment:
 
-```
+```bash
 conda create -n deep-image-matching python=3.9
 conda activate deep-image-matching
 pip install --upgrade pip
 ```
 
+Then, you can install deep-image-matching using pip with the following command:
+
+```bash
+pip install deep-image-matching
+```
+
+If there is any issue with the installation, you can also install the package from the source code.
 Clone the repository and install deep-image-matching in editable mode:
 
-```
+```bash
 git clone https://github.com/3DOM-FBK/deep-image-matching.git
 cd deep-image-matching
 pip install -e .
 ```
 
-Install pycolmap (optional):
+Install pycolmap (optional, but recommended):
 
-```
+```bash
 pip install pycolmap==0.6.1
 ```
 Pycolmap is optional to run reconstruction directly in DIM. If pycolmap is not available, matches will be written both in a h5 and colmap database for later processing with COLMAP GUI or API, or other processing.
+
+Try to run the tests to check if deep-image-matching is correctly installed, try to import the package in a Python shell:
+
+```python
+import deep_image_matching as dim
+```
 
 For more information, check the [documentation](https://3dom-fbk.github.io/deep-image-matching/installation/).
 

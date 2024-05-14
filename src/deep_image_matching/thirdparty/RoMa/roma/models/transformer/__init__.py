@@ -3,9 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from ...utils.utils import get_grid
-from .dinov2 import vit_large  # noqa: F401
-from .layers.attention import MemEffAttention  # noqa: F401
-from .layers.block import Block  # noqa: F401
+from .dinov2 import vit_large  # noqa
+from .layers.attention import MemEffAttention  # noqa
+from .layers.block import Block  # noqa
 
 
 class TransformerDecoder(nn.Module):

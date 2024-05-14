@@ -1,10 +1,10 @@
 # Code by Song Shuang, Geospatial Data Analytics Group, Ohio State Univeristy
 
+import sys
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-from pathlib import Path
-import sys
 import rasterio as rio
 
 

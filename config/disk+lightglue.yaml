@@ -1,15 +1,17 @@
 # User configuration file
 
 general:
-  tile_size: (2000, 1500)
+  tile_size: (1400, 1200)
   geom_verification: pydegensac
   min_inliers_per_pair: 10
-  min_inlier_ratio_per_pair: 0.05
-  gv_threshold: 4
+  min_inlier_ratio_per_pair: 0.25
 
 extractor:
   name: "disk"
-  max_keypoints: 2000
+  max_keypoints: -1 # -1 no limits
+  nms_window_size: 5
+  detection_threshold: 0.0
+  pad_if_not_divisible: True
 
 matcher:
   name: "lightglue"

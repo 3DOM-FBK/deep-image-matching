@@ -1,0 +1,22 @@
+# User configuration file
+
+general:
+  tile_size: (1400, 1200)
+  geom_verification: pydegensac
+  min_inliers_per_pair: 10
+  min_inlier_ratio_per_pair: 0.25
+
+extractor:
+  name: "disk"
+  max_keypoints: 8000 # -1 no limits
+  nms_window_size: 5
+  detection_threshold: 0.0
+  pad_if_not_divisible: True
+
+matcher:
+  name: "lightglue"
+  flash: True # enable FlashAttention if available
+  mp: False # enable mixed precision
+  depth_confidence: 0.95 # early stopping, disable with -1
+  width_confidence: 0.99 # point pruning, disable with -1
+  filter_threshold: 0.10 # match threshold

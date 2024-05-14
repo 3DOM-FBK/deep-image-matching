@@ -2,14 +2,33 @@
 
 ## COLMAP 
 
-Deep-Image-Matching saves the results in a sqlite database, that database can be directly used with COLMAP to run the reconstruction.
+COLMAP is a general-purpose Structure-from-Motion (SfM) and Multi-View Stereo (MVS) pipeline with a graphical and command-line interface. It offers a wide range of features for reconstruction of ordered and unordered image collections. COLMAP is available for Windows, Mac, and Linux.
 
-To import the solution into COLMAP, open the COLAMP GUI and create a new project by "File" -> "New Project".
-Then select the sqlite database file that was created by Deep-Image-Matching and the directory containing the images.
+Deep-Image-Matching saves the results in a sqlite database that database can be directly used with COLMAP to visualize the matches and run the reconstruction.
+
+### Installation
+
+If you don't have COLMAP installed with the GUI, refer to the instructions at [https://colmap.github.io/install.html](https://colmap.github.io/install.html).
+
+### Project Setup
+
+* Launch COLMAP GUI
+* Go to `File` > `New project`
+* Open the sqlite database `database.db` file in your project's result folder (`Database` > `Open`)
+* Select your project's  `images` folder (`Images` > `Select`)
+* Click `Save`
+
 
 ![COLMAP import](./assets/colamp1.png)
 
+### View Matches
+
 You can then use the `Database Management` tab to explore the matches for each image pair.
+
+* Go to `Processing` > `Database Management`
+* Pick an image and click `Overlapping images` (top right)
+* Select the `Two-view geometries` tab
+* Choose an overlapping image's `id` and click `Show matches`
 
 ![COLMAP matches](./assets/colamp2.png)
 
