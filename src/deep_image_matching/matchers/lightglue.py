@@ -140,30 +140,6 @@ class LightGlueMatcher(MatcherBase):
         #     lafs1: LAFs of a shape :math:`(1, B1, 2, 3)`.
         #     lafs2: LAFs of a shape :math:`(1, B2, 2, 3)`.
 
-        # Return:
-        #     - Descriptor distance of matching descriptors, shape of :math:`(B3, 1)`.
-        #     - Long tensor indexes of matching descriptors in desc1 and desc2,
-        #         shape of :math:`(B3, 2)` where :math:`0 <= B3 <= B1`.
-
-        # LightGlue takes the following inputs:
-        # Input (dict):
-        #     image0: dict
-        #         keypoints: [B x M x 2]
-        #         descriptors: [B x M x D]
-        #         image: [B x C x H x W] or image_size: [B x 2]
-        #     image1: dict
-        #         keypoints: [B x N x 2]
-        #         descriptors: [B x N x D]
-        #         image: [B x C x H x W] or image_size: [B x 2]
-        # Output (dict):
-        #     log_assignment: [B x M+1 x N+1]
-        #     matches0: [B x M]
-        #     matching_scores0: [B x M]
-        #     matches1: [B x N]
-        #     matching_scores1: [B x N]
-        #     matches: List[[Si x 2]], scores: List[[Si]]
-        # """
-
         # Convert features to LightGlue format
         feats0 = featuresDict2Lightglue(feats0, self._device)
         feats1 = featuresDict2Lightglue(feats1, self._device)
@@ -184,62 +160,6 @@ class LightGlueMatcher(MatcherBase):
             hw1=torch.flip(feats0["image_size"], dims=[1]),
             hw2=torch.flip(feats1["image_size"], dims=[1]),
         )
-
-        # from kornia_moons.viz import visualize_LAF
-
-        # img_list = list(self.config.general["image_dir"].rglob("*"))
-        # image0 = K.io.load_image(img_list[0], K.io.ImageLoadType.RGB32, device=self._device)[None, ...]
-        # visualize_LAF(image0, lafs0)
-
-        # # load the matcher
-        # if self.config.extractor["name"] != "dedode":
-        #     feat_name = self.config.extractor["name"]
-        # else:
-        #     if "G" in self.config.extractor["descriptor_weights"]:
-        #         feat_name = "dedodeg"
-        #     elif "B" in self.config.extractor["descriptor_weights"]:
-        #         feat_name = "dedodeb"
-        # if not feat_name in self.local_features:
-        #     raise ValueError(f"Feature {feat_name} not supported by LightGlueMatcher")
-
-        # matcher = KF.LightGlue(features=feat_name, **self.config.matcher).eval().to(self._device)
-
-        # from torch import Tensor
-
-        # @torch.cuda.amp.custom_fwd(cast_inputs=torch.float32)
-        # def normalize_keypoints(kpts: Tensor, size: Tensor) -> Tensor:
-        #     if isinstance(size, torch.Size):
-        #         size = Tensor(size)[None]
-        #     shift = size.float().to(kpts) / 2
-        #     scale = size.max(1).values.float().to(kpts) / 2
-        #     print("shift", shift)
-        #     print("scale", scale)
-        #     kpts = (kpts - shift[:, None]) / scale[:, None, None]
-        #     return kpts
-
-        # kpts0 = feats0["keypoints"]
-        # size0 = torch.flip(feats1["image_size"], dims=[1])
-        # # size0 = feats1["image_size"]
-        # kpts0_norm = normalize_keypoints(kpts0, size0).clone()
-
-        # torch.all(kpts0_norm >= -1).item() and torch.all(kpts0_norm <= 1).item()
-
-        # image0 = {
-        #     "keypoints": feats0["keypoints"],
-        #     "descriptors": feats0["descriptors"],
-        #     "image_size": torch.flip(feats0["image_size"], dims=[1]),
-        #     # torch.tensor(img1.shape[-2:][::-1]).view(1, 2).to(device),
-        # }
-        # image1 = {
-        #     "keypoints": feats1["keypoints"],
-        #     "descriptors": feats1["descriptors"],
-        #     "image_size": torch.flip(feats1["image_size"], dims=[1]),
-        #     # torch.tensor(img2.shape[-2:][::-1]).view(1, 2).to(device),
-        # }
-
-        # out = matcher({"image0": image0, "image1": image1})
-        # idx = out["matches"][0]
-        # print(f"{idx.shape[0]} tentative matches with DISK LightGlue")
 
         matches01_idx = idx.detach().cpu().numpy()
 
