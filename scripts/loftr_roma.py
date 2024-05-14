@@ -137,9 +137,8 @@ def import_into_colmap(img_dir,
     return
 
 
-
 if __name__ == '__main__':
-
+    
     input_dir = r"C:\Users\fbk3d\Desktop\git-3dom\deep-image-matching\assets\example_cyprus\z_input"
     out_dir = r"C:\Users\fbk3d\Desktop\git-3dom\deep-image-matching\assets\example_cyprus\z_output"
     image_dir = r"C:\Users\fbk3d\Desktop\transparent-temp\glass_cup\images"
