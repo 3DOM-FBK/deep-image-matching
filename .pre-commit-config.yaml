@@ -1,14 +1,14 @@
-#repos:
-#  - repo: https://github.com/psf/black
-#    rev: 23.12.1
-#    hooks:
-#      - id: black
-#  # - repo: https://github.com/pycqa/flake8
-#  #   rev: 7.0.0 # Pick a git hash / tag to point to
-#  #   hooks:
-#  #     - id: flake8
-#  - repo: https://github.com/kynan/nbstripout
-#    rev: 0.6.1
-#    hooks:
-#      - id: nbstripout
-#        files: ".ipynb"
+repos:
+  - repo: https://github.com/psf/black
+    rev: 23.12.1
+    hooks:
+      - id: black
+  # - repo: https://github.com/pycqa/flake8
+  #   rev: 7.0.0 # Pick a git hash / tag to point to
+  #   hooks:
+  #     - id: flake8
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.6.1
+    hooks:
+      - id: nbstripout
+        files: ".ipynb"
