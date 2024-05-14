@@ -7,7 +7,6 @@ import cv2
 import exifread
 import numpy as np
 import PIL
-from PIL import Image
 
 from .sensor_width_database import SensorWidthDatabase
 
@@ -16,7 +15,7 @@ logger = logging.getLogger("dim")
 
 IMAGE_EXT = [".jpg", ".JPG", ".png", ".PNG", ".tif", "TIF"]
 
-Image.MAX_IMAGE_PIXELS = None
+PIL.Image.MAX_IMAGE_PIXELS = None
 
 
 def read_image(
