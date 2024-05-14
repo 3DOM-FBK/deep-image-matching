@@ -32,6 +32,8 @@ def featuresDict2Lightglue(feats: FeaturesDict, device: torch.device) -> dict:
     # Check device
     feats = {k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in feats.items()}
 
+    # Reverse the image size to (H, W)
+
     return feats
 
 
@@ -163,30 +165,81 @@ class LightGlueMatcher(MatcherBase):
         # """
 
         # Convert features to LightGlue format
-        # Check if keypoints outside the image
-        idx = (
-            (feats0["keypoints"][:, 0] >= 0)
-            & (feats0["keypoints"][:, 0] < feats0["image_size"][1])
-            & (feats0["keypoints"][:, 1] >= 0)
-            & (feats0["keypoints"][:, 1] < feats0["image_size"][0])
-        )
-        if not idx.all():
-            raise ValueError("Some keypoints are outside the image")
-
         feats0 = featuresDict2Lightglue(feats0, self._device)
         feats1 = featuresDict2Lightglue(feats1, self._device)
 
         # match the features
-        lafs0 = KF.laf_from_center_scale_ori(feats0["keypoints"])
-        lafs1 = KF.laf_from_center_scale_ori(feats1["keypoints"])
+        lafs0 = KF.laf_from_center_scale_ori(
+            feats0["keypoints"], torch.ones(1, len(feats0["keypoints"]), 1, 1, device=self._device)
+        )
+        lafs1 = KF.laf_from_center_scale_ori(
+            feats1["keypoints"], torch.ones(1, len(feats1["keypoints"]), 1, 1, device=self._device)
+        )
+
         dist, idx = self._matcher(
             feats0["descriptors"][0],
             feats1["descriptors"][0],
             lafs0,
             lafs1,
-            hw1=feats0["image_size"],
-            hw2=feats1["image_size"],
+            hw1=torch.flip(feats0["image_size"], dims=[1]),
+            hw2=torch.flip(feats1["image_size"], dims=[1]),
         )
+
+        # from kornia_moons.viz import visualize_LAF
+
+        # img_list = list(self.config.general["image_dir"].rglob("*"))
+        # image0 = K.io.load_image(img_list[0], K.io.ImageLoadType.RGB32, device=self._device)[None, ...]
+        # visualize_LAF(image0, lafs0)
+
+        # # load the matcher
+        # if self.config.extractor["name"] != "dedode":
+        #     feat_name = self.config.extractor["name"]
+        # else:
+        #     if "G" in self.config.extractor["descriptor_weights"]:
+        #         feat_name = "dedodeg"
+        #     elif "B" in self.config.extractor["descriptor_weights"]:
+        #         feat_name = "dedodeb"
+        # if not feat_name in self.local_features:
+        #     raise ValueError(f"Feature {feat_name} not supported by LightGlueMatcher")
+
+        # matcher = KF.LightGlue(features=feat_name, **self.config.matcher).eval().to(self._device)
+
+        # from torch import Tensor
+
+        # @torch.cuda.amp.custom_fwd(cast_inputs=torch.float32)
+        # def normalize_keypoints(kpts: Tensor, size: Tensor) -> Tensor:
+        #     if isinstance(size, torch.Size):
+        #         size = Tensor(size)[None]
+        #     shift = size.float().to(kpts) / 2
+        #     scale = size.max(1).values.float().to(kpts) / 2
+        #     print("shift", shift)
+        #     print("scale", scale)
+        #     kpts = (kpts - shift[:, None]) / scale[:, None, None]
+        #     return kpts
+
+        # kpts0 = feats0["keypoints"]
+        # size0 = torch.flip(feats1["image_size"], dims=[1])
+        # # size0 = feats1["image_size"]
+        # kpts0_norm = normalize_keypoints(kpts0, size0).clone()
+
+        # torch.all(kpts0_norm >= -1).item() and torch.all(kpts0_norm <= 1).item()
+
+        # image0 = {
+        #     "keypoints": feats0["keypoints"],
+        #     "descriptors": feats0["descriptors"],
+        #     "image_size": torch.flip(feats0["image_size"], dims=[1]),
+        #     # torch.tensor(img1.shape[-2:][::-1]).view(1, 2).to(device),
+        # }
+        # image1 = {
+        #     "keypoints": feats1["keypoints"],
+        #     "descriptors": feats1["descriptors"],
+        #     "image_size": torch.flip(feats1["image_size"], dims=[1]),
+        #     # torch.tensor(img2.shape[-2:][::-1]).view(1, 2).to(device),
+        # }
+
+        # out = matcher({"image0": image0, "image1": image1})
+        # idx = out["matches"][0]
+        # print(f"{idx.shape[0]} tentative matches with DISK LightGlue")
 
         matches01_idx = idx.detach().cpu().numpy()
 
@@ -206,7 +259,7 @@ if __name__ == "__main__":
         "dir": "./assets/example_cyprus",
         "pipeline": "superpoint+lightglue",
         "strategy": "bruteforce",
-        "quality": "medium",
+        "quality": "high",
         "tiling": "none",
         "camera_options": "./assets/example_cyprus/cameras.yaml",
         "openmvg": None,

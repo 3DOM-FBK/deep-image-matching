@@ -181,6 +181,11 @@ confs = {
     "sift+kornia_matcher": {
         "extractor": {
             "name": "sift",
+            "n_features": 4000,
+            "nOctaveLayers": 3,
+            "contrastThreshold": 0.04,
+            "edgeThreshold": 10,
+            "sigma": 1.6,
         },
         "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.85},
     },
@@ -223,10 +228,11 @@ confs = {
     "sift+lightglue": {
         "extractor": {
             "name": "sift",
-            "model_name": "aliked-n16rot",
-            "max_num_keypoints": 4000,
-            "detection_threshold": 0.2,
-            "nms_radius": 3,
+            "n_features": 8000,
+            "nOctaveLayers": 3,
+            "contrastThreshold": 0.01,
+            "edgeThreshold": 10,
+            "sigma": 1.6,
         },
         "matcher": {
             "name": "lightglue",
