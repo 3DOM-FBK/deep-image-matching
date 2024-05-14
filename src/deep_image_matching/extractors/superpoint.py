@@ -35,6 +35,7 @@ class SuperPoint(nn.Module):
         "fix_sampling": True,
     }
     required_inputs = ["image"]
+    descriptor_size = 256
     detection_noise = 2.0
 
     def __init__(self, conf):

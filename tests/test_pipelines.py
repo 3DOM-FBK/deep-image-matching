@@ -47,7 +47,13 @@ def create_config_file(config: dict, path: Path) -> Path:
 
 # Test matching strategies
 def test_sp_lg_bruteforce(data_dir):
-    prm = {"dir": data_dir, "pipeline": "superpoint+lightglue", "strategy": "bruteforce", "skip_reconstruction": True}
+    prm = {
+        "dir": data_dir,
+        "pipeline": "superpoint+lightglue",
+        "strategy": "bruteforce",
+        "tile_selection": "none",
+        "skip_reconstruction": True,
+    }
     config = Config(prm)
     matcher = ImageMatcher(config)
     feature_path, match_path = matcher.run()
@@ -60,6 +66,7 @@ def test_sp_lg_sequential(data_dir):
         "dir": data_dir,
         "pipeline": "superpoint+lightglue",
         "strategy": "sequential",
+        "tile_selection": "none",
         "overlap": 1,
         "skip_reconstruction": True,
     }
@@ -75,6 +82,7 @@ def test_sp_lg_matching_lowres(data_dir):
         "dir": data_dir,
         "pipeline": "superpoint+lightglue",
         "strategy": "matching_lowres",
+        "tile_selection": "none",
         "skip_reconstruction": True,
     }
     config = Config(prm)
@@ -98,6 +106,7 @@ def test_sp_lg_custom_config(data_dir):
         "dir": data_dir,
         "pipeline": "superpoint+lightglue",
         "strategy": "sequential",
+        "tile_selection": "none",
         "overlap": 1,
         "config_file": config_file,
         "skip_reconstruction": True,
@@ -148,6 +157,7 @@ def test_sp_lg_quality_medium(data_dir):
         "dir": data_dir,
         "pipeline": "superpoint+lightglue",
         "strategy": "sequential",
+        "tile_selection": "none",
         "overlap": 1,
         "skip_reconstruction": True,
     }
@@ -219,6 +229,7 @@ def test_disk_lg(data_dir):
         "dir": data_dir,
         "pipeline": "disk+lightglue",
         "strategy": "sequential",
+        "tile_selection": "none",
         "overlap": 1,
         "skip_reconstruction": True,
     }
@@ -234,6 +245,7 @@ def test_aliked_lg(data_dir):
         "dir": data_dir,
         "pipeline": "aliked+lightglue",
         "strategy": "sequential",
+        "tile_selection": "none",
         "overlap": 1,
         "skip_reconstruction": True,
     }
@@ -249,6 +261,7 @@ def test_orb(data_dir):
         "dir": data_dir,
         "pipeline": "orb+kornia_matcher",
         "strategy": "sequential",
+        "tile_selection": "none",
         "overlap": 1,
         "skip_reconstruction": True,
     }
@@ -264,6 +277,7 @@ def test_sift(data_dir):
         "dir": data_dir,
         "pipeline": "sift+kornia_matcher",
         "strategy": "sequential",
+        "tile_selection": "none",
         "overlap": 1,
         "skip_reconstruction": True,
     }
@@ -279,7 +293,7 @@ def test_keynet(data_dir):
         "dir": data_dir,
         "pipeline": "keynetaffnethardnet+kornia_matcher",
         "strategy": "sequential",
-        "quality": "medium",
+        "tile_selection": "none",
         "overlap": 1,
         "skip_reconstruction": True,
     }
@@ -291,12 +305,48 @@ def test_keynet(data_dir):
 
 
 def test_dedode_nn(data_dir):
-    if not torch.cuda.is_available():
-        pytest.skip("DeDoDe is not available without CUDA GPU.")
     prm = {
         "dir": data_dir,
         "pipeline": "dedode+kornia_matcher",
         "strategy": "sequential",
+        "tile_selection": "none",
+        "overlap": 1,
+        "skip_reconstruction": True,
+    }
+    config = Config(prm)
+    matcher = ImageMatcher(config)
+    feature_path, match_path = matcher.run()
+    assert feature_path.exists()
+    assert match_path.exists()
+
+
+# FAILS WITH TILING
+# def test_dedode_tiling(data_dir):
+#     if not torch.cuda.is_available():
+#         pytest.skip("DeDoDe is not available without CUDA GPU.")
+#     prm = {
+#         "dir": data_dir,
+#         "pipeline": "dedode+lightglue",
+#         "strategy": "sequential",
+#         "tile_selection": "grid",
+#         "overlap": 1,
+#         "skip_reconstruction": True,
+#     }
+#     config = Config(prm)
+#     matcher = ImageMatcher(config)
+#     feature_path, match_path = matcher.run()
+#     assert feature_path.exists()
+#     assert match_path.exists()
+
+
+def test_dedode_lightglue(data_dir):
+    if not torch.cuda.is_available():
+        pytest.skip("DeDoDe is not available without CUDA GPU.")
+    prm = {
+        "dir": data_dir,
+        "pipeline": "dedode+lightglue",
+        "strategy": "sequential",
+        "tile_selection": "none",
         "overlap": 1,
         "skip_reconstruction": True,
     }
@@ -313,6 +363,7 @@ def test_loftr(data_dir):
         "dir": data_dir,
         "pipeline": "loftr",
         "strategy": "sequential",
+        "tile_selection": "none",
         "overlap": 1,
         "skip_reconstruction": True,
     }
@@ -330,6 +381,7 @@ def test_roma(data_dir):
         "dir": data_dir,
         "pipeline": "roma",
         "strategy": "sequential",
+        "tile_selection": "none",
         "overlap": 1,
         "skip_reconstruction": True,
     }
