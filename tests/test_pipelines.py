@@ -276,6 +276,7 @@ def test_keynet(data_dir):
         "dir": data_dir,
         "pipeline": "keynetaffnethardnet+kornia_matcher",
         "strategy": "sequential",
+        "quality": "medium",
         "overlap": 1,
         "skip_reconstruction": True,
     }

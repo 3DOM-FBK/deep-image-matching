@@ -1,6 +1,5 @@
-from typing import Any, Callable, ClassVar, Dict, List, Optional, Tuple
+from typing import Any, ClassVar, Dict, List
 
-import kornia as K
 import kornia.feature as KF
 import numpy as np
 import torch
@@ -29,10 +28,13 @@ def featuresDict2Lightglue(feats: FeaturesDict, device: torch.device) -> dict:
 
     # Convert to tensor
     feats = {k: torch.tensor(v, dtype=torch.float, device=device) for k, v in feats.items()}
+
     # Check device
     feats = {k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in feats.items()}
 
     # Reverse the image size to (H, W)
+    if "image_size" in feats.keys():
+        feats["image_size"] = torch.flip(feats["image_size"], dims=[1]).cpu().numpy()
 
     return feats
 
@@ -157,8 +159,8 @@ class LightGlueMatcher(MatcherBase):
             feats1["descriptors"][0],
             lafs0,
             lafs1,
-            hw1=torch.flip(feats0["image_size"], dims=[1]),
-            hw2=torch.flip(feats1["image_size"], dims=[1]),
+            hw1=feats0["image_size"],
+            hw2=feats1["image_size"],
         )
 
         matches01_idx = idx.detach().cpu().numpy()
