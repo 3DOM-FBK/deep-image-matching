@@ -9,8 +9,8 @@ general:
 
 extractor:
   name: keynetaffnethardnet
-  n_features: 960
-  upright: False
+  n_features: 8000
+  upright: True
 
 matcher:
   name: "kornia_matcher"

@@ -10,7 +10,7 @@ general:
 extractor:
   name: "aliked"
   model_name: aliked-n16rot
-  max_num_keypoints: 960
+  max_num_keypoints: 8000
   detection_threshold: 0.2
   nms_radius: 3
 

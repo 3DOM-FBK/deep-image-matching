@@ -9,7 +9,7 @@ general:
 
 extractor:
   name: "dedode"
-  n_features: 1500
+  n_features: 8000
   upright: False
 
 matcher:

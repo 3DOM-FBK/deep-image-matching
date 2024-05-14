@@ -1,0 +1,14 @@
+# User configuration file
+
+general:
+  tile_size: (1500, 1500)
+  geom_verification: ransac
+  min_inliers_per_pair: 10
+  min_inlier_ratio_per_pair: 0.05
+  gv_threshold: 1
+
+extractor:
+  name: "no_extractor"
+
+matcher:
+  name: "loftr"

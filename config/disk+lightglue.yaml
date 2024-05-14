@@ -4,12 +4,12 @@ general:
   tile_size: (2000, 1500)
   geom_verification: pydegensac
   min_inliers_per_pair: 10
-  min_inlier_ratio_per_pair: 0.15
-  gv_threshold: 1
+  min_inlier_ratio_per_pair: 0.05
+  gv_threshold: 4
 
 extractor:
   name: "disk"
-  max_keypoints: 720 # -1 no limits
+  max_keypoints: 2000
 
 matcher:
   name: "lightglue"
