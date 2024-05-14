@@ -10,9 +10,9 @@ from .extractor_base import ExtractorBase, FeaturesDict
 class SIFTExtractor(ExtractorBase):
     _default_conf = {
         "name": "sift",
-        "n_features": 4000,
-        "nOctaveLayers": 3,
-        "contrastThreshold": 0.04,
+        "n_features": 8192,
+        "nOctaveLayers": 4,
+        "contrastThreshold": 0.006,
         "edgeThreshold": 10,
         "sigma": 1.6,
     }

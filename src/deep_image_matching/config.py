@@ -228,11 +228,10 @@ confs = {
     "sift+lightglue": {
         "extractor": {
             "name": "sift",
-            "n_features": 8000,
-            "nOctaveLayers": 3,
-            "contrastThreshold": 0.01,
+            "n_features": 8192,
+            "nOctaveLayers": 4,
+            "contrastThreshold": 0.006,
             "edgeThreshold": 10,
-            "sigma": 1.6,
         },
         "matcher": {
             "name": "lightglue",
@@ -248,6 +247,34 @@ confs = {
             "max_keypoints": 10_000,
             "detector_weights": "L-SO2",  # [L, L-C4, L-SO2, L-C4-v2]
             "descriptor_weights": "G-C4",  # [B-upright, G-upright, B-C4, B-SO2, G-C4]
+        },
+        "matcher": {
+            "name": "lightglue",
+            "n_layers": 9,
+            "depth_confidence": 0.95,  # early stopping, disable with -1
+            "width_confidence": 0.99,  # point pruning, disable with -1
+            "filter_threshold": 0.1,  # match threshold
+        },
+    },
+    "sift_pycolmap+lightglue": {
+        "extractor": {
+            "name": "sift_pycolmap",
+            "num_threads": -1,
+            "max_image_size": 3200,
+            "max_num_features": 8192,
+            "first_octave": -1,
+            "num_octaves": 4,
+            "octave_resolution": 3,
+            "peak_threshold": 0.006666666666666667,
+            "edge_threshold": 10.0,
+            "estimate_affine_shape": False,
+            "max_num_orientations": 2,
+            "upright": False,
+            "darkness_adaptivity": False,
+            "domain_size_pooling": False,
+            "dsp_min_scale": 0.16666666666666666,
+            "dsp_max_scale": 3.0,
+            "dsp_num_scales": 10,
         },
         "matcher": {
             "name": "lightglue",

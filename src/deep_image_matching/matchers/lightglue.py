@@ -91,6 +91,7 @@ class LightGlueMatcher(MatcherBase):
         "keynet_affnet_hardnet",
         "sift",
         "superpoint",
+        "sift",
     ]
 
     required_inputs: ClassVar[List[str]] = ["image0", "image1"]
@@ -103,7 +104,9 @@ class LightGlueMatcher(MatcherBase):
         super().__init__(config)
 
         # load the matcher
-        if self.config.extractor["name"] != "dedode":
+        if self.config.extractor["name"] == "sift_pycolmap":
+            feat_name = "sift"
+        elif self.config.extractor["name"] != "dedode":
             feat_name = self.config.extractor["name"]
         else:
             if "G" in self.config.extractor["descriptor_weights"]:

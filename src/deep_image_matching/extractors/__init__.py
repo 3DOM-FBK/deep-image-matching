@@ -4,7 +4,7 @@ from .alike import AlikeExtractor
 from .aliked import AlikedExtractor
 from .dedode import DeDoDeExtractor
 from .disk import DiskExtractor
-from .extractor_base import ExtractorBase
+from .extractor_base import ExtractorBase, FeaturesDict
 from .keynetaffnethardnet import KeyNetExtractor
 from .no_extractor import NoExtractor
 from .orb import ORBExtractor
@@ -37,3 +37,4 @@ def extractor_loader(root, model):
     classes = [c for c in classes if issubclass(c[1], ExtractorBase)]
     assert len(classes) == 1, classes
     return classes[0][1]
+
