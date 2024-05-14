@@ -2,10 +2,13 @@ import platform
 import subprocess
 from pathlib import Path
 
-import deep_image_matching as dim
+# import deep_image_matching as dim
 import pytest
 import torch
 import yaml
+from deep_image_matching import Config, ImageMatcher
+from deep_image_matching.io import export_to_colmap
+from deep_image_matching.reconstruction import pycolmap_reconstruction
 
 # def run_pipeline(cmd, verbose: bool = False) -> None:
 #     # Run the script using subprocess
@@ -45,8 +48,8 @@ def create_config_file(config: dict, path: Path) -> Path:
 # Test matching strategies
 def test_sp_lg_bruteforce(data_dir):
     prm = {"dir": data_dir, "pipeline": "superpoint+lightglue", "strategy": "bruteforce", "skip_reconstruction": True}
-    config = dim.Config(prm)
-    matcher = dim.ImageMatcher(config)
+    config = Config(prm)
+    matcher = ImageMatcher(config)
     feature_path, match_path = matcher.run()
     assert feature_path.exists()
     assert match_path.exists()
@@ -60,8 +63,8 @@ def test_sp_lg_sequential(data_dir):
         "overlap": 1,
         "skip_reconstruction": True,
     }
-    config = dim.Config(prm)
-    matcher = dim.ImageMatcher(config)
+    config = Config(prm)
+    matcher = ImageMatcher(config)
     feature_path, match_path = matcher.run()
     assert feature_path.exists()
     assert match_path.exists()
@@ -74,8 +77,8 @@ def test_sp_lg_matching_lowres(data_dir):
         "strategy": "matching_lowres",
         "skip_reconstruction": True,
     }
-    config = dim.Config(prm)
-    matcher = dim.ImageMatcher(config)
+    config = Config(prm)
+    matcher = ImageMatcher(config)
     feature_path, match_path = matcher.run()
     assert feature_path.exists()
     assert match_path.exists()
@@ -99,8 +102,8 @@ def test_sp_lg_custom_config(data_dir):
         "config_file": config_file,
         "skip_reconstruction": True,
     }
-    config = dim.Config(prm)
-    matcher = dim.ImageMatcher(config)
+    config = Config(prm)
+    matcher = ImageMatcher(config)
     feature_path, match_path = matcher.run()
     assert feature_path.exists()
     assert match_path.exists()
@@ -118,17 +121,17 @@ def test_pycolmap(data_dir):
         "overlap": 1,
         "skip_reconstruction": False,
     }
-    config = dim.Config(prm)
-    matcher = dim.ImageMatcher(config)
+    config = Config(prm)
+    matcher = ImageMatcher(config)
     feature_path, match_path = matcher.run()
-    dim.io.export_to_colmap(
+    export_to_colmap(
         img_dir=config.general["image_dir"],
         feature_path=feature_path,
         match_path=match_path,
         database_path=config.general["output_dir"] / "database.db",
         camera_config_path=config.general["camera_options"],
     )
-    model = dim.reconstruction.pycolmap_reconstruction(
+    model = pycolmap_reconstruction(
         database_path=config.general["output_dir"] / "database.db",
         sfm_dir=config.general["output_dir"],
         image_dir=config.general["image_dir"],
@@ -148,8 +151,8 @@ def test_sp_lg_quality_medium(data_dir):
         "overlap": 1,
         "skip_reconstruction": True,
     }
-    config = dim.Config(prm)
-    matcher = dim.ImageMatcher(config)
+    config = Config(prm)
+    matcher = ImageMatcher(config)
     feature_path, match_path = matcher.run()
     assert feature_path.exists()
     assert match_path.exists()
@@ -166,8 +169,8 @@ def test_tiling_preselection(data_dir, config_file_tiling):
         "config_file": config_file_tiling,
         "skip_reconstruction": True,
     }
-    config = dim.Config(prm)
-    matcher = dim.ImageMatcher(config)
+    config = Config(prm)
+    matcher = ImageMatcher(config)
     feature_path, match_path = matcher.run()
     assert feature_path.exists()
     assert match_path.exists()
@@ -184,8 +187,8 @@ def test_tiling_grid(data_dir, config_file_tiling):
         "config_file": config_file_tiling,
         "skip_reconstruction": True,
     }
-    config = dim.Config(prm)
-    matcher = dim.ImageMatcher(config)
+    config = Config(prm)
+    matcher = ImageMatcher(config)
     feature_path, match_path = matcher.run()
     assert feature_path.exists()
     assert match_path.exists()
@@ -202,8 +205,8 @@ def test_tiling_exhaustive(data_dir, config_file_tiling):
         "config_file": config_file_tiling,
         "skip_reconstruction": True,
     }
-    config = dim.Config(prm)
-    matcher = dim.ImageMatcher(config)
+    config = Config(prm)
+    matcher = ImageMatcher(config)
     feature_path, match_path = matcher.run()
     assert feature_path.exists()
     assert match_path.exists()
@@ -219,8 +222,8 @@ def test_disk_lg(data_dir):
         "overlap": 1,
         "skip_reconstruction": True,
     }
-    config = dim.Config(prm)
-    matcher = dim.ImageMatcher(config)
+    config = Config(prm)
+    matcher = ImageMatcher(config)
     feature_path, match_path = matcher.run()
     assert feature_path.exists()
     assert match_path.exists()
@@ -234,8 +237,8 @@ def test_aliked_lg(data_dir):
         "overlap": 1,
         "skip_reconstruction": True,
     }
-    config = dim.Config(prm)
-    matcher = dim.ImageMatcher(config)
+    config = Config(prm)
+    matcher = ImageMatcher(config)
     feature_path, match_path = matcher.run()
     assert feature_path.exists()
     assert match_path.exists()
@@ -249,8 +252,8 @@ def test_orb(data_dir):
         "overlap": 1,
         "skip_reconstruction": True,
     }
-    config = dim.Config(prm)
-    matcher = dim.ImageMatcher(config)
+    config = Config(prm)
+    matcher = ImageMatcher(config)
     feature_path, match_path = matcher.run()
     assert feature_path.exists()
     assert match_path.exists()
@@ -264,8 +267,8 @@ def test_sift(data_dir):
         "overlap": 1,
         "skip_reconstruction": True,
     }
-    config = dim.Config(prm)
-    matcher = dim.ImageMatcher(config)
+    config = Config(prm)
+    matcher = ImageMatcher(config)
     feature_path, match_path = matcher.run()
     assert feature_path.exists()
     assert match_path.exists()
@@ -280,8 +283,8 @@ def test_keynet(data_dir):
         "overlap": 1,
         "skip_reconstruction": True,
     }
-    config = dim.Config(prm)
-    matcher = dim.ImageMatcher(config)
+    config = Config(prm)
+    matcher = ImageMatcher(config)
     feature_path, match_path = matcher.run()
     assert feature_path.exists()
     assert match_path.exists()
@@ -297,8 +300,8 @@ def test_dedode_nn(data_dir):
         "overlap": 1,
         "skip_reconstruction": True,
     }
-    config = dim.Config(prm)
-    matcher = dim.ImageMatcher(config)
+    config = Config(prm)
+    matcher = ImageMatcher(config)
     feature_path, match_path = matcher.run()
     assert feature_path.exists()
     assert match_path.exists()
@@ -313,8 +316,8 @@ def test_loftr(data_dir):
         "overlap": 1,
         "skip_reconstruction": True,
     }
-    config = dim.Config(prm)
-    matcher = dim.ImageMatcher(config)
+    config = Config(prm)
+    matcher = ImageMatcher(config)
     feature_path, match_path = matcher.run()
     assert feature_path.exists()
     assert match_path.exists()
@@ -330,8 +333,8 @@ def test_roma(data_dir):
         "overlap": 1,
         "skip_reconstruction": True,
     }
-    config = dim.Config(prm)
-    matcher = dim.ImageMatcher(config)
+    config = Config(prm)
+    matcher = ImageMatcher(config)
     feature_path, match_path = matcher.run()
     assert feature_path.exists()
     assert match_path.exists()
@@ -348,8 +351,8 @@ def test_roma_tiling(data_dir, config_file_tiling):
         "tiling": "preselection",
         "skip_reconstruction": True,
     }
-    config = dim.Config(prm)
-    matcher = dim.ImageMatcher(config)
+    config = Config(prm)
+    matcher = ImageMatcher(config)
     feature_path, match_path = matcher.run()
     assert feature_path.exists()
     assert match_path.exists()
