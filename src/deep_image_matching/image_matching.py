@@ -353,7 +353,7 @@ class ImageMatcher:
 
         # Try to rotate images so they will be all "upright", useful for deep-learning approaches that usually are not rotation invariant
         if self.config.general["upright"]:
-            self.rotate_upright_images()
+            self.rotate_upright_images(self.config.general["upright"])
             timer.update("rotate_upright_images")
 
         # Extract features
