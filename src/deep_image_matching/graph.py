@@ -19,7 +19,6 @@ def save_output_graph(G, name):
     nt = Network()
 
     # HTML template for view graph details panel
-    print(os.path.join(TEMPLATE_DIR, "template.html").replace('\\', '/'))
     nt.set_template(os.path.join(TEMPLATE_DIR, "template.html").replace('\\', '/'))
     nt.from_nx(G)
     nt.toggle_physics(False)
@@ -41,8 +40,10 @@ def save_output_graph(G, name):
             G.graph["communities"],
         )
     )
-
-    nt.write_html(name, notebook=False, open_browser=False)
+    html = nt.generate_html(name, notebook=False)
+    with open(name, mode='w', encoding='utf-8') as fp:
+        fp.write(html)
+    #nt.write_html(name, notebook=False, open_browser=False)
 
     return
 
