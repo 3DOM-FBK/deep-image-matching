@@ -198,8 +198,8 @@
             });
 
             network.on("zoom", function(params) {
-                if (document.getElementById("imagePopup") != null)
-                    imagePopup.style.transform = "scale(" + params.scale + ")";
+                //if (document.getElementById("imagePopup") != null)
+                    //imagePopup.style.transform = "scale(" + params.scale + ")";
             });
 
                 //   network.once("stabilizationIterationsDone", function() {
@@ -239,7 +239,7 @@
 
                 //position tooltip:
                 posCanvas.x = posCanvas.x + 0.5 * (boundingBox.right - boundingBox.left);
-
+                imagePopup.x = posCanvas.x
                 // convert coordinates to the DOM space
                 var posDOM = network.canvasToDOM(posCanvas);
 
