@@ -187,9 +187,8 @@ function highlightFilter(filter) {
     selectNodes(selectedNodes)
 }
 
-
-
 function clusterByCommunity(index, color) {
+    var i = index + 1
     //network.setData(data);
     var clusterOptionsByData;
     //for (var i = 0; i < network.groups["communities"].length; i++) {
@@ -205,7 +204,10 @@ function clusterByCommunity(index, color) {
           borderWidth: 3,
           shape: "circle",
           color: color,
-          label: "community:" + index,
+          label: "community #" + i,
+          font: {
+            size: 14
+          },
         },
       };
       network.cluster(clusterOptionsByData);
