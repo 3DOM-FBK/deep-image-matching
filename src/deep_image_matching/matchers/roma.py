@@ -196,7 +196,7 @@ class RomaMatcher(DetectorFreeMatcherBase):
         W_B, H_B = Image.open(img1_path).size
 
         warp, certainty = self.matcher.match(str(img0_path), str(img1_path), device=self._device)
-        matches, certainty = self.matcher.sample(warp, certainty)
+        matches, certainty = self.matcher.sample(warp, certainty, num=self.config.matcher["num_sampled_points"])
         kptsA, kptsB = self.matcher.to_pixel_coordinates(matches, H_A, W_A, H_B, W_B)
         kptsA, kptsB = kptsA.cpu().numpy(), kptsB.cpu().numpy()
 
