@@ -2,7 +2,7 @@ import inspect
 import logging
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
-from typing import Optional, Tuple, TypedDict, Union
+from typing import Any, Dict, Optional, Tuple, TypedDict, Union
 
 import cv2
 import h5py
@@ -64,6 +64,16 @@ class ExtractorBase(metaclass=ABCMeta):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}"
+
+    @classmethod
+    def get_default_conf(cls) -> Dict[str, Any]:
+        """
+        Class method to return the default configuration of the extractor.
+
+        Returns:
+            dict: The default configuration dictionary.
+        """
+        return cls._default_conf
 
     @torch.inference_mode()
     def extract(self, img: Union[Image, Path, str]) -> Path:

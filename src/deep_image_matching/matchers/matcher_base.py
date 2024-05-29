@@ -3,7 +3,7 @@ import logging
 from abc import ABCMeta, abstractmethod
 from itertools import product
 from pathlib import Path
-from typing import Optional, Tuple, TypedDict
+from typing import Any, Dict, Optional, Tuple, TypedDict
 
 import cv2
 import h5py
@@ -108,6 +108,16 @@ class MatcherBase(metaclass=ABCMeta):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}"
+
+    @classmethod
+    def get_default_conf(cls) -> Dict[str, Any]:
+        """
+        Class method to return the default configuration of the matcher.
+
+        Returns:
+            dict: The default configuration dictionary.
+        """
+        return cls._default_conf
 
     @abstractmethod
     @torch.inference_mode()
@@ -560,6 +570,16 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}"
+
+    @classmethod
+    def get_default_conf(cls) -> Dict[str, Any]:
+        """
+        Class method to return the default configuration of the matcher.
+
+        Returns:
+            dict: The default configuration dictionary.
+        """
+        return cls._default_conf
 
     @torch.inference_mode()
     def match(
