@@ -35,6 +35,7 @@ class RomaMatcher(DetectorFreeMatcherBase):
     """
 
     _default_conf = {
+        "name": "roma",
         "coarse_res": 560,  # (h,w) or only one value for square images
         "upsample_res": 864,  # (h,w) or only one value for square images
         "num_sampled_points": 10000,  # number of points to sample for each image (or for each tile if tile_preselection_size is set)
