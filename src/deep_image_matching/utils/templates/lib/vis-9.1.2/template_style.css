@@ -94,6 +94,14 @@ p {
     padding: 10px;
 }
 
+a:link, a:visited {
+    color: #3f3e3eb6;
+  }
+
+ a:hover {
+    color: #232222cb;
+ } 
+
 #reopenButton {
     position: fixed;
     top: 15px;
