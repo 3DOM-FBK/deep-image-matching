@@ -371,7 +371,7 @@ class Config:
             if not config_file.exists():
                 raise FileNotFoundError(f"Configuration file {config_file} not found.")
             self.update_from_yaml(config_file)
-            self.print()
+            # self.print()
 
         self.config_file = self._cfg["general"]["output_dir"] / "config.json"
         self.save(self.config_file)
