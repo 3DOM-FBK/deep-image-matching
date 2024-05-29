@@ -15,7 +15,7 @@ from . import (
     matchers,
 )
 from .config import Config
-from .constants import GeometricVerification, Quality, TileSelection, Timer
+from .constants import Timer
 
 # from .extractors import SuperPointExtractor, extractor_loader
 from .extractors import extractor_loader
@@ -25,7 +25,7 @@ from .io import get_features
 # from .matchers import LightGlueMatcher, matcher_loader
 from .matchers import matcher_loader
 from .matchers.lightglue import LightGlueMatcher
-from .pairs_generator import PairsGenerator
+from .pairs_generator import pairs_from_bruteforce, pairs_from_lowres, pairs_from_retrieval, pairs_from_sequential
 from .utils import ImageList, get_pairs_from_file
 
 logger = logging.getLogger("dim")
@@ -63,60 +63,23 @@ class ImageMatcher:
     def __init__(
         self,
         config: Config,
-        # imgs_dir: Path,
-        # output_dir: Path,
-        # matching_strategy: str,
-        # local_features: str,
-        # matching_method: str,
-        # retrieval_option: str = None,
-        # pair_file: Path = None,
-        # overlap: int = None,
-        # existing_colmap_model: Path = None,
-        # custom_config: dict = {},
     ):
         """
         Initializes the ImageMatcher class.
 
-        Parameters:
-            imgs_dir (Path): Path to the directory containing the images.
-            output_dir (Path): Path to the output directory for the results.
-            matching_strategy (str): The strategy for generating pairs of images for matching.
-            local_features (str): The method for extracting local features from the images.
-            matching_method (str): The method for matching pairs of images.
-            retrieval_option (str, optional): The retrieval option for generating pairs of images. Defaults to None.
-            pair_file (Path, optional): Path to the file containing custom pairs of images. Required when 'retrieval_option' is set to 'custom_pairs'. Defaults to None.
-            overlap (int, optional): The overlap between tiles. Required when 'retrieval_option' is set to 'sequential'. Defaults to None.
-            existing_colmap_model (Path, optional): Path to the existing COLMAP model. Required when 'retrieval_option' is set to 'covisibility'. Defaults to None.
-            custom_config (dict, optional): Custom configuration settings. Defaults to {}.
-
-        Raises:
-            ValueError: If the 'overlap' option is required but not provided when 'retrieval_option' is set to 'sequential'.
-            ValueError: If the 'pair_file' option is required but not provided when 'retrieval_option' is set to 'custom_pairs'.
-            ValueError: If the 'pair_file' does not exist when 'retrieval_option' is set to 'custom_pairs'.
-            ValueError: If the 'existing_colmap_model' option is required but not provided when 'retrieval_option' is set to 'covisibility'.
-            ValueError: If the 'existing_colmap_model' does not exist when 'retrieval_option' is set to 'covisibility'.
-            ValueError: If the image folder is empty or contains only one image.
-
-        Returns:
-            None
+        Args:
+            config (Config): The DIM configuration object.
         """
 
         # Store configuration
         self.config = config
         self.image_dir = Path(config.general["image_dir"])
         self.output_dir = Path(config.general["output_dir"])
+        self.output_dir.mkdir(parents=True, exist_ok=True)
         self.strategy = config.general["matching_strategy"]
         self.extraction = config.extractor["name"]
         self.matching = config.matcher["name"]
         self.pair_file = config.general["pair_file"]
-
-        # self.existing_colmap_model = config.general["db_path"]
-        # if config.general["retrieval"] == "covisibility":
-        #     if self.existing_colmap_model is None:
-        #         raise ValueError("'existing_colmap_model' option is required when 'strategy' is set to covisibility")
-        #     else:
-        #         if not self.existing_colmap_model.exists():
-        #             raise ValueError(f"File {self.existing_colmap_model} does not exist")
 
         # Initialize ImageList class
         self.image_list = ImageList(self.image_dir)
@@ -125,9 +88,6 @@ class ImageMatcher:
             raise ValueError(f"Image folder empty. Supported formats: {self.image_ext}")
         elif len(images) == 1:
             raise ValueError("Image folder must contain at least two images")
-
-        # Initialize output directory
-        self.output_dir.mkdir(parents=True, exist_ok=True)
 
         # Initialize extractor
         try:
@@ -169,12 +129,6 @@ class ImageMatcher:
     def run(self):
         """
         Runs the image matching pipeline.
-
-        Returns:
-            None
-
-        Raises:
-            None
         """
         # Generate pairs to be matched
         pair_path = self.generate_pairs()
@@ -202,32 +156,62 @@ class ImageMatcher:
 
         return feature_path, match_path
 
-    def generate_pairs(self, **kwargs) -> Path:
+    def generate_pairs(self) -> Path:
         """
         Generates pairs of images for matching.
 
         Returns:
             Path: The path to the pair file containing the generated pairs of images.
         """
-        if self.pair_file is not None and self.strategy == "custom_pairs":
+
+        if self.strategy == "custom_pairs":
+            if self.pair_file is None:
+                raise ValueError("Custom pairs strategy requires a pair file")
             if not self.pair_file.exists():
                 raise FileExistsError(f"File {self.pair_file} does not exist")
-
             pairs = get_pairs_from_file(self.pair_file)
             self.pairs = [(self.image_dir / im1, self.image_dir / im2) for im1, im2 in pairs]
+            return self.pair_file
 
-        else:
-            pairs_generator = PairsGenerator(
+        # If the path to the pair file is not provided, generate pairs
+        if self.pair_file is None:
+            self.pair_file = self.output_dir / "pairs.txt"
+
+        elif self.strategy == "sequential":
+            if self.config.general["overlap"] is None:
+                raise ValueError("Overlap is required when 'strategy' is set to sequential")
+            self.pairs = pairs_from_sequential(
                 self.image_list.img_paths,
-                self.pair_file,
-                self.strategy,
-                self.config.general["retrieval"],
                 self.config.general["overlap"],
+            )
+
+        elif self.strategy == "bruteforce":
+            self.pairs = pairs_from_bruteforce(self.image_list.img_paths)
+
+        elif self.strategy == "matching_lowres":
+            self.pairs = pairs_from_lowres(
+                self.image_list.img_paths,
+                resize_max=1000,
+                min_matches=20,
+                max_keypoints=2000,
+                do_geometric_verification=False,
+            )
+
+        elif self.strategy == "retrieval":
+            self.pairs = pairs_from_retrieval(
+                self.image_list.img_paths,
+                self.config.general["retrieval"],
                 self.image_dir,
                 self.output_dir,
-                **kwargs,
             )
-            self.pairs = pairs_generator.run()
+
+        with open(self.pair_file, "w") as txt_file:
+            for p1, p2 in self.pairs:
+                if isinstance(p1, Path):
+                    p1 = p1.name
+                if isinstance(p2, Path):
+                    p2 = p2.name
+                txt_file.write(f"{p1} {p2}\n")
 
         return self.pair_file
 

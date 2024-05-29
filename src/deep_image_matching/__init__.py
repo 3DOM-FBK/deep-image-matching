@@ -40,7 +40,6 @@ from .parser import parse_cli
 
 # Import classes and variables
 from .image_matching import ImageMatcher
-from .pairs_generator import PairsGenerator
 from .constants import *
 from .config import Config
 
