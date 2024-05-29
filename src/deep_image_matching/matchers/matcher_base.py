@@ -292,7 +292,7 @@ class MatcherBase(metaclass=ABCMeta):
 
         logger.debug(f"Matching {img0_name}-{img1_name} done!")
 
-        # # For debugging
+        # Viz for debugging
         if self.config.general["verbose"]:
             viz_dir = self.config.general["output_dir"] / "debug" / "matches"
             viz_dir.mkdir(parents=True, exist_ok=True)
@@ -420,79 +420,18 @@ class MatcherBase(metaclass=ABCMeta):
         save_path: str = None,
         fast_viz: bool = True,
         interactive_viz: bool = False,
-        **kwargs,
+        **config,
     ) -> None:
-        # Check input parameters
-        if not interactive_viz:
-            assert save_path is not None, "output_dir must be specified if interactive_viz is False"
-        if fast_viz:
-            if interactive_viz:
-                logger.warning("interactive_viz is ignored if fast_viz is True")
-            assert save_path is not None, "output_dir must be specified if fast_viz is True"
-
-        # Get config parameters
-        interactive_viz = kwargs.get("interactive_viz", False)
-        autoresize = kwargs.get("autoresize", True)
-        max_long_edge = kwargs.get("max_long_edge", 1200)
-        jpg_quality = kwargs.get("jpg_quality", 80)
-        hide_matching_track = kwargs.get("hide_matching_track", False)
-
-        img0 = Path(img0)
-        img1 = Path(img1)
-        img0_name = img0.name
-        img1_name = img1.name
-
-        # Load images
-        image0 = load_image_np(img0, as_float=False, grayscale=True)
-        image1 = load_image_np(img1, as_float=False, grayscale=True)
-
-        # Load features and matches
-        features0 = get_features(feature_path, img0_name)
-        features1 = get_features(feature_path, img1_name)
-        matches = get_matches(matchings_path, img0_name, img1_name)
-        kpts0 = features0["keypoints"][matches[:, 0]]
-        kpts1 = features1["keypoints"][matches[:, 1]]
-
-        # Make visualization with OpenCV or Matplotlib
-        if fast_viz:
-            if hide_matching_track:
-                line_thickness = -1
-            else:
-                line_thickness = 1
-
-            viz_matches_cv2(
-                image0,
-                image1,
-                kpts0,
-                kpts1,
-                str(save_path),
-                line_thickness=line_thickness,
-                autoresize=autoresize,
-                max_long_edge=max_long_edge,
-                jpg_quality=jpg_quality,
-            )
-        else:
-            hide_fig = not interactive_viz
-            if interactive_viz:
-                viz_matches_mpl(
-                    image0,
-                    image1,
-                    kpts0,
-                    kpts1,
-                    hide_fig=hide_fig,
-                    config=kwargs,
-                )
-            else:
-                viz_matches_mpl(
-                    image0,
-                    image1,
-                    kpts0,
-                    kpts1,
-                    save_path,
-                    hide_fig=hide_fig,
-                    point_size=5,
-                    config=kwargs,
-                )
+        viz_helper(
+            feature_path,
+            matchings_path,
+            img0,
+            img1,
+            save_path,
+            fast_viz,
+            interactive_viz,
+            **config,
+        )
 
 
 class DetectorFreeMatcherBase(metaclass=ABCMeta):
@@ -666,16 +605,19 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         timer_match.update("save to h5")
         timer_match.print(f"{__class__.__name__} match")
 
-        # For debugging
-        # viz_dir = self.config.general["output_dir"] / "viz"
-        # viz_dir.mkdir(parents=True, exist_ok=True)
-        # self.viz_matches(
-        #     feature_path,
-        #     matches_path,
-        #     img0,
-        #     img1,
-        #     save_path=viz_dir / f"{img0_name}_{img1_name}.png",
-        # )
+        # Viz for debugging
+        if self.config.general["verbose"]:
+            viz_dir = self.config.general["output_dir"] / "debug" / "matches"
+            viz_dir.mkdir(parents=True, exist_ok=True)
+            self.viz_matches(
+                feature_path,
+                matches_path,
+                img0,
+                img1,
+                save_path=viz_dir / f"{img0_name}_{img1_name}.jpg",
+                img_format="jpg",
+                jpg_quality=70,
+            )
 
         logger.debug(f"Matching {img0_name}-{img1_name} done!")
 
@@ -815,79 +757,91 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         interactive_viz: bool = False,
         **config,
     ) -> None:
-        # Check input parameters
-        if not interactive_viz:
-            assert save_path is not None, "output_dir must be specified if interactive_viz is False"
-        if fast_viz:
-            if interactive_viz:
-                logger.warning("interactive_viz is ignored if fast_viz is True")
-            assert save_path is not None, "output_dir must be specified if fast_viz is True"
+        viz_helper(feature_path, matchings_path, img0, img1, save_path, fast_viz, interactive_viz, **config)
 
-        img0 = Path(img0)
-        img1 = Path(img1)
-        img0_name = img0.name
-        img1_name = img1.name
 
-        # Load images
-        image0 = load_image_np(img0, self.as_float, self.grayscale)
-        image1 = load_image_np(img1, self.as_float, self.grayscale)
+# Various util functions
+def viz_helper(
+    feature_path: Path,
+    matchings_path: Path,
+    img0: Path,
+    img1: Path,
+    save_path: str = None,
+    fast_viz: bool = True,
+    interactive_viz: bool = False,
+    grayscale: bool = True,
+    **config,
+) -> None:
+    # Check input parameters
+    if not interactive_viz:
+        assert save_path is not None, "output_dir must be specified if interactive_viz is False"
+    if fast_viz:
+        if interactive_viz:
+            logger.warning("interactive_viz is ignored if fast_viz is True")
+        assert save_path is not None, "output_dir must be specified if fast_viz is True"
 
-        # Load features and matches
-        features0 = get_features(feature_path, img0_name)
-        features1 = get_features(feature_path, img1_name)
-        matches = get_matches(matchings_path, img0_name, img1_name)
-        kpts0 = features0["keypoints"][matches[:, 0]]
-        kpts1 = features1["keypoints"][matches[:, 1]]
+    img0 = Path(img0)
+    img1 = Path(img1)
+    img0_name = img0.name
+    img1_name = img1.name
 
-        # Make visualization with OpenCV or Matplotlib
-        if fast_viz:
-            # Get config for OpenCV visualization
-            autoresize = config.get("autoresize", True)
-            max_long_edge = config.get("max_long_edge", 1200)
-            jpg_quality = config.get("jpg_quality", 80)
-            hide_matching_track = config.get("hide_matching_track", False)
-            if hide_matching_track:
-                line_thickness = -1
-            else:
-                line_thickness = 0.2
+    # Load images
+    image0 = load_image_np(img0, as_float=False, grayscale=grayscale)
+    image1 = load_image_np(img1, as_float=False, grayscale=grayscale)
 
-            viz_matches_cv2(
+    # Load features and matches
+    features0 = get_features(feature_path, img0_name)
+    features1 = get_features(feature_path, img1_name)
+    matches = get_matches(matchings_path, img0_name, img1_name)
+    kpts0 = features0["keypoints"][matches[:, 0]]
+    kpts1 = features1["keypoints"][matches[:, 1]]
+
+    # Make visualization with OpenCV or Matplotlib
+    if fast_viz:
+        # Get config for OpenCV visualization
+        autoresize = config.get("autoresize", True)
+        max_long_edge = config.get("max_long_edge", 1200)
+        jpg_quality = config.get("jpg_quality", 80)
+        hide_matching_track = config.get("hide_matching_track", False)
+        if hide_matching_track:
+            line_thickness = -1
+        else:
+            line_thickness = 1
+
+        viz_matches_cv2(
+            image0,
+            image1,
+            kpts0,
+            kpts1,
+            str(save_path),
+            line_thickness=line_thickness,
+            autoresize=autoresize,
+            max_long_edge=max_long_edge,
+            jpg_quality=jpg_quality,
+        )
+    else:
+        interactive_viz = config.get("interactive_viz", False)
+        hide_fig = not interactive_viz
+        if interactive_viz:
+            viz_matches_mpl(
                 image0,
                 image1,
                 kpts0,
                 kpts1,
-                str(save_path),
-                line_thickness=line_thickness,
-                autoresize=autoresize,
-                max_long_edge=max_long_edge,
-                jpg_quality=jpg_quality,
+                hide_fig=hide_fig,
+                config=config,
             )
         else:
-            interactive_viz = config.get("interactive_viz", False)
-            hide_fig = not interactive_viz
-            if interactive_viz:
-                viz_matches_mpl(
-                    image0,
-                    image1,
-                    kpts0,
-                    kpts1,
-                    hide_fig=hide_fig,
-                    config=config,
-                )
-            else:
-                viz_matches_mpl(
-                    image0,
-                    image1,
-                    kpts0,
-                    kpts1,
-                    save_path,
-                    hide_fig=hide_fig,
-                    point_size=5,
-                    config=config,
-                )
-
-
-# Various util functions
+            viz_matches_mpl(
+                image0,
+                image1,
+                kpts0,
+                kpts1,
+                save_path,
+                hide_fig=hide_fig,
+                point_size=5,
+                config=config,
+            )
 
 
 def tile_selection(

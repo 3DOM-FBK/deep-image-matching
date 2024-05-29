@@ -167,6 +167,20 @@ class RomaMatcher(DetectorFreeMatcherBase):
                 return None
         timer_match.update("save to h5")
 
+        # Viz for debugging
+        if self.config.general["verbose"]:
+            viz_dir = self.config.general["output_dir"] / "debug" / "matches"
+            viz_dir.mkdir(parents=True, exist_ok=True)
+            self.viz_matches(
+                feature_path,
+                matches_path,
+                img0,
+                img1,
+                save_path=viz_dir / f"{img0_name}_{img1_name}.jpg",
+                img_format="jpg",
+                jpg_quality=70,
+            )
+
         timer_match.print(f"{__class__.__name__} match")
 
     @torch.inference_mode()
@@ -338,21 +352,21 @@ class RomaMatcher(DetectorFreeMatcherBase):
             logger.debug(f"     Found {len(kptsA)} matches")
 
             # Viz for debugging
-            if self.config.general["verbose"]:
-                tile_match_dir = Path(self.config.general["output_dir"]) / "debug" / "matches_by_tile"
-                tile_match_dir.mkdir(parents=True, exist_ok=True)
-                t0 = cv2.imread(str(tile_path0))
-                t1 = cv2.imread(str(tile_path1))
-                viz_matches_cv2(
-                    image0=t0,
-                    image1=t1,
-                    pts0=kptsA,
-                    pts1=kptsB,
-                    save_path=tile_match_dir / f"{img0.stem}-{img1.stem}_t{tidx0}-{tidx1}.jpg",
-                    line_thickness=1,
-                    autoresize=False,
-                    jpg_quality=60,
-                )
+            # if self.config.general["verbose"]:
+            #     tile_match_dir = Path(self.config.general["output_dir"]) / "debug" / "matches_by_tile"
+            #     tile_match_dir.mkdir(parents=True, exist_ok=True)
+            #     t0 = cv2.imread(str(tile_path0))
+            #     t1 = cv2.imread(str(tile_path1))
+            #     viz_matches_cv2(
+            #         image0=t0,
+            #         image1=t1,
+            #         pts0=kptsA,
+            #         pts1=kptsB,
+            #         save_path=tile_match_dir / f"{img0.stem}-{img1.stem}_t{tidx0}-{tidx1}.jpg",
+            #         line_thickness=1,
+            #         autoresize=False,
+            #         jpg_quality=60,
+            #     )
 
             # Restore original image coordinates (not cropped)
             kptsA = kptsA + np.array(t_origins0[tidx0]).astype("float32")
@@ -394,21 +408,21 @@ class RomaMatcher(DetectorFreeMatcherBase):
             mkpts1_full = mkpts1_full[unique_idx]
 
         # Viz for debugging
-        if self.config.general["verbose"]:
-            tile_match_dir = Path(self.config.general["output_dir"]) / "debug" / "matches_by_tile"
-            tile_match_dir.mkdir(parents=True, exist_ok=True)
-            image0 = cv2.imread(str(img0))
-            image1 = cv2.imread(str(img1))
-            viz_matches_cv2(
-                image0,
-                image1,
-                mkpts0_full,
-                mkpts1_full,
-                save_path=tile_match_dir / f"{img0.stem}-{img1.stem}.jpg",
-                line_thickness=-1,
-                autoresize=True,
-                jpg_quality=60,
-            )
+        # if self.config.general["verbose"]:
+        #     tile_match_dir = Path(self.config.general["output_dir"]) / "debug" / "matches_by_tile"
+        #     tile_match_dir.mkdir(parents=True, exist_ok=True)
+        #     image0 = cv2.imread(str(img0))
+        #     image1 = cv2.imread(str(img1))
+        #     viz_matches_cv2(
+        #         image0,
+        #         image1,
+        #         mkpts0_full,
+        #         mkpts1_full,
+        #         save_path=tile_match_dir / f"{img0.stem}-{img1.stem}.jpg",
+        #         line_thickness=-1,
+        #         autoresize=True,
+        #         jpg_quality=60,
+        #     )
 
         # Create a 1-to-1 matching array
         matches0 = np.arange(mkpts0_full.shape[0])
