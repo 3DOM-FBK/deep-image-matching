@@ -6,6 +6,15 @@ Please note that the following scripts are not part of the main pipeline and are
 
 Documentation for the scripts is in progress. If you have any questions, please open an issue.
 
+### Merging databases with different local features
+
+To run the matching with different local features and/or matchers and marging together the results, you can use scripts in the `./scripts` directory for merging the COLMAP databases.
+
+```
+python ./join_databases.py --help
+python ./join_databases.py --input path/to/dir/with/databases --output path/to/output/dir
+```
+
 ## Check Matches
 
 To visualize the geometrically verified matches, you have two options:

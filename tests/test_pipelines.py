@@ -288,6 +288,8 @@ def test_keynet(data_dir):
 
 
 def test_dedode_nn(data_dir):
+    if not torch.cuda.is_available():
+        pytest.skip("DeDoDe is not available without CUDA GPU.")
     prm = {
         "dir": data_dir,
         "pipeline": "dedode+kornia_matcher",

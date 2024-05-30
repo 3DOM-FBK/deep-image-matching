@@ -155,36 +155,13 @@ The `--dir` parameter defines the processing directory, where all the results wi
 
 The `--pipeline` parameter defines the combaination of local feature extractor and matcher.
 
-For all the usage instructions and configurations, refer to the [documenation](https://3dom-fbk.github.io/deep-image-matching/getting_started) or check the example notebooks.
+For all the usage instructions and configurations, refer to the [documenation](https://3dom-fbk.github.io/deep-image-matching/getting_started) or check the demo notebooks.
 
 <!-- To run the GUI, you can use the following command:
 
 ```bash
 python main.py --gui
 ``` -->
-
-## Advanced usage
-
-For advanced usage, please refer to the [documentation](https://3dom-fbk.github.io/deep-image-matching/) and/or check the `scripts` directory.
-
-### Merging databases with different local features
-
-To run the matching with different local features and/or matchers and marging together the results, you can use scripts in the `./scripts` directory for merging the COLMAP databases.
-
-```
-python ./join_databases.py --help
-python ./join_databases.py --input path/to/dir/with/databases --output path/to/output/dir
-```
-
-### Exporting the solution to Metashape
-
-To export the solution to Metashape, you can export the COLMAP database to Bundler format and then import it into Metashape.
-This can be done from Metashape GUI, by first importing the images and then use the function `Import Cameras` (File -> Import -> Import Cameras) to select Bundler file (e.g., bundler.out) and the image list file (e.g., bundler_list.txt).
-
-Alternatevely, you can use the `export_to_metashape.py` script to automatically create a Metashape project from a reconstruction saved in Bundler format.
-The script `export_to_metashape.py` takes as input the solution in Bundler format and the images and it exports the solution to Metashape.
-It requires to install Metashape as a Python module in your environment and to have a valid license.
-Please, refer to the instructions at [https://github.com/franioli/metashape](https://github.com/franioli/metashape).
 
 ## How to contribute
 
