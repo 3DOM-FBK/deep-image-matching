@@ -123,10 +123,13 @@ class ImageMatcher:
     def img_names(self):
         return self.image_list.img_names
 
-    def run(self, export_to_colmap: bool = True):
+    def run(self, export_to_colmap: bool = True, verbose: bool = False):
         """
         Runs the image matching pipeline.
         """
+        if verbose:
+            self.config["general"]["verbose"] = True
+
         # Generate pairs to be matched
         pair_path = self.generate_pairs()
         timer.update("generate_pairs")
