@@ -6,9 +6,12 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-import pycolmap
-
 logger = logging.getLogger("dim")
+
+try:
+    import pycolmap
+except ImportError:
+    logger.error("pycolmap not found, 3D reconstruction will not be available.")
 
 
 class OutputCapture:

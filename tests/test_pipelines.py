@@ -7,7 +7,6 @@ import torch
 import yaml
 from deep_image_matching import Config, ImageMatcher
 from deep_image_matching.io import export_to_colmap
-from deep_image_matching.reconstruction import pycolmap_reconstruction
 
 
 @pytest.fixture
@@ -106,6 +105,9 @@ def test_sp_lg_custom_config(data_dir):
 def test_pycolmap(data_dir):
     if platform.system() == "Windows":
         pytest.skip("Pycolmap is not available on Windows. Please use WSL or Docker to run this test.")
+
+    from deep_image_matching.reconstruction import pycolmap_reconstruction
+
     prm = {
         "dir": data_dir,
         "pipeline": "superpoint+lightglue",
