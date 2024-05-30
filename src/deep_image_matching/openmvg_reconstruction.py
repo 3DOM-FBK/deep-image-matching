@@ -1,10 +1,11 @@
+import logging
 import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-from .constants import logger
+logger = logging.getLogger("dim")
 
 
 def main(

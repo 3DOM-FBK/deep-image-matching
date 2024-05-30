@@ -94,7 +94,7 @@ def match_low_resolution(
     img_list: List[Union[str, Path]],
     feature_path: Path,
     matches_path: Path,
-    resize_max: int = 2000,
+    resize_max: int = 1000,
     min_matches: int = 15,
     do_geometric_verification: bool = False,
     sp_cfg: dict = {},

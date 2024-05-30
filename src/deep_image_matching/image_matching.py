@@ -10,17 +10,14 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from . import (
-    extractors,
-    matchers,
-)
+from . import extractors, matchers
 from .config import Config
 from .constants import Timer
 
 # from .extractors import SuperPointExtractor, extractor_loader
 from .extractors import extractor_loader
 from .extractors.superpoint import SuperPointExtractor
-from .io import get_features
+from .io import export_to_colmap, get_features
 
 # from .matchers import LightGlueMatcher, matcher_loader
 from .matchers import matcher_loader
@@ -126,7 +123,7 @@ class ImageMatcher:
     def img_names(self):
         return self.image_list.img_names
 
-    def run(self):
+    def run(self, export_to_colmap: bool = True):
         """
         Runs the image matching pipeline.
         """
@@ -150,6 +147,16 @@ class ImageMatcher:
         if self.config.general["upright"]:
             self.rotate_back_features(feature_path)
             timer.update("rotate_back_features")
+
+        # Export to COLMAP
+        if export_to_colmap:
+            export_to_colmap(
+                img_dir=self.image_dir,
+                feature_path=feature_path,
+                match_path=match_path,
+                database_path=self.output_dir / "database.db",
+                camera_config_path=self.config.general["camera_options"],
+            )
 
         # Print timing
         timer.print("Deep Image Matching")
