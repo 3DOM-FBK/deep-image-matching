@@ -2,12 +2,6 @@ import inspect
 from enum import Enum
 from typing import Tuple
 
-from .utils import Timer, setup_logger
-
-logger = setup_logger(name="dim", log_level="info")
-timer = Timer(logger=logger)
-
-
 # def get_extractor_classes(root):
 #     classes = inspect.getmembers(root, inspect.isclass)
 #     classes = [c[0] for c in classes if issubclass(c[1], root.ExtractorBase)]

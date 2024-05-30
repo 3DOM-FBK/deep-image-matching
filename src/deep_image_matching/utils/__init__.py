@@ -5,6 +5,7 @@ from .database import (
     image_ids_to_pair_id,
     pair_id_to_image_ids,
 )
+from .geometric_verification import geometric_verification
 from .image import Image, ImageList
 from .logger import change_logger_level, setup_logger
 from .tiling import Tiler

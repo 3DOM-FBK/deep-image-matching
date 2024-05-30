@@ -9,11 +9,11 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from deep_image_matching.constants import Timer, logger
+from deep_image_matching.constants import logger
 from deep_image_matching.io.h5 import get_features
 from deep_image_matching.thirdparty.hloc.extractors.superpoint import SuperPoint
 from deep_image_matching.thirdparty.LightGlue.lightglue import LightGlue
-from deep_image_matching.utils.geometric_verification import geometric_verification
+from deep_image_matching.utils import Timer, geometric_verification
 
 
 class FeaturesDict(TypedDict):

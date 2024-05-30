@@ -6,8 +6,8 @@ import numpy as np
 import torch
 from kornia import feature as KF
 
-from ..constants import TileSelection, Timer
-from ..utils.tiling import Tiler
+from ..constants import TileSelection
+from ..utils import Tiler, Timer
 from .matcher_base import DetectorFreeMatcherBase, tile_selection
 
 logger = logging.getLogger("dim")

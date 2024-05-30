@@ -4,6 +4,10 @@ import logging
 from time import time
 from collections import OrderedDict
 
+from .utils import setup_logger
+
+logger = setup_logger(name="dim", log_level="info")
+
 time_dict = OrderedDict()
 time_dict["start"] = time()
 

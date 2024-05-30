@@ -12,18 +12,18 @@ from tqdm import tqdm
 
 from . import extractors, matchers
 from .config import Config
-from .constants import Timer
 
 # from .extractors import SuperPointExtractor, extractor_loader
 from .extractors import extractor_loader
 from .extractors.superpoint import SuperPointExtractor
-from .io import export_to_colmap, get_features
+from .io import export_to_colmap as exp2colmap
+from .io import get_features
 
 # from .matchers import LightGlueMatcher, matcher_loader
 from .matchers import matcher_loader
 from .matchers.lightglue import LightGlueMatcher
 from .pairs_generator import pairs_from_bruteforce, pairs_from_lowres, pairs_from_retrieval, pairs_from_sequential
-from .utils import ImageList, get_pairs_from_file
+from .utils import ImageList, Timer, get_pairs_from_file
 
 logger = logging.getLogger("dim")
 timer = Timer(logger=logger)
@@ -150,7 +150,7 @@ class ImageMatcher:
 
         # Export to COLMAP
         if export_to_colmap:
-            export_to_colmap(
+            exp2colmap(
                 img_dir=self.image_dir,
                 feature_path=feature_path,
                 match_path=match_path,

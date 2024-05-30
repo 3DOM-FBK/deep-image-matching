@@ -8,10 +8,10 @@ import numpy as np
 import torch
 from yacs.config import CfgNode as CN
 
-from ..constants import TileSelection, Timer
+from ..constants import TileSelection
 from ..thirdparty.se2loftr.configs.loftr.outdoor import loftr_ds_e2_dense_8rot
 from ..thirdparty.se2loftr.src.loftr import LoFTR
-from ..utils.tiling import Tiler
+from ..utils import Tiler, Timer
 from .matcher_base import DetectorFreeMatcherBase, tile_selection
 
 logger = logging.getLogger("dim")

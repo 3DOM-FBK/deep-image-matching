@@ -9,11 +9,11 @@ import torch
 from PIL import Image
 from tqdm import tqdm
 
-from ..constants import TileSelection, Timer
+from ..constants import TileSelection
 from ..io.h5 import get_features
 from ..thirdparty.RoMa.roma import roma_outdoor
+from ..utils import Tiler, Timer
 from ..utils.geometric_verification import geometric_verification
-from ..utils.tiling import Tiler
 from ..visualization import viz_matches_cv2
 from .matcher_base import DetectorFreeMatcherBase, tile_selection
 

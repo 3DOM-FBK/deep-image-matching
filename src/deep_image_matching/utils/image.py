@@ -6,7 +6,8 @@ from typing import Tuple, Union
 import cv2
 import exifread
 import numpy as np
-import PIL
+from PIL import Image as PImage
+
 from exifread.exceptions import ExifNotFound, InvalidExif
 
 from .sensor_width_database import SensorWidthDatabase
@@ -16,7 +17,7 @@ logger = logging.getLogger("dim")
 
 IMAGE_EXT = [".jpg", ".JPG", ".png", ".PNG", ".tif", "TIF"]
 
-PIL.Image.MAX_IMAGE_PIXELS = None
+PImage.MAX_IMAGE_PIXELS = None
 
 
 def read_image(
@@ -62,8 +63,8 @@ def resize_image(
             interp = cv2.INTER_LINEAR
         resized = cv2.resize(image, size, interpolation=interp)
     elif interp.startswith("pil_"):
-        interp = getattr(PIL.Image, interp[len("pil_") :].upper())
-        resized = PIL.Image.fromarray(image.astype(np.uint8))
+        interp = getattr(PImage, interp[len("pil_") :].upper())
+        resized = PImage.fromarray(image.astype(np.uint8))
         resized = resized.resize(size, resample=interp)
         resized = np.asarray(resized, dtype=image.dtype)
     else:
@@ -115,7 +116,7 @@ class Image:
         try:
             self.read_exif()
         except InvalidExif as e:
-            img = PIL.Image.open(path)
+            img = PImage.open(path)
             self._width, self._height = img.size
 
     def __repr__(self) -> str:
@@ -164,7 +165,7 @@ class Image:
         if self._height is None:
             logger.error(f"Image height not available for {self.name}. Try to read it from the image file.")
             try:
-                img = PIL.Image.open(self._path)
+                img = PImage.open(self._path)
                 self._width, self._height = img.size
             except Exception as e:
                 logger.error(f"Unable to read image size for {self.name}: {e}")
@@ -177,7 +178,7 @@ class Image:
         if self._width is None:
             logger.error(f"Image width not available for {self.name}. Try to read it from the image file.")
             try:
-                img = PIL.Image.open(self._path)
+                img = PImage.open(self._path)
                 self._width, self._height = img.size
             except Exception as e:
                 logger.error(f"Unable to read image size for {self.name}: {e}")
@@ -191,7 +192,7 @@ class Image:
         if self._width is None or self._height is None:
             logger.warning(f"Image size not available for {self.name}. Trying to read it from the image file.")
             try:
-                img = PIL.Image.open(self._path)
+                img = PImage.open(self._path)
                 self._width, self._height = img.size
             except Exception as e:
                 logger.error(f"Unable to read image size for {self.name}: {e}")

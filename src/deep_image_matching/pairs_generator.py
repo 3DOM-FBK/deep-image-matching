@@ -1,3 +1,4 @@
+import logging
 from collections import defaultdict
 from itertools import combinations
 from pathlib import Path
@@ -8,12 +9,14 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from .constants import Timer, logger
 from .image_retrieval import ImageRetrieval
 from .io.colmap_read_write_model import read_model
 from .thirdparty.hloc.extractors.superpoint import SuperPoint
 from .thirdparty.LightGlue.lightglue import LightGlue
-from .utils.geometric_verification import geometric_verification
+from .utils import Timer, geometric_verification
+
+logger = logging.getLogger("dim")
+timer = Timer(logger=logger)
 
 
 def pairs_from_bruteforce(img_list: List[Union[str, Path]]) -> List[tuple]:

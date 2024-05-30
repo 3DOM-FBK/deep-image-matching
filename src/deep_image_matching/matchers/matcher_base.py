@@ -11,14 +11,13 @@ import numpy as np
 import torch
 
 from ..config import Config
-from ..constants import Quality, TileSelection, Timer, get_size_by_quality
+from ..constants import Quality, TileSelection, get_size_by_quality
 from ..extractors.extractor_base import ExtractorBase
 from ..io.h5 import get_features, get_matches
 from ..thirdparty.hloc.extractors.superpoint import SuperPoint
 from ..thirdparty.LightGlue.lightglue import LightGlue
-from ..utils.geometric_verification import geometric_verification
+from ..utils import Tiler, Timer, geometric_verification
 from ..utils.image import resize_image
-from ..utils.tiling import Tiler
 from ..visualization import viz_matches_cv2, viz_matches_mpl
 
 logger = logging.getLogger("dim")
