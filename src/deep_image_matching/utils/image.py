@@ -7,6 +7,7 @@ import cv2
 import exifread
 import numpy as np
 import PIL
+from exifread.exceptions import ExifNotFound, InvalidExif
 
 from .sensor_width_database import SensorWidthDatabase
 
@@ -113,7 +114,7 @@ class Image:
 
         try:
             self.read_exif()
-        except Exception:
+        except InvalidExif as e:
             img = PIL.Image.open(path)
             self._width, self._height = img.size
 
@@ -263,20 +264,12 @@ class Image:
             None
 
         """
-        from exifread.exceptions import ExifNotFound, InvalidExif
-
         try:
             with open(self._path, "rb") as f:
                 exif = exifread.process_file(f, details=False, debug=False)
-        except IOError as e:
-            logger.info(f"{e}. Unable to read exif data for image {self.name}.")
+        except (IOError, InvalidExif, ExifNotFound) as e:
+            logger.debug(f"{e}. Unable to read exif data for image {self.name}.")
             raise InvalidExif("Exif error")
-        except InvalidExif as e:
-            logger.info(f"Unable to read exif data for image {self.name}. {e}")
-            raise ValueError("Exif error")
-        except ExifNotFound as e:
-            logger.info(f"Unable to read exif data for image {self.name}. {e}")
-            raise ValueError("Exif error")
 
         if len(exif) == 0:
             logger.info(f"No exif data available for image {self.name} (this will probably not affect the matching).")
