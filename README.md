@@ -19,9 +19,7 @@
 
 Multivew matcher for SfM software. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. Now, it supports both OpenMVG and MicMac. Feel free to collaborate!
 
-While `dev` branch is more frequently updated, `master` is the default more stable branch and is updated from `dev` less frequently. If you are looking for the newest developments, please switch to `dev`.
-
-For how to use DIM, check the <a href="https://3dom-fbk.github.io/deep-image-matching/">Documentation</a> (updated for the master branch).
+The `master` is the default more stable branch and is updated from `dev` less frequently. If you are looking for the newest developments, please switch to `dev`. For how to use DIM, check the <a href="https://3dom-fbk.github.io/deep-image-matching/">Documentation</a> (updated for the master branch).
 
 **Please, note that `deep-image-matching` is under active development** and it is still in an experimental stage. If you find any bug, please open an issue.
 
