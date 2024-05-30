@@ -1,10 +1,9 @@
-import logging
 from importlib import import_module
 
 import deep_image_matching as dim
 import yaml
 
-logger = dim.setup_logger("dim")
+logger = dim.logger
 
 # Parse arguments from command line
 args = dim.parse_cli()
@@ -19,16 +18,7 @@ matcher = dim.ImageMatcher(config)
 
 # Run image matching
 feature_path, match_path = matcher.run()
-
-# Export in colmap format
 database_path = output_dir / "database.db"
-dim.io.export_to_colmap(
-    img_dir=imgs_dir,
-    feature_path=feature_path,
-    match_path=match_path,
-    database_path=database_path,
-    camera_config_path=config.general["camera_options"],
-)
 
 # Visualize view graph
 if config.general["graph"]:
