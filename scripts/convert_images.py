@@ -2,33 +2,54 @@ import os
 import cv2
 import argparse
 import numpy as np
-
+import rasterio
 from PIL import Image
-from deep_image_matching import logger
 
 
 def load_img(
     path_to_img: str,
+    reader: str,
 ):
-    #img = cv2.imread(path_to_img, cv2.IMREAD_ANYDEPTH)
-    logger.debug(
-        "Image loaded with pillow .."
-    )
-    img = Image.open(path_to_img)
-    img = img.convert("L")
-    logger.info(f"Image mode: {img.mode}")
-    img = np.array(img)
-    logger.info(f"Image mode: {img.dtype}")
+    """
+    Load an image from the given path using the specified reader.
+
+    Args:
+        path_to_img (str): Path to the image file.
+        reader (str): The image reader to use. Supported options are "rasterio", "opencv", and "pillow".
+
+    Returns:
+        numpy.ndarray: The loaded image as a NumPy array.
+    """
+    if reader == "rasterio":
+        with rasterio.open(path_to_img) as dataset:
+            img = dataset.read(1)
+
+    elif reader == "opencv":
+        img = cv2.imread(path_to_img, cv2.IMREAD_ANYDEPTH)
+
+    elif reader == "pillow":
+        img = Image.open(path_to_img)
+        img = img.convert("L")
+        img = np.array(img)
 
     return img
 
 
-def convert_images(input_folder, output_folder, target_format, normalize, method):
-    # Create the output folder if it doesn't exist
+def convert_images(input_folder, output_folder, target_format, normalize, method, reader):
+    """
+    Convert images in a folder to a target image format using OpenCV.
+
+    Args:
+        input_folder (str): Path to the folder containing input images.
+        output_folder (str): Path to the folder where converted images will be saved.
+        target_format (str): Target image format (e.g., 'png', 'jpg', 'jpeg', 'tiff').
+        normalize (bool): Flag indicating whether to normalize pixel values to cover the whole range 0-255.
+        method (str): Normalization method. Supported options are "single_image" and "image_set".
+        reader (str): Library to read the images. Supported options are "opencv", "pillow", and "rasterio".
+    """
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
-    # Get a list of all image files in the input folder
     image_files = [
         f
         for f in os.listdir(input_folder)
@@ -55,7 +76,7 @@ def convert_images(input_folder, output_folder, target_format, normalize, method
         )
     ]
     if len(image_files) == 0:
-        logger.error(
+        print(
             "No images in the folder. Check that the path to the folder is correct or that the format is supported."
         )
         quit()
@@ -66,7 +87,7 @@ def convert_images(input_folder, output_folder, target_format, normalize, method
 
     for image_file in image_files:
         image_path = os.path.join(input_folder, image_file)
-        img = load_img(image_path)
+        img = load_img(image_path, reader)
 
         MIN.append(np.min(img))
         MAX.append(np.max(img))
@@ -75,15 +96,14 @@ def convert_images(input_folder, output_folder, target_format, normalize, method
     abs_max = np.max(MAX)
 
     for i, image_file in enumerate(image_files):
-        # Read the image
-        logger.info(f"[IMAGE{i}]")
+        print(f"[IMAGE{i}]")
         image_path = os.path.join(input_folder, image_file)
         output_path = os.path.join(
             output_folder, os.path.splitext(image_file)[0] + "." + target_format
         )
-        img = load_img(image_path)
+        img = load_img(image_path, reader)
         min_original, max_original = np.min(img), np.max(img)
-        logger.info(f"Range: min_original {min_original}  max_original {max_original}")
+        print(f"Range: min_original {min_original}  max_original {max_original}")
 
         if not normalize:
             if img.dtype == np.uint8:
@@ -116,7 +136,6 @@ def convert_images(input_folder, output_folder, target_format, normalize, method
 
 
 if __name__ == "__main__":
-    # Parse command-line arguments
     parser = argparse.ArgumentParser(
         description="Convert images in a folder to a target image format using OpenCV."
     )
@@ -135,18 +154,23 @@ if __name__ == "__main__":
         help="Normalize pixel values if set to cover the whole range 0-255.",
     )
     parser.add_argument(
-        "-m",
         "--method",
         choices=["single_image", "image_set"],
         help="Normalize respect max and min of each single image or respect max and min of the entire image set.",
     )
+    parser.add_argument(
+        "--reader",
+        choices=["opencv", "pillow", "rasterio"],
+        default="pillow",
+        help="Library to read the images. Default is 'pillow'.",
+    )
     args = parser.parse_args()
 
-    # Call the function to convert images
     convert_images(
         args.input_folder,
         args.output_folder,
         args.target_format,
         args.normalize,
         args.method,
+        args.reader,
     )
