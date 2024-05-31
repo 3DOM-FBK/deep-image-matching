@@ -9,6 +9,7 @@ import os, h5py, warnings
 import numpy as np
 from tqdm import tqdm
 from PIL import Image, ExifTags
+import argparse
 
 # Credit to: https://github.com/ducha-aiki/imc2023-kornia-starter-pack/blob/main/loftr-pycolmap-3dreconstruction.ipynb
 
@@ -138,15 +139,23 @@ def import_into_colmap(img_dir,
 
 
 if __name__ == '__main__':
-    
-    input_dir = r"C:\Users\fbk3d\Desktop\transparent-temp\glass_cup\z_input"
-    out_dir = r"C:\Users\fbk3d\Desktop\transparent-temp\glass_cup\z_output"
-    image_dir = r"C:\Users\fbk3d\Desktop\transparent-temp\glass_cup\images"
+    parser = argparse.ArgumentParser(description='LOFTR Roma Script')
+    parser.add_argument('--input_dir', type=str, default=r"C:\Users\fbk3d\Desktop\transparent-temp\glass_cup\z_input", help='Input directory')
+    parser.add_argument('--output_dir', type=str, default=r"C:\Users\fbk3d\Desktop\transparent-temp\glass_cup\z_output", help='Output directory')
+    parser.add_argument('--image_dir', type=str, default=r"C:\Users\fbk3d\Desktop\transparent-temp\glass_cup\images", help='Image directory')
+    parser.add_argument('--img_ext', type=str, default='.jpg', help='Image extension')
+
+    args = parser.parse_args()
+
+    input_dir = args.input_dir
+    output_dir = args.output_dir
+    image_dir = args.image_dir
+    img_ext = args.img_ext
 
     with h5py.File(fr'{input_dir}\features.h5', mode='r') as h5_feats, \
         h5py.File(fr'{input_dir}\matches.h5', mode='r') as h5_matches, \
         h5py.File(fr'{input_dir}\matches_loftr.h5', mode='w') as h5_out:
-    
+ 
         for img1 in h5_matches.keys():
             print(img1)
             kpts1 = h5_feats[img1]['keypoints'][...]
@@ -206,11 +215,11 @@ if __name__ == '__main__':
             m2_semiclean2 = m2_semiclean[unique_idxs_current2]
             out_match[k1][k2] = m2_semiclean2.numpy()
 
-    with h5py.File(fr'{out_dir}\keypoints.h5', mode='w') as f_kp:
+    with h5py.File(fr'{output_dir}\keypoints.h5', mode='w') as f_kp:
         for k, kpts1 in unique_kpts.items():
             f_kp[k] = kpts1
 
-    with h5py.File(fr'{out_dir}\matches.h5', mode='w') as f_match:
+    with h5py.File(fr'{output_dir}\matches.h5', mode='w') as f_match:
         for k1, gr in out_match.items():
             group  = f_match.require_group(k1)
             for k2, match in gr.items():
@@ -219,5 +228,5 @@ if __name__ == '__main__':
 
     import_into_colmap(
         image_dir, 
-        feature_dir=f"{out_dir}", 
-        database_path=f"{out_dir}/colmap_loftr.db")
+        feature_dir=f"{output_dir}", 
+        database_path=f"{output_dir}/colmap_loftr.db")
