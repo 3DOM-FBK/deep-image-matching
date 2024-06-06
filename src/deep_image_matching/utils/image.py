@@ -6,9 +6,8 @@ from typing import Tuple, Union
 import cv2
 import exifread
 import numpy as np
-from PIL import Image as PImage
-
 from exifread.exceptions import ExifNotFound, InvalidExif
+from PIL import Image as PImage
 
 from .sensor_width_database import SensorWidthDatabase
 
@@ -115,7 +114,8 @@ class Image:
 
         try:
             self.read_exif()
-        except InvalidExif as e:
+        except InvalidExif:
+            logger.debug(f"No exif data available for image {self.name} (this will probably not affect the matching)")
             img = PImage.open(path)
             self._width, self._height = img.size
 
@@ -257,9 +257,7 @@ class Image:
         Read image exif with exifread and store them in a dictionary
 
         Raises:
-            IOError: If there is an error reading the image file.
-            InvalidExif: If the exif data is invalid.
-            ExifNotFound: If no exif data is found for the image.
+            InvalidExif: If the exif data is invalid or not available.
 
         Returns:
             None
@@ -269,12 +267,10 @@ class Image:
             with open(self._path, "rb") as f:
                 exif = exifread.process_file(f, details=False, debug=False)
         except (IOError, InvalidExif, ExifNotFound) as e:
-            logger.debug(f"{e}. Unable to read exif data for image {self.name}.")
-            raise InvalidExif("Exif error")
+            raise InvalidExif(e)
 
         if len(exif) == 0:
-            logger.info(f"No exif data available for image {self.name} (this will probably not affect the matching).")
-            raise ValueError("Exif error")
+            raise InvalidExif()
 
         # Get image size
         if "Image ImageWidth" in exif.keys() and "Image ImageLength" in exif.keys():
