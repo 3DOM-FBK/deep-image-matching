@@ -39,10 +39,12 @@
                 Click on nodes to show the <b>image preview</b> and to highlight connections.</br>
                 Hover on edges to show the number of <b>matches</b> between a pair of images.</br></br>
 
-                Nodes are positioned using the <b>Fruchterman-Reingold</b> force-directed algorithm, the closer the nodes, the stronger the connection.
+                Nodes are positioned using the <b>Fruchterman-Reingold</b> force-directed algorithm <a href="https://networkx.org/documentation/stable/reference/generated/networkx.drawing.layout.spring_layout.html">[1]</a>, the closer the nodes, the stronger the connection.
                 Images are grouped into <b>communities</b>. Nodes share more matches with other nodes inside the community and fewer with nodes outside.</br></br>
                 Click on a community in the list to <b>cluster</b> the graph.</br>
-                Click on the cluster to <b>reopen</b> the community. </br> </br> 
+                Click on the cluster to <b>reopen</b> the community. </br> </br>
+                A list of images 'communities.csv' grouped by community is automatically created in the results folder. </br>
+                If present, images which have a significantly lower <b>clustering coefficient</b> <a href="https://networkx.org/documentation/stable/reference/algorithms/generated/networkx.algorithms.cluster.clustering.html#networkx.algorithms.cluster.clustering">[2]</a> than the average of their community are represented with larger size. These may be community outliers, so check them first! </br></br>
                 <b>Not aligned images</b> (if available) are shown in the list below and on the side of the graph.
 
             </p>
@@ -196,8 +198,8 @@
             });
 
             network.on("zoom", function(params) {
-                if (document.getElementById("imagePopup") != null)
-                    imagePopup.style.transform = "scale(" + params.scale + ")";
+                //if (document.getElementById("imagePopup") != null)
+                    //imagePopup.style.transform = "scale(" + params.scale + ")";
             });
 
                 //   network.once("stabilizationIterationsDone", function() {
@@ -237,7 +239,6 @@
 
                 //position tooltip:
                 posCanvas.x = posCanvas.x + 0.5 * (boundingBox.right - boundingBox.left);
-
                 // convert coordinates to the DOM space
                 var posDOM = network.canvasToDOM(posCanvas);
 
