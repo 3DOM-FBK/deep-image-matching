@@ -243,7 +243,7 @@ opt_zoo = {
         "matching_lowres",
         "covisibility",
     ],
-    "upright_strategy": ["custom", "2-clusters"]
+    "upright_strategy": ["custom", "2clusters", "exif"]
 }
 
 
