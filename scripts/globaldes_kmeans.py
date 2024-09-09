@@ -12,6 +12,7 @@ if __name__ == "__main__":
     parser.add_argument('--imgs_dir', type=str, help='Path to the directory containing the images')
     parser.add_argument('--outs_dir', type=str, help='Path to the output directory')
     parser.add_argument('--retrieval_conf', type=str, default='netvlad', help='Configuration for retrieval, e.g. netvlad')
+    parser.add_argument('--kmeans_clusters', type=int, default=1000, help='Number of clusters for KMeans')
 
     args = parser.parse_args()
 
@@ -33,7 +34,7 @@ if __name__ == "__main__":
         #print(matrix.shape)
         #print(images);quit()
 
-    X = 1000  # Number of clusters you want
+    X = args.kmeans_clusters  # Number of clusters you want
     kmeans = KMeans(n_clusters=X, random_state=42)
     kmeans.fit(matrix)
     labels = kmeans.labels_
@@ -47,8 +48,6 @@ if __name__ == "__main__":
             f.write(f"left/{kfrm}\n")
             f.write(f"right/{kfrm}\n")
 
-    
 
     ## Get the cluster centers (centroids)
     #centroids = kmeans.cluster_centers_
-
