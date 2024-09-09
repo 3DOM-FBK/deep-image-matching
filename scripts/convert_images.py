@@ -5,20 +5,22 @@ import numpy as np
 
 from PIL import Image
 from deep_image_matching import logger
-
-
+import rasterio as rio
+ 
 def load_img(
     path_to_img: str,
 ):
+    img = rio.open(path_to_img).read(1)
+    #print(img.shape);quit()
     #img = cv2.imread(path_to_img, cv2.IMREAD_ANYDEPTH)
-    logger.debug(
-        "Image loaded with pillow .."
-    )
-    img = Image.open(path_to_img)
-    img = img.convert("L")
-    logger.info(f"Image mode: {img.mode}")
-    img = np.array(img)
-    logger.info(f"Image mode: {img.dtype}")
+    #logger.debug(
+    #    "Image loaded with pillow .."
+    #)
+    #img = Image.open(path_to_img)
+    #img = img.convert("L")
+    #logger.info(f"Image mode: {img.mode}")
+    #img = np.array(img)
+    #logger.info(f"Image mode: {img.dtype}")
 
     return img
 
