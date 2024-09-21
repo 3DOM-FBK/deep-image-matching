@@ -139,11 +139,11 @@ def import_into_colmap(img_dir,
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='LOFTR Roma Script')
-    parser.add_argument('--input_dir', type=str, default=r"C:\Users\fbk3d\Desktop\transparent-temp\glass_cup\z_input", help='Input directory')
-    parser.add_argument('--output_dir', type=str, default=r"C:\Users\fbk3d\Desktop\transparent-temp\glass_cup\z_output", help='Output directory')
-    parser.add_argument('--image_dir', type=str, default=r"C:\Users\fbk3d\Desktop\transparent-temp\glass_cup\images", help='Image directory')
-    parser.add_argument('--img_ext', type=str, default='.jpg', help='Image extension')
+    parser = argparse.ArgumentParser(description='LOFTR and Roma matchers to multi-view. Assign same index to keypoints in different images with distance < 1 px')
+    parser.add_argument('-i', '--input_dir', type=str, help='Path to directory containing databases features.h5 and matches.h5')
+    parser.add_argument('-o', '--output_dir', type=str, help='Output directory')
+    parser.add_argument('-d', '--image_dir', type=str, help='Image directory')
+    parser.add_argument('-e', '--img_ext', type=str, default='.jpg', help='Image extension')
 
     args = parser.parse_args()
 
