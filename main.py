@@ -1,7 +1,10 @@
+import os
 import logging
 from importlib import import_module
+from pathlib import Path
 
 import deep_image_matching as dim
+from deep_image_matching.utils.loftr_roma_to_multiview import LoftrRomaToMultiview
 import yaml
 
 logger = dim.setup_logger("dim")
@@ -29,6 +32,15 @@ dim.io.export_to_colmap(
     database_path=database_path,
     camera_config_path=config.general["camera_options"],
 )
+
+if matcher.matching in ["loftr", "se2loftr", "roma"]:
+    images = os.listdir(imgs_dir)
+    image_format = Path(images[0]).suffix
+    LoftrRomaToMultiview(
+        input_dir=feature_path.parent,
+        output_dir=feature_path.parent,
+        image_dir=imgs_dir, 
+        img_ext=image_format)
 
 # Visualize view graph
 if config.general["graph"]:
