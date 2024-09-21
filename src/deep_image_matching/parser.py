@@ -104,9 +104,9 @@ def parse_cli() -> dict:
     )
     parser.add_argument(
         "--upright",
-        action="store_true",
-        help="Enable the estimation of the best image rotation for the matching (useful in case of aerial datasets).",
-        default=False,
+        choices=Config.get_upright_options(),
+        default=None,
+        help="Enable the estimation of the best image rotation for the matching.",
     )
     parser.add_argument(
         "--skip_reconstruction",

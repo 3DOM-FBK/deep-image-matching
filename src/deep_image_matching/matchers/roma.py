@@ -194,6 +194,12 @@ class RomaMatcher(DetectorFreeMatcherBase):
         W_A, H_A = Image.open(img0_path).size
         W_B, H_B = Image.open(img1_path).size
 
+        #for path in [str(img0_path), str(img1_path)]:
+        #    image = cv2.imread(path, cv2.IMREAD_UNCHANGED)
+        #    if len(image.shape) == 2:
+        #        image_rgb = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+        #        cv2.imwrite(path, image_rgb)
+
         warp, certainty = self.matcher.match(str(img0_path), str(img1_path), device=self._device)
         matches, certainty = self.matcher.sample(warp, certainty)
         kptsA, kptsB = self.matcher.to_pixel_coordinates(matches, H_A, W_A, H_B, W_B)

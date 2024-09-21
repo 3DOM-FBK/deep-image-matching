@@ -236,7 +236,6 @@ def add_keypoints(db: Path, h5_path: Path, image_path: Path, camera_options: dic
     grouped_images = parse_camera_options(camera_options, db, image_path)
 
     with h5py.File(str(h5_path), "r") as keypoint_f:
-        # camera_id = None
         fname_to_id = {}
         k = 0
         for filename in tqdm(list(keypoint_f.keys())):
@@ -256,18 +255,16 @@ def add_keypoints(db: Path, h5_path: Path, image_path: Path, camera_options: dic
                         k += 1
                     elif k > 0:
                         camera_id = single_camera_id
-            else:
+            elif filename in list(grouped_images.keys()):
                 camera_id = grouped_images[filename]["camera_id"]
+            else:
+                print('ERROR in h5_to_db.py')
+                quit()
             image_id = db.add_image(filename, camera_id)
             fname_to_id[filename] = image_id
-            # print('keypoints')
-            # print(keypoints)
-            # print('image_id', image_id)
+
             if len(keypoints.shape) >= 2:
                 db.add_keypoints(image_id, keypoints)
-            # else:
-            #    keypoints =
-            #    db.add_keypoints(image_id, keypoints)
 
     return fname_to_id
 

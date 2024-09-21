@@ -243,6 +243,7 @@ opt_zoo = {
         "matching_lowres",
         "covisibility",
     ],
+    "upright_strategy": ["custom", "2clusters", "exif"]
 }
 
 
@@ -393,6 +394,10 @@ class Config:
     @staticmethod
     def get_retrieval_names() -> list:
         return opt_zoo["retrieval"]
+    
+    @staticmethod
+    def get_upright_options() -> list:
+        return opt_zoo["upright_strategy"]
 
     @staticmethod
     def parse_general_config(input_args: dict) -> dict:

@@ -1,12 +1,12 @@
 general:
-  camera_model: "pinhole" # ["simple-pinhole", "pinhole", "simple-radial", "opencv"]
+  camera_model: "simple-radial" # ["simple-pinhole", "pinhole", "simple-radial", "opencv"]
   openmvg_camera_model: "pinhole_radial_k3" # ["pinhole", "pinhole_radial_k3", "pinhole_brown_t2"]
-  single_camera: True
+  single_camera: False
 
-cam0:
-  camera_model: "pinhole"
-  images : ""
+cam0: # Do not add additional space when listing images, just comma separated
+  camera_model: "opencv"
+  images : "DSC_6466.JPG,DSC_6467.JPG"
 
 cam1:
-  camera_model: "pinhole"
-  images : "DSC_6468.jpg,DSC_6468.jpg"
+  camera_model: "simple-pinhole"
+  images : "DSC_6468.JPG"

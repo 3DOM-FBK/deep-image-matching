@@ -5,11 +5,15 @@ import numpy as np
 import rasterio
 from PIL import Image
 
-
+from deep_image_matching import logger
+import rasterio as rio
+ 
+  
 def load_img(
     path_to_img: str,
     reader: str,
 ):
+
     """
     Load an image from the given path using the specified reader.
 

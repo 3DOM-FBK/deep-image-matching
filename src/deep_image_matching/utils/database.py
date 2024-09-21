@@ -363,3 +363,23 @@ class COLMAPDatabase(sqlite3.Connection):
             matches[im_ids] = mtc
 
         return matches, images
+    
+    def get_images(self) -> dict:
+        query = "SELECT image_id, name, camera_id FROM images"
+        data = self.execute(query).fetchall()
+        images = {}
+        for d in data:
+            image_id = d[0]
+            image_name = d[1]
+            camera_id = d[2]
+            images[image_name] = (image_id, camera_id)
+        return images
+    
+    def clean_keypoints(self):
+        self.execute("DELETE FROM keypoints")
+    
+    def clean_matches(self):
+        self.execute("DELETE FROM matches")
+    
+    def clean_two_view_geometries(self):
+        self.execute("DELETE FROM two_view_geometries")
