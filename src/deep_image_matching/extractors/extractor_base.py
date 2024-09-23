@@ -205,7 +205,7 @@ class ExtractorBase(metaclass=ABCMeta):
         save_features_h5(
             feature_path,
             features,
-            im_path.name,
+            img.name,
             as_half=self.features_as_half,
         )
 

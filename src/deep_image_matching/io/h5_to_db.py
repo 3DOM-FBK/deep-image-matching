@@ -25,9 +25,11 @@ from pathlib import Path
 import h5py
 import numpy as np
 import yaml
-from PIL import ExifTags, Image
+from PIL import ExifTags
+from PIL import Image as PIL_Image
 from tqdm import tqdm
 
+from ..utils.image import Image
 from ..utils.database import COLMAPDatabase, image_ids_to_pair_id
 
 logger = logging.getLogger("dim")
@@ -127,7 +129,7 @@ def get_focal(image_path: Path, err_on_default: bool = False) -> float:
         This function calculates the focal length based on the maximum size of the image and the EXIF data. If the focal length cannot be determined from the EXIF data, it uses a default prior value.
 
     """
-    image = Image.open(image_path)
+    image = PIL_Image.open(image_path)
     max_size = max(image.size)
 
     exif = image.getexif()
@@ -156,7 +158,7 @@ def get_focal(image_path: Path, err_on_default: bool = False) -> float:
 
 
 def create_camera(db: Path, image_path: Path, camera_model: str):
-    image = Image.open(image_path)
+    image = PIL_Image.open(image_path)
     width, height = image.size
 
     focal = get_focal(image_path)
@@ -237,7 +239,7 @@ def add_keypoints(db: Path, h5_path: Path, image_path: Path, camera_options: dic
 
     with h5py.File(str(h5_path), "r") as keypoint_f:
         fname_to_id = {}
-        k = 0
+        created_cameras = {}
         for filename in tqdm(list(keypoint_f.keys())):
             keypoints = keypoint_f[filename]["keypoints"].__array__()
 
@@ -247,19 +249,31 @@ def add_keypoints(db: Path, h5_path: Path, image_path: Path, camera_options: dic
 
             if filename not in list(grouped_images.keys()):
                 if camera_options["general"]["single_camera"] is False:
-                    camera_id = create_camera(db, path, camera_options["general"]["camera_model"])
+                    image = Image(path)
+                    if image.camera_id != None:
+                        if image.camera_id not in created_cameras:
+                            camera_id = create_camera(
+                                db, path, camera_options[f"cam{image.camera_id}"]["camera_model"]
+                            )
+                            created_cameras[image.camera_id] = camera_id
+                        else:
+                            camera_id = created_cameras[image.camera_id]
+                    else:
+                        camera_id = create_camera(
+                            db, path, camera_options["general"]["camera_model"]
+                        )
+                        created_cameras[camera_id] = camera_id
                 elif camera_options["general"]["single_camera"] is True:
-                    if k == 0:
-                        camera_id = create_camera(db, path, camera_options["general"]["camera_model"])
+                    if len(created_cameras) == 0:
+                        camera_id = create_camera(
+                            db, path, camera_options["general"]["camera_model"]
+                        )
                         single_camera_id = camera_id
-                        k += 1
-                    elif k > 0:
+                        created_cameras[camera_id] = camera_id
+                    else:
                         camera_id = single_camera_id
-            elif filename in list(grouped_images.keys()):
-                camera_id = grouped_images[filename]["camera_id"]
             else:
-                print('ERROR in h5_to_db.py')
-                quit()
+                camera_id = grouped_images[filename]["camera_id"]
             image_id = db.add_image(filename, camera_id)
             fname_to_id[filename] = image_id
 

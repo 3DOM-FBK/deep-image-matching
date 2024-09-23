@@ -420,6 +420,7 @@ class ImageMatcher:
         pairs = [(item[0].name, item[1].name) for item in self.pairs]
         path_to_upright_dir = self.output_dir / "upright_images"
         os.makedirs(path_to_upright_dir, exist_ok=False)
+        # I guess will break here, use recursive folder iterator
         images = os.listdir(self.image_dir)
 
         logger.info(f"Copying images to {path_to_upright_dir}")

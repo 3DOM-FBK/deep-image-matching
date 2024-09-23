@@ -13,6 +13,7 @@ from ..constants import TileSelection, Timer
 from ..io.h5 import get_features
 from ..thirdparty.RoMa.roma import roma_outdoor
 from ..utils.geometric_verification import geometric_verification
+from ..utils.image import Image
 from ..utils.tiling import Tiler
 from ..visualization import viz_matches_cv2
 from .matcher_base import DetectorFreeMatcherBase, tile_selection
@@ -115,8 +116,8 @@ class RomaMatcher(DetectorFreeMatcherBase):
             self._feature_path = Path(feature_path)
 
         # Get features from h5 file
-        img0 = Path(img0)
-        img1 = Path(img1)
+        img0 = Image(img0)
+        img1 = Image(img1)
         img0_name = img0.name
         img1_name = img1.name
 
@@ -139,7 +140,7 @@ class RomaMatcher(DetectorFreeMatcherBase):
         features1 = get_features(feature_path, img1_name)
 
         # Rescale threshold according the image original image size
-        img_shape = cv2.imread(str(img0)).shape
+        img_shape = cv2.imread(img0.path).shape
         tile_size = max(self.config["general"]["tile_size"])
         scale_fct = np.floor(max(img_shape) / tile_size / 2)
         gv_threshold = self.config["general"]["gv_threshold"] * scale_fct
@@ -172,8 +173,8 @@ class RomaMatcher(DetectorFreeMatcherBase):
     def _match_pairs(
         self,
         feature_path: Path,
-        img0_path: Path,
-        img1_path: Path,
+        img0: Image,
+        img1: Image
     ):
         """
         Perform matching between feature pairs.
@@ -187,12 +188,12 @@ class RomaMatcher(DetectorFreeMatcherBase):
             np.ndarray: Array containing the indices of matched keypoints.
         """
 
-        img0_name = img0_path.name
-        img1_name = img1_path.name
+        img0_name = img0.name
+        img1_name = img1.name
 
         # Run inference
-        W_A, H_A = Image.open(img0_path).size
-        W_B, H_B = Image.open(img1_path).size
+        W_A, H_A = Image.open(img0.path).size
+        W_B, H_B = Image.open(img1.path).size
 
         #for path in [str(img0_path), str(img1_path)]:
         #    image = cv2.imread(path, cv2.IMREAD_UNCHANGED)
@@ -200,7 +201,7 @@ class RomaMatcher(DetectorFreeMatcherBase):
         #        image_rgb = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
         #        cv2.imwrite(path, image_rgb)
 
-        warp, certainty = self.matcher.match(str(img0_path), str(img1_path), device=self._device)
+        warp, certainty = self.matcher.match(img0.path, img1.path, device=self._device)
         matches, certainty = self.matcher.sample(warp, certainty)
         kptsA, kptsB = self.matcher.to_pixel_coordinates(matches, H_A, W_A, H_B, W_B)
         kptsA, kptsB = kptsA.cpu().numpy(), kptsB.cpu().numpy()
@@ -283,8 +284,8 @@ class RomaMatcher(DetectorFreeMatcherBase):
         timer.update("tile selection")
 
         # Read images and resize them if needed
-        image0 = cv2.imread(str(img0))
-        image1 = cv2.imread(str(img1))
+        image0 = cv2.imread(img0.path)
+        image1 = cv2.imread(img1.path)
         image0 = self._resize_image(self._quality, image0)
         image1 = self._resize_image(self._quality, image1)
 
