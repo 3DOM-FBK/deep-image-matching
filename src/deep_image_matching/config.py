@@ -45,7 +45,7 @@ conf_general = {
     #   GeometricVerification.MAGSAC (use opencv MAGSAC),
     #   Other methods: RANSAC, LMEDS, RHO, USAC_DEFAULT, USAC_PARALLEL, USAC_FM_8PTS, USAC_FAST, USAC_ACCURATE, USAC_PROSAC, USAC_MAGSAC
     "geom_verification": GeometricVerification.PYDEGENSAC,
-    "gv_threshold": 4,
+    "gv_threshold": 1,
     "gv_confidence": 0.99999,
     # Minimum number of inliers matches and minumum inlier ratio per pair
     "min_inliers_per_pair": 15,
@@ -171,6 +171,10 @@ confs = {
         "extractor": {"name": "no_extractor"},
         "matcher": {"name": "roma", "pretrained": "outdoor"},
     },
+    "srif": {
+        "extractor": {"name": "no_extractor"},
+        "matcher": {"name": "srif", "pretrained": "outdoor"}, ################################################### togliere outdoor
+    },
     "keynetaffnethardnet+kornia_matcher": {
         "extractor": {
             "name": "keynetaffnethardnet",
@@ -230,6 +234,7 @@ opt_zoo = {
         "lightglue",
         "loftr",
         "se2loftr",
+        "srif",
         "adalam",
         "kornia_matcher",
         "roma",

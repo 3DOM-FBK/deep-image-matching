@@ -33,7 +33,7 @@ dim.io.export_to_colmap(
     camera_config_path=config.general["camera_options"],
 )
 
-if matcher.matching in ["loftr", "se2loftr", "roma"]:
+if matcher.matching in ["loftr", "se2loftr", "roma", "srif"]:
     images = os.listdir(imgs_dir)
     image_format = Path(images[0]).suffix
     LoftrRomaToMultiview(
