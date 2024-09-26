@@ -95,7 +95,7 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
         Raises:
             torch.cuda.OutOfMemoryError: If an out-of-memory error occurs while matching images.
         """
-        MAX_FEATURES = 5000
+        MAX_FEATURES = 8000
         img0_name = img0_path.name
         img1_name = img1_path.name
 
@@ -126,7 +126,7 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
                 mkpts1,
                 px_th=1.0,
                 conf=0.99,
-                max_iters=100000,
+                max_iters=10000,
             )
             mkpts0 = mkpts0[inlMask, :]
             mkpts1 = mkpts1[inlMask, :]
