@@ -1,4 +1,5 @@
 import os
+import time
 import logging
 from importlib import import_module
 from pathlib import Path
@@ -6,6 +7,8 @@ from pathlib import Path
 import deep_image_matching as dim
 from deep_image_matching.utils.loftr_roma_to_multiview import LoftrRomaToMultiview
 import yaml
+
+start_time = time.time()
 
 logger = dim.setup_logger("dim")
 
@@ -32,6 +35,9 @@ dim.io.export_to_colmap(
     database_path=database_path,
     camera_config_path=config.general["camera_options"],
 )
+
+import shutil
+shutil.copyfile(database_path, output_dir / "debug.db")
 
 if matcher.matching in ["loftr", "se2loftr", "roma", "srif"]:
     images = os.listdir(imgs_dir)
@@ -112,3 +118,8 @@ if not config.general["skip_reconstruction"]:
             verbose=config.general["verbose"],
             refine_intrinsics=refine_intrinsics,
         )
+
+end_time = time.time()
+
+total_time = end_time - start_time
+print(f"Total processing time: {total_time:.2f} seconds")
