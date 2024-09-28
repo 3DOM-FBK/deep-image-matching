@@ -1,7 +1,7 @@
 import os
 import argparse
 from pathlib import Path
-
+import sqlite3
 import cv2
 import numpy as np
 from deep_image_matching.utils.database import (
@@ -10,12 +10,45 @@ from deep_image_matching.utils.database import (
     pair_id_to_image_ids,
 )
 
-def generate_pairs(imgs_dir):
+
+def pair_id_to_image_ids(pair_id):
+    image_id2 = pair_id % 2147483647
+    image_id1 = (pair_id - image_id2) / 2147483647
+    return image_id1, image_id2
+
+def ExportMatches(
+    database_path: Path, 
+    min_num_matches: int = 1, 
+) -> None:
+    
+    connection = sqlite3.connect(database_path)
+    cursor = connection.cursor()
     pairs = []
-    n_images = len(os.listdir(imgs_dir))
-    for i in range(n_images-1):
-        if i%2 == 0:
-            pairs.append((i+1, i+2))
+
+    cursor.execute("SELECT pair_id, rows FROM two_view_geometries")
+    for row in cursor:
+        pair_id = row[0]
+        n_matches = row[1]
+        id_img1, id_img2 = pair_id_to_image_ids(pair_id)
+        id_img1, id_img2 = int(id_img1), int(id_img2)
+        #img1 = images[id_img1]
+        #img2 = images[id_img2]
+        if n_matches >= min_num_matches:
+            pairs.append((id_img1, id_img2))
+    
+    connection.close()
+
+    return pairs
+
+def generate_pairs(imgs_dir, method=["bruteforce", "custom"], database_path=Path("./")):
+    pairs = []
+    if method == "custom":
+        n_images = len(os.listdir(imgs_dir))
+        for i in range(n_images-1):
+            if i%2 == 0:
+                pairs.append((i+1, i+2))
+    elif method == "bruteforce":
+        pairs = ExportMatches(database_path)
     return pairs
 
 class ShowPairMatches:
@@ -93,8 +126,14 @@ class ShowPairMatches:
         keypoints1 = self.keypoints[id1][:,:2]
         print(f"Img {id0}: kpts shape = {keypoints0.shape}")
         print(f"Img {id1}: kpts shape = {keypoints1.shape}")
-        print("raw matches shape", np.shape(self.matches[(id0, id1)]))
-        print("verified matches shape", np.shape(self.two_views_matches[(id0, id1)]))
+        try:
+            print("raw matches shape", np.shape(self.matches[(id0, id1)]))
+        except:
+            pass
+        try:
+            print("verified matches shape", np.shape(self.two_views_matches[(id0, id1)]))
+        except:
+            pass
 
         img0_path = self.imgs_dir / self.imgs[id0]
         img1_path = self.imgs_dir / self.imgs[id1]
@@ -247,7 +286,7 @@ def main():
         show_pair_matches.ShowMatches()
     
     else:
-        pairs = generate_pairs(imgs_dir)
+        pairs = generate_pairs(imgs_dir, method="bruteforce", database_path=database_path)
         print(pairs)
         for pair in pairs:
             i1, i2 = pair[0], pair[1]
