@@ -8,6 +8,7 @@ from kornia import feature as KF
 
 from ..constants import TileSelection, Timer
 from ..utils.tiling import Tiler
+from ..utils.image import Image
 from .matcher_base import DetectorFreeMatcherBase, tile_selection
 
 logger = logging.getLogger("dim")
@@ -92,13 +93,15 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
         Raises:
             torch.cuda.OutOfMemoryError: If an out-of-memory error occurs while matching images.
         """
-
-        img0_name = img0_path.name
-        img1_name = img1_path.name
+        # Could just rename args but they might be used as keyword args elsewhere
+        img0 = img0_path
+        img1 = img1_path
+        img0_name = img0.name
+        img1_name = img0.name
 
         # Load images
-        image0 = self._load_image_np(img0_path)
-        image1 = self._load_image_np(img1_path)
+        image0 = self._load_image_np(img0.path)
+        image1 = self._load_image_np(img1.path)
 
         # Resize images if needed
         image0_ = self._resize_image(self._quality, image0)

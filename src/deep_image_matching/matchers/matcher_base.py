@@ -17,7 +17,7 @@ from ..io.h5 import get_features, get_matches
 from ..thirdparty.hloc.extractors.superpoint import SuperPoint
 from ..thirdparty.LightGlue.lightglue import LightGlue
 from ..utils.geometric_verification import geometric_verification
-from ..utils.image import resize_image
+from ..utils.image import resize_image, Image
 from ..utils.tiling import Tiler
 from ..visualization import viz_matches_cv2, viz_matches_mpl
 
@@ -205,10 +205,12 @@ class MatcherBase(metaclass=ABCMeta):
             self._feature_path = Path(feature_path)
 
         # Get features from h5 file
+        img0 = Image(img0)
+        img1 = Image(img1)
         img0_name = img0.name
         img1_name = img1.name
-        features0 = get_features(self._feature_path, img0.name)
-        features1 = get_features(self._feature_path, img1.name)
+        features0 = get_features(self._feature_path, img0_name)
+        features1 = get_features(self._feature_path, img1_name)
         timer_match.update("load h5 features")
 
         # Perform matching (on tiles or full images)
@@ -328,8 +330,8 @@ class MatcherBase(metaclass=ABCMeta):
             self.viz_matches(
                 feature_path,
                 matches_path,
-                img0,
-                img1,
+                img0.path,
+                img1.path,
                 save_path=viz_dir / f"{img0_name}_{img1_name}.jpg",
                 img_format="jpg",
                 jpg_quality=70,
@@ -466,14 +468,14 @@ class MatcherBase(metaclass=ABCMeta):
         jpg_quality = kwargs.get("jpg_quality", 80)
         hide_matching_track = kwargs.get("hide_matching_track", False)
 
-        img0 = Path(img0)
-        img1 = Path(img1)
+        img0 = Image(img0)
+        img1 = Image(img1)
         img0_name = img0.name
         img1_name = img1.name
 
         # Load images
-        image0 = load_image_np(img0, as_float=False, grayscale=True)
-        image1 = load_image_np(img1, as_float=False, grayscale=True)
+        image0 = load_image_np(img0.path, as_float=False, grayscale=True)
+        image1 = load_image_np(img1.path, as_float=False, grayscale=True)
 
         # Load features and matches
         features0 = get_features(feature_path, img0_name)
@@ -648,8 +650,8 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         else:
             self._feature_path = Path(feature_path)
 
-        img0 = Path(img0)
-        img1 = Path(img1)
+        img0 = Image(img0)
+        img1 = Image(img1)
         img0_name = img0.name
         img1_name = img1.name
 
@@ -672,7 +674,7 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         features1 = get_features(feature_path, img1_name)
 
         # Rescale threshold according the image original image size
-        img_shape = cv2.imread(str(img0)).shape
+        img_shape = cv2.imread(img0.path).shape
         scale_fct = np.floor(max(img_shape) / self.max_tile_size / 2)
         gv_threshold = self.config["general"]["gv_threshold"] * scale_fct
 
@@ -854,14 +856,14 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
                 logger.warning("interactive_viz is ignored if fast_viz is True")
             assert save_path is not None, "output_dir must be specified if fast_viz is True"
 
-        img0 = Path(img0)
-        img1 = Path(img1)
+        img0 = Image(img0)
+        img1 = Image(img1)
         img0_name = img0.name
         img1_name = img1.name
 
         # Load images
-        image0 = load_image_np(img0, self.as_float, self.grayscale)
-        image1 = load_image_np(img1, self.as_float, self.grayscale)
+        image0 = load_image_np(img0.path, self.as_float, self.grayscale)
+        image1 = load_image_np(img1.path, self.as_float, self.grayscale)
 
         # Load features and matches
         features0 = get_features(feature_path, img0_name)

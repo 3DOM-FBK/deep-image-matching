@@ -43,7 +43,6 @@ class NoExtractor(ExtractorBase):
         output_dir = Path(self.config["general"]["output_dir"])
         feature_path = output_dir / "features.h5"
         output_dir.mkdir(parents=True, exist_ok=True)
-        im_name = im_path.name
 
         # Build fake features
         features = {}
@@ -51,6 +50,7 @@ class NoExtractor(ExtractorBase):
         features["descriptors"] = np.array([])
         features["scores"] = np.array([])
         img_obj = Image(im_path)
+        im_name = img_obj.name
         # img_obj.read_exif()
         features["image_size"] = np.array(img_obj.size)
         features["tile_idx"] = np.array([])

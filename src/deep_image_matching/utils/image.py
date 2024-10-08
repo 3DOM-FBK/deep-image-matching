@@ -111,20 +111,39 @@ class Image:
         self._exif_data = None
         self._date_time = None
         self._focal_length = None
-
+        self._camera_id = None
+        self._name = None
+        if "cam" in str(path):
+            for i, part in enumerate(path.parts):
+                if part.startswith("cam") and part[3:].isdigit():
+                    self._camera_id = eval(part[3:])
+                    rel_path = Path(*path.parts[i:])
+            self._name = str(rel_path)
+        else:
+            self._name = path.name
+        
         try:
             self.read_exif()
         except Exception:
             img = PIL.Image.open(path)
             self._width, self._height = img.size
+        
+        img = PIL.Image.open(path)
+        self._width, self._height = img.size
+
 
     def __repr__(self) -> str:
         """Returns a string representation of the image"""
-        return f"Image {self._path}"
+        return f"Image {self.name}"
 
     def __str__(self) -> str:
         """Returns a string representation of the image"""
-        return f"Image {self._path}"
+        return f"Image {self.name}"
+    
+    @property
+    def camera_id(self) -> int:
+        """Returns the camera_id of the image, if defined"""
+        return self._camera_id
 
     @property
     def id(self) -> int:
@@ -136,12 +155,12 @@ class Image:
     @property
     def name(self) -> str:
         """Returns the name of the image (including extension)"""
-        return self._path.name
+        return self._name
 
     @property
     def stem(self) -> str:
         """Returns the name of the image (excluding extension)"""
-        return self._path.stem
+        return self._name.stem
 
     @property
     def path(self) -> Path:
@@ -408,7 +427,7 @@ class ImageList:
         self.images = []
         self.current_idx = 0
         i = 0
-        all_imgs = [image for image in img_dir.glob("*") if image.suffix in self.IMAGE_EXT]
+        all_imgs = [image for image in img_dir.rglob("*") if image.suffix in self.IMAGE_EXT]
         all_imgs.sort()
 
         if len(all_imgs) == 0:
