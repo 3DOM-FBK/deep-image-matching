@@ -40,7 +40,9 @@ if matcher.matching in ["loftr", "se2loftr", "roma"]:
         input_dir=feature_path.parent,
         output_dir=feature_path.parent,
         image_dir=imgs_dir, 
-        img_ext=image_format)
+        img_ext=image_format,
+        mask_dir=args.mask,
+    )
 
 # Visualize view graph
 if config.general["graph"]:
