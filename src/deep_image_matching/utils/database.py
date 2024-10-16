@@ -32,11 +32,8 @@
 # This script is based on an original implementation by True Price.
 
 import sqlite3
-import sys
 
 import numpy as np
-
-IS_PYTHON3 = sys.version_info[0] >= 3
 
 MAX_IMAGE_ID = 2**31 - 1
 
@@ -68,9 +65,7 @@ CREATE_IMAGES_TABLE = """CREATE TABLE IF NOT EXISTS images (
     prior_tz REAL,
     CONSTRAINT image_id_check CHECK(image_id >= 0 and image_id < {}),
     FOREIGN KEY(camera_id) REFERENCES cameras(camera_id))
-""".format(
-    MAX_IMAGE_ID
-)
+""".format(MAX_IMAGE_ID)
 
 CREATE_TWO_VIEW_GEOMETRIES_TABLE = """
 CREATE TABLE IF NOT EXISTS two_view_geometries (
@@ -126,17 +121,11 @@ def pair_id_to_image_ids(pair_id):
 
 
 def array_to_blob(array):
-    if IS_PYTHON3:
-        return array.tostring()
-    else:
-        return np.getbuffer(array)
+    return array.tobytes()
 
 
 def blob_to_array(blob, dtype, shape=(-1,)):
-    if IS_PYTHON3:
-        return np.fromstring(blob, dtype=dtype).reshape(*shape)
-    else:
-        return np.frombuffer(blob, dtype=dtype).reshape(*shape)
+    return np.frombuffer(blob, dtype=dtype).reshape(*shape)
 
 
 class COLMAPDatabase(sqlite3.Connection):
@@ -295,11 +284,9 @@ def example_usage():
     args = parser.parse_args()
 
     if os.path.exists(args.database_path):
-        print("ERROR: database path already exists -- will not modify it.")
-        return
+        os.remove(args.database_path)
 
     # Open the database.
-
     db = COLMAPDatabase.connect(args.database_path)
 
     # For convenience, try creating all the tables upfront.
@@ -413,6 +400,8 @@ def example_usage():
 
     if os.path.exists(args.database_path):
         os.remove(args.database_path)
+
+    print("All tests passed.")
 
 
 if __name__ == "__main__":
