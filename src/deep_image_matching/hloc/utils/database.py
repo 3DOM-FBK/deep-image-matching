@@ -32,11 +32,8 @@
 # This script is based on an original implementation by True Price.
 
 import sqlite3
-import sys
 
 import numpy as np
-
-IS_PYTHON3 = sys.version_info[0] >= 3
 
 MAX_IMAGE_ID = 2**31 - 1
 
