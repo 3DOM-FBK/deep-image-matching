@@ -19,7 +19,7 @@ Example: `python main.py --dir ./assets/example_cyprus --pipeline superpoint+lig
 
 Other optional parameters are:
 
-- `--config_file` `-c`: the path to the YAML configuration file containing the custom configuration. See the [Advanced configuration](#advanced-configuration) section (default: `None`, so default configuration is used)
+- `--config_file` `-c`: the path to the YAML configuration file containing the custom configuration. See the [Advanced configuration](./advanced_configuration.md) section (default: `None`, so default configuration is used)
 - `--strategy` `-s`: the strategy to use for matching the images. It can be `matching_lowres`, `bruteforce`, `sequential`, `retrieval`, `custom_pairs`. See [Matching strategies](#matching-strategies) section (default: `matching_lowres`)
 - `--quality` `-q`: the quality of the images to be matched. It can be `lowest`, `low`, `medium`, `high` or `highest`. See [Quality](#quality) section (default: `high`).
 - `tiling` `-t`: if passed, the images are tiled in 4 parts and each part is matched separately. This is useful for high-resolution images if you do not want to resize them. See [Tiling](#tiling) section (default: `None`).
@@ -53,7 +53,6 @@ The GUI loads the available configurations from [`config.py`](https://github.com
 ### From Jupyter notebooks
 
 If you want to use Deep_Image_Matching from a Jupyter notebook, you can check the examples in the [`notebooks`](https://github.com/3DOM-FBK/deep-image-matching/tree/master/notebooks) folder.
-
 
 ## Pipelines
 
@@ -130,4 +129,3 @@ If you want to run the matching by tile, you can choose different approaches for
 - `exhaustive`: the images are divided into a regular grid of size 2400x2000 px to extract the features. The matching is carried out by matching all the possible combinations of tiles (brute-force). This method can be very slow for large images or in combination with the `highest` quality option and, in some cases, it may lead to error in the geometric verification if too many wrong matches are detected.
 
 To control the tile size and the tile overlap, refer to the [Advanced configuration](./advanced_configuration.md) section.
-
