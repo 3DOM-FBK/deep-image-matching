@@ -31,10 +31,10 @@
 
 # This script is based on an original implementation by True Price.
 
-import sys
 import sqlite3
-import numpy as np
+import sys
 
+import numpy as np
 
 IS_PYTHON3 = sys.version_info[0] >= 3
 
@@ -68,9 +68,7 @@ CREATE_IMAGES_TABLE = """CREATE TABLE IF NOT EXISTS images (
     prior_tz REAL,
     CONSTRAINT image_id_check CHECK(image_id >= 0 and image_id < {}),
     FOREIGN KEY(camera_id) REFERENCES cameras(camera_id))
-""".format(
-    MAX_IMAGE_ID
-)
+""".format(MAX_IMAGE_ID)
 
 CREATE_TWO_VIEW_GEOMETRIES_TABLE = """
 CREATE TABLE IF NOT EXISTS two_view_geometries (
@@ -183,8 +181,8 @@ class COLMAPDatabase(sqlite3.Connection):
         self,
         name,
         camera_id,
-        prior_q=np.full(4, np.NaN),
-        prior_t=np.full(3, np.NaN),
+        prior_q=np.full(4, np.nan),
+        prior_t=np.full(3, np.nan),
         image_id=None,
     ):
         cursor = self.execute(
@@ -277,8 +275,8 @@ class COLMAPDatabase(sqlite3.Connection):
 
 
 def example_usage():
-    import os
     import argparse
+    import os
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--database_path", default="database.db")
