@@ -32,7 +32,7 @@ RUN python3 -m pip install --upgrade pip
 RUN pip3 install setuptools
 RUN pip3 install torch torchvision
 RUN pip3 install -e .
-RUN pip3 install pycolmap
+RUN pip3 install pycolmap==0.6.1
 
 # Running the tests:
 RUN python -m pytest  
