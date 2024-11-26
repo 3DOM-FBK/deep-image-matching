@@ -285,14 +285,21 @@ class Config:
         Args:
             args (dict): The input arguments provided by the user.
         """
+        is_gui = args["gui"] is not None and args["gui"]
+
         # Parse input arguments
         general = self.parse_general_config(args)
 
         # Build configuration dictionary
         self.cfg["general"] = {**conf_general, **general}
-        features_config = self.get_config(args["pipeline"])
-        self.cfg["extractor"] = features_config["extractor"]
-        self.cfg["matcher"] = features_config["matcher"]
+
+        if is_gui:
+            self.cfg["extractor"] = args["extractor"]
+            self.cfg["matcher"] = args["matcher"]
+        else:
+            features_config = self.get_config(args["pipeline"])
+            self.cfg["extractor"] = features_config["extractor"]
+            self.cfg["matcher"] = features_config["matcher"]
 
         # If the user has provided a configuration file, update the configuration
         if "config_file" in args and args["config_file"] is not None:
@@ -367,6 +374,8 @@ class Config:
         """
         args = {**Config.default_cli_opts, **input_args}
 
+        is_gui = args["gui"] is not None and args["gui"]
+
         # Check that at least one of the two options is provided
         if args["images"] is None and args["dir"] is None:
             raise ValueError(
@@ -429,17 +438,26 @@ class Config:
         args["outs"].mkdir(parents=True, exist_ok=True)
 
         # Check extraction and matching configuration
-        if args["pipeline"] is None or args["pipeline"] not in confs:
+        if not is_gui and (args["pipeline"] is None or args["pipeline"] not in confs):
             raise ValueError(
                 "Invalid config. --pipeline option is required and must be a valid pipeline. Check --help for details"
             )
-        pipeline = args["pipeline"]
-        extractor = confs[pipeline]["extractor"]["name"]
+
+        if is_gui:
+            extractor = args["extractor"]["name"]
+        else:
+            extractor = confs[args["pipeline"]]["extractor"]["name"]
+
         if extractor not in opt_zoo["extractors"]:
             raise ValueError(
                 f"Invalid extractor option: {extractor}. Valid options are: {opt_zoo['extractors']}"
             )
-        matcher = confs[pipeline]["matcher"]["name"]
+
+        if is_gui:
+            matcher = args["matcher"]["name"]
+        else:
+            matcher = confs[args["pipeline"]]["matcher"]["name"]
+
         if matcher not in opt_zoo["matchers"]:
             raise ValueError(
                 f"Invalid matcher option: {matcher}. Valid options are: {opt_zoo['matchers']}"

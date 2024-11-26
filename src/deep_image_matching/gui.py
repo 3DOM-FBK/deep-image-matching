@@ -69,30 +69,25 @@ class MatcherApp:
     #    state = "normal" if self.use_custom.get() else "disabled"
     #    self.pair_file["state"] = state
 
-    def on_submit(self):
-        args = {
+    def __get_args(self):
+        return {
             "image_dir": Path(self.image_dir.get()),
             "out_dir": Path(self.out_dir.get()),
-            "config": self.config.get(),
+            "extractor": confs[self.config.get()]["extractor"],
+            "matcher": confs[self.config.get()]["matcher"],
             "strategy": self.strategy.get(),
             "pair_file": self.pair_file.get(),
             "image_overlap": self.overlap.get(),
             "upright": self.use_custom.get(),
         }
-        pprint(args)
 
+    def on_submit(self):
+        args = self.__get_args()
+        pprint(args)
         self.master.quit()
 
     def get_values(self):
-        args = {
-            "image_dir": Path(self.image_dir.get()),
-            "out_dir": Path(self.out_dir.get()),
-            "config": self.config.get(),
-            "strategy": self.strategy.get(),
-            "pair_file": self.pair_file.get(),
-            "image_overlap": self.overlap.get(),
-            "upright": self.use_custom.get(),
-        }
+        args = self.__get_args()
 
         if not args["image_dir"].exists() or not args["image_dir"].is_dir():
             msg = f"Directory {args['image_dir']} does not exist"

@@ -17,7 +17,7 @@ def parse_cli() -> dict:
         "-d",
         "--dir",
         type=str,
-        help="Project directoryt, containing a folder 'images', in which all the images are present and where the results will be saved.",
+        help="Project directory, containing a folder 'images', in which all the images are present and where the results will be saved.",
         default=None,
     )
     parser.add_argument(
@@ -38,9 +38,8 @@ def parse_cli() -> dict:
         "-p",
         "--pipeline",
         type=str,
-        help="Define the pipeline (combination of local feature extractor and matcher) to use for the matching.",
+        help="Define the pipeline (combination of local feature extractor and matcher) to use for the matching. MUST be provided if not using the GUI",
         choices=Config.get_pipelines(),
-        required=True,
     )
     parser.add_argument(
         "-c",
@@ -143,14 +142,20 @@ def parse_cli() -> dict:
         "--camera_options",
         help="Path to camera options yaml file, e.g. config/cameras.yaml",
         default="./config/cameras.yaml",
+        required=True,
     )
     args = parser.parse_args()
 
+    if not args.gui and args.pipeline is None:
+        parser.error("without --gui, you must specify -p/--pipeline")
+
     if args.gui is True:
         gui_out = gui()
+        args.gui = True
         args.images = gui_out["image_dir"]
         args.outs = gui_out["out_dir"]
         args.matcher = gui_out["matcher"]
+        args.extractor = gui_out["extractor"]
         args.config_file = gui_out["config_file"]
         args.strategy = gui_out["strategy"]
         args.pairs = gui_out["pair_file"]
