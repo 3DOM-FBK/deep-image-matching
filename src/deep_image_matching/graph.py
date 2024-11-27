@@ -21,6 +21,7 @@ def save_output_graph(G, name):
 
     # HTML template for view graph details panel
     nt.set_template(os.path.join(TEMPLATE_DIR, "template.html").replace("\\", "/"))
+    print(os.path.join(TEMPLATE_DIR, "template.html").replace("\\", "/"))
     nt.from_nx(G)
     nt.toggle_physics(False)
 
