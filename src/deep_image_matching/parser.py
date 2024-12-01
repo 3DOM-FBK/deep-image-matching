@@ -142,7 +142,6 @@ def parse_cli() -> dict:
         "--camera_options",
         help="Path to camera options yaml file, e.g. config/cameras.yaml",
         default="./config/cameras.yaml",
-        required=True,
     )
     args = parser.parse_args()
 
@@ -156,7 +155,6 @@ def parse_cli() -> dict:
         args.outs = gui_out["out_dir"]
         args.matcher = gui_out["matcher"]
         args.extractor = gui_out["extractor"]
-        args.config_file = gui_out["config_file"]
         args.strategy = gui_out["strategy"]
         args.pairs = gui_out["pair_file"]
         args.overlap = gui_out["image_overlap"]
