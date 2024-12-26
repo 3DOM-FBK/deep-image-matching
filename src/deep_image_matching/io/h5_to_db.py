@@ -144,7 +144,9 @@ def get_focal(image_path: Path, err_on_default: bool = False) -> float:
     return focal
 
 
-def create_camera(db: Path, image_path: Path, camera_model: str):
+def create_camera(
+    db: Path, image_path: Path, camera_model: str, param_arr: np.array = None
+):
     image = Image.open(image_path)
     width, height = image.size
 
@@ -152,16 +154,22 @@ def create_camera(db: Path, image_path: Path, camera_model: str):
 
     if camera_model == "simple-pinhole":
         model = 0  # simple pinhole
-        param_arr = np.array([focal, width / 2, height / 2])
+        if param_arr is None:
+            param_arr = np.array([focal, width / 2, height / 2])
     elif camera_model == "pinhole":
         model = 1  # pinhole
-        param_arr = np.array([focal, focal, width / 2, height / 2])
+        if param_arr is None:
+            param_arr = np.array([focal, focal, width / 2, height / 2])
     elif camera_model == "simple-radial":
         model = 2  # simple radial
-        param_arr = np.array([focal, width / 2, height / 2, 0.1])
+        if param_arr is None:
+            param_arr = np.array([focal, width / 2, height / 2, 0.1])
     elif camera_model == "opencv":
         model = 4  # opencv
-        param_arr = np.array([focal, focal, width / 2, height / 2, 0.0, 0.0, 0.0, 0.0])
+        if param_arr is None:
+            param_arr = np.array(
+                [focal, focal, width / 2, height / 2, 0.0, 0.0, 0.0, 0.0]
+            )
     else:
         raise RuntimeError(f"Invalid camera model {camera_model}")
 
@@ -192,13 +200,22 @@ def parse_camera_options(
     n_cameras = len(camera_options.keys()) - 1
     for camera in range(n_cameras):
         cam_opt = camera_options[f"cam{camera}"]
-        images = cam_opt["images"].split(",")
+        # images = cam_opt["images"].split(",")
+        # use glob pattern to find images
+        patterns = cam_opt["images"].split(",")
+        images = []
+        for pattern in patterns:
+            images.extend(img.name for img in Path(image_path).glob(pattern))
+        images = sorted(images)
+
         for i, img in enumerate(images):
             grouped_images[img] = {"camera_id": camera + 1}
             if i == 0:
                 path = os.path.join(image_path, img)
                 try:
-                    create_camera(db, path, cam_opt["camera_model"])
+                    create_camera(
+                        db, path, cam_opt["camera_model"], cam_opt["intrinsics"]
+                    )
                 except:
                     logger.warning(
                         f"Was not possible to load the first image to initialize cam{camera}"
@@ -242,12 +259,18 @@ def add_keypoints(
             if filename not in list(grouped_images.keys()):
                 if camera_options["general"]["single_camera"] is False:
                     camera_id = create_camera(
-                        db, path, camera_options["general"]["camera_model"]
+                        db,
+                        path,
+                        camera_options["general"]["camera_model"],
+                        camera_options["general"]["intrinsics"],
                     )
                 elif camera_options["general"]["single_camera"] is True:
                     if k == 0:
                         camera_id = create_camera(
-                            db, path, camera_options["general"]["camera_model"]
+                            db,
+                            path,
+                            camera_options["general"]["camera_model"],
+                            camera_options["general"]["intrinsics"],
                         )
                         single_camera_id = camera_id
                         k += 1

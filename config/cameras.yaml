@@ -2,11 +2,19 @@ general:
   camera_model: "pinhole" # ["simple-pinhole", "pinhole", "simple-radial", "opencv"]
   openmvg_camera_model: "pinhole_radial_k3" # ["pinhole", "pinhole_radial_k3", "pinhole_brown_t2"]
   single_camera: True
+  intrinsics: ~  # None
 
 cam0:
   camera_model: "pinhole"
-  images : ""
+  intrinsics: [
+    481.14, 478.43, 481.44, 383.72
+  ]
+  images : "cam0_*.jpg"
 
 cam1:
-  camera_model: "pinhole"
-  images : "DSC_6468.jpg,DSC_6468.jpg"
+  camera_model: "opencv"
+  intrinsics: [
+    481.91, 482.20, 482.70, 384.33,
+    0.0, 0.0, 0.0, 0.0
+  ]
+  images : "cam1_*.jpg"
