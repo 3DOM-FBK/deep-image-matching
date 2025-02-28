@@ -16,6 +16,9 @@ config/cameras_test.yaml
 .vscode/
 *.~lock*
 
+# Pycharm
+.idea
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
