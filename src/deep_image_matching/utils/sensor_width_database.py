@@ -14,7 +14,10 @@ from pathlib import Path
 class SensorWidthDatabase:
     """Database class for sensor-width, reading data from a csv file."""
 
-    DEFAULT_SENSOR_DB_PATH = Path(__file__).resolve().parents[1] / "thirdparty/sensor_width_camera_database.csv"
+    DEFAULT_SENSOR_DB_PATH = (
+        Path(__file__).resolve().parents[1]
+        / "thirdparty/sensor_width_camera_database.csv"
+    )
     DATABASE_URL = url = (
         "https://raw.githubusercontent.com/openMVG/openMVG/6d6b1dd70bded094ba06024e481dd5a5c662dc83/src/openMVG/exif/sensor_width_database/sensor_width_camera_database.txt"
     )
@@ -26,7 +29,10 @@ class SensorWidthDatabase:
         if csv_path is None or not Path(csv_path).exists():
             csv_path = Path(self.DEFAULT_SENSOR_DB_PATH)
             url = self.DATABASE_URL
-            with urllib.request.urlopen(url) as response, open(csv_path, "wb") as out_file:
+            with (
+                urllib.request.urlopen(url) as response,
+                open(csv_path, "wb") as out_file,
+            ):
                 shutil.copyfileobj(response, out_file)
 
         if not csv_path.exists():
@@ -34,7 +40,7 @@ class SensorWidthDatabase:
 
         # Store data in a dictionary for efficient lookup
         self.data = {}
-        with open(csv_path, "r") as file:
+        with open(csv_path) as file:
             reader = csv.reader(file, delimiter=";")
             for row in reader:
                 try:

@@ -48,14 +48,12 @@ dependencies = [
   "pytest",
   "pycolmap>=3.12.0",
   "ipykernel>=6.29.5",
+  "ruff>=0.12.1",
 ]
 
 [project.optional-dependencies]
 dev = [
-  "flake8",
-  "black",
   "bumpver",
-  "isort",
   "pytest",
   "mkdocs",
   "mkdocs-material",

@@ -23,7 +23,9 @@ def main(
 
         if sys.platform in ["windows", "win32"]:
             if openmvg_sfm_bin is None:
-                raise ValueError("openMVG binaries path is not provided. Please provide the path to openMVG binaries.")
+                raise ValueError(
+                    "openMVG binaries path is not provided. Please provide the path to openMVG binaries."
+                )
             pRecons = subprocess.Popen(
                 [
                     openmvg_sfm_bin / "openMVG_main_IncrementalSfM",

@@ -1,9 +1,9 @@
-import os
-import cv2
 import argparse
-import numpy as np
-
+import os
 from pathlib import Path
+
+import cv2
+import numpy as np
 
 
 class ImageNormalizer:
@@ -12,10 +12,10 @@ class ImageNormalizer:
     """
 
     def __init__(
-            self, 
-            reduce_noise: bool = True,
-            noise_kernel: tuple = (5, 5),
-            ):
+        self,
+        reduce_noise: bool = True,
+        noise_kernel: tuple = (5, 5),
+    ):
         """
         Initialize the ImageNormalizer object.
 
@@ -27,11 +27,11 @@ class ImageNormalizer:
         self.noise_kernel = noise_kernel
 
     def img_gradient(
-            self,
-            image_path: Path,
-            output_path: Path,
-            ksize: int = 3,
-            ):
+        self,
+        image_path: Path,
+        output_path: Path,
+        ksize: int = 3,
+    ):
         """
         Export the gradient of the image.
 
@@ -53,14 +53,14 @@ class ImageNormalizer:
             gradient_magnitude, None, 0, 255, cv2.NORM_MINMAX
         )
         cv2.imwrite(str(output_path), normalized_gradient)
-    
+
     def normalize_kernel(
-            self,
-            image_path: Path,
-            output_path: Path,
-            patch_size: int = 30,
-            method: str = "minmax",
-            ):
+        self,
+        image_path: Path,
+        output_path: Path,
+        patch_size: int = 30,
+        method: str = "minmax",
+    ):
         """
         Normalize an image using kernel method.
 
@@ -94,7 +94,9 @@ class ImageNormalizer:
                 if method == "minmax":
                     min_value = np.min(patch)
                     max_value = np.max(patch)
-                    norm_value = (image[i, j] - min_value) * 255 / (max_value - min_value)
+                    norm_value = (
+                        (image[i, j] - min_value) * 255 / (max_value - min_value)
+                    )
                     if norm_value > 0 and norm_value < 256:
                         normalized_image[i, j] = norm_value
                     else:
@@ -128,13 +130,23 @@ if __name__ == "__main__":
         "--patch_size", type=int, default=30, help="Size of the patch (default: 30)"
     )
     parser.add_argument(
-        "--reduce_noise", type=bool, default=True, help="Apply noise reduction (default: True)"
+        "--reduce_noise",
+        type=bool,
+        default=True,
+        help="Apply noise reduction (default: True)",
     )
     parser.add_argument(
-        "--noise_kernel", type=tuple, default=(5, 5), help="Apply noise reduction (default: True)"
+        "--noise_kernel",
+        type=tuple,
+        default=(5, 5),
+        help="Apply noise reduction (default: True)",
     )
     parser.add_argument(
-        "--method", type=str, choices=["norm_kernel_minmax", "norm_kernel_meanstd", "gradient"], default=(5, 5), help="Apply noise reduction (default: True)"
+        "--method",
+        type=str,
+        choices=["norm_kernel_minmax", "norm_kernel_meanstd", "gradient"],
+        default=(5, 5),
+        help="Apply noise reduction (default: True)",
     )
     args = parser.parse_args()
 
@@ -143,30 +155,30 @@ if __name__ == "__main__":
         os.makedirs(args.output)
 
     image_normalizer = ImageNormalizer(
-        reduce_noise = args.reduce_noise,
-        noise_kernel = args.noise_kernel,
-        )
+        reduce_noise=args.reduce_noise,
+        noise_kernel=args.noise_kernel,
+    )
 
     for img in images:
         if args.method == "norm_kernel_minmax":
             image_normalizer.normalize_kernel(
-                args.images / img, 
-                args.output / img, 
+                args.images / img,
+                args.output / img,
                 patch_size=args.patch_size,
                 method="minmax",
-                )
-    
+            )
+
         elif args.method == "norm_kernel_meanstd":
             image_normalizer.normalize_kernel(
-                args.images / img, 
-                args.output / img, 
+                args.images / img,
+                args.output / img,
                 patch_size=args.patch_size,
                 method="meanstd",
-                )
-        
+            )
+
         elif args.method == "gradient":
             image_normalizer.img_gradient(
-                args.images / img, 
-                args.output / img, 
+                args.images / img,
+                args.output / img,
                 ksize=3,
-                )
+            )

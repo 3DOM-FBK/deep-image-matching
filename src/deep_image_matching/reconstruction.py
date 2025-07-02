@@ -53,7 +53,9 @@ def pycolmap_reconstruction(
     options = {"num_threads": min(multiprocessing.cpu_count(), 16), **options}
     with OutputCapture(verbose):
         with pycolmap.ostream():
-            reconstructions = pycolmap.incremental_mapping(database_path, image_dir, models_path, options=options)
+            reconstructions = pycolmap.incremental_mapping(
+                database_path, image_dir, models_path, options=options
+            )
 
     if len(reconstructions) == 0:
         logger.error("Could not reconstruct any model!")
@@ -68,7 +70,7 @@ def pycolmap_reconstruction(
             largest_index = index
             largest_num_images = num_images
     assert largest_index is not None
-    logger.info(f"Largest model is #{largest_index} " f"with {largest_num_images} images.")
+    logger.info(f"Largest model is #{largest_index} with {largest_num_images} images.")
 
     for index, model in reconstructions.items():
         if len(reconstructions) > 1:

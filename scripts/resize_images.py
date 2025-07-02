@@ -1,5 +1,6 @@
-import os
 import argparse
+import os
+
 from PIL import Image
 
 
@@ -20,6 +21,7 @@ def resize_images(input_folder, output_folder, new_resolution):
 
                 # Save the resized image to the output folder
                 resized_img.save(output_path)
+
 
 def main():
     parser = argparse.ArgumentParser(description="Resize images in a folder.")

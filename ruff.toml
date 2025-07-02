@@ -25,6 +25,7 @@ exclude = [
     "node_modules",
     "site-packages",
     "venv",
+    "src/deep_image_matching/thirdparty", # Exclude third-party libraries from linting and formatting
 ]
 line-length = 88
 

@@ -32,7 +32,6 @@ import Metashape
 import numpy as np
 import pandas as pd
 from easydict import EasyDict as edict
-
 from icepy4d.core.calibration import read_opencv_calibration
 from icepy4d.core.constants import DATETIME_FMT
 from icepy4d.utils.logger import deprecated

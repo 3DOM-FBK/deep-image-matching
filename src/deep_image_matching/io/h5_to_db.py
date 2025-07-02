@@ -82,7 +82,7 @@ def export_to_colmap(
 
     # If a config file is provided, read camera options, otherwise use defaults
     if camera_config_path is not None:
-        with open(camera_config_path, "r") as file:
+        with open(camera_config_path) as file:
             camera_options = yaml.safe_load(file)
     else:
         camera_options = DEFAULT_CAM_OPTIONS
@@ -211,11 +211,15 @@ def parse_camera_options(
                 try:
                     create_camera(db, path, cam_opt["camera_model"])
                 except:
-                    logger.warning(f"Was not possible to load the first image to initialize cam{camera}")
+                    logger.warning(
+                        f"Was not possible to load the first image to initialize cam{camera}"
+                    )
     return grouped_images
 
 
-def add_keypoints(db: Path, h5_path: Path, image_path: Path, camera_options: dict = {}) -> dict:
+def add_keypoints(
+    db: Path, h5_path: Path, image_path: Path, camera_options: dict = {}
+) -> dict:
     """
     Adds keypoints from an HDF5 file to a COLMAP database.
 
@@ -243,14 +247,18 @@ def add_keypoints(db: Path, h5_path: Path, image_path: Path, camera_options: dic
 
             path = os.path.join(image_path, filename)
             if not os.path.isfile(path):
-                raise IOError(f"Invalid image path {path}")
+                raise OSError(f"Invalid image path {path}")
 
             if filename not in list(grouped_images.keys()):
                 if camera_options["general"]["single_camera"] is False:
-                    camera_id = create_camera(db, path, camera_options["general"]["camera_model"])
+                    camera_id = create_camera(
+                        db, path, camera_options["general"]["camera_model"]
+                    )
                 elif camera_options["general"]["single_camera"] is True:
                     if k == 0:
-                        camera_id = create_camera(db, path, camera_options["general"]["camera_model"])
+                        camera_id = create_camera(
+                            db, path, camera_options["general"]["camera_model"]
+                        )
                         single_camera_id = camera_id
                         k += 1
                     elif k > 0:
@@ -258,7 +266,7 @@ def add_keypoints(db: Path, h5_path: Path, image_path: Path, camera_options: dic
             elif filename in list(grouped_images.keys()):
                 camera_id = grouped_images[filename]["camera_id"]
             else:
-                print('ERROR in h5_to_db.py')
+                print("ERROR in h5_to_db.py")
                 quit()
             image_id = db.add_image(filename, camera_id)
             fname_to_id[filename] = image_id
@@ -341,7 +349,9 @@ def add_matches(db, h5_path, fname_to_id):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("h5_path", help=("Path to the directory with " "keypoints.h5 and matches.h5"))
+    parser.add_argument(
+        "h5_path", help=("Path to the directory with keypoints.h5 and matches.h5")
+    )
     parser.add_argument("image_path", help="Path to source images")
     parser.add_argument(
         "--image-extension",

@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 from deep_image_matching import GeometricVerification
 from deep_image_matching.utils.geometric_verification import geometric_verification
 

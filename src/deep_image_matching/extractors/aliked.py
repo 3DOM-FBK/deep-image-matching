@@ -79,7 +79,10 @@ class AlikedExtractor(ExtractorBase):
 
     def _rbd(self, data: dict) -> dict:
         """Remove batch dimension from elements in data"""
-        return {k: v[0] if isinstance(v, (torch.Tensor, np.ndarray, list)) else v for k, v in data.items()}
+        return {
+            k: v[0] if isinstance(v, (torch.Tensor, np.ndarray, list)) else v
+            for k, v in data.items()
+        }
 
 
 if __name__ == "__main__":

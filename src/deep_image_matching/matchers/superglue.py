@@ -5,7 +5,9 @@ from ..thirdparty.SuperGluePretrainedNetwork.models.superglue import SuperGlue
 from .matcher_base import FeaturesDict, MatcherBase
 
 
-def features_2_sg(feats0: FeaturesDict, feats1: FeaturesDict, device: torch.device) -> dict:
+def features_2_sg(
+    feats0: FeaturesDict, feats1: FeaturesDict, device: torch.device
+) -> dict:
     # Merge feats0 and feats1 in a single dict
     data = {}
     data = {**data, **{k + "0": v for k, v in feats0.items()}}
@@ -27,7 +29,9 @@ def features_2_sg(feats0: FeaturesDict, feats1: FeaturesDict, device: torch.devi
     data = {k: v[None] for k, v in data.items()}
 
     # Convert to tensor
-    data = {k: torch.tensor(v, dtype=torch.float, device=device) for k, v in data.items()}
+    data = {
+        k: torch.tensor(v, dtype=torch.float, device=device) for k, v in data.items()
+    }
 
     # Add channel dimension if missing
     for i in range(2):
@@ -37,7 +41,9 @@ def features_2_sg(feats0: FeaturesDict, feats1: FeaturesDict, device: torch.devi
     return data
 
 
-def correspondence_matrix_from_matches0(kpts_number: int, matches0: np.ndarray) -> np.ndarray:
+def correspondence_matrix_from_matches0(
+    kpts_number: int, matches0: np.ndarray
+) -> np.ndarray:
     n_tie_points = np.arange(kpts_number).reshape((-1, 1))
     matrix = np.hstack((n_tie_points, matches0.reshape((-1, 1))))
     correspondences = matrix[~np.any(matrix == -1, axis=1)]
@@ -86,7 +92,11 @@ class SuperGlueMatcher(MatcherBase):
         data = features_2_sg(feats0, feats1, self._device)
 
         match_res = self._matcher(data)
-        match_res = {k: v.cpu().numpy() for k, v in match_res.items() if isinstance(v, torch.Tensor)}
+        match_res = {
+            k: v.cpu().numpy()
+            for k, v in match_res.items()
+            if isinstance(v, torch.Tensor)
+        }
 
         # Make correspondence matrix from matches0
         matches0 = match_res["matches0"]

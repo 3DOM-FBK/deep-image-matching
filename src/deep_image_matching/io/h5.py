@@ -81,12 +81,17 @@ def get_features(
         if as_tensor:
             if device.type == "cuda" and not torch.cuda.is_available():
                 device = torch.device("cpu")
-            feats = {k: torch.tensor(v, dtype=torch.float, device=device) for k, v in feats.items()}
+            feats = {
+                k: torch.tensor(v, dtype=torch.float, device=device)
+                for k, v in feats.items()
+            }
 
         return feats
 
 
-def get_keypoints(path: Path, name: str, return_uncertainty: bool = False) -> np.ndarray:
+def get_keypoints(
+    path: Path, name: str, return_uncertainty: bool = False
+) -> np.ndarray:
     with h5py.File(str(path), "r", libver="latest") as hfile:
         dset = hfile[name]["keypoints"]
         p = dset.__array__()
@@ -94,6 +99,7 @@ def get_keypoints(path: Path, name: str, return_uncertainty: bool = False) -> np
     if return_uncertainty:
         return p, uncertainty
     return p
+
 
 def get_matches(path: Path, name0: str, name1: str) -> np.ndarray:
     with h5py.File(str(path), "r", libver="latest") as hfile:
@@ -117,4 +123,7 @@ def find_pair(hfile: h5py.File, name0: str, name1: str):
     pair = names_to_pair_old(name1, name0)
     if pair in hfile:
         return pair, True
-    raise ValueError(f"Could not find pair {(name0, name1)}... " "Maybe you matched with a different list of pairs? ")
+    raise ValueError(
+        f"Could not find pair {(name0, name1)}... "
+        "Maybe you matched with a different list of pairs? "
+    )

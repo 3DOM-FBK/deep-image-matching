@@ -17,23 +17,30 @@ def featuresDict2Lightglue(feats: FeaturesDict, device: torch.device) -> dict:
         del feats["feature_path"]
     if "im_path" in feats.keys():
         del feats["im_path"]
-    #if "time" in feats.keys():
+    # if "time" in feats.keys():
     #    del feats["time"]
 
     # Add batch dimension
     feats = {k: v[None] for k, v in feats.items()}
 
     # Convert to tensor
-    feats = {k: torch.tensor(v, dtype=torch.float, device=device) for k, v in feats.items()}
+    feats = {
+        k: torch.tensor(v, dtype=torch.float, device=device) for k, v in feats.items()
+    }
     # Check device
-    feats = {k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in feats.items()}
+    feats = {
+        k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in feats.items()
+    }
 
     return feats
 
 
 def rbd(data: dict) -> dict:
     """Remove batch dimension from elements in data"""
-    return {k: v[0] if isinstance(v, (torch.Tensor, np.ndarray, list)) else v for k, v in data.items()}
+    return {
+        k: v[0] if isinstance(v, (torch.Tensor, np.ndarray, list)) else v
+        for k, v in data.items()
+    }
 
 
 class LightGlueMatcher(MatcherBase):
@@ -75,7 +82,11 @@ class LightGlueMatcher(MatcherBase):
 
         # remove batch dimension and convert to numpy
         mfeats0, mfeats1, matches01 = [rbd(x) for x in [feats0, feats1, match_res]]
-        match_res = {k: v.cpu().numpy() for k, v in matches01.items() if isinstance(v, torch.Tensor)}
+        match_res = {
+            k: v.cpu().numpy()
+            for k, v in matches01.items()
+            if isinstance(v, torch.Tensor)
+        }
 
         # get matching array (indices of matched keypoints in image0 and image1)
         matches01_idx = match_res["matches"]

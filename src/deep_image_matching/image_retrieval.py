@@ -28,7 +28,7 @@ def ImageRetrieval(imgs_dir, outs_dir, retrieval_option, sfm_pairs):
         quit()
 
     img_pairs = []
-    with open(outs_dir / "retrieval_pairs.txt", "r") as pairs:
+    with open(outs_dir / "retrieval_pairs.txt") as pairs:
         lines = pairs.readlines()
         for line in lines:
             im1, im2 = line.strip().split(" ", 1)
@@ -43,10 +43,7 @@ def ImageRetrieval(imgs_dir, outs_dir, retrieval_option, sfm_pairs):
             pair2 = img_pairs[j]
             im3 = pair2[0]
             im4 = pair2[1]
-            if im3 == im1 and im4 == im2:
-                index_duplicate_pairs.append(j)
-                # print('discarded', im1, im2, im3, im4)
-            elif im3 == im2 and im4 == im1:
+            if im3 == im1 and im4 == im2 or im3 == im2 and im4 == im1:
                 index_duplicate_pairs.append(j)
                 # print('discarded', im1, im2, im3, im4)
             else:

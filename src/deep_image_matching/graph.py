@@ -12,14 +12,15 @@ from deep_image_matching.utils.database import pair_id_to_image_ids
 logger = logging.getLogger("dim")
 
 TEMPLATE_DIR = os.path.join(
-    os.path.dirname(os.path.realpath(__file__)), "utils","templates"
+    os.path.dirname(os.path.realpath(__file__)), "utils", "templates"
 )
+
 
 def save_output_graph(G, name):
     nt = Network()
 
     # HTML template for view graph details panel
-    nt.set_template(os.path.join(TEMPLATE_DIR, "template.html").replace('\\', '/'))
+    nt.set_template(os.path.join(TEMPLATE_DIR, "template.html").replace("\\", "/"))
     nt.from_nx(G)
     nt.toggle_physics(False)
 
@@ -41,9 +42,9 @@ def save_output_graph(G, name):
         )
     )
     html = nt.generate_html(name, notebook=False)
-    with open(name, mode='w', encoding='utf-8') as fp:
+    with open(name, mode="w", encoding="utf-8") as fp:
         fp.write(html)
-    #nt.write_html(name, notebook=False, open_browser=False)
+    # nt.write_html(name, notebook=False, open_browser=False)
 
     return
 

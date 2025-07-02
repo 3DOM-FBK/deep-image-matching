@@ -1,11 +1,11 @@
 import os
-import logging
 from importlib import import_module
 from pathlib import Path
 
+import yaml
+
 import deep_image_matching as dim
 from deep_image_matching.utils.loftr_roma_to_multiview import LoftrRomaToMultiview
-import yaml
 
 logger = dim.setup_logger("dim")
 
@@ -39,8 +39,9 @@ if matcher.matching in ["loftr", "se2loftr", "roma"]:
     LoftrRomaToMultiview(
         input_dir=feature_path.parent,
         output_dir=feature_path.parent,
-        image_dir=imgs_dir, 
-        img_ext=image_format)
+        image_dir=imgs_dir,
+        img_ext=image_format,
+    )
 
 # Visualize view graph
 if config.general["graph"]:
@@ -53,7 +54,7 @@ if config.general["graph"]:
 # If --skip_reconstruction is not specified, run reconstruction
 # Export in openMVG format
 if config.general["openmvg_conf"]:
-    with open(config.general["openmvg_conf"], "r") as file:
+    with open(config.general["openmvg_conf"]) as file:
         openmvgcfg = yaml.safe_load(file)
     openmvg_sfm_bin = openmvgcfg["general"]["path_to_binaries"]
     openmvg_database = openmvgcfg["general"]["openmvg_database"]
