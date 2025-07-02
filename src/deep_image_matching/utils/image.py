@@ -257,87 +257,74 @@ class Image:
         """Returns the image (pixel values) as numpy array"""
         return read_image(self._path)
 
-    def read_exif(self) -> None:
-        """
-        Read image exif with exifread and store them in a dictionary
 
-        Raises:
-            IOError: If there is an error reading the image file.
-            InvalidExif: If the exif data is invalid.
-            ExifNotFound: If no exif data is found for the image.
+def read_exif(self) -> None:
+    """
+    Read image exif with exifread and store them in a dictionary
 
-        Returns:
-            None
+    Raises:
+        ValueError: If there is an error reading the image file or
+                   if the exif data is invalid or not found.
 
-        """
-        from exifread.exceptions import ExifNotFound, InvalidExif
+    Returns:
+        None
+    """
+    try:
+        with open(self._path, "rb") as f:
+            exif = exifread.process_file(f, details=False, debug=False)
+    except OSError as e:
+        logger.info(f"{e}. Unable to read exif data for image {self.name}.")
+        raise ValueError(f"Exif error: {e}") from e
+    except Exception as e:
+        logger.info(f"Unable to read exif data for image {self.name}. {e}")
+        raise ValueError(f"Exif error: {e}") from e
 
-        try:
-            with open(self._path, "rb") as f:
-                exif = exifread.process_file(f, details=False, debug=False)
-        except OSError as e:
-            logger.info(f"{e}. Unable to read exif data for image {self.name}.")
-            raise InvalidExif("Exif error")
-        except InvalidExif as e:
-            logger.info(f"Unable to read exif data for image {self.name}. {e}")
-            raise ValueError("Exif error")
-        except ExifNotFound as e:
-            logger.info(f"Unable to read exif data for image {self.name}. {e}")
-            raise ValueError("Exif error")
+    if len(exif) == 0:
+        logger.info(
+            f"No exif data available for image {self.name} (this will probably not affect the matching)."
+        )
+        raise ValueError("No exif data found")
 
-        if len(exif) == 0:
-            logger.info(
-                f"No exif data available for image {self.name} (this will probably not affect the matching)."
-            )
-            raise ValueError("Exif error")
+    # Get image size
+    if "Image ImageWidth" in exif and "Image ImageLength" in exif:
+        self._width = exif["Image ImageWidth"].printable
+        self._height = exif["Image ImageLength"].printable
+    elif "EXIF ExifImageWidth" in exif and "EXIF ExifImageLength" in exif:
+        self._width = exif["EXIF ExifImageWidth"].printable
+        self._height = exif["EXIF ExifImageLength"].printable
 
-        # Get image size
-        if "Image ImageWidth" in exif.keys() and "Image ImageLength" in exif.keys():
-            self._width = exif["Image ImageWidth"].printable
-            self._height = exif["Image ImageLength"].printable
-        elif (
-            "EXIF ExifImageWidth" in exif.keys()
-            and "EXIF ExifImageLength" in exif.keys()
-        ):
-            self._width = exif["EXIF ExifImageWidth"].printable
-            self._height = exif["EXIF ExifImageLength"].printable
-
-        # Get Image Date and Time
-        if "Image DateTime" in exif.keys():
-            date_str = exif["Image DateTime"].printable
-        elif "EXIF DateTimeOriginal" in exif.keys():
-            date_str = exif["EXIF DateTimeOriginal"].printable
-        else:
-            logger.info(f"Date not available in exif for {self.name}")
-            date_str = None
-        if date_str is not None:
-            for format in self.DATE_FORMATS:
-                try:
-                    self._date_time = datetime.strptime(date_str, format)
-                    break
-                except ValueError:
-                    continue
-
-        # Get Focal Length
-        if "EXIF FocalLength" in exif.keys():
+    # Get Image Date and Time
+    if "Image DateTime" in exif:
+        date_str = exif["Image DateTime"].printable
+    elif "EXIF DateTimeOriginal" in exif:
+        date_str = exif["EXIF DateTimeOriginal"].printable
+    else:
+        logger.info(f"Date not available in exif for {self.name}")
+        date_str = None
+    if date_str is not None:
+        for format in self.DATE_FORMATS:
             try:
-                focal_length_str = exif["EXIF FocalLength"].printable
-
-                # Check if it's a ratio
-                if "/" in focal_length_str:
-                    numerator, denominator = focal_length_str.split("/")
-                    self._focal_length = float(numerator) / float(denominator)
-                else:
-                    self._focal_length = float(focal_length_str)
+                self._date_time = datetime.strptime(date_str, format)
+                break
             except ValueError:
-                logger.info(
-                    f"Unable to get focal length from exif for image {self.name}"
-                )
+                continue
 
-        # Store exif data
-        self._exif_data = exif
+    # Get Focal Length
+    if "EXIF FocalLength" in exif:
+        try:
+            focal_length_str = exif["EXIF FocalLength"].printable
 
-        # TODO: Get GPS coordinates from exif
+            # Check if it's a ratio
+            if "/" in focal_length_str:
+                numerator, denominator = focal_length_str.split("/")
+                self._focal_length = float(numerator) / float(denominator)
+            else:
+                self._focal_length = float(focal_length_str)
+        except ValueError:
+            logger.info(f"Unable to get focal length from exif for image {self.name}")
+
+    # Store exif data
+    self._exif_data = exif
 
     def get_intrinsics_from_exif(self) -> np.ndarray:
         """Constructs the camera intrinsics from exif tag.
