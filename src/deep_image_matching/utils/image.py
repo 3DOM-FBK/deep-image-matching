@@ -1,13 +1,12 @@
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Tuple, Union
+from typing import Optional, Union
 
 import cv2
 import exifread
 import numpy as np
-import PIL
-from PIL import Image
+from PIL import Image as PILImage
 
 from .sensor_width_database import SensorWidthDatabase
 
@@ -16,7 +15,7 @@ logger = logging.getLogger("dim")
 
 IMAGE_EXT = [".jpg", ".JPG", ".png", ".PNG", ".tif", "TIF"]
 
-Image.MAX_IMAGE_PIXELS = None
+PILImage.MAX_IMAGE_PIXELS = None
 
 
 def read_image(
@@ -37,13 +36,8 @@ def read_image(
     if not Path(path).exists():
         raise ValueError(f"File {path} does not exist")
 
-    if color:
-        flag = cv2.IMREAD_COLOR
-    else:
-        flag = cv2.IMREAD_GRAYSCALE
-
+    flag = cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE
     image = cv2.imread(str(path), flag)
-
     if color:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
@@ -52,7 +46,7 @@ def read_image(
 
 def resize_image(
     image: np.ndarray,
-    size: Tuple[int, int],  # Destination size (width, height)
+    size: tuple[int, int],  # Destination size (width, height)
     interp: str = "cv2_area",
 ) -> np.ndarray:
     if interp.startswith("cv2_"):
@@ -62,8 +56,8 @@ def resize_image(
             interp = cv2.INTER_LINEAR
         resized = cv2.resize(image, size, interpolation=interp)
     elif interp.startswith("pil_"):
-        interp = getattr(PIL.Image, interp[len("pil_") :].upper())
-        resized = PIL.Image.fromarray(image.astype(np.uint8))
+        interp = getattr(PILImage, interp[len("pil_") :].upper())
+        resized = PILImage.fromarray(image.astype(np.uint8))
         resized = resized.resize(size, resample=interp)
         resized = np.asarray(resized, dtype=image.dtype)
     else:
@@ -88,7 +82,7 @@ class Image:
     DATE_FMT = "%Y-%m-%d"
     TIME_FMT = "%H:%M:%S"
     DATETIME_FMT = "%Y:%m:%d %H:%M:%S"
-    DATE_FORMATS = [DATETIME_FMT, DATE_FMT, TIME_FMT]
+    DATE_FORMATS = [DATETIME_FMT, DATE_FMT, TIME_FMT, f"{DATE_FMT} {TIME_FMT}"]
 
     def __init__(self, path: Union[str, Path], id: int = None) -> None:
         """
@@ -104,18 +98,19 @@ class Image:
         if path.suffix not in self.IMAGE_EXT:
             raise ValueError(f"File {path} is not a valid image file")
 
-        self._path = path
-        self._id = id
-        self._width = None
-        self._height = None
-        self._exif_data = None
-        self._date_time = None
-        self._focal_length = None
+        self._path: Path = path
+        self._id: Optional[int] = id
+        self._width: Optional[int] = None
+        self._height: Optional[int] = None
+        self._exif_data: Optional[dict] = None
+        self._date_time: Optional[datetime] = None
+        self._focal_length: Optional[float] = None
+        self._K: Optional[np.ndarray] = None
 
         try:
             self.read_exif()
         except Exception:
-            img = PIL.Image.open(path)
+            img = PILImage.open(path)
             self._width, self._height = img.size
 
     def __repr__(self) -> str:
@@ -127,7 +122,7 @@ class Image:
         return f"Image {self._path}"
 
     @property
-    def id(self) -> int:
+    def id(self) -> Optional[int]:
         """Returns the id of the image"""
         if self._id is None:
             logger.error(f"Image id not available for {self.name}. Set it first")
@@ -149,7 +144,7 @@ class Image:
         return self._path
 
     @property
-    def parent(self) -> str:
+    def parent(self) -> Path:
         """Path to the parent folder of the image"""
         return self._path.parent
 
@@ -159,62 +154,30 @@ class Image:
         return self._path.suffix
 
     @property
-    def height(self) -> int:
+    def height(self) -> Optional[int]:
         """Returns the height of the image in pixels"""
-        if self._height is None:
-            logger.error(
-                f"Image height not available for {self.name}. Try to read it from the image file."
-            )
-            try:
-                img = PIL.Image.open(self._path)
-                self._width, self._height = img.size
-            except Exception as e:
-                logger.error(f"Unable to read image size for {self.name}: {e}")
-                return None
-        return int(self._height)
+        return self._height
 
     @property
-    def width(self) -> int:
+    def width(self) -> Optional[int]:
         """Returns the width of the image in pixels"""
-        if self._width is None:
-            logger.error(
-                f"Image width not available for {self.name}. Try to read it from the image file."
-            )
-            try:
-                img = PIL.Image.open(self._path)
-                self._width, self._height = img.size
-            except Exception as e:
-                logger.error(f"Unable to read image size for {self.name}: {e}")
-                return None
-
-        return int(self._width)
+        return self._width
 
     @property
     def size(self) -> tuple:
         """Returns the size of the image in pixels as a tuple (width, height)"""
-        if self._width is None or self._height is None:
-            logger.warning(
-                f"Image size not available for {self.name}. Trying to read it from the image file."
-            )
-            try:
-                img = PIL.Image.open(self._path)
-                self._width, self._height = img.size
-            except Exception as e:
-                logger.error(f"Unable to read image size for {self.name}: {e}")
-                return None
-
-        return (int(self._width), int(self._height))
+        return (self._width, self._height)
 
     @property
-    def exif(self) -> dict:
-        """exif Returns the exif of the image"""
+    def exif(self) -> Optional[dict]:
+        """Returns the exif of the image"""
         if self._exif_data is None:
             logger.error(f"No exif data available for {self.name}.")
             return None
         return self._exif_data
 
     @property
-    def date(self) -> str:
+    def date(self) -> Optional[str]:
         """Returns the date and time of the image in a string format."""
         if self._date_time is None:
             logger.error(f"No exif data available for {self.name}.")
@@ -222,7 +185,7 @@ class Image:
         return self._date_time.strftime(self.DATE_FMT)
 
     @property
-    def time(self) -> str:
+    def time(self) -> Optional[str]:
         """time Returns the time of the image from exif as a string"""
         if self._date_time is None:
             logger.error(f"No exif data available for {self.name}.")
@@ -230,7 +193,7 @@ class Image:
         return self._date_time.strftime(self.TIME_FMT)
 
     @property
-    def datetime(self) -> datetime:
+    def datetime(self) -> Optional[datetime]:
         """Returns the date and time of the image as datetime object."""
         if self._date_time is None:
             logger.error(f"No exif data available for {self.name}.")
@@ -238,7 +201,7 @@ class Image:
         return self._date_time
 
     @property
-    def timestamp(self) -> str:
+    def timestamp(self) -> Optional[str]:
         """Returns the date and time of the image in a string format."""
         if self._date_time is None:
             logger.error(f"No exif data available for {self.name}.")
@@ -246,87 +209,107 @@ class Image:
         return self._date_time.strftime(self.DATETIME_FMT)
 
     @property
-    def focal_length(self) -> float:
+    def focal_length(self) -> Optional[float]:
         """Returns the focal length of the image in mm."""
         if self._focal_length is None:
             logger.error(f"Focal length not available in exif data for {self.name}.")
             return None
         return self._focal_length
 
+    @property
+    def K(self) -> Optional[np.ndarray]:
+        """Returns the camera intrinsics matrix K from exif data."""
+        if self._K is None:
+            logger.error(f"Camera intrinsics not available for {self.name}.")
+            return None
+        return self._K
+
     def read(self) -> np.ndarray:
         """Returns the image (pixel values) as numpy array"""
         return read_image(self._path)
 
+    def read_exif(self) -> None:
+        """
+        Read image exif with exifread and store them in a dictionary
 
-def read_exif(self) -> None:
-    """
-    Read image exif with exifread and store them in a dictionary
+        Raises:
+            ValueError: If there is an error reading the image file or
+                    if the exif data is invalid or not found.
 
-    Raises:
-        ValueError: If there is an error reading the image file or
-                   if the exif data is invalid or not found.
-
-    Returns:
-        None
-    """
-    try:
-        with open(self._path, "rb") as f:
-            exif = exifread.process_file(f, details=False, debug=False)
-    except OSError as e:
-        logger.info(f"{e}. Unable to read exif data for image {self.name}.")
-        raise ValueError(f"Exif error: {e}") from e
-    except Exception as e:
-        logger.info(f"Unable to read exif data for image {self.name}. {e}")
-        raise ValueError(f"Exif error: {e}") from e
-
-    if len(exif) == 0:
-        logger.info(
-            f"No exif data available for image {self.name} (this will probably not affect the matching)."
-        )
-        raise ValueError("No exif data found")
-
-    # Get image size
-    if "Image ImageWidth" in exif and "Image ImageLength" in exif:
-        self._width = exif["Image ImageWidth"].printable
-        self._height = exif["Image ImageLength"].printable
-    elif "EXIF ExifImageWidth" in exif and "EXIF ExifImageLength" in exif:
-        self._width = exif["EXIF ExifImageWidth"].printable
-        self._height = exif["EXIF ExifImageLength"].printable
-
-    # Get Image Date and Time
-    if "Image DateTime" in exif:
-        date_str = exif["Image DateTime"].printable
-    elif "EXIF DateTimeOriginal" in exif:
-        date_str = exif["EXIF DateTimeOriginal"].printable
-    else:
-        logger.info(f"Date not available in exif for {self.name}")
-        date_str = None
-    if date_str is not None:
-        for format in self.DATE_FORMATS:
-            try:
-                self._date_time = datetime.strptime(date_str, format)
-                break
-            except ValueError:
-                continue
-
-    # Get Focal Length
-    if "EXIF FocalLength" in exif:
+        Returns:
+            None
+        """
         try:
-            focal_length_str = exif["EXIF FocalLength"].printable
+            with open(self._path, "rb") as f:
+                tags = exifread.process_file(f, details=False, builtin_types=True)
+                # Convert to dictionary and remove thumbnail if present
+                exif = dict(tags)
+                if "JPEGThumbnail" in exif:
+                    del exif["JPEGThumbnail"]
+        except OSError as e:
+            logger.info(f"{e}. Unable to read exif data for image {self.name}.")
+            raise ValueError(f"Exif error: {e}") from e
+        except Exception as e:
+            logger.info(f"Unable to read exif data for image {self.name}. {e}")
+            raise ValueError(f"Exif error: {e}") from e
 
-            # Check if it's a ratio
-            if "/" in focal_length_str:
-                numerator, denominator = focal_length_str.split("/")
-                self._focal_length = float(numerator) / float(denominator)
-            else:
-                self._focal_length = float(focal_length_str)
-        except ValueError:
-            logger.info(f"Unable to get focal length from exif for image {self.name}")
+        if len(exif) == 0:
+            logger.info(
+                f"No exif data available for image {self.name} (this will probably not affect the matching)."
+            )
+            raise ValueError("No exif data found")
 
-    # Store exif data
-    self._exif_data = exif
+        # Get image size
+        if "Image ImageWidth" in exif and "Image ImageLength" in exif:
+            self._width = int(exif["Image ImageWidth"])
+            self._height = int(exif["Image ImageLength"])
+        elif "EXIF ExifImageWidth" in exif and "EXIF ExifImageLength" in exif:
+            self._width = int(exif["EXIF ExifImageWidth"])
+            self._height = int(exif["EXIF ExifImageLength"])
 
-    def get_intrinsics_from_exif(self) -> np.ndarray:
+        # Get Image Date and Time
+        date_str = None
+        if "Image DateTime" in exif:
+            date_str = str(exif["Image DateTime"])
+        elif "EXIF DateTimeOriginal" in exif:
+            date_str = str(exif["EXIF DateTimeOriginal"])
+        else:
+            logger.info(f"Date not available in exif for {self.name}")
+
+        if date_str:
+            for format in self.DATE_FORMATS:
+                try:
+                    self._date_time = datetime.strptime(date_str, format)
+                    break
+                except ValueError:
+                    logger.info(
+                        f"Unable to parse date {date_str} for image {self.name}"
+                    )
+                    continue
+
+        # Get Focal Length
+        if "EXIF FocalLength" in exif:
+            try:
+                focal_length_str = str(exif["EXIF FocalLength"])
+
+                # Check if it's a ratio
+                if "/" in focal_length_str:
+                    numerator, denominator = focal_length_str.split("/")
+                    self._focal_length = float(numerator) / float(denominator)
+                else:
+                    self._focal_length = float(focal_length_str)
+            except ValueError:
+                logger.info(
+                    f"Unable to get focal length from exif for image {self.name}"
+                )
+
+        # Store exif data
+        self._exif_data = exif
+
+        # Try to get camera intrinsics from exif data
+        self._K = self.get_intrinsics_from_exif()
+
+    def get_intrinsics_from_exif(self) -> Optional[np.ndarray]:
         """Constructs the camera intrinsics from exif tag.
 
         Equation: focal_px=max(w_px,h_px)*focal_mm / ccdw_mm
@@ -348,16 +331,13 @@ def read_exif(self) -> None:
                 logger.error("Unable to read exif data.")
                 return None
         try:
-            focal_length_mm = float(self._exif_data["EXIF FocalLength"].printable)
+            focal_length_mm = float(self._exif_data["EXIF FocalLength"])
         except OSError:
             logger.error("Focal length non found in exif data.")
             return None
         try:
             sensor_width_db = SensorWidthDatabase()
-            sensor_width_mm = sensor_width_db.lookup(
-                self._exif_data["Image Make"].printable,
-                self._exif_data["Image Model"].printable,
-            )
+            sensor_width_mm = sensor_width_db.lookup(self._exif_data["Image Model"])
         except OSError:
             logger.error("Unable to get sensor size in mm from sensor database")
             return None
@@ -375,6 +355,7 @@ def read_exif(self) -> None:
             ],
             dtype=float,
         )
+
         return K
 
 
@@ -472,12 +453,7 @@ class ImageList:
 
 
 if __name__ == "__main__":
-    image_path = "data/easy_small/01_Camera1.jpg"
+    # Run these tests with pytest
+    import pytest
 
-    img = Image(image_path)
-
-    image_dir = "data/easy_small"
-
-    img_list = ImageList(image_dir)
-
-    print("done")
+    pytest.main(["-v", __file__])
