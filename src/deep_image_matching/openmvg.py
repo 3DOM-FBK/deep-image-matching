@@ -7,7 +7,7 @@ from pathlib import Path
 from .constants import logger
 
 
-def main(
+def openmvg_reconstruction(
     openmvg_out_path: Path,
     skip_reconstruction: bool,
     openmvg_sfm_bin: Path = None,

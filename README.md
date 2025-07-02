@@ -70,15 +70,17 @@ For installing deep-image-matching, we recommend using [uv](https://docs.astral.
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Create and activate a virtual environment
-uv venv deep-image-matching --python 3.9
+uv venv --python 3.9
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 
 Then, you can install deep-image-matching using uv:
 
 ```bash
-uv pip install deep-image-matching
+uv pip install -e .
 ```
+
+This command will install the package in editable mode, allowing you to modify the source code and see changes immediately without needing to reinstall. If you want to use deep-image-matching as a non-editable library, you can also install it without the `-e` flag.
 
 If there is any issue with the installation, you can also install the package from the source code.
 Clone the repository and install deep-image-matching in development mode:
@@ -97,10 +99,16 @@ uv pip install pycolmap==0.6.1
 
 Pycolmap is optional to run reconstruction directly in DIM. If pycolmap is not available, matches will be written both in a h5 and colmap database for later processing with COLMAP GUI or API, or other processing.
 
-Try to run the tests to check if deep-image-matching is correctly installed, try to import the package in a Python shell:
+To verify that deep-image-matching is correctly installed, you can try to import the package in a Python shell:
 
 ```python
 import deep_image_matching as dim
+```
+
+To test most of the functionality, run the tests to check if deep-image-matching is correctly installed, run:
+
+```bash
+uv pytest tests
 ```
 
 For more information, check the [documentation](https://3dom-fbk.github.io/deep-image-matching/installation/).
@@ -129,7 +137,7 @@ pip install deep-image-matching
 
 If you prefer using Docker, first, build the image:
 
-```
+```bash
 docker build --tag deep-image-matching .
 ```
 
@@ -138,13 +146,13 @@ Note that the first time you run the command, it will take a while to download t
 Once the image is built, you can run it with the following commands.
 On Linux:
 
-```
+```bash
 docker run --name run-deep-image-matching --mount type=bind,source=/home/username/data,target=/workspace/data --gpus all -it deep-image-matching
 ```
 
 On Windows (please use Powershell):
 
-```
+```powershell
 docker run --name run-deep-image-matching --mount type=bind,source=D:\data,target=/workspace/data --gpus all -it deep-image-matching
 ```
 
