@@ -1,9 +1,8 @@
 <div align="center">
- 
- [![Static Badge](https://img.shields.io/badge/Matches_for-COLMAP-red)](https://github.com/colmap/colmap) [![Static Badge](https://img.shields.io/badge/Matches_for-OpenMVG-red)](https://github.com/openMVG/openMVG) [![Static Badge](https://img.shields.io/badge/Matches_for-MICMAC-red)](https://github.com/micmacIGN/micmac) ![Static Badge](https://img.shields.io/badge/Matches_for-Metashape-red) 
- 
- [![Static Badge](https://img.shields.io/badge/Powered_by-Kornia-green)](https://github.com/kornia/kornia) [![Static Badge](https://img.shields.io/badge/Powered_by-hloc-green)](https://github.com/kornia/kornia) [![GitHub Release](https://img.shields.io/github/v/release/3DOM-FBK/deep-image-matching)](https://github.com/3DOM-FBK/deep-image-matching/releases) [![Static Badge](https://img.shields.io/badge/docs-DeepImageMatcher-blue
- )](https://3dom-fbk.github.io/deep-image-matching/)
+
+[![Static Badge](https://img.shields.io/badge/Matches_for-COLMAP-red)](https://github.com/colmap/colmap) [![Static Badge](https://img.shields.io/badge/Matches_for-OpenMVG-red)](https://github.com/openMVG/openMVG) [![Static Badge](https://img.shields.io/badge/Matches_for-MICMAC-red)](https://github.com/micmacIGN/micmac) ![Static Badge](https://img.shields.io/badge/Matches_for-Metashape-red)
+
+[![Static Badge](https://img.shields.io/badge/Powered_by-Kornia-green)](https://github.com/kornia/kornia) [![Static Badge](https://img.shields.io/badge/Powered_by-hloc-green)](https://github.com/kornia/kornia) [![GitHub Release](https://img.shields.io/github/v/release/3DOM-FBK/deep-image-matching)](https://github.com/3DOM-FBK/deep-image-matching/releases) [![Static Badge](https://img.shields.io/badge/docs-DeepImageMatcher-blue)](https://3dom-fbk.github.io/deep-image-matching/)
 
 </div>
 
@@ -19,11 +18,9 @@
 
 Multivew matcher for SfM software. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. Now, it supports both OpenMVG and MicMac. Feel free to collaborate!
 
-While `dev` branch is more frequently updated, `master` is the default more stable branch and is updated from `dev` less frequently. If you are looking for the newest developments, please switch to `dev`. 
+While `dev` branch is more frequently updated, `master` is the default more stable branch and is updated from `dev` less frequently. If you are looking for the newest developments, please switch to `dev`.
 
-
-For how to use DIM, check the <a href="https://3dom-fbk.github.io/deep-image-matching/">Documentation</a> (updated for the master branch). 
-
+For how to use DIM, check the <a href="https://3dom-fbk.github.io/deep-image-matching/">Documentation</a> (updated for the master branch).
 
 **Please, note that `deep-image-matching` is under active development** and it is still in an experimental stage. If you find any bug, please open an issue.
 
@@ -45,7 +42,7 @@ Key features:
 | &check; ALIKED                     | &check; SE2-LoFTR (no tiling and only GPU)                |
 | &check; KeyNet + OriNet + HardNet8 | &check; RoMa                                              |
 | &check; DeDoDe (only GPU)          | &#x2610; GlueStick                                        |
-| &check; SIFT (from Opencv)         | 
+| &check; SIFT (from Opencv)         |
 | &check; ORB (from Opencv)          |
 
 | Supported SfM software                        |
@@ -66,34 +63,38 @@ DIM can also be utilized as a library instead of being executed through the Comm
 
 ## Local Installation
 
-For installing deep-image-matching, first create a conda environment:
+For installing deep-image-matching, we recommend using [uv](https://docs.astral.sh/uv/) for fast and reliable package management:
 
 ```bash
-conda create -n deep-image-matching python=3.9
-conda activate deep-image-matching
-pip install --upgrade pip
+# Install uv if you haven't already
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Create and activate a virtual environment
+uv venv deep-image-matching --python 3.9
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 
-Then, you can install deep-image-matching using pip with the following command:
+Then, you can install deep-image-matching using uv:
 
 ```bash
-pip install deep-image-matching
+uv pip install deep-image-matching
 ```
 
 If there is any issue with the installation, you can also install the package from the source code.
-Clone the repository and install deep-image-matching in editable mode:
+Clone the repository and install deep-image-matching in development mode:
 
 ```bash
 git clone https://github.com/3DOM-FBK/deep-image-matching.git
 cd deep-image-matching
-pip install -e .
+uv sync --dev
 ```
 
 Install pycolmap (optional, but recommended):
 
 ```bash
-pip install pycolmap==0.6.1
+uv pip install pycolmap==0.6.1
 ```
+
 Pycolmap is optional to run reconstruction directly in DIM. If pycolmap is not available, matches will be written both in a h5 and colmap database for later processing with COLMAP GUI or API, or other processing.
 
 Try to run the tests to check if deep-image-matching is correctly installed, try to import the package in a Python shell:
@@ -103,6 +104,26 @@ import deep_image_matching as dim
 ```
 
 For more information, check the [documentation](https://3dom-fbk.github.io/deep-image-matching/installation/).
+
+### Why uv?
+
+This project has migrated from conda/pip to [uv](https://docs.astral.sh/uv/) for dependency management. Benefits include:
+
+- **Faster installation**: uv is significantly faster than pip for dependency resolution and installation
+- **Better dependency resolution**: More reliable resolution of complex dependency trees
+- **Lockfile support**: `uv.lock` ensures reproducible installations across different environments
+- **Integrated tooling**: Built-in support for virtual environments, Python version management, and project building
+- **Cross-platform consistency**: Better support for different operating systems and architectures
+
+### Legacy conda/pip installation
+
+If you prefer to use conda/pip (though not recommended), you can still install the package:
+
+```bash
+conda create -n deep-image-matching python=3.9
+conda activate deep-image-matching
+pip install deep-image-matching
+```
 
 ## Docker Installation
 
@@ -151,9 +172,9 @@ For example, to run the matching with SuperPoint and LightGlue on a dataset, you
 python main.py --dir assets/example_cyprus --pipeline superpoint+lightglue
 ```
 
-The `--dir` parameter defines the processing directory, where all the results will be saved. This directory must constain a subfolder named **images** in which all the images must be stored. We currentely do not support image retrieval from multiple directories or subdirectories, but we may add this feature in the future. 
+The `--dir` parameter defines the processing directory, where all the results will be saved. This directory must constain a subfolder named **images** in which all the images must be stored. We currentely do not support image retrieval from multiple directories or subdirectories, but we may add this feature in the future.
 
-The `--pipeline` parameter defines the combaination of local feature extractor and matcher. 
+The `--pipeline` parameter defines the combaination of local feature extractor and matcher.
 
 For all the usage instructions and configurations, refer to the [documenation](https://3dom-fbk.github.io/deep-image-matching/getting_started) or check the example notebooks.
 
@@ -191,7 +212,7 @@ Please, refer to the instructions at [https://github.com/franioli/metashape](htt
 Any contribution to this repo is really welcome!
 If you want to contribute to the project, please, check the [contributing guidelines](./CONTRIBUTING.md).
 
-## To Do List:
+## To Do List
 
 See the [TODO list](notes.md) for the list of features and improvements that are planned for the future.
 
@@ -235,6 +256,7 @@ Dynamics Monitoring},
 ```
 
 Depending on the options used, consider citing the corresponding work of:
+
 - [KORNIA](https://github.com/kornia/kornia)
 - [HLOC](https://github.com/cvg/Hierarchical-Localization)
 - [COLMAP](https://github.com/colmap/colmap)

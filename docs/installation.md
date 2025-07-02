@@ -5,38 +5,42 @@
 Deep-image-matching is tested on Ubuntu 22.04 and Windows 10 with `Python 3.9`. It is strongly recommended to have a NVIDIA GPU with at least 8GB of memory.
 Due to dependencies issues, it is recommended to use `Python 3.9` on Windows and MacOS, while on Linux you can also use `Python 3.10` (see [pydegensac](#pydegensac)).
 
-All the dependencies are listed in the `pyproject.toml` file.
+All the dependencies are listed in the `pyproject.toml` file and managed with `uv.lock`.
 
 ## Installation
 
-For installing deep-image-matching, first create a conda environment:
+For installing deep-image-matching, we recommend using [uv](https://docs.astral.sh/uv/) for fast and reliable package management:
 
 ```bash
-conda create -n deep-image-matching python=3.9
-conda activate deep-image-matching
-pip install --upgrade pip
+# Install uv if you haven't already
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Create and activate a virtual environment
+uv venv deep-image-matching --python 3.9
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 
-Then, you can install deep-image-matching using pip with the following command:
+Then, you can install deep-image-matching using uv:
 
 ```bash
-pip install deep-image-matching
+uv pip install deep-image-matching
 ```
 
 If there is any issue with the installation, you can also install the package from the source code.
-Clone the repository and install deep-image-matching in editable mode:
+Clone the repository and install deep-image-matching in development mode:
 
 ```bash
 git clone https://github.com/3DOM-FBK/deep-image-matching.git
 cd deep-image-matching
-pip install -e .
+uv sync --dev
 ```
 
 Install pycolmap (optional):
 
 ```bash
-pip install pycolmap==0.6.1
+uv pip install pycolmap==0.6.1
 ```
+
 Pycolmap is optional to run reconstruction directly in DIM. If pycolmap is not available, matches will be written both in a h5 and colmap database for later processing with COLMAP GUI or API, or other processing.
 
 Try to run the tests to check if deep-image-matching is correctly installed, try to import the package in a Python shell:
@@ -44,7 +48,6 @@ Try to run the tests to check if deep-image-matching is correctly installed, try
 ```python
 import deep_image_matching as dim
 ```
-
 
 ### Notes and troubleshooting
 
