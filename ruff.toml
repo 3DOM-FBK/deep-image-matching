@@ -1,3 +1,4 @@
+target-version = "py39" # Set the target version for linting and formatting
 exclude = [
     ".bzr",
     ".direnv",
@@ -79,3 +80,7 @@ docstring-code-format = true
 # This only has an effect when the `docstring-code-format` setting is
 # enabled.
 docstring-code-line-length = "dynamic"
+
+# Configure pyupgrade to maintain Python 3.9 compatibility
+# The [lint.pyupgrade] section is not supported in ruff.toml and has been removed.
+# Set target-version and other options in the main section if supported by your ruff version.
