@@ -94,11 +94,15 @@ def pycolmap_reconstruction(
 
         # Export reconstruction in Bundler format
         if export_bundler:
-            fname = "bundler"
-            model.export_bundler(
-                reconstruction_dir / (fname + ".out"),
-                reconstruction_dir / (fname + "_list.txt"),
-                skip_distortion=True,
+            logger.warning(
+                "Exporting reconstruction in Bundler format is deprecated and not implemented anymore in pycolmap. Use the script export_to_bundler.py in the COLMAP repository: https://github.com/colmap/colmap/blob/main/scripts/python/export_to_bundler.py"
             )
+
+            # fname = "bundler"
+            # model.export_bundler(
+            #     reconstruction_dir / (fname + ".out"),
+            #     reconstruction_dir / (fname + "_list.txt"),
+            #     skip_distortion=True,
+            # )
 
     return reconstructions[largest_index]
