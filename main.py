@@ -101,7 +101,7 @@ if not config.general["skip_reconstruction"]:
         #     },
         # )
         reconst_opts = {}
-        refine_intrinsics = config.general["refine_intrinsics"] if "refine_intrinsics" in config.general else True
+        refine_intrinsics = config.general.get("refine_intrinsics", True)
 
         # Run reconstruction
         model = reconstruction.pycolmap_reconstruction(
