@@ -2,6 +2,7 @@ import ast
 import json
 import logging
 import shutil
+import sys
 from copy import deepcopy
 from enum import Enum
 from pathlib import Path
@@ -469,9 +470,13 @@ class Config:
                 shutil.rmtree(args["outs"])
             else:
                 logger.warning(
-                    f"{args['outs']} already exists. Use '--force' option to overwrite the folder. Using existing features is not yet fully implemented (it will be implemented in a future release). Exiting."
+                    "Output folder already exists. Results will be overwritten (reusing existing features is not yet implemented). Do you want to continue anyway? (yes/no)"
                 )
-                exit(1)
+                if input("Type 'yes' to continue: ").lower() != "yes":
+                    logger.error(
+                        "Exiting. Please use '--force' option to overwrite the existing folder."
+                    )
+                    sys.exit(1)
         args["outs"].mkdir(parents=True, exist_ok=True)
 
         # Check extraction and matching configuration
