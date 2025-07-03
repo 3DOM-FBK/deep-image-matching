@@ -49,6 +49,7 @@ dependencies = [
   "pycolmap>=3.12.0",
   "ipykernel>=6.29.5",
   "ruff>=0.12.1",
+  "enlighten>=1.14.1",
 ]
 
 [project.optional-dependencies]

@@ -53,8 +53,6 @@ if config.general["graph"]:
 
 # If --skip_reconstruction is not specified, run reconstruction with pycolmap
 if not config.general["skip_reconstruction"]:
-    from deep_image_matching.reconstruction import pycolmap_reconstruction
-
     # Optional - You can specify some reconstruction configuration
     # reconst_opts = (
     #     {
@@ -64,17 +62,19 @@ if not config.general["skip_reconstruction"]:
     #     },
     # )
     reconst_opts = {}
-    refine_intrinsics = config.general.get("refine_intrinsics", True)
-
-    # Run reconstruction
-    model = pycolmap_reconstruction(
+    model = dim.reconstruction.incremental_reconstruction(
         database_path=output_dir / "database.db",
-        sfm_dir=output_dir,
         image_dir=imgs_dir,
-        options=reconst_opts,
-        verbose=config.general["verbose"],
-        refine_intrinsics=refine_intrinsics,
+        sfm_dir=output_dir / "reconstruction",
+        reconstruction_options=reconst_opts,
+        refine_intrinsics=True,
+        ignore_two_view_tracks=True,
+        filter_min_tri_angle=None,
+        export_ply=True,
+        export_text=True,
+        export_bundler=False,
     )
+
 
 # Export in openMVG format
 if config.general["openmvg_conf"]:
