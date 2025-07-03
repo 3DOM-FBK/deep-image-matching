@@ -293,7 +293,7 @@ class Config:
         "db_path": None,
         "upright": False,
         "skip_reconstruction": False,
-        "force": True,
+        "force": False,
         "verbose": False,
         "graph": True,
         "openmvg": None,
