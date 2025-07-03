@@ -274,7 +274,7 @@ class Image:
         elif "EXIF DateTimeOriginal" in exif:
             date_str = str(exif["EXIF DateTimeOriginal"])
         else:
-            logger.info(f"Date not available in exif for {self.name}")
+            logger.debug(f"Date not available in exif for {self.name}")
 
         if date_str:
             for format in self.DATE_FORMATS:
@@ -282,7 +282,7 @@ class Image:
                     self._date_time = datetime.strptime(date_str, format)
                     break
                 except ValueError:
-                    logger.info(
+                    logger.debug(
                         f"Unable to parse date {date_str} for image {self.name}"
                     )
                     continue
@@ -299,7 +299,7 @@ class Image:
                 else:
                     self._focal_length = float(focal_length_str)
             except ValueError:
-                logger.info(
+                logger.debug(
                     f"Unable to get focal length from exif for image {self.name}"
                 )
 
@@ -328,18 +328,18 @@ class Image:
             try:
                 self.read_exif()
             except OSError:
-                logger.error("Unable to read exif data.")
+                logger.info("Unable to read exif data.")
                 return None
         try:
             focal_length_mm = float(self._exif_data["EXIF FocalLength"])
         except OSError:
-            logger.error("Focal length non found in exif data.")
+            logger.debug("Focal length non found in exif data.")
             return None
         try:
             sensor_width_db = SensorWidthDatabase()
             sensor_width_mm = sensor_width_db.lookup(self._exif_data["Image Model"])
         except OSError:
-            logger.error("Unable to get sensor size in mm from sensor database")
+            logger.debug("Unable to get sensor size in mm from sensor database")
             return None
 
         img_w_px = self.width
