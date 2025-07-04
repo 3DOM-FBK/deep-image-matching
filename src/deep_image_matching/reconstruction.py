@@ -1,59 +1,76 @@
-import contextlib
-import io
 import logging
 import multiprocessing
-import sys
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional, Union
 
+import enlighten
 import pycolmap
 
 logger = logging.getLogger("dim")
 
 
-class OutputCapture:
-    def __init__(self, verbose: bool):
-        self.verbose = verbose
-
-    def __enter__(self):
-        if not self.verbose:
-            self.capture = contextlib.redirect_stdout(io.StringIO())
-            self.out = self.capture.__enter__()
-
-    def __exit__(self, exc_type, *args):
-        if not self.verbose:
-            self.capture.__exit__(exc_type, *args)
-            if exc_type is not None:
-                logger.error("Failed with output:\n%s", self.out.getvalue())
-        sys.stdout.flush()
+def incremental_mapping_with_pbar(database_path, image_path, sfm_path):
+    num_images = pycolmap.Database(database_path).num_images
+    with enlighten.Manager() as manager:
+        with manager.counter(total=num_images, desc="Images registered:") as pbar:
+            pbar.update(0, force=True)
+            reconstructions = pycolmap.incremental_mapping(
+                database_path,
+                image_path,
+                sfm_path,
+                initial_image_pair_callback=lambda: pbar.update(2),
+                next_image_callback=lambda: pbar.update(1),
+            )
+    return reconstructions
 
 
-def pycolmap_reconstruction(
+def incremental_reconstruction(
     database_path: Path,
-    sfm_dir: Path,
     image_dir: Path,
+    sfm_dir: Path,
     refine_intrinsics: bool = True,
-    options: Optional[Dict[str, Any]] = {},
-    export_text: bool = True,
-    export_bundler: bool = True,
+    ignore_two_view_tracks: bool = True,
+    filter_min_tri_angle: Union[float, None] = None,
+    reconstruction_options: Optional[dict[str, Any]] = None,
     export_ply: bool = True,
-    verbose: bool = False,
-) -> pycolmap.Reconstruction:
-    models_path = sfm_dir / "models"
-    models_path.mkdir(exist_ok=True, parents=True)
+    export_text: bool = False,
+    export_bundler: bool = False,
+) -> Union[pycolmap.Reconstruction, None]:
     logger.info("Running 3D reconstruction...")
 
+    if not database_path.exists():
+        logger.error(f"Database file {database_path} does not exist.")
+        return None
+
+    if reconstruction_options is None:
+        reconstruction_options = {}
+
+    try:
+        num_threads = reconstruction_options.pop(
+            "num_threads", multiprocessing.cpu_count()
+        )
+        pipeline_options = pycolmap.IncrementalPipelineOptions(
+            num_threads=num_threads, **(reconstruction_options or {})
+        )
+    except TypeError:
+        logger.error(
+            "Invailid options for IncrementalPipelineOptions. Using default options."
+        )
+        pipeline_options = pycolmap.IncrementalPipelineOptions()
+
     if not refine_intrinsics:
-        options = {
-            "ba_refine_focal_length": False,
-            "ba_refine_principal_point": False,
-            "ba_refine_extra_params": False,
-            **options,
-        }
-    options = {"num_threads": min(multiprocessing.cpu_count(), 16), **options}
-    with OutputCapture(verbose):
-        with pycolmap.ostream():
-            reconstructions = pycolmap.incremental_mapping(database_path, image_dir, models_path, options=options)
+        pipeline_options.ba_refine_focal_length = False
+        pipeline_options.ba_refine_principal_point = False
+        pipeline_options.ba_refine_extra_params = False
+
+    if not ignore_two_view_tracks:
+        pipeline_options.triangulation.ignore_two_view_tracks = False
+
+    if filter_min_tri_angle is not None:
+        pipeline_options.mapper.filter_min_tri_angle = filter_min_tri_angle
+
+    sfm_dir.mkdir(exist_ok=True, parents=True)
+    reconstructions = incremental_mapping_with_pbar(database_path, image_dir, sfm_dir)
 
     if len(reconstructions) == 0:
         logger.error("Could not reconstruct any model!")
@@ -68,23 +85,15 @@ def pycolmap_reconstruction(
             largest_index = index
             largest_num_images = num_images
     assert largest_index is not None
-    logger.info(f"Largest model is #{largest_index} " f"with {largest_num_images} images.")
+    logger.info(f"Largest model is #{largest_index} with {largest_num_images} images.")
 
+    # Exporting the models in other formats
     for index, model in reconstructions.items():
-        if len(reconstructions) > 1:
-            logger.info(f"Exporting model #{index}...")
-            reconstruction_dir = sfm_dir / "reconstruction" / f"model_{index}"
-        else:
-            logger.info("Exporting model...")
-            reconstruction_dir = sfm_dir / "reconstruction"
-        reconstruction_dir.mkdir(exist_ok=True, parents=True)
-
-        # Export reconstruction in Colmap format
-        model.write(reconstruction_dir)
+        reconstruction_dir = sfm_dir / f"{index}"
 
         # Export ply
         if export_ply:
-            model.export_PLY(reconstruction_dir / "rec.ply")
+            model.export_PLY(str(reconstruction_dir / "rec.ply"))
 
         # Export reconstruction in text format
         if export_text:
@@ -92,11 +101,8 @@ def pycolmap_reconstruction(
 
         # Export reconstruction in Bundler format
         if export_bundler:
-            fname = "bundler"
-            model.export_bundler(
-                reconstruction_dir / (fname + ".out"),
-                reconstruction_dir / (fname + "_list.txt"),
-                skip_distortion=True,
+            logger.warning(
+                "Exporting reconstruction in Bundler format is deprecated and not implemented anymore in pycolmap. Use the script export_to_bundler.py in the COLMAP repository: https://github.com/colmap/colmap/blob/main/scripts/python/export_to_bundler.py"
             )
 
     return reconstructions[largest_index]

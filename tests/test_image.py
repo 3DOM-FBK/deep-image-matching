@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+
 from deep_image_matching.utils.image import Image, ImageList, read_image
 
 
@@ -98,7 +99,7 @@ def test_raise_value_error_for_directory_without_valid_image_files():
 def test_raise_index_error_for_invalid_index(image_dir):
     image_list = ImageList(image_dir)
     with pytest.raises(IndexError):
-        image = image_list[10]
+        _ = image_list[10]
 
 
 if __name__ == "__main__":

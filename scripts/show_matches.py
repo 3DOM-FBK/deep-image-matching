@@ -1,9 +1,11 @@
-import os
 import argparse
-from pathlib import Path
+import os
 import sqlite3
+from pathlib import Path
+
 import cv2
 import numpy as np
+
 from deep_image_matching.utils.database import (
     COLMAPDatabase,
     blob_to_array,
@@ -16,11 +18,11 @@ def pair_id_to_image_ids(pair_id):
     image_id1 = (pair_id - image_id2) / 2147483647
     return image_id1, image_id2
 
+
 def ExportMatches(
-    database_path: Path, 
-    min_num_matches: int = 1, 
+    database_path: Path,
+    min_num_matches: int = 1,
 ) -> None:
-    
     connection = sqlite3.connect(database_path)
     cursor = connection.cursor()
     pairs = []
@@ -31,25 +33,27 @@ def ExportMatches(
         n_matches = row[1]
         id_img1, id_img2 = pair_id_to_image_ids(pair_id)
         id_img1, id_img2 = int(id_img1), int(id_img2)
-        #img1 = images[id_img1]
-        #img2 = images[id_img2]
+        # img1 = images[id_img1]
+        # img2 = images[id_img2]
         if n_matches >= min_num_matches:
             pairs.append((id_img1, id_img2))
-    
+
     connection.close()
 
     return pairs
+
 
 def generate_pairs(imgs_dir, method=["bruteforce", "custom"], database_path=Path("./")):
     pairs = []
     if method == "custom":
         n_images = len(os.listdir(imgs_dir))
-        for i in range(n_images-1):
-            if i%2 == 0:
-                pairs.append((i+1, i+2))
+        for i in range(n_images - 1):
+            if i % 2 == 0:
+                pairs.append((i + 1, i + 2))
     elif method == "bruteforce":
         pairs = ExportMatches(database_path)
     return pairs
+
 
 class ShowPairMatches:
     def __init__(
@@ -101,9 +105,9 @@ class ShowPairMatches:
             ):
                 if data is not None:
                     pair_id = pair_id_to_image_ids(pair_id)
-                    self.two_views_matches[
-                        (int(pair_id[0]), int(pair_id[1]))
-                    ] = blob_to_array(data, np.uint32, (-1, 2))
+                    self.two_views_matches[(int(pair_id[0]), int(pair_id[1]))] = (
+                        blob_to_array(data, np.uint32, (-1, 2))
+                    )
 
     def ShowMatches(self, plot_config: dict):
         if self.db_type == "colmap":
@@ -122,8 +126,8 @@ class ShowPairMatches:
             im1 = self.imgs_dict["data"][1]
             id1 = inverted_dict[im1]
 
-        keypoints0 = self.keypoints[id0][:,:2]
-        keypoints1 = self.keypoints[id1][:,:2]
+        keypoints0 = self.keypoints[id0][:, :2]
+        keypoints1 = self.keypoints[id1][:, :2]
         print(f"Img {id0}: kpts shape = {keypoints0.shape}")
         print(f"Img {id1}: kpts shape = {keypoints1.shape}")
         try:
@@ -131,7 +135,9 @@ class ShowPairMatches:
         except:
             pass
         try:
-            print("verified matches shape", np.shape(self.two_views_matches[(id0, id1)]))
+            print(
+                "verified matches shape", np.shape(self.two_views_matches[(id0, id1)])
+            )
         except:
             self.two_views_matches[(id0, id1)] = []
 
@@ -158,7 +164,6 @@ class ShowPairMatches:
         matches: np.ndarray,
         plot_config: dict,
     ):
-        
         show_keypoints = plot_config["show_keypoints"]
         radius = plot_config["radius"]
         thickness = plot_config["thickness"]
@@ -174,12 +179,18 @@ class ShowPairMatches:
 
         # Create a new image to draw matches
         img_matches = np.zeros(
-            (max(img0.shape[0], img1.shape[0]), img0.shape[1] + img1.shape[1] + space_between_images, 3),
+            (
+                max(img0.shape[0], img1.shape[0]),
+                img0.shape[1] + img1.shape[1] + space_between_images,
+                3,
+            ),
             dtype=np.uint8,
         )
         img_matches[: img0.shape[0], : img0.shape[1]] = img0
-        img_matches[: img1.shape[0], img0.shape[1]+space_between_images :] = img1
-        img_matches[: img1.shape[0], img0.shape[1] : img0.shape[1]+space_between_images] = (255,255,255)
+        img_matches[: img1.shape[0], img0.shape[1] + space_between_images :] = img1
+        img_matches[
+            : img1.shape[0], img0.shape[1] : img0.shape[1] + space_between_images
+        ] = (255, 255, 255)
 
         if show_keypoints:
             # Show keypoints
@@ -240,7 +251,10 @@ def parse_args():
         "-o", "--output", type=str, help="Path to output folder", required=True
     )
     parser.add_argument(
-        "--all", action='store_true', help="Export matches for all pairs", required=False
+        "--all",
+        action="store_true",
+        help="Export matches for all pairs",
+        required=False,
     )
     parser.add_argument(
         "-i",
@@ -272,7 +286,7 @@ def main():
         "thickness": 2,
         "space_between_images": 0,
     }
-    
+
     args = parse_args()
     database_path = Path(args.database)
     out_dir = Path(args.output)
@@ -301,9 +315,11 @@ def main():
 
         show_pair_matches.LoadDatabase()
         show_pair_matches.ShowMatches(plot_config)
-    
+
     else:
-        pairs = generate_pairs(imgs_dir, method="bruteforce", database_path=database_path)
+        pairs = generate_pairs(
+            imgs_dir, method="bruteforce", database_path=database_path
+        )
         print(pairs)
         for pair in pairs:
             i1, i2 = pair[0], pair[1]
@@ -323,7 +339,7 @@ def main():
             )
 
             show_pair_matches.LoadDatabase()
-            #show_pair_matches.ShowMatches(plot_config);quit()
+            # show_pair_matches.ShowMatches(plot_config);quit()
 
             try:
                 show_pair_matches.ShowMatches(plot_config)

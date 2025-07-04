@@ -2,6 +2,7 @@ import ast
 import json
 import logging
 import shutil
+import sys
 from copy import deepcopy
 from enum import Enum
 from pathlib import Path
@@ -245,7 +246,7 @@ opt_zoo = {
         "matching_lowres",
         "covisibility",
     ],
-    "upright_strategy": ["custom", "2clusters", "exif"]
+    "upright_strategy": ["custom", "2clusters", "exif"],
 }
 
 
@@ -295,7 +296,7 @@ class Config:
         "db_path": None,
         "upright": False,
         "skip_reconstruction": False,
-        "force": True,
+        "force": False,
         "verbose": False,
         "graph": True,
         "openmvg": None,
@@ -320,7 +321,7 @@ class Config:
         return self._cfg["matcher"]
 
     def __repr__(self) -> str:
-        return f"DeepImageMatching Configuration Object"
+        return "DeepImageMatching Configuration Object"
 
     def __init__(self, args: dict):
         """
@@ -396,7 +397,7 @@ class Config:
     @staticmethod
     def get_retrieval_names() -> list:
         return opt_zoo["retrieval"]
-    
+
     @staticmethod
     def get_upright_options() -> list:
         return opt_zoo["upright_strategy"]
@@ -417,15 +418,21 @@ class Config:
 
         # Check that at least one of the two options is provided
         if args["images"] is None and args["dir"] is None:
-            raise ValueError("Invalid input. Either '--images' or '--dir' option must be provided.")
+            raise ValueError(
+                "Invalid input. Either '--images' or '--dir' option must be provided."
+            )
 
         # If the project directory is not provided, check that the image folder is provided (and it valid)
         if args["dir"] is None:
             args["images"] = Path(args["images"])
             if not args["images"]:
-                raise ValueError("Invalid input. '--images' option is required when '--dir' option is not provided.")
+                raise ValueError(
+                    "Invalid input. '--images' option is required when '--dir' option is not provided."
+                )
             if not args["images"].exists() or not args["images"].is_dir():
-                raise ValueError(f"Invalid images folder {args['images']}. Direcotry does not exist")
+                raise ValueError(
+                    f"Invalid images folder {args['images']}. Direcotry does not exist"
+                )
             args["dir"] = args["images"].parent
         else:
             args["dir"] = Path(args["dir"])
@@ -446,21 +453,32 @@ class Config:
         else:
             args["images"] = Path(args["images"])
             if not args["images"].exists() or not args["images"].is_dir():
-                raise ValueError(f"Invalid images folder {args['images']}. Direcotry does not exist")
+                raise ValueError(
+                    f"Invalid images folder {args['images']}. Direcotry does not exist"
+                )
 
         # if output folder is not provided, use the default one
         if args["outs"] is None:
-            args["outs"] = args["dir"] / f"results_{args['pipeline']}_{args['strategy']}_quality_{args['quality']}"
+            args["outs"] = (
+                args["dir"]
+                / f"results_{args['pipeline']}_{args['strategy']}_quality_{args['quality']}"
+            )
 
         if args["outs"].exists():
             if args["force"]:
-                logger.warning(f"{args['outs']} already exists, but the '--force' option is used. Deleting the folder.")
+                logger.warning(
+                    f"{args['outs']} already exists, but the '--force' option is used. Deleting the folder."
+                )
                 shutil.rmtree(args["outs"])
             else:
                 logger.warning(
-                    f"{args['outs']} already exists. Use '--force' option to overwrite the folder. Using existing features is not yet fully implemented (it will be implemented in a future release). Exiting."
+                    "Output folder already exists. Results will be overwritten (reusing existing features is not yet implemented). Do you want to continue anyway? (yes/no)"
                 )
-                exit(1)
+                if input("Type 'yes' to continue: ").lower() != "yes":
+                    logger.error(
+                        "Exiting. Please use '--force' option to overwrite the existing folder."
+                    )
+                    sys.exit(1)
         args["outs"].mkdir(parents=True, exist_ok=True)
 
         # Check extraction and matching configuration
@@ -471,10 +489,14 @@ class Config:
         pipeline = args["pipeline"]
         extractor = confs[pipeline]["extractor"]["name"]
         if extractor not in opt_zoo["extractors"]:
-            raise ValueError(f"Invalid extractor option: {extractor}. Valid options are: {opt_zoo['extractors']}")
+            raise ValueError(
+                f"Invalid extractor option: {extractor}. Valid options are: {opt_zoo['extractors']}"
+            )
         matcher = confs[pipeline]["matcher"]["name"]
         if matcher not in opt_zoo["matchers"]:
-            raise ValueError(f"Invalid matcher option: {matcher}. Valid options are: {opt_zoo['matchers']}")
+            raise ValueError(
+                f"Invalid matcher option: {matcher}. Valid options are: {opt_zoo['matchers']}"
+            )
 
         # Check matching strategy and related options
         if args["strategy"] not in opt_zoo["matching_strategy"]:
@@ -489,13 +511,19 @@ class Config:
                     "Invalid overlap. --overlap 'int' option is required when --strategy is set to sequential"
                 )
             elif args["overlap"] < 1:
-                raise ValueError("Invalid overlap. --overlap must be a positive integer greater than 0")
+                raise ValueError(
+                    "Invalid overlap. --overlap must be a positive integer greater than 0"
+                )
             elif args["overlap"] >= num_imgs - 1:
-                raise ValueError("Invalid overlap. --overlap must be less than the number of images-1")
+                raise ValueError(
+                    "Invalid overlap. --overlap must be less than the number of images-1"
+                )
 
         elif args["strategy"] == "retrieval":
             if args["global_feature"] is None:
-                raise ValueError("--global_feature option is required when --strategy is set to retrieval")
+                raise ValueError(
+                    "--global_feature option is required when --strategy is set to retrieval"
+                )
             elif args["global_feature"] not in opt_zoo["retrieval"]:
                 raise ValueError(
                     f"Invalid global_feature option: {args['global_feature']}. Valid options are: {opt_zoo['retrieval']}"
@@ -503,14 +531,18 @@ class Config:
 
         elif args["strategy"] == "covisibility":
             if args["db_path"] is None:
-                raise ValueError("--db_path option is required when --strategy is set to covisibility")
+                raise ValueError(
+                    "--db_path option is required when --strategy is set to covisibility"
+                )
             args["db_path"] = Path(args["db_path"])
             if not args["db_path"].exists():
                 raise ValueError(f"File {args['db_path']} does not exist")
 
         elif args["strategy"] == "custom_pairs":
             if args["pair_file"] is None:
-                raise ValueError("--pair_file option is required when --strategy is set to custom_pairs")
+                raise ValueError(
+                    "--pair_file option is required when --strategy is set to custom_pairs"
+                )
             args["pair_file"] = Path(args["pair_file"])
             if not args["pair_file"].exists():
                 raise ValueError(f"File {args['pair_file']} does not exist")
@@ -576,16 +608,20 @@ class Config:
 
         print(f"Using a custom configuration file: {path}")
 
-        with open(path, "r") as file:
+        with open(path) as file:
             cfg = yaml.safe_load(file)
 
         if "general" in cfg:
             if "quality" in cfg["general"]:
                 cfg["general"]["quality"] = Quality[cfg["general"]["quality"].upper()]
             if "tile_selection" in cfg["general"]:
-                cfg["general"]["tile_selection"] = TileSelection[cfg["general"]["tile_selection"].upper()]
+                cfg["general"]["tile_selection"] = TileSelection[
+                    cfg["general"]["tile_selection"].upper()
+                ]
             if "geom_verification" in cfg["general"]:
-                cfg["general"]["geom_verification"] = GeometricVerification[cfg["general"]["geom_verification"].upper()]
+                cfg["general"]["geom_verification"] = GeometricVerification[
+                    cfg["general"]["geom_verification"].upper()
+                ]
             if "tile_size" in cfg["general"]:
                 tile_sz = cfg["general"]["tile_size"]
                 if isinstance(tile_sz, Tuple):

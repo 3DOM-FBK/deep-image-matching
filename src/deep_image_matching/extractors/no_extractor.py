@@ -36,7 +36,9 @@ class NoExtractor(ExtractorBase):
         elif isinstance(img, Path):
             im_path = img
         else:
-            raise TypeError("Invalid image path. 'img' must be a string, a Path or an Image object")
+            raise TypeError(
+                "Invalid image path. 'img' must be a string, a Path or an Image object"
+            )
         if not im_path.exists():
             raise ValueError(f"Image {im_path} does not exist")
 

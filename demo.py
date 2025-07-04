@@ -1,12 +1,16 @@
 import os
+<<<<<<< HEAD:main.py
 import time
 import logging
+=======
+>>>>>>> origin/dev_uv_and_pycolmap:demo.py
 from importlib import import_module
 from pathlib import Path
 
+import yaml
+
 import deep_image_matching as dim
 from deep_image_matching.utils.loftr_roma_to_multiview import LoftrRomaToMultiview
-import yaml
 
 
 start_time = time.time()
@@ -59,15 +63,38 @@ if config.general["graph"]:
     except ImportError:
         logger.error("pyvis is not available. Unable to visualize view graph.")
 
-# If --skip_reconstruction is not specified, run reconstruction
+# If --skip_reconstruction is not specified, run reconstruction with pycolmap
+if not config.general["skip_reconstruction"]:
+    # Optional - You can specify some reconstruction configuration
+    # reconst_opts = (
+    #     {
+    #         "ba_refine_focal_length": True,
+    #         "ba_refine_principal_point": False,
+    #         "ba_refine_extra_params": False,
+    #     },
+    # )
+    reconst_opts = {}
+    model = dim.reconstruction.incremental_reconstruction(
+        database_path=output_dir / "database.db",
+        image_dir=imgs_dir,
+        sfm_dir=output_dir / "reconstruction",
+        reconstruction_options=reconst_opts,
+        refine_intrinsics=True,
+        ignore_two_view_tracks=True,
+        filter_min_tri_angle=None,
+        export_ply=True,
+        export_text=True,
+        export_bundler=False,
+    )
+
+
 # Export in openMVG format
 if config.general["openmvg_conf"]:
-    with open(config.general["openmvg_conf"], "r") as file:
+    with open(config.general["openmvg_conf"]) as file:
         openmvgcfg = yaml.safe_load(file)
     openmvg_sfm_bin = openmvgcfg["general"]["path_to_binaries"]
     openmvg_database = openmvgcfg["general"]["openmvg_database"]
     openmvg_out_path = output_dir / "openmvg"
-
     dim.io.export_to_openmvg(
         img_dir=imgs_dir,
         feature_path=feature_path,
@@ -78,55 +105,12 @@ if config.general["openmvg_conf"]:
         camera_config_path=config.general["camera_options"],
     )
 
-    # Reconstruction with OpenMVG
-    reconstruction = import_module("deep_image_matching.openmvg_reconstruction")
-    reconstruction.main(
-        openmvg_out_path=openmvg_out_path,
-        skip_reconstruction=config.general["skip_reconstruction"],
-        openmvg_sfm_bin=openmvg_sfm_bin,
-    )
+    # If skip_reconstruction is not specified, run OpenMVG reconstruction
+    if not config.general["skip_reconstruction"]:
+        from deep_image_matching.openmvg import openmvg_reconstruction
 
-# Reconstruction with pycolmap
-if not config.general["skip_reconstruction"]:
-    use_pycolmap = True
-    try:
-        # To be sure, check if pycolmap is available, otherwise skip reconstruction
-        pycolmap = import_module("pycolmap")
-        logger.info(f"Using pycolmap version {pycolmap.__version__}")
-    except ImportError:
-        logger.error("Pycomlap is not available.")
-        use_pycolmap = False
-
-    if use_pycolmap:
-        # import reconstruction module
-        reconstruction = import_module("deep_image_matching.reconstruction")
-
-        # Optional - You can specify some reconstruction configuration
-        # reconst_opts = (
-        #     {
-        #         "ba_refine_focal_length": True,
-        #         "ba_refine_principal_point": False,
-        #         "ba_refine_extra_params": False,
-        #     },
-        # )
-        reconst_opts = {}
-        refine_intrinsics = (
-            config.general["refine_intrinsics"]
-            if "refine_intrinsics" in config.general
-            else True
+        openmvg_reconstruction(
+            openmvg_out_path=openmvg_out_path,
+            skip_reconstruction=config.general["skip_reconstruction"],
+            openmvg_sfm_bin=openmvg_sfm_bin,
         )
-
-        # Run reconstruction
-        model = reconstruction.pycolmap_reconstruction(
-            database_path=output_dir / "database.db",
-            sfm_dir=output_dir,
-            image_dir=imgs_dir,
-            options=reconst_opts,
-            verbose=config.general["verbose"],
-            refine_intrinsics=refine_intrinsics,
-        )
-
-end_time = time.time()
-
-total_time = end_time - start_time
-print(f"Total processing time: {total_time:.2f} seconds")

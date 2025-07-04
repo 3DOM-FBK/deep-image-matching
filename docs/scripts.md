@@ -1,4 +1,19 @@
-# Scripts
+# Scripts and Demo Files
+
+## Demo Files
+
+The repository includes demo files in the root directory that serve as example launchers and templates:
+
+- `demo.py` - Simple script demonstrating the complete workflow
+- `demo.ipynb` - Interactive Jupyter notebook version of the demo
+
+These are meant to be **copied and customized** by users who want to use DIM as a Python library or create their own custom workflows.
+
+```bash
+python demo.py --dir assets/example_cyprus --pipeline superpoint+lightglue
+```
+
+## Utility Scripts
 
 You can use the scripts located inside the `scripts` folder for advanced usage of the Deep-Image-Matching pipeline.
 
@@ -18,23 +33,23 @@ To visualize the geometrically verified matches, you have two options:
 To visualize the results you can use the `show_matches.py` script. Pass to the `--images` argument the names of the images (e.g. "img01.jpg img02.jpg") or their ids (e.g. "1 2") and choose accordingly the `--type` between `names` if you specify the name of the image with the extension, or `ids` if you specifiy the image `id`. In COLMAP image `ids` starts from 1 and not from 0.
 
 ```bash
-python3 ./deep-image-matching/show_matches.py \
+python3 ./scripts/show_matches.py \
   --images    "1 2" \
   --type      ids \
-  --database  ./deep-image-matching/assets/example_cyprus/results_superpoint+lightglue_matching_lowres_quality_high/database.db \
-  --imgsdir   ./deep-image-matching/assets/example_cyprus/images \
-  --output    ./deep-image-matching/assets/example_cyprus/matches.png
+  --database  ./assets/example_cyprus/results_superpoint+lightglue_matching_lowres_quality_high/database.db \
+  --imgsdir   ./assets/example_cyprus/images \
+  --output    ./assets/example_cyprus/matches.png
 ```
 
 or
 
 ```bash
-python3 ./deep-image-matching/show_matches.py \
+python3 ./scripts/show_matches.py \
   --images    "img01.jpg img02.jpg" \
   --type      names \
-  --database  ./deep-image-matching/assets/example_cyprus/results_superpoint+lightglue_matching_lowres_quality_high/database.db \
-  --imgsdir   ./deep-image-matching/assets/example_cyprus/images \
-  --output    ./deep-image-matching/assets/example_cyprus/matches.png
+  --database  ./assets/example_cyprus/results_superpoint+lightglue_matching_lowres_quality_high/database.db \
+  --imgsdir   ./assets/example_cyprus/images \
+  --output    ./assets/example_cyprus/matches.png
 ```
 
-The matches are shown matches.png.
+The matches are shown in matches.png.

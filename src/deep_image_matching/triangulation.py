@@ -19,7 +19,7 @@ logger = logging.getLogger("dim")
 
 def parse_retrieval(path):
     retrieval = defaultdict(list)
-    with open(path, "r") as f:
+    with open(path) as f:
         for p in f.read().rstrip("\n").split("\n"):
             if len(p) == 0:
                 continue
@@ -28,7 +28,9 @@ def parse_retrieval(path):
     return dict(retrieval)
 
 
-def create_db_from_model(reconstruction: pycolmap.Reconstruction, database_path: Path) -> Dict[str, int]:
+def create_db_from_model(
+    reconstruction: pycolmap.Reconstruction, database_path: Path
+) -> Dict[str, int]:
     """
     Creates a COLMAP database from a PyCOLMAP reconstruction (it deletes an existing database if found at the specified path). The function
     populates the database with camera parameters and image information, but does not add 2D and 3D points.
@@ -106,11 +108,15 @@ def get_matches(matches_h5: Path, name0: str, name1) -> np.ndarray:
             if name1 in f:
                 name0, name1 = name1, name0
             else:
-                raise KeyError(f"Key '{name0}' and '{name1}' not found in '{matches_h5}'")
+                raise KeyError(
+                    f"Key '{name0}' and '{name1}' not found in '{matches_h5}'"
+                )
         return f[name0][name1][:]
 
 
-def import_keypoints(features_h5: Path, image_ids: Dict[str, int], database_path: Path) -> None:
+def import_keypoints(
+    features_h5: Path, image_ids: Dict[str, int], database_path: Path
+) -> None:
     """
     Imports keypoints from an HDF5 file into a COLMAP database.
 
@@ -223,7 +229,9 @@ def import_verifed_matches(
                 continue
 
             cam1_from_cam0 = image1.cam_from_world * image0.cam_from_world.inverse()
-            errors0, errors1 = compute_epipolar_errors(cam1_from_cam0, kps0[matches[:, 0]], kps1[matches[:, 1]])
+            errors0, errors1 = compute_epipolar_errors(
+                cam1_from_cam0, kps0[matches[:, 0]], kps1[matches[:, 1]]
+            )
             valid_matches = np.logical_and(
                 errors0 <= cam0.cam_from_img_threshold(noise0 * max_error),
                 errors1 <= cam1.cam_from_img_threshold(noise1 * max_error),

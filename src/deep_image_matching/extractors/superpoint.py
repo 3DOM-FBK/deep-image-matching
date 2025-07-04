@@ -21,7 +21,9 @@ def sample_descriptors_fix_sampling(keypoints, descriptors, s: int = 8):
     descriptors = torch.nn.functional.grid_sample(
         descriptors, keypoints.view(b, 1, -1, 2), mode="bilinear", align_corners=False
     )
-    descriptors = torch.nn.functional.normalize(descriptors.reshape(b, c, -1), p=2, dim=1)
+    descriptors = torch.nn.functional.normalize(
+        descriptors.reshape(b, c, -1), p=2, dim=1
+    )
     return descriptors
 
 
@@ -47,7 +49,7 @@ class SuperPoint(nn.Module):
     def forward(self, data):
         """Check the data and call the _forward method of the child model."""
         for key in self.required_inputs:
-            assert key in data, "Missing key {} in data".format(key)
+            assert key in data, f"Missing key {key} in data"
         return self._forward(data)
 
     def _init(self, conf):
@@ -121,7 +123,9 @@ class SuperPointExtractor(ExtractorBase):
         feats = self._extractor({"image": image_})
 
         # Remove elements from list/tuple
-        feats = {k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()}
+        feats = {
+            k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()
+        }
         # Convert tensors to numpy arrays
         feats = {k: v.cpu().numpy() for k, v in feats.items()}
 

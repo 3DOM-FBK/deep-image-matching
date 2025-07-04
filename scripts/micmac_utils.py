@@ -6,7 +6,6 @@ from deep_image_matching.io import h5_to_micmac as mm
 
 
 def show_micmac_matches(project_dir: Path, img_pattern: str) -> None:
-
     # Load the data
     project_path = Path(project_dir)
     if not project_path.exists():
@@ -23,8 +22,9 @@ def show_micmac_matches(project_dir: Path, img_pattern: str) -> None:
         matches_path = homol_path / f"Pastis{i0.name}" / f"{i1.name}.txt"
         if not matches_path.exists():
             raise FileNotFoundError(f"Matches file {matches_path} does not exist")
-        mm.show_micmac_matches(matches_path, project_path, matches_dir / f"matches_{i0.name}-{i1.name}.png")
-
+        mm.show_micmac_matches(
+            matches_path, project_path, matches_dir / f"matches_{i0.name}-{i1.name}.png"
+        )
 
     with mp.Pool() as p:
         p.starmap(

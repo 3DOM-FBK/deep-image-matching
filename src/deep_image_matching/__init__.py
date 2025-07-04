@@ -1,8 +1,8 @@
 __version__ = "1.2.4"
 
 import logging
-from time import time
 from collections import OrderedDict
+from time import time
 
 time_dict = OrderedDict()
 time_dict["start"] = time()
@@ -19,29 +19,25 @@ except ImportError:
     NO_PYCOLMAP = True
 
 # Import submodules
-from . import extractors
-from . import matchers
-from . import io
-from . import utils
-from . import visualization
-from . import thirdparty
+from . import extractors, io, matchers, thirdparty, utils, visualization
 
 if not NO_PYCOLMAP:
     # Import submodules that require pycolmap
-    from . import reconstruction
-    from . import triangulation
+    from . import reconstruction, triangulation
 try:
     from . import graph
 except ImportError:
     logging.warning("pyvis is not available. Unable to visualize view graph.")
 
 # Import functions
-from .parser import parse_cli
+from .config import Config
+from .constants import *
 
 # Import classes and variables
 from .image_matching import ImageMatcher
 from .pairs_generator import PairsGenerator
-from .constants import *
-from .config import Config
+from .parser import parse_cli
 
-print("Deep Image Matching loaded in {:.3f} seconds.".format(time() - time_dict["start"]))
+print(
+    "Deep Image Matching loaded in {:.3f} seconds.".format(time() - time_dict["start"])
+)

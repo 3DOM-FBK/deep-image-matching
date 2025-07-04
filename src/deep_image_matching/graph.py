@@ -13,7 +13,9 @@ logger = logging.getLogger("dim")
 
 TEMPLATE_DIR = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), "utils", "templates"
+    os.path.dirname(os.path.realpath(__file__)), "utils", "templates"
 )
+
 
 
 def save_output_graph(G, name):
@@ -44,7 +46,9 @@ def save_output_graph(G, name):
     )
     html = nt.generate_html(name, notebook=False)
     with open(name, mode="w", encoding="utf-8") as fp:
+    with open(name, mode="w", encoding="utf-8") as fp:
         fp.write(html)
+    # nt.write_html(name, notebook=False, open_browser=False)
     # nt.write_html(name, notebook=False, open_browser=False)
 
     return

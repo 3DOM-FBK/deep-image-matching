@@ -14,7 +14,7 @@ def export_markers(
         chunk = Metashape.app.document.chunk
 
     # writing header
-    file = open(path, "wt")
+    file = open(path, "w")
 
     if sort_by_camera:
         file.write("image_name,gcp_name,image_u,image_v\n")

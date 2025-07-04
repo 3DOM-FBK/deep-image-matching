@@ -9,12 +9,15 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get install -y \
     git \
-    python3.10-venv \
+    curl \
     libglib2.0-0 \
     ffmpeg \
     libsm6 \
     libxext6
 
+# Install uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.cargo/bin:$PATH"
 
 # Clone repo
 RUN git clone https://github.com/3DOM-FBK/deep-image-matching.git /workspace/dim
@@ -23,16 +26,9 @@ WORKDIR /workspace/dim
 # Checkout the specified branch
 RUN git checkout ${BRANCH}
 
-# Create virtual environment
-RUN python3.10 -m venv /venv
-ENV PATH=/venv/bin:$PATH
-
-# Install deep-image-matching
-RUN python3 -m pip install --upgrade pip
-RUN pip3 install setuptools
-RUN pip3 install torch torchvision
-RUN pip3 install -e .
-RUN pip3 install pycolmap
+# Install deep-image-matching with uv
+RUN uv sync --dev
+RUN uv pip install pycolmap
 
 # Running the tests:
-RUN python -m pytest  
+RUN uv run pytest  

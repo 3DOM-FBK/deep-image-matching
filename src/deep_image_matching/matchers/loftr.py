@@ -258,7 +258,9 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
         # Select uniue features on image 0, on rounded coordinates
         if select_unique is True:
             decimals = 1
-            _, unique_idx = np.unique(np.round(mkpts0_full, decimals), axis=0, return_index=True)
+            _, unique_idx = np.unique(
+                np.round(mkpts0_full, decimals), axis=0, return_index=True
+            )
             mkpts0_full = mkpts0_full[unique_idx]
             mkpts1_full = mkpts1_full[unique_idx]
 

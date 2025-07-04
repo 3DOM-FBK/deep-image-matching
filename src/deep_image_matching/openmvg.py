@@ -7,7 +7,7 @@ from pathlib import Path
 from .constants import logger
 
 
-def main(
+def openmvg_reconstruction(
     openmvg_out_path: Path,
     skip_reconstruction: bool,
     openmvg_sfm_bin: Path = None,
@@ -23,7 +23,9 @@ def main(
 
         if sys.platform in ["windows", "win32"]:
             if openmvg_sfm_bin is None:
-                raise ValueError("openMVG binaries path is not provided. Please provide the path to openMVG binaries.")
+                raise ValueError(
+                    "openMVG binaries path is not provided. Please provide the path to openMVG binaries."
+                )
             pRecons = subprocess.Popen(
                 [
                     openmvg_sfm_bin / "openMVG_main_IncrementalSfM",

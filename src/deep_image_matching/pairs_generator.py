@@ -18,7 +18,9 @@ from .thirdparty.LightGlue.lightglue import LightGlue
 from .utils.geometric_verification import geometric_verification
 
 
-def pairs_from_sequential(img_list: List[Union[str, Path]], overlap: int) -> List[tuple]:
+def pairs_from_sequential(
+    img_list: List[Union[str, Path]], overlap: int
+) -> List[tuple]:
     pairs = []
     for i in range(len(img_list) - overlap):
         for k in range(overlap):
@@ -41,8 +43,12 @@ def pairs_from_lowres(
     use_superpoint: bool = True,
     do_geometric_verification: bool = False,
 ) -> List[tuple]:
-    def read_tensor_image(path: Path, resize_to: int = 500, device="cuda") -> Tuple[np.ndarray, float]:
-        device = torch.device(device) if torch.cuda.is_available() else torch.device("cpu")
+    def read_tensor_image(
+        path: Path, resize_to: int = 500, device="cuda"
+    ) -> Tuple[np.ndarray, float]:
+        device = (
+            torch.device(device) if torch.cuda.is_available() else torch.device("cpu")
+        )
         img = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
         size = img.shape[:2][::-1]
         scale = resize_to / max(size)
@@ -66,7 +72,9 @@ def pairs_from_lowres(
         return torch.tensor(image / 255.0, dtype=torch.float).to(device)
 
     def sp2lg(feats: dict) -> dict:
-        feats = {k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()}
+        feats = {
+            k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()
+        }
         if feats["descriptors"].shape[-1] != 256:
             feats["descriptors"] = feats["descriptors"].T
         feats = {k: v[None] for k, v in feats.items()}
@@ -75,7 +83,10 @@ def pairs_from_lowres(
     def rbd2np(data: dict) -> dict:
         """Remove batch dimension from elements in data"""
         return {
-            k: v[0].cpu().numpy() if isinstance(v, (torch.Tensor, np.ndarray, list)) else v for k, v in data.items()
+            k: v[0].cpu().numpy()
+            if isinstance(v, (torch.Tensor, np.ndarray, list))
+            else v
+            for k, v in data.items()
         }
 
     use_superpoint = True
@@ -207,7 +218,7 @@ def pairs_from_lowres(
 
             # print(im0_path.name, im1_path.name, count_true)
             if count_true > min_matches:
-                pairs.append((pair))
+                pairs.append(pair)
         else:
             if len(mkpts0) > min_matches:
                 pairs.append(pair)

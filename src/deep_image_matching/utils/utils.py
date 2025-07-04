@@ -3,7 +3,6 @@ import io
 import logging
 import sys
 from pathlib import Path
-from typing import Dict
 
 import numpy as np
 
@@ -49,7 +48,7 @@ def get_pairs_from_file(pair_file: Path) -> list:
               (image1 , image2).
     """
     pairs = []
-    with open(pair_file, "r") as txt_file:
+    with open(pair_file) as txt_file:
         lines = txt_file.readlines()
         for line in lines:
             im1, im2 = line.strip().split(" ", 1)

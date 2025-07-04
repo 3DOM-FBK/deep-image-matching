@@ -9,18 +9,19 @@ import logging
 import os
 import random
 import shutil
+from functools import partial
+from multiprocessing import Pool
 from pathlib import Path
 from pprint import pprint
-from PIL import Image
-import PIL.ExifTags
-import exifread
+from typing import List, Optional
 
 import cv2
+import exifread
 import h5py
 import numpy as np
 import torch
+from PIL import Image
 from tqdm import tqdm
-from typing import List, Optional
 
 from . import (
     extractors,
@@ -32,16 +33,9 @@ from .extractors import SuperPointExtractor, extractor_loader
 from .io import get_features
 from .matchers import LightGlueMatcher, matcher_loader
 from .pairs_generator import PairsGenerator
-from .utils.image import ImageList
-from .utils.geometric_verification import geometric_verification
-
-
-from multiprocessing import Pool
-from multiprocessing import Pool, set_start_method
-from functools import partial
-
 from .utils import ImageList, get_pairs_from_file
-from .config import Config
+from .utils.geometric_verification import geometric_verification
+from .utils.image import ImageList
 
 logger = logging.getLogger("dim")
 timer = Timer(logger=logger)
@@ -310,7 +304,9 @@ class ImageMatcher:
         try:
             Extractor = extractor_loader(extractors, self.extraction)
         except AttributeError:
-            raise ValueError(f"Invalid local feature extractor. {self.extraction} is not supported.")
+            raise ValueError(
+                f"Invalid local feature extractor. {self.extraction} is not supported."
+            )
         self._extractor = Extractor(self.config)
 
         # Initialize matcher
@@ -333,7 +329,9 @@ class ImageMatcher:
         logger.info(f"  Tile selection: {self.config.general['tile_selection'].name}")
         logger.info(f"  Feature extraction method: {self.extraction}")
         logger.info(f"  Matching method: {self.matching}")
-        logger.info(f"  Geometric verification: {self.config.general['geom_verification'].name}")
+        logger.info(
+            f"  Geometric verification: {self.config.general['geom_verification'].name}"
+        )
         logger.info(f"  CUDA available: {torch.cuda.is_available()}")
 
     @property
@@ -388,7 +386,9 @@ class ImageMatcher:
                 raise FileExistsError(f"File {self.pair_file} does not exist")
 
             pairs = get_pairs_from_file(self.pair_file)
-            self.pairs = [(self.image_dir / im1, self.image_dir / im2) for im1, im2 in pairs]
+            self.pairs = [
+                (self.image_dir / im1, self.image_dir / im2) for im1, im2 in pairs
+            ]
 
         else:
             pairs_generator = PairsGenerator(
@@ -445,12 +445,11 @@ class ImageMatcher:
         self.rotated_images = []
 
         if strategy == "2clusters":
-
-            logger.info(f"Initializing Superpoint + LIghtGlue..")
+            logger.info("Initializing Superpoint + LIghtGlue..")
             SPextractor = SuperPointExtractor(self.config)
             LGmatcher = LightGlueMatcher(self.config)
 
-            #SPextractor = SuperPointExtractor(
+            # SPextractor = SuperPointExtractor(
             #    config={
             #        "general": {},
             #        "extractor": {
@@ -458,8 +457,8 @@ class ImageMatcher:
             #            "max_keypoints": 1024,
             #        },
             #    }
-            #)
-            #LGmatcher = LightGlueMatcher(
+            # )
+            # LGmatcher = LightGlueMatcher(
             #    config={
             #        "general": {},
             #        "matcher": {
@@ -468,7 +467,7 @@ class ImageMatcher:
             #            "filter_threshold": 0.1,  # match threshold
             #        },
             #    },
-            #)
+            # )
 
             cluster0 = []
             cluster1 = os.listdir(path_to_upright_dir)
@@ -487,7 +486,9 @@ class ImageMatcher:
             logger.info(f"Max n iter: {max_iter}")
             for iter in tqdm(range(max_iter)):
                 rotated = []
-                print(f"len(cluster0): {len(cluster0)}\t len(cluster1): {len(cluster1)}")
+                print(
+                    f"len(cluster0): {len(cluster0)}\t len(cluster1): {len(cluster1)}"
+                )
                 last_cluster1_len = len(cluster1)
 
                 # rotated.sort
@@ -516,7 +517,9 @@ class ImageMatcher:
                     processed = [item[0] for item in results]
                     rotated = [item[1] for item in results]
 
-                    processed = [item for sublist in processed for item in sublist if item]
+                    processed = [
+                        item for sublist in processed for item in sublist if item
+                    ]
                     self.rotated_images = self.rotated_images + [
                         item[0] for item in rotated if item != []
                     ]
@@ -553,7 +556,9 @@ class ImageMatcher:
                         self.rotated_images.append((img, int(rot)))
 
                         if int(rot) != 0:
-                            image1 = Image.open(str(path_to_upright_dir / img)).convert("L")
+                            image1 = Image.open(str(path_to_upright_dir / img)).convert(
+                                "L"
+                            )
                             p = image1.rotate(int(rot), expand=True)
                             p.save(str(path_to_upright_dir / img))
                     except:
@@ -561,33 +566,36 @@ class ImageMatcher:
 
         if strategy == "exif":
             orientation_map = {
-                'Horizontal (normal)': 0,
-                'Rotated 180': 180,
-                'Rotated 90 CW': 90,
-                'Rotated 90 CCW': 270
+                "Horizontal (normal)": 0,
+                "Rotated 180": 180,
+                "Rotated 90 CW": 90,
+                "Rotated 90 CCW": 270,
             }
 
             for img in os.listdir(self.image_dir):
                 image_path = path_to_upright_dir / img
                 image = cv2.imread(str(self.image_dir / img))
-                
-                with open(str(self.image_dir / img), 'rb') as image_file:
+
+                with open(str(self.image_dir / img), "rb") as image_file:
                     tags = exifread.process_file(image_file)
-                    orientation_tag = 'Image Orientation'
+                    orientation_tag = "Image Orientation"
 
                     if orientation_tag in tags:
                         orientation_description = str(tags[orientation_tag])
-                        orientation_degrees = orientation_map.get(orientation_description, None)
+                        orientation_degrees = orientation_map.get(
+                            orientation_description
+                        )
                         print(orientation_degrees)
                         if orientation_degrees is not None:
                             if orientation_degrees == 180:
                                 image = cv2.rotate(image, cv2.ROTATE_180)
                             elif orientation_degrees == 90:
-                                image = cv2.rotate(image, cv2.ROTATE_90_COUNTERCLOCKWISE)
+                                image = cv2.rotate(
+                                    image, cv2.ROTATE_90_COUNTERCLOCKWISE
+                                )
                             elif orientation_degrees == 270:
                                 image = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
                         cv2.imwrite(str(image_path), image)
-
 
         out_file = self.pair_file.parent / f"{self.pair_file.stem}_rot.txt"
         with open(out_file, "w") as txt_file:
@@ -700,7 +708,7 @@ class ImageMatcher:
         """
         # images = self.image_list.img_names
         for img, theta in tqdm(self.rotated_images):
-            print('img, theta', img, theta)
+            print("img, theta", img, theta)
             features = get_features(feature_path, img)
             keypoints = features["keypoints"]
             rotated_keypoints = np.empty(keypoints.shape)

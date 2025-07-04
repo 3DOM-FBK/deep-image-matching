@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
+
 from PIL import Image
-import numpy as np
 
 img_dir = Path(r"/path/to/imgs")
 size = (1300, 3288)
