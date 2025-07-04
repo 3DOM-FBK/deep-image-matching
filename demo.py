@@ -1,4 +1,9 @@
 import os
+<<<<<<< HEAD:main.py
+import time
+import logging
+=======
+>>>>>>> origin/dev_uv_and_pycolmap:demo.py
 from importlib import import_module
 from pathlib import Path
 
@@ -6,6 +11,9 @@ import yaml
 
 import deep_image_matching as dim
 from deep_image_matching.utils.loftr_roma_to_multiview import LoftrRomaToMultiview
+
+
+start_time = time.time()
 
 logger = dim.setup_logger("dim")
 
@@ -33,7 +41,11 @@ dim.io.export_to_colmap(
     camera_config_path=config.general["camera_options"],
 )
 
-if matcher.matching in ["loftr", "se2loftr", "roma"]:
+import shutil
+
+shutil.copyfile(database_path, output_dir / "debug.db")
+
+if matcher.matching in ["loftr", "se2loftr", "roma", "srif"]:
     images = os.listdir(imgs_dir)
     image_format = Path(images[0]).suffix
     LoftrRomaToMultiview(

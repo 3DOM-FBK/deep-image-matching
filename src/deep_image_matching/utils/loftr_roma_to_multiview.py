@@ -112,6 +112,10 @@ def get_unique_idxs(A, dim=1):
     first_indicies = ind_sorted[cum_sum]
     return first_indicies
 
+def import_into_colmap(img_dir,
+                       feature_dir ='.featureout',
+                       database_path = 'colmap.db',
+                       ):
 
 def import_into_colmap(img_dir, feature_dir=".featureout", database_path="database.db"):
     db = COLMAPDatabase.connect(database_path)
@@ -229,11 +233,17 @@ def LoftrRomaToMultiview(
             group = f_match.require_group(k1)
             for k2, match in gr.items():
                 group[k2] = match
+
+    #try:
+    #    os.remove(f"{output_dir}/database.db")
+    #except:
+    #    pass
+
     import_into_colmap(
-        image_dir,
-        feature_dir=f"{output_dir}",
-        database_path=f"{output_dir}/database.db",
-    )
+        image_dir, 
+        feature_dir=f"{output_dir}", 
+        database_path=f"{output_dir}/database.db")
+    
 
 
 if __name__ == "__main__":

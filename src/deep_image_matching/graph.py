@@ -13,7 +13,9 @@ logger = logging.getLogger("dim")
 
 TEMPLATE_DIR = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), "utils", "templates"
+    os.path.dirname(os.path.realpath(__file__)), "utils", "templates"
 )
+
 
 
 def save_output_graph(G, name):
@@ -21,6 +23,7 @@ def save_output_graph(G, name):
 
     # HTML template for view graph details panel
     nt.set_template(os.path.join(TEMPLATE_DIR, "template.html").replace("\\", "/"))
+    print(os.path.join(TEMPLATE_DIR, "template.html").replace("\\", "/"))
     nt.from_nx(G)
     nt.toggle_physics(False)
 
@@ -43,7 +46,9 @@ def save_output_graph(G, name):
     )
     html = nt.generate_html(name, notebook=False)
     with open(name, mode="w", encoding="utf-8") as fp:
+    with open(name, mode="w", encoding="utf-8") as fp:
         fp.write(html)
+    # nt.write_html(name, notebook=False, open_browser=False)
     # nt.write_html(name, notebook=False, open_browser=False)
 
     return
@@ -71,14 +76,6 @@ def view_graph(db, output_dir, imgs_dir):
         img1 = int(img1)
         img2 = int(img2)
         G.add_edge(img1, img2, matches=rows)
-
-    """
-        Remove output files if they exist
-    """
-    try:
-        os.remove(os.path.join(output_dir, "communities.txt"))
-    except OSError:
-        pass
 
     # Create list of aligned images and
     # add NA prefix for not aligned images
@@ -132,26 +129,28 @@ def view_graph(db, output_dir, imgs_dir):
             G.nodes[n]["y"] = -pos[1]
 
     # Compute communities using modularity
-    C = nx.community.greedy_modularity_communities(AG, "matches")
+    C = nx.community.greedy_modularity_communities(AG, "matches", resolution=1)
     i = 0
     Cs = []
     # Compute clustering coefficient for each node
     clustering = nx.clustering(AG, weight="matches")
 
-    # Write communities output file
-    with open(os.path.join(output_dir, "communities.csv"), "a") as comm_file:
-        print(
-            "IMG_ID,IMG_NAME,Community_ID,Clustering_coefficient(0,1),IS_OUTLIER?[0,1]",
-            file=comm_file,
-        )
+    # Compute maximum spannning tree
+    MST = nx.maximum_spanning_tree(AG, "matches")
+    MST_raw = nx.maximum_spanning_tree(AG, "matches")
+
     for c in C:
         Cg = G.subgraph(c)  # Draw communities with different colors
         comm_clustering = [clustering[n] for n in Cg.nodes]
         avg_comm_clustering = mean(comm_clustering)
         threshold = 0.3
+        MST.add_edges_from(Cg.edges(data=True))
+
         for n in Cg.nodes():
             # Draw communities with different colors
             G.nodes[n]["group"] = i
+            MST.nodes[n]["group"] = i
+            MST_raw.nodes[n]["group"] = i
             # Draw probable outliers with larger shape
             if clustering[n] < threshold * avg_comm_clustering:
                 G.nodes[n]["font"] = {"size": 12}
@@ -165,16 +164,72 @@ def view_graph(db, output_dir, imgs_dir):
                 )
             with open(comm_file.name, "a") as comm_file:
                 print(out, file=comm_file)
+
+            l = []
+
+            # MST expansion
+            # Find edges between communities
+            for e in MST.edges():
+                # Adjacent communities
+                if G.nodes[e[0]]["group"] != G.nodes[e[1]]["group"]:
+                    l = [
+                        (u, v, d)
+                        for u, v, d in G.edges(data=True)
+                        if (
+                            lambda u, v, d: G.nodes[u]["group"]
+                            == G.nodes[e[0]]["group"]
+                            and G.nodes[v]["group"] == G.nodes[e[1]]["group"]
+                        )(u, v, d)
+                    ]
+                MST.add_edges_from(l)
+
         i += 1
         Cs.append(Cg.number_of_nodes())
     G.graph["communities"] = Cs
 
+    """
+        Remove output files if they exist
+    """
+    try:
+        os.remove(os.path.join(output_dir, "communities.txt"))
+    except OSError:
+        pass
+    try:
+        os.remove(os.path.join(output_dir, "raw_mst_pairs.txt"))
+    except OSError:
+        pass
+    try:
+        os.remove(os.path.join(output_dir, "exp_mst_pairs.txt"))
+    except OSError:
+        pass
+
+    # Write communities output file
+    with open(os.path.join(output_dir, "communities.csv"), "a") as comm_file:
+        print(
+            "IMG_ID,IMG_NAME,Community_ID,Clustering_coefficient(0,1),IS_OUTLIER?[0,1]",
+            file=comm_file,
+        )
+
+    # Write MST and MST_expanded pairs output files
+    with open(os.path.join(output_dir, "raw_mst_pairs.txt"), "w") as f:
+        for e in MST_raw.edges():
+            print(
+                "{} {}".format(G.nodes[e[0]]["title"], G.nodes[e[1]]["title"]), file=f
+            )
+
+    with open(os.path.join(output_dir, "exp_mst_pairs.txt"), "w") as f:
+        for e in MST.edges():
+            print(
+                "{} {}".format(G.nodes[e[0]]["title"], G.nodes[e[1]]["title"]), file=f
+            )
+
     cwd = os.getcwd()
     os.chdir(output_dir)
     save_output_graph(G, "graph.html")
-    logger.info(
-        "View graph written at {}".format(os.path.join(output_dir, "graph.html"))
-    )
+    save_output_graph(MST, "exp_mst.html")
+    save_output_graph(MST_raw, "raw_mst.html")
+
+    logger.info("View graphs written at {}".format(output_dir))
     os.chdir(cwd)
 
     return

@@ -6,6 +6,7 @@ import cv2
 # Function to create video from images in a folder
 def images_to_video(image_folder, output_video_path, frame_duration=0.5):
     images = [img for img in os.listdir(image_folder) if img.endswith(".png")]
+    #images.sort(key=lambda x: int(x.split('_')[0]))
     frame = cv2.imread(os.path.join(image_folder, images[0]))
 
     # Get image dimensions

@@ -35,7 +35,7 @@ def Points(img1_path, img2_path, matches_path) -> None:
     plt.show()
 
 
-def Lines(img1_path, img2_path, matches_path) -> None:
+def Lines(img1_path, img2_path, matches_path, max_matches) -> None:
     assert img1_path.exists(), f"{img1_path} does not exist"
     assert img2_path.exists(), f"{img2_path} does not exist"
 
@@ -79,8 +79,9 @@ def Lines(img1_path, img2_path, matches_path) -> None:
     c = 0
     for (x1, y1), (x2, y2) in zip(src_pts, dst_pts):
         ax.plot([x1, x2], [y1, y2], "g-", linewidth=0.5)
+        # print(x1, y1, x2, y2)
         c += 1
-        if c > 1000:
+        if c > max_matches:
             break
 
     plt.show()
@@ -121,6 +122,6 @@ if __name__ == "__main__":
     if method == "points":
         Points(img1_path, img2_path, matches_path)
     elif method == "lines":
-        Lines(img1_path, img2_path, matches_path)
+        Lines(img1_path, img2_path, matches_path, max_matches=10000)
     else:
         raise ValueError(f"Invalid method: {method}")
