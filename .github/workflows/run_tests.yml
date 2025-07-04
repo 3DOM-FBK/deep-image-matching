@@ -53,7 +53,7 @@ jobs:
           uv run python -c "import cv2; print('opencv OK')"
           uv run python -c "import kornia; print('kornia OK')"
           uv run python -c "import pycolmap; print('pycolmap OK')"
-          uv run python -c "import deep_image_matching; print('deep_image_matching OK')
+          uv run python -c "import deep_image_matching; print('deep_image_matching OK')"
       - name: Test pytest collection (macOS debug)
         if: runner.os == 'macOS'
         run: |
