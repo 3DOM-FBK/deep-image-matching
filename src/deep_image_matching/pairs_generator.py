@@ -22,9 +22,11 @@ def pairs_from_sequential(
     img_list: List[Union[str, Path]], overlap: int
 ) -> List[tuple]:
     pairs = []
-    for i in range(len(img_list) - overlap):
+    for i in range(len(img_list)):
         for k in range(overlap):
             j = i + k + 1
+            if j >= len(img_list):
+                break
             im1 = img_list[i]
             im2 = img_list[j]
             pairs.append((im1, im2))

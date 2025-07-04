@@ -22,7 +22,7 @@ While `dev` branch is more frequently updated, `master` is the default more stab
 
 For how to use DIM, check the <a href="https://3dom-fbk.github.io/deep-image-matching/">Documentation</a> (updated for the master branch).
 
-**Please, note that `deep-image-matching` is under active development** and it is still in an experimental stage. If you find any bug, please open an issue.
+**Please, note that `deep-image-matching` is under active development** and it is still in an experimental stage. If you find any bug, please open an issue. **For the licence of individual local features and matchers please refer to the authors' original projects**.
 
 Key features:
 

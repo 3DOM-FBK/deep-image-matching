@@ -38,7 +38,7 @@ python -m deep_image_matching --dir ./assets/example_cyprus --pipeline superpoin
 
 Other optional parameters are:
 
-- `--config_file` `-c`: the path to the YAML configuration file containing the custom configuration. See the [Advanced configuration](#advanced-configuration) section (default: `None`, so default configuration is used)
+- `--config_file` `-c`: the path to the YAML configuration file containing the custom configuration. See the [Advanced configuration](./advanced_configuration.md) section (default: `None`, so default configuration is used)
 - `--strategy` `-s`: the strategy to use for matching the images. It can be `matching_lowres`, `bruteforce`, `sequential`, `retrieval`, `custom_pairs`. See [Matching strategies](#matching-strategies) section (default: `matching_lowres`)
 - `--quality` `-q`: the quality of the images to be matched. It can be `lowest`, `low`, `medium`, `high` or `highest`. See [Quality](#quality) section (default: `high`).
 - `tiling` `-t`: if passed, the images are tiled in 4 parts and each part is matched separately. This is useful for high-resolution images if you do not want to resize them. See [Tiling](#tiling) section (default: `None`).

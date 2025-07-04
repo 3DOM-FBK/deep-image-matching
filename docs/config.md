@@ -31,19 +31,10 @@ matcher:
   th: 0.85
 ```
 
-### Default configuration
-
-Note that all the defaults configurations of DIM, including local features, matchers and geometric verification, are in `src/deep_image_matching/config.py`.
-
-
-<!--
-**Page under construction...**
+### The Config Class
 
 ::: deep_image_matching.config.Config
     options:
       show_root_heading: true
       show_source: false
       members:
--->
-
-
