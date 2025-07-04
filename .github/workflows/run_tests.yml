@@ -49,23 +49,11 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           uv run python -c "print('Testing basic imports...')"
-          uv run python -c "import numpy; print('numpy OK')"
           uv run python -c "import torch; print('torch OK')"
           uv run python -c "import cv2; print('opencv OK')"
           uv run python -c "import kornia; print('kornia OK')"
-          try:
-              import pycolmap
-              print('pycolmap OK')
-          except ImportError as e:
-              print(f'pycolmap import failed: {e}')
-          "
-          uv run python -c "
-          try:
-              import deep_image_matching
-              print('deep_image_matching OK')
-          except Exception as e:
-              print(f'deep_image_matching import failed: {e}')
-          "
+          uv run python -c "import pycolmap; print('pycolmap OK')"
+          uv run python -c "import deep_image_matching; print('deep_image_matching OK')
       - name: Test pytest collection (macOS debug)
         if: runner.os == 'macOS'
         run: |
