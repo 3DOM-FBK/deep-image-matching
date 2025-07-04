@@ -21,11 +21,10 @@ jobs:
       # macOS specific environment variables to handle potential issues
       PYTORCH_ENABLE_MPS_FALLBACK: 1
       OBJC_DISABLE_INITIALIZE_FORK_SAFETY: YES
-      # Disable MPS entirely on macOS for testing
-      PYTORCH_MPS_HIGH_WATERMARK_RATIO: 0.0
-      # Force CPU-only mode
-      CUDA_VISIBLE_DEVICES: ""
+      PYTORCH_MPS_HIGH_WATERMARK_RATIO: 0.0 # Disable MPS entirely on macOS for testing
+      CUDA_VISIBLE_DEVICES: "" # Force CPU-only mode
       MPS_AVAILABLE: "0"
+      KMP_DUPLICATE_LIB_OK: TRUE # Fix OpenMP conflict on macOS
     steps:
       - uses: actions/checkout@v4
       - name: Install uv
