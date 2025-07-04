@@ -59,7 +59,13 @@ Want to run on a sample dataset? ➡️ [![Open In Colab](https://colab.research
 
 Want to run on your images? ➡️ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/3DOM-FBK/deep-image-matching/blob/master/notebooks/colab_run_from_bash_custom_images.ipynb)
 
-DIM can also be utilized as a library instead of being executed through the Command Line Interface (refer to the `Usage Instructions`). For an illustrative example, please see `notebooks/sfm_pipeline.ipynb`.
+DIM can also be utilized as a library instead of being executed through the Command Line Interface (refer to the `Usage Instructions`).
+
+For quick examples, see:
+
+- `demo.py` - Simple script demonstrating the basic workflow
+- `demo.ipynb` - Interactive notebook version of the demo
+- `notebooks/sfm_pipeline.ipynb` - Complete SfM pipeline with detailed explanations
 
 ## Local Installation
 
@@ -82,22 +88,8 @@ uv pip install -e .
 
 This command will install the package in editable mode, allowing you to modify the source code and see changes immediately without needing to reinstall. If you want to use deep-image-matching as a non-editable library, you can also install it without the `-e` flag.
 
-If there is any issue with the installation, you can also install the package from the source code.
-Clone the repository and install deep-image-matching in development mode:
-
-```bash
-git clone https://github.com/3DOM-FBK/deep-image-matching.git
-cd deep-image-matching
-uv sync --dev
-```
-
-Install pycolmap (optional, but recommended):
-
-```bash
-uv pip install pycolmap==0.6.1
-```
-
-Pycolmap is optional to run reconstruction directly in DIM. If pycolmap is not available, matches will be written both in a h5 and colmap database for later processing with COLMAP GUI or API, or other processing.
+This will also install `pycolmap` as a dependency, which is required for running the 3D reconstruction.
+If you have any issues with `pycolmap`, you can manually install it following the official instructions [here](https://colmap.github.io/pycolmap/index.html).
 
 To verify that deep-image-matching is correctly installed, you can try to import the package in a Python shell:
 
@@ -125,12 +117,15 @@ This project has migrated from conda/pip to [uv](https://docs.astral.sh/uv/) for
 
 ### Legacy conda/pip installation
 
-If you prefer to use conda/pip (though not recommended), you can still install the package:
+If you have any issue with uv, you prefer to have a global installation of DIM, or you have any other problem with the installation, you can use conda/manba to create an environment and install DIM from source using pip:
 
 ```bash
+git clone https://github.com/3DOM-FBK/deep-image-matching.git
+cd deep-image-matching
+
 conda create -n deep-image-matching python=3.9
 conda activate deep-image-matching
-pip install deep-image-matching
+pip install -e .
 ```
 
 ## Docker Installation
@@ -166,25 +161,39 @@ If you face any issues, especially on Linux when using the `gpus all` setting, p
 
 ## Usage instructions
 
-<!-- You can run deep-image-matching from the command line or from the GUI. -->
+### Quick start with the demo
+
+For a quick start, check out the `demo.py` script or `demo.ipynb` notebook that demonstrate basic usage with the example dataset:
+
+```bash
+python demo.py --dir assets/example_cyprus --pipeline superpoint+lightglue
+```
+
+The demo runs the complete pipeline from feature extraction to 3D reconstruction using the provided example dataset.
+
+A similar demo example is also available as a notebook in `demo.ipynb`.
+
+### Command Line Interface
 
 Use the following command to see all the available options from the CLI:
 
-```
-python main.py --help
-```
-
-For example, to run the matching with SuperPoint and LightGlue on a dataset, you can use the following command:
-
-```
-python main.py --dir assets/example_cyprus --pipeline superpoint+lightglue
+```bash
+python -m deep_image_matching --help
 ```
 
-The `--dir` parameter defines the processing directory, where all the results will be saved. This directory must constain a subfolder named **images** in which all the images must be stored. We currentely do not support image retrieval from multiple directories or subdirectories, but we may add this feature in the future.
+For example, to run the matching with SuperPoint and LightGlue on the example_cyprus dataset:
 
-The `--pipeline` parameter defines the combaination of local feature extractor and matcher.
+```bash
+python -m deep_image_matching --dir assets/example_cyprus --pipeline superpoint+lightglue
+```
 
-For all the usage instructions and configurations, refer to the [documenation](https://3dom-fbk.github.io/deep-image-matching/getting_started) or check the example notebooks.
+The `--dir` parameter defines the processing directory, where all the results will be saved. This directory must contain a subfolder named **images** with all the images to be processed.
+
+### Library usage
+
+Deep-image-matching can also be used as a Python library. For a comprehensive example showing the complete SfM pipeline, see `notebooks/sfm_pipeline.ipynb`.
+
+For detailed usage instructions and configurations, refer to the [documentation](https://3dom-fbk.github.io/deep-image-matching/getting_started).
 
 <!-- To run the GUI, you can use the following command:
 
@@ -200,7 +209,7 @@ For advanced usage, please refer to the [documentation](https://3dom-fbk.github.
 
 To run the matching with different local features and/or matchers and marging together the results, you can use scripts in the `./scripts` directory for merging the COLMAP databases.
 
-```
+```bash
 python ./join_databases.py --help
 python ./join_databases.py --input path/to/dir/with/databases --output path/to/output/dir
 ```
