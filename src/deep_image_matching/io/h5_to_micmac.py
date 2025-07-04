@@ -89,8 +89,8 @@ def get_matches(
         s1idx = np.argsort(matches1_idx)
 
         # Get coordinates of matches
-        x0y0 = features[key0]["keypoints"][matches0_idx[s0idx]]
-        x1y1 = features[key1]["keypoints"][matches1_idx[s1idx]]
+        x0y0 = features[key0]["keypoints"][:][matches0_idx[s0idx]]
+        x1y1 = features[key1]["keypoints"][:][matches1_idx[s1idx]]
 
         # Restore the original order
         x0y0 = x0y0[np.argsort(s0idx)]
