@@ -1,4 +1,4 @@
-name: run-test
+name: run-tests
 
 on:
   push:
@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.9"]
     steps:
       - uses: actions/checkout@v4
@@ -28,7 +28,6 @@ jobs:
       - name: Install dependencies
         run: |
           uv sync --dev
-          uv pip install pycolmap
       - name: Test with pytest
         run: |
           uv run pytest
