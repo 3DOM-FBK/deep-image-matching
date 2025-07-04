@@ -1,0 +1,16 @@
+*.pyc
+*.pth
+run_bench
+logs*
+acne_weights.zip
+dematch_weights.zip
+dematch_models
+convmatch_models
+convmatch_weights.zip
+src/FCGNN/weights/
+src/CLNet/clnet_weights.zip
+src/CLNet/CLNet_models
+src/NCMNet/ncmnet_weights.zip
+src/NCMNet/NCMNet_models
+src/MS2DGNet/ms2dgnet_weights.zip
+src/MS2DGNet/MS2DGNet_models
