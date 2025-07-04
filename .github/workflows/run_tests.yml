@@ -21,6 +21,11 @@ jobs:
       # macOS specific environment variables to handle potential issues
       PYTORCH_ENABLE_MPS_FALLBACK: 1
       OBJC_DISABLE_INITIALIZE_FORK_SAFETY: YES
+      # Disable MPS entirely on macOS for testing
+      PYTORCH_MPS_HIGH_WATERMARK_RATIO: 0.0
+      # Force CPU-only mode
+      CUDA_VISIBLE_DEVICES: ""
+      MPS_AVAILABLE: "0"
     steps:
       - uses: actions/checkout@v4
       - name: Install uv
@@ -38,10 +43,22 @@ jobs:
           uv run python -c "import sys; print(f'Python: {sys.version}')"
           uv run python -c "import platform; print(f'Platform: {platform.platform()}')"
           uv run python -c "import torch; print(f'PyTorch: {torch.__version__}')"
-      - name: Test with pytest
-        env:
-          # Force CPU-only mode on macOS to avoid MPS/GPU issues
-          CUDA_VISIBLE_DEVICES: ""
-          MPS_AVAILABLE: "0"
+          uv run python -c "import torch; print(f'MPS available: {torch.backends.mps.is_available()}')"
+          uv run python -c "import os; print(f'Environment vars: CUDA_VISIBLE_DEVICES={os.environ.get(\"CUDA_VISIBLE_DEVICES\", \"not set\")}, MPS_AVAILABLE={os.environ.get(\"MPS_AVAILABLE\", \"not set\")}')"
+      - name: Test import of main modules (macOS debug)
+        if: runner.os == 'macOS'
         run: |
-          uv run pytest -v
+          uv run python -c "print('Testing basic imports...')"
+          uv run python -c "import numpy; print('numpy OK')"
+          uv run python -c "import torch; print('torch OK')"
+          uv run python -c "import cv2; print('opencv OK')"
+          uv run python -c "import kornia; print('kornia OK')"
+          uv run python -c "try: import pycolmap; print('pycolmap OK'); except ImportError as e: print(f'pycolmap import failed: {e}')"
+          uv run python -c "try: import deep_image_matching; print('deep_image_matching OK'); except Exception as e: print(f'deep_image_matching import failed: {e}')"
+      - name: Test pytest collection (macOS debug)
+        if: runner.os == 'macOS'
+        run: |
+          uv run pytest --collect-only -v || echo "Collection failed, continuing..."
+      - name: Test with pytest
+        run: |
+          uv run pytest -v --tb=short
