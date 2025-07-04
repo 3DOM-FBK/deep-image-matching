@@ -1,21 +1,40 @@
 # Getting started with Deep-Image-Matching
 
-Deep-Image-Matching can be launched from the Command Line (CLI), from the GUI (note that the GUI is still under development) or use Deep_Image_Matching as a Python library.
+Deep-Image-Matching can be launched from the Command Line (CLI) or used as a Python library. A GUI is also available but is still under development.
 
-In `assets` folder there are some projects and images for testing.
+In the `assets` folder there are some projects and images for testing.
+
+## Quick Start with Demo
+
+For a quick start, check out the demo files that demonstrate basic usage with the example dataset:
+
+- `demo.py` - Simple script demonstrating the basic workflow
+- `demo.ipynb` - Interactive notebook version of the demo
+
+```bash
+python demo.py --dir assets/example_cyprus --pipeline superpoint+lightglue
+```
 
 ## Run Deep-Image-Matching
 
 ### Command Line Interface (CLI)
 
-Before running the CLI, check the options with `python ./main.py --help`.
+Before running the CLI, check the options with:
 
-The minimal required option are:
+```bash
+python -m deep_image_matching --help
+```
 
-- `--dir` `-d`: it is the path of the 'project directory', i.e., the directory containing a folder named 'images', with all the image to be processed, and where the output will be saved
+The minimal required options are:
+
+- `--dir` `-d`: the path of the 'project directory', i.e., the directory containing a folder named 'images', with all the images to be processed, and where the output will be saved
 - `--pipeline` `-p`: the name of pipeline (i.e., the combination of local feature extractor and matcher) to use (e.g., "superpoint+lightglue"). See the [Pipelines](#pipelines) section for more details.
 
-Example: `python main.py --dir ./assets/example_cyprus --pipeline superpoint+lightglue`
+Example:
+
+```bash
+python -m deep_image_matching --dir ./assets/example_cyprus --pipeline superpoint+lightglue
+```
 
 Other optional parameters are:
 
@@ -37,14 +56,22 @@ Finally, there are some 'strategy-dependent' options (i.e., options that are use
 - `--global_feature`: if `strategy` is set to `retrieval`, set the global descriptor to use for image retrieval. Options are: "netvlad", "openibl", "cosplace", "dir" (default: `netvlad`).
 - `--pair_file`: if `strategy` is set to `custom_pairs`, set the path to the text file containing the pairs of images to be matched. (default: `None`).
 
-### Graphical User Interface (GUI)
+### Library usage
 
-**Note that the GUI is still under development and it may have some bugs**
+Deep-image-matching can also be used as a Python library. For comprehensive examples, see:
+
+- `demo.py` - Simple script demonstrating the basic workflow
+- `demo.ipynb` - Interactive notebook version of the demo
+- `notebooks/sfm_pipeline.ipynb` - Complete SfM pipeline with detailed explanations
+
+### GUI (Under Development)
+
+**Note:** The GUI is still under development and may have some bugs.
 
 To run with the GUI:
 
 ```bash
-python ./main.py --gui
+python -m deep_image_matching --gui
 ```
 
 In the GUI, you can define the same parameters that are available in the CLI.
@@ -53,7 +80,6 @@ The GUI loads the available configurations from [`config.py`](https://github.com
 ### From Jupyter notebooks
 
 If you want to use Deep_Image_Matching from a Jupyter notebook, you can check the examples in the [`notebooks`](https://github.com/3DOM-FBK/deep-image-matching/tree/master/notebooks) folder.
-
 
 ## Pipelines
 
@@ -76,7 +102,7 @@ Possible configurations are:
 You can check all the available configurations by running:
 
 ```bash
-python ./main.py --help
+python -m deep_image_matching --help
 ```
 
 Alternatively, if you are working in a notebook you can use the Config class:
@@ -130,4 +156,3 @@ If you want to run the matching by tile, you can choose different approaches for
 - `exhaustive`: the images are divided into a regular grid of size 2400x2000 px to extract the features. The matching is carried out by matching all the possible combinations of tiles (brute-force). This method can be very slow for large images or in combination with the `highest` quality option and, in some cases, it may lead to error in the geometric verification if too many wrong matches are detected.
 
 To control the tile size and the tile overlap, refer to the [Advanced configuration](./advanced_configuration.md) section.
-

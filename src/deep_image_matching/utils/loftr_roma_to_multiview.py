@@ -133,7 +133,7 @@ def LoftrRomaToMultiview(
     input_dir: Path,
     output_dir: Path,
     image_dir: Path,
-    img_ext: Path,
+    img_ext: str,
     mask_dir: Optional[Path] = None,
 ) -> None:
     if mask_dir:

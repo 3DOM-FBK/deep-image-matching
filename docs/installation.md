@@ -2,12 +2,13 @@
 
 ## Requirements
 
-Deep-image-matching is tested on Ubuntu 22.04 and Windows 10 with `Python 3.9`. It is strongly recommended to have a NVIDIA GPU with at least 8GB of memory.
-Due to dependencies issues, it is recommended to use `Python 3.9` on Windows and MacOS, while on Linux you can also use `Python 3.10` (see [pydegensac](#pydegensac)).
+Deep-image-matching is tested on Ubuntu 22.04, Windows 10, and macOS with `Python 3.9`. It is strongly recommended to have a NVIDIA GPU with at least 8GB of memory for optimal performance with deep learning models.
+
+Due to dependencies issues, it is recommended to use `Python 3.9` on Windows and macOS, while on Linux you can also use `Python 3.10` (see [pydegensac](#pydegensac)).
 
 All the dependencies are listed in the `pyproject.toml` file and managed with `uv.lock`.
 
-## Installation
+## Installation with uv (Recommended)
 
 For installing deep-image-matching, we recommend using [uv](https://docs.astral.sh/uv/) for fast and reliable package management:
 
@@ -16,40 +17,60 @@ For installing deep-image-matching, we recommend using [uv](https://docs.astral.
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Create and activate a virtual environment
-uv venv deep-image-matching --python 3.9
+uv venv --python 3.9
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 
 Then, you can install deep-image-matching using uv:
 
 ```bash
-uv pip install deep-image-matching
+uv pip install -e .
 ```
 
-If there is any issue with the installation, you can also install the package from the source code.
-Clone the repository and install deep-image-matching in development mode:
+This command will install the package in editable mode. If you want to use deep-image-matching as a non-editable library, you can install it without the `-e` flag.
 
-```bash
-git clone https://github.com/3DOM-FBK/deep-image-matching.git
-cd deep-image-matching
-uv sync --dev
-```
+This will also install `pycolmap` as a dependency, which is required for running the 3D reconstruction.
 
-Install pycolmap (optional):
-
-```bash
-uv pip install pycolmap==0.6.1
-```
-
-Pycolmap is optional to run reconstruction directly in DIM. If pycolmap is not available, matches will be written both in a h5 and colmap database for later processing with COLMAP GUI or API, or other processing.
-
-Try to run the tests to check if deep-image-matching is correctly installed, try to import the package in a Python shell:
+To verify that deep-image-matching is correctly installed, you can try to import the package in a Python shell:
 
 ```python
 import deep_image_matching as dim
 ```
 
-### Notes and troubleshooting
+To test most of the functionality, run:
+
+```bash
+uv run pytest tests
+```
+
+### Why uv?
+
+This project has migrated from conda/pip to [uv](https://docs.astral.sh/uv/) for dependency management. Benefits include:
+
+- Faster installation: uv is significantly faster than pip for dependency resolution and installation
+- Better dependency resolution: More reliable resolution of complex dependency trees
+- Lockfile support: `uv.lock` ensures reproducible installations across different environments
+- Integrated tooling: Built-in support for virtual environments, Python version management, and project building
+- Cross-platform consistency: Better support for different operating systems and architectures
+
+## Conda/pip installation
+
+If you have any issue with uv, you prefer to have a global installation of DIM, or you have any other problem with the installation, you can use conda/mamba to create an environment and install DIM from source using pip:
+
+```bash
+git clone https://github.com/3DOM-FBK/deep-image-matching.git
+cd deep-image-matching
+
+conda create -n deep-image-matching python=3.9
+conda activate deep-image-matching
+pip install -e .
+```
+
+## Docker Installation
+
+For Docker installation, see the [Docker Installation](#using-docker) section below.
+
+## Notes and troubleshooting
 
 #### Pytorch
 
@@ -73,9 +94,9 @@ Recently, [pycolmap 0.5.0](https://github.com/colmap/pycolmap/releases/tag/v0.5.
 Before, if you were using Windows, you could use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) for installing pycolmap (please refer to issue [#34](https://github.com/colmap/pycolmap/issues/34) in pycolmap repo).
 However, now you can also try installing it with pip, it should work fine.
 
-## Docker Installation
+## Using Docker
 
-If you prefer to use Docker, first, build the image:
+If you prefer using Docker, first, build the image:
 
 ```bash
 docker build --tag deep-image-matching .
@@ -84,33 +105,38 @@ docker build --tag deep-image-matching .
 Note that the first time you run the command, it will take a while to download the base image and install all the dependencies.
 
 Once the image is built, you can run it with the following commands.
+
 On Linux:
 
 ```bash
-docker run --name running-deep-image-matching --mount type=bind,source=/home/username/data,target=/workspace/data --gpus all -it deep-image-matching
+docker run --name run-deep-image-matching --mount type=bind,source=/home/username/data,target=/workspace/data --gpus all -it deep-image-matching
 ```
 
-On Windows (please, use Powershell):
+On Windows (please use Powershell):
 
 ```powershell
-docker run --name running-deep-image-matching --mount type=bind,source=D:\data,target=/workspace/data --gpus all -it deep-image-matching
+docker run --name run-deep-image-matching --mount type=bind,source=D:\data,target=/workspace/data --gpus all -it deep-image-matching
 ```
 
-**Replace** `/home/username/data` (on Linux) or `D:\data` (on Winows) with the desired path for mounting a shared volume between the local OS and the docker container. Make sure to use absolute paths. This folder will be used to store alll the input data (images) and outputs.
+**Replace** `/home/username/data` (on Linux) or `D:\data` (on Windows) with the desired path for mounting a shared volume between the local OS and the docker container. Make sure to use absolute paths. This folder will be used to store all the input data (images) and outputs.
 
-If you want to run the container in background, you can use the `--detach` option:
+### Docker Options
+
+Include the `--detach` option to run the container in background:
 
 ```bash
-docker run --name run-deep-image-matching --mount type=bind,source=/home/username/data,target=/workspace/data --gpus all --detach deep-image-matching
+docker run --name run-deep-image-matching --mount type=bind,source=/home/username/data,target=/workspace/data --gpus all --detach -it deep-image-matching
 ```
 
-You can also remove the container on exit using the `--rm` option:
+Include the `--rm` option to remove container on exit:
 
 ```bash
 docker run --name run-deep-image-matching --mount type=bind,source=/home/username/data,target=/workspace/data --gpus all --rm -it deep-image-matching
 ```
 
 Once the container is running, you can then open the repo cloned inside the container directly in VSCode using `ctrl+alt+O` and selecting the option "attach to running container" (make sure to have the Docker extension installed in VSCode), then enjoy!
+
+### Building from Different Branches
 
 If you want to build the docker image with deep-image-matching and pycolmap from a branch different from `master`, you can use the following command:
 

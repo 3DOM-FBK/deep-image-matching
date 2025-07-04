@@ -109,13 +109,13 @@ For more information, check the [documentation](https://3dom-fbk.github.io/deep-
 
 This project has migrated from conda/pip to [uv](https://docs.astral.sh/uv/) for dependency management. Benefits include:
 
-- **Faster installation**: uv is significantly faster than pip for dependency resolution and installation
-- **Better dependency resolution**: More reliable resolution of complex dependency trees
-- **Lockfile support**: `uv.lock` ensures reproducible installations across different environments
-- **Integrated tooling**: Built-in support for virtual environments, Python version management, and project building
-- **Cross-platform consistency**: Better support for different operating systems and architectures
+- Faster installation: uv is significantly faster than pip for dependency resolution and installation
+- Better dependency resolution: More reliable resolution of complex dependency trees
+- Lockfile support: `uv.lock` ensures reproducible installations across different environments
+- Integrated tooling: Built-in support for virtual environments, Python version management, and project building
+- Cross-platform consistency: Better support for different operating systems and architectures
 
-### Legacy conda/pip installation
+### Conda/pip installation
 
 If you have any issue with uv, you prefer to have a global installation of DIM, or you have any other problem with the installation, you can use conda/manba to create an environment and install DIM from source using pip:
 
@@ -128,36 +128,9 @@ conda activate deep-image-matching
 pip install -e .
 ```
 
-## Docker Installation
+### Docker Installation
 
-If you prefer using Docker, first, build the image:
-
-```bash
-docker build --tag deep-image-matching .
-```
-
-Note that the first time you run the command, it will take a while to download the base image and install all the dependencies.
-
-Once the image is built, you can run it with the following commands.
-On Linux:
-
-```bash
-docker run --name run-deep-image-matching --mount type=bind,source=/home/username/data,target=/workspace/data --gpus all -it deep-image-matching
-```
-
-On Windows (please use Powershell):
-
-```powershell
-docker run --name run-deep-image-matching --mount type=bind,source=D:\data,target=/workspace/data --gpus all -it deep-image-matching
-```
-
-**replace** `/home/username/data` (on Linux) or `D:\data` (on Winows) with the desired path for mounting a shared volume between the local OS and the docker container. Make sure to use absolute paths. This folder will be used to store alll the input data (images) and outputs.
-
-Include the `--detach` option to run the container in background and/or `--rm` to remove container on exit.
-
-Once the container is running, you can then open the repo cloned inside the container directly in VSCode using `ctrl+alt+O` and selecting the option "attach to running container" (make sure to have the Docker extension installed in VSCode), then enjoy!
-
-If you face any issues, especially on Linux when using the `gpus all` setting, please refer to the [documentation](https://3dom-fbk.github.io/deep-image-matching/installation/).
+For Docker installation, see the [Docker Installation](https://3dom-fbk.github.io/deep-image-matching/installation#using-docker/) section in the documentation.
 
 ## Usage instructions
 
