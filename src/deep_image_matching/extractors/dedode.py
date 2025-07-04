@@ -12,7 +12,7 @@ class DeDoDe(ExtractorBase):
     dedode_descriptor_G_url = "https://github.com/Parskatt/DeDoDe/releases/download/dedode_pretrained_models/dedode_descriptor_G.pth"
     dedode_descriptor_B_url = "https://github.com/Parskatt/DeDoDe/releases/download/dedode_pretrained_models/dedode_descriptor_B.pth"
 
-    default_conf = {
+    _default_conf = {
         "name:": "",
     }
     required_inputs = ["image"]
@@ -24,7 +24,7 @@ class DeDoDe(ExtractorBase):
         # Init the base class
         super().__init__(config)
 
-        cfg = self._config.get("extractor")
+        cfg = self.config.get("extractor")
 
         # Load extractor and descriptor
         device = torch.device(self._device if torch.cuda.is_available() else "cpu")

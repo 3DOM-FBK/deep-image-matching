@@ -1,5 +1,5 @@
 general:
-  camera_model: "pinhole" # ["simple-pinhole", "pinhole", "simple-radial", "opencv"]
+  camera_model: "simple-radial" # ["simple-pinhole", "pinhole", "simple-radial", "opencv"]
   openmvg_camera_model: "pinhole_radial_k3" # ["pinhole", "pinhole_radial_k3", "pinhole_brown_t2"]
   single_camera: True
   intrinsics: ~  # None

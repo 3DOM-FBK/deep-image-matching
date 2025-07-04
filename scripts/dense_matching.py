@@ -46,9 +46,10 @@ def empty_reconstruction_from_existing(sfm_dir: Path, dense_dir: Path, overwrite
     dense_dir.mkdir(parents=True)
 
     # Make empty images.txt
-    with open(sfm_dir / "images.txt", "r") as inp, open(
-        dense_dir / "images.txt", "w"
-    ) as out:
+    with (
+        open(sfm_dir / "images.txt") as inp,
+        open(dense_dir / "images.txt", "w") as out,
+    ):
         lines = inp.readlines()
         for i, line in enumerate(lines):
             if i % 2 == 0:
@@ -59,9 +60,10 @@ def empty_reconstruction_from_existing(sfm_dir: Path, dense_dir: Path, overwrite
     shutil.copy(sfm_dir / "cameras.txt", dense_dir / "cameras.txt")
 
     # Make empty points3D.txt
-    with open(sfm_dir / "points3D.txt", "r") as inp, open(
-        dense_dir / "points3D.txt", "w"
-    ) as out:
+    with (
+        open(sfm_dir / "points3D.txt") as inp,
+        open(dense_dir / "points3D.txt", "w") as out,
+    ):
         pass
 
 

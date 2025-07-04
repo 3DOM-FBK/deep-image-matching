@@ -2,7 +2,8 @@ import kornia
 import numpy as np
 import pytest
 import torch
-from deep_image_matching.utils.tiling import Tiler
+
+from deep_image_matching.utils import Tiler
 
 
 @pytest.fixture

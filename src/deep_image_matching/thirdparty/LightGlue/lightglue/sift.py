@@ -77,7 +77,7 @@ def run_opencv_sift(features: cv2.Feature2D, image: np.ndarray) -> np.ndarray:
 
 
 class SIFT(Extractor):
-    default_conf = {
+    _default_conf = {
         "rootsift": True,
         "nms_radius": 0,  # None to disable filtering entirely.
         "max_num_keypoints": 4096,
@@ -99,10 +99,7 @@ class SIFT(Extractor):
         backend = self.conf.backend
         if backend.startswith("pycolmap"):
             if pycolmap is None:
-                raise ImportError(
-                    "Cannot find module pycolmap: install it with pip"
-                    "or use backend=opencv."
-                )
+                raise ImportError("Cannot find module pycolmap: install it with pip" "or use backend=opencv.")
             options = {
                 "peak_threshold": self.conf.detection_threshold,
                 "edge_threshold": self.conf.edge_threshold,
@@ -110,12 +107,8 @@ class SIFT(Extractor):
                 "num_octaves": self.conf.num_octaves,
                 "normalization": pycolmap.Normalization.L2,  # L1_ROOT is buggy.
             }
-            device = (
-                "auto" if backend == "pycolmap" else backend.replace("pycolmap_", "")
-            )
-            if (
-                backend == "pycolmap_cpu" or not pycolmap.has_cuda
-            ) and pycolmap.__version__ < "0.5.0":
+            device = "auto" if backend == "pycolmap" else backend.replace("pycolmap_", "")
+            if (backend == "pycolmap_cpu" or not pycolmap.has_cuda) and pycolmap.__version__ < "0.5.0":
                 warnings.warn(
                     "The pycolmap CPU SIFT is buggy in version < 0.5.0, "
                     "consider upgrading pycolmap or use the CUDA version.",
@@ -133,9 +126,7 @@ class SIFT(Extractor):
             )
         else:
             backends = {"opencv", "pycolmap", "pycolmap_cpu", "pycolmap_cuda"}
-            raise ValueError(
-                f"Unknown backend: {backend} not in " f"{{{','.join(backends)}}}."
-            )
+            raise ValueError(f"Unknown backend: {backend} not in " f"{{{','.join(backends)}}}.")
 
     def extract_single_image(self, image: torch.Tensor):
         image_np = image.cpu().numpy().squeeze(0)
@@ -148,9 +139,7 @@ class SIFT(Extractor):
                 detections, scores, descriptors = self.sift.extract(image_np)
             keypoints = detections[:, :2]  # Keep only (x, y).
             scales, angles = detections[:, -2:].T
-            if scores is not None and (
-                self.conf.backend == "pycolmap_cpu" or not pycolmap.has_cuda
-            ):
+            if scores is not None and (self.conf.backend == "pycolmap_cpu" or not pycolmap.has_cuda):
                 # Set the scores as a combination of abs. response and scale.
                 scores = np.abs(scores) * scales
         elif self.conf.backend == "opencv":
@@ -169,9 +158,7 @@ class SIFT(Extractor):
 
         # sometimes pycolmap returns points outside the image. We remove them
         if self.conf.backend.startswith("pycolmap"):
-            is_inside = (
-                pred["keypoints"] + 0.5 < np.array([image_np.shape[-2:][::-1]])
-            ).all(-1)
+            is_inside = (pred["keypoints"] + 0.5 < np.array([image_np.shape[-2:][::-1]])).all(-1)
             pred = {k: v[is_inside] for k, v in pred.items()}
 
         if self.conf.nms_radius is not None:

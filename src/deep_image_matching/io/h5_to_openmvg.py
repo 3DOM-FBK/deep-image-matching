@@ -3,6 +3,7 @@ This module contains functions to export image features, matches, and camera dat
 """
 
 import json
+import logging
 import os
 import shutil
 import sys
@@ -13,16 +14,24 @@ from pathlib import Path
 
 import h5py
 import numpy as np
+import yaml
 from PIL import Image
 from tqdm import tqdm
 
 from deep_image_matching.io.h5_to_db import get_focal
 
-from .. import logger
+logger = logging.getLogger("dim")
 
 __OPENMVG_DIST_NAME_MAP = {
     "pinhole_radial_k3": "disto_k3",
     "pinhole_brown_t2": "disto_t2",
+}
+
+DEFAULT_CAM_OPTIONS = {
+    "general": {
+        "single_camera": False,
+        "openmvg_camera_model": "pinhole_radial_k3",
+    },
 }
 
 
@@ -76,7 +85,7 @@ def add_keypoints(h5_path, image_path, matches_dir):
 
         path = os.path.join(image_path, filename)
         if not os.path.isfile(path):
-            raise IOError(f"Invalid image path {path}")
+            raise OSError(f"Invalid image path {path}")
         if len(keypoints.shape) >= 2:
             threading.Thread(
                 target=lambda: saveFeaturesOpenMVG(matches_dir, name, keypoints)
@@ -352,7 +361,7 @@ def export_to_openmvg(
     feature_path: Path,
     match_path: Path,
     openmvg_out_path: Path,
-    camera_options: dict,
+    camera_config_path: Path,
     openmvg_sfm_bin: Path = None,
     openmvg_database: Path = None,
 ) -> None:
@@ -366,7 +375,7 @@ def export_to_openmvg(
         feature_path (Path): Path to the feature file (HDF5 format).
         match_path (Path): Path to the match file (HDF5 format).
         openmvg_out_path (Path): Path to the desired output directory for the OpenMVG project.
-        camera_options (dict): Camera configuration options.
+        camera_config_path (Path): Path to the camera options yaml file.
         openmvg_sfm_bin (Path, optional): Path to the OpenMVG SfM executable. If not provided,
                                           attempts to find it automatically (Linux only).
         openmvg_database (Path, optional): Path to the OpenMVG sensor width database.
@@ -380,6 +389,24 @@ def export_to_openmvg(
         )
         os.rmdir(openmvg_out_path)
     openmvg_out_path.mkdir(parents=True)
+
+    if not img_dir.exists():
+        raise FileNotFoundError(f"Image directory {img_dir} does not exist.")
+    if not feature_path.exists():
+        raise FileNotFoundError(f"Feature file {feature_path} does not exist.")
+    if not match_path.exists():
+        raise FileNotFoundError(f"Match file {match_path} does not exist.")
+    if not camera_config_path.exists():
+        raise FileNotFoundError(
+            f"Camera options file {camera_config_path} does not exist."
+        )
+
+    # If a config file is provided, read camera options, otherwise use defaults
+    if camera_config_path is not None:
+        with open(camera_config_path) as file:
+            camera_options = yaml.safe_load(file)
+    else:
+        camera_options = DEFAULT_CAM_OPTIONS
 
     # NOTE: this part meybe is not needed here...
     if openmvg_sfm_bin is None:
@@ -404,9 +431,13 @@ def export_to_openmvg(
             )
     else:
         # Download openMVG sensor_width_camera_database to the openMVG output folder
-        url = "https://github.com/openMVG/openMVG/blob/develop/src/openMVG/exif/sensor_width_database/sensor_width_camera_database.txt"
+        url = "https://raw.githubusercontent.com/openMVG/openMVG/6d6b1dd70bded094ba06024e481dd5a5c662dc83/src/openMVG/exif/sensor_width_database/sensor_width_camera_database.txt"
         openmvg_database = openmvg_out_path / "sensor_width_camera_database.txt"
-        urllib.request.urlretrieve(url, openmvg_database)
+        with (
+            urllib.request.urlopen(url) as response,
+            open(openmvg_database, "wb") as out_file,
+        ):
+            shutil.copyfileobj(response, out_file)
 
     # camera_file_params = openmvg_database # Path to sensor_width_camera_database.txt file
     matches_dir = openmvg_out_path / "matches"

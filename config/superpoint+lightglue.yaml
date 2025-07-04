@@ -2,13 +2,14 @@
 
 general:
   tile_size: (2400, 2000)
-  geom_verification: pydegensac
+  geom_verification: PYDEGENSAC # NONE, PYDEGENSAC, MAGSAC, RANSAC, LMEDS, RHO, USAC_DEFAULT, USAC_PARALLEL, USAC_FM_8PTS, USAC_FAST, USAC_ACCURATE, USAC_PROSAC, USAC_MAGSAC
   min_inliers_per_pair: 10
-  min_inlier_ratio_per_pair: 0.25
+  min_inlier_ratio_per_pair: 0.15
+  gv_threshold: 1
 
 extractor:
   name: "superpoint"
-  max_keypoints: 8000 # -1 no limits
+  max_keypoints: 2000 # -1 no limits
   nms_radius: 4
   keypoint_threshold: 0.005
   remove_borders: 4

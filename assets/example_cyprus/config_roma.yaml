@@ -1,0 +1,22 @@
+# User configuration file
+
+general:
+  # tile_size: (3000, 2000) # This setting is overwriten by the the upsample_res setting
+  tile_overlap: 50
+  geom_verification: none
+  gv_threshold: 3
+  gv_confidence: 0.9999
+  min_matches_per_tile: 3
+  min_inliers_per_pair: 5
+  min_inlier_ratio_per_pair: 0.2
+  refine_intrinsics: False
+  preselection_pipeline: roma
+
+extractor:
+  name: no_extractor
+
+matcher:
+  name: roma
+  coarse_res: 560
+  upsample_res: 860
+  num_sampled_points: 10000

@@ -125,8 +125,8 @@ class ConvRefiner(nn.Module):
             if self.has_displacement_emb:
                 im_A_coords = torch.meshgrid(
                     (
-                        torch.linspace(-1 + 1 / hs, 1 - 1 / hs, hs, device="cuda"),
-                        torch.linspace(-1 + 1 / ws, 1 - 1 / ws, ws, device="cuda"),
+                        torch.linspace(-1 + 1 / hs, 1 - 1 / hs, hs, device=x.device),
+                        torch.linspace(-1 + 1 / ws, 1 - 1 / ws, ws, device=x.device),
                     )
                 )
                 im_A_coords = torch.stack((im_A_coords[1], im_A_coords[0]))
@@ -501,11 +501,9 @@ class RegressionMatcher(nn.Module):
         self,
         encoder,
         decoder,
-        h=600,
-        w=600,
-        # h=448,
-        # w=448,
-        sample_mode="threshold",
+        h=448,
+        w=448,
+        sample_mode="threshold_balanced",
         upsample_preds=False,
         symmetric=False,
         name=None,
@@ -522,9 +520,7 @@ class RegressionMatcher(nn.Module):
         self.og_transforms = get_tuple_transform_ops(resize=None, normalize=True)
         self.sample_mode = sample_mode
         self.upsample_preds = upsample_preds
-        # self.upsample_res = (14*16*6, 14*16*6)
-        # self.upsample_res = (int(864/4), int(864/4))
-        self.upsample_res = (int(14 * 16 * 6 / 2), int(14 * 16 * 6 / 2))
+        self.upsample_res = (14 * 16 * 6, 14 * 16 * 6)
         self.symmetric = symmetric
         self.sample_thresh = 0.05
         self.recrop_upsample = recrop_upsample
@@ -542,8 +538,9 @@ class RegressionMatcher(nn.Module):
             X = torch.cat((x_q, x_s), dim=0)
             feature_pyramid = self.encoder(X, upsample=upsample)
         else:
-            feature_pyramid = self.encoder(x_q, upsample=upsample), self.encoder(
-                x_s, upsample=upsample
+            feature_pyramid = (
+                self.encoder(x_q, upsample=upsample),
+                self.encoder(x_s, upsample=upsample),
             )
         return feature_pyramid
 
@@ -572,9 +569,9 @@ class RegressionMatcher(nn.Module):
             return good_matches, good_certainty
         density = kde(good_matches, std=0.1)
         p = 1 / (density + 1)
-        p[
-            density < 10
-        ] = 1e-7  # Basically should have at least 10 perfect neighbours, or around 100 ok ones
+        p[density < 10] = (
+            1e-7  # Basically should have at least 10 perfect neighbours, or around 100 ok ones
+        )
         balanced_samples = torch.multinomial(
             p, num_samples=min(num, len(good_certainty)), replacement=False
         )
@@ -621,8 +618,11 @@ class RegressionMatcher(nn.Module):
         )
         return corresps
 
-    def to_pixel_coordinates(self, matches, H_A, W_A, H_B, W_B):
-        kpts_A, kpts_B = matches[..., :2], matches[..., 2:]
+    def to_pixel_coordinates(self, coords, H_A, W_A, H_B, W_B):
+        if isinstance(coords, (list, tuple)):
+            kpts_A, kpts_B = coords[0], coords[1]
+        else:
+            kpts_A, kpts_B = coords[..., :2], coords[..., 2:]
         kpts_A = torch.stack(
             (W_A / 2 * (kpts_A[..., 0] + 1), H_A / 2 * (kpts_A[..., 1] + 1)), axis=-1
         )
@@ -631,7 +631,22 @@ class RegressionMatcher(nn.Module):
         )
         return kpts_A, kpts_B
 
-    def match_keypoints(self, x_A, x_B, warp, certainty, return_tuple=True):
+    def to_normalized_coordinates(self, coords, H_A, W_A, H_B, W_B):
+        if isinstance(coords, (list, tuple)):
+            kpts_A, kpts_B = coords[0], coords[1]
+        else:
+            kpts_A, kpts_B = coords[..., :2], coords[..., 2:]
+        kpts_A = torch.stack(
+            (2 / W_A * kpts_A[..., 0] - 1, 2 / H_A * kpts_A[..., 1] - 1), axis=-1
+        )
+        kpts_B = torch.stack(
+            (2 / W_B * kpts_B[..., 0] - 1, 2 / H_B * kpts_B[..., 1] - 1), axis=-1
+        )
+        return kpts_A, kpts_B
+
+    def match_keypoints(
+        self, x_A, x_B, warp, certainty, return_tuple=True, return_inds=False
+    ):
         x_A_to_B = F.grid_sample(
             warp[..., -2:].permute(2, 0, 1)[None],
             x_A[None, None],
@@ -651,10 +666,17 @@ class RegressionMatcher(nn.Module):
             * (cert_A_to_B[:, None] > self.sample_thresh),
             as_tuple=True,
         )
+
         if return_tuple:
-            return x_A[inds_A], x_B[inds_B]
+            if return_inds:
+                return inds_A, inds_B
+            else:
+                return x_A[inds_A], x_B[inds_B]
         else:
-            return torch.cat((x_A[inds_A], x_B[inds_B]), dim=-1)
+            if return_inds:
+                return torch.cat((inds_A, inds_B), dim=-1)
+            else:
+                return torch.cat((x_A[inds_A], x_B[inds_B]), dim=-1)
 
     def get_roi(self, certainty, W, H, thr=0.025):
         raise NotImplementedError("WIP, disable for now")
@@ -787,8 +809,8 @@ class RegressionMatcher(nn.Module):
             # Create im_A meshgrid
             im_A_coords = torch.meshgrid(
                 (
-                    torch.linspace(-1 + 1 / hs, 1 - 1 / hs, hs, device="cuda"),
-                    torch.linspace(-1 + 1 / ws, 1 - 1 / ws, ws, device="cuda"),
+                    torch.linspace(-1 + 1 / hs, 1 - 1 / hs, hs, device=device),
+                    torch.linspace(-1 + 1 / ws, 1 - 1 / ws, ws, device=device),
                 )
             )
             im_A_coords = torch.stack((im_A_coords[1], im_A_coords[0]))
@@ -829,7 +851,7 @@ class RegressionMatcher(nn.Module):
         save_path=None,
     ):
         assert (
-            symmetric == True
+            symmetric is True
         ), "Currently assuming bidirectional warp, might update this if someone complains ;)"
         H, W2, _ = warp.shape
         W = W2 // 2 if symmetric else W2

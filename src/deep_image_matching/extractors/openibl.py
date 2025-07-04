@@ -5,7 +5,7 @@ from ..utils.hloc_base_model import BaseModel
 
 
 class OpenIBL(BaseModel):
-    default_conf = {
+    _default_conf = {
         "model_name": "vgg16_netvlad",
     }
     required_inputs = ["image"]

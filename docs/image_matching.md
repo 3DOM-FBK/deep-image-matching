@@ -2,7 +2,7 @@
 
 **Page under construction...**
 
-::: deep_image_matching.image_matching.ImageMatching
+::: deep_image_matching.image_matching.ImageMatcher
     options:
       show_root_heading: true
       heading_level: 2

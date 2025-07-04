@@ -1,6 +1,7 @@
 """ """
 
 import argparse
+import logging
 import shutil
 import subprocess
 from itertools import permutations
@@ -11,8 +12,10 @@ import cv2
 import h5py
 import numpy as np
 
-from .. import IMAGE_EXT, logger
+from ..utils.image import IMAGE_EXT
 from ..visualization import viz_matches_cv2
+
+logger = logging.getLogger("dim")
 
 
 def execute(cmd, cwd=None):
@@ -35,7 +38,7 @@ def execute(cmd, cwd=None):
 def read_Homol_matches(file: Path) -> Tuple[np.ndarray, np.ndarray]:
     x0y0 = []
     x1y1 = []
-    with open(file, "r") as f:
+    with open(file) as f:
         for line in f:
             line = line.split()
             x0y0.append(np.array([line[0], line[1]], dtype=np.float32))
@@ -69,9 +72,10 @@ def get_matches(
                If the matches are not present, None is returned for both elements.
     """
 
-    with h5py.File(str(feature_path), "r") as features, h5py.File(
-        str(match_path), "r"
-    ) as matches:
+    with (
+        h5py.File(str(feature_path), "r") as features,
+        h5py.File(str(match_path), "r") as matches,
+    ):
         # Check if the matches are present
         if key0 not in matches.keys() or key1 not in matches[key0].keys():
             return None, None
@@ -85,8 +89,8 @@ def get_matches(
         s1idx = np.argsort(matches1_idx)
 
         # Get coordinates of matches
-        x0y0 = features[key0]["keypoints"][matches0_idx[s0idx]]
-        x1y1 = features[key1]["keypoints"][matches1_idx[s1idx]]
+        x0y0 = features[key0]["keypoints"][:][matches0_idx[s0idx]]
+        x1y1 = features[key1]["keypoints"][:][matches1_idx[s1idx]]
 
         # Restore the original order
         x0y0 = x0y0[np.argsort(s0idx)]
@@ -325,19 +329,35 @@ def export_to_micmac(
 def main():
     parser = argparse.ArgumentParser(description="Export to MicMac.")
     parser.add_argument(
-        "--image_dir", type=str, required=True, help="Path to the image directory."
+        "-i",
+        "--image_dir",
+        type=str,
+        required=True,
+        help="Path to the image directory.",
     )
     parser.add_argument(
-        "--features_h5", type=str, required=True, help="Path to the features.h5 file."
+        "-f",
+        "--features_h5",
+        type=str,
+        required=True,
+        help="Path to the features.h5 file.",
     )
     parser.add_argument(
-        "--matches_h5", type=str, required=True, help="Path to the matches.h5 file."
+        "-m",
+        "--matches_h5",
+        type=str,
+        required=True,
+        help="Path to the matches.h5 file.",
     )
     parser.add_argument(
-        "--out_dir", type=str, default="micmac", help="Path to the output directory."
+        "-o",
+        "--out_dir",
+        type=str,
+        default="micmac",
+        help="Path to the output directory.",
     )
     parser.add_argument(
-        "--img_ext", type=str, default=IMAGE_EXT, help="Image extension."
+        "-x", "--img_ext", type=str, default=IMAGE_EXT, help="Image extension."
     )
     parser.add_argument(
         "--run_Tapas",

@@ -1,9 +1,11 @@
+import logging
 import shutil
 from pathlib import Path
 from pprint import pprint
 
-from . import logger
 from .config import confs
+
+logger = logging.getLogger("dim")
 
 try:
     import tkinter as tk

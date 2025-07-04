@@ -1,0 +1,24 @@
+# User configuration file
+
+general:
+  tile_size: (2400, 2000)
+  geom_verification: PYDEGENSAC # NONE, PYDEGENSAC, MAGSAC, RANSAC, LMEDS, RHO, USAC_DEFAULT, USAC_PARALLEL, USAC_FM_8PTS, USAC_FAST, USAC_ACCURATE, USAC_PROSAC, USAC_MAGSAC
+  gv_threshold: 4
+  min_inliers_per_pair: 10
+  min_inlier_ratio_per_pair: 0.25
+
+extractor:
+  name: "superpoint"
+  max_keypoints: 8000 # -1 no limits
+  nms_radius: 4
+  keypoint_threshold: 0.005
+  remove_borders: 4
+  fix_sampling: False
+
+matcher:
+  name: "lightglue"
+  flash: True # enable FlashAttention if available
+  mp: False # enable mixed precision
+  depth_confidence: 0.95 # early stopping, disable with -1
+  width_confidence: 0.99 # point pruning, disable with -1
+  filter_threshold: 0.10 # match threshold

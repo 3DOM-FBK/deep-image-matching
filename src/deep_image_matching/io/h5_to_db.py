@@ -17,19 +17,22 @@ This module contains functions to export image features and matches to a COLMAP 
 """
 
 import argparse
+import logging
 import os
 import warnings
 from pathlib import Path
 
 import h5py
 import numpy as np
+import yaml
 from PIL import ExifTags, Image
 from tqdm import tqdm
 
-from .. import logger
 from ..utils.database import COLMAPDatabase, image_ids_to_pair_id
 
-default_camera_options = {
+logger = logging.getLogger("dim")
+
+DEFAULT_CAM_OPTIONS = {
     "general": {
         "single_camera": False,
         "camera_model": "simple-radial",
@@ -42,7 +45,7 @@ def export_to_colmap(
     feature_path: Path,
     match_path: Path,
     database_path: str = "database.db",
-    camera_options: dict = default_camera_options,
+    camera_config_path: Path = None,
 ):
     """
     Exports image features and matches to a COLMAP database.
@@ -52,7 +55,7 @@ def export_to_colmap(
         feature_path (Path): Path to the feature file (in HDF5 format) containing the extracted keypoints.
         match_path (Path): Path to the match file (in HDF5 format) containing the matches between keypoints.
         database_path (str, optional): Path to the COLMAP database file. Defaults to "colmap.db".
-        camera_options (dict, optional): Flag indicating whether to use camera options. Defaults to default_camera_options.
+        camera_config_path (Path, optional): Path to the camera options yaml file. If none is passesed, the default camera configuration is used.
 
     Returns:
         None
@@ -77,6 +80,14 @@ def export_to_colmap(
         logger.warning(f"Database path {database_path} already exists - deleting it")
         database_path.unlink()
 
+    # If a config file is provided, read camera options, otherwise use defaults
+    if camera_config_path is not None:
+        with open(camera_config_path) as file:
+            camera_options = yaml.safe_load(file)
+    else:
+        camera_options = DEFAULT_CAM_OPTIONS
+
+    # Create the database and add keypoints and matches
     db = COLMAPDatabase.connect(database_path)
     db.create_tables()
     fname_to_id = add_keypoints(db, feature_path, img_dir, camera_options)
@@ -246,7 +257,6 @@ def add_keypoints(
     grouped_images = parse_camera_options(camera_options, db, image_path)
 
     with h5py.File(str(h5_path), "r") as keypoint_f:
-        # camera_id = None
         fname_to_id = {}
         k = 0
         for filename in tqdm(list(keypoint_f.keys())):
@@ -254,7 +264,7 @@ def add_keypoints(
 
             path = os.path.join(image_path, filename)
             if not os.path.isfile(path):
-                raise IOError(f"Invalid image path {path}")
+                raise OSError(f"Invalid image path {path}")
 
             if filename not in list(grouped_images.keys()):
                 if camera_options["general"]["single_camera"] is False:
@@ -276,18 +286,16 @@ def add_keypoints(
                         k += 1
                     elif k > 0:
                         camera_id = single_camera_id
-            else:
+            elif filename in list(grouped_images.keys()):
                 camera_id = grouped_images[filename]["camera_id"]
+            else:
+                print("ERROR in h5_to_db.py")
+                quit()
             image_id = db.add_image(filename, camera_id)
             fname_to_id[filename] = image_id
-            # print('keypoints')
-            # print(keypoints)
-            # print('image_id', image_id)
+
             if len(keypoints.shape) >= 2:
                 db.add_keypoints(image_id, keypoints)
-            # else:
-            #    keypoints =
-            #    db.add_keypoints(image_id, keypoints)
 
     return fname_to_id
 
@@ -365,7 +373,7 @@ def add_matches(db, h5_path, fname_to_id):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "h5_path", help=("Path to the directory with " "keypoints.h5 and matches.h5")
+        "h5_path", help=("Path to the directory with keypoints.h5 and matches.h5")
     )
     parser.add_argument("image_path", help="Path to source images")
     parser.add_argument(

@@ -10,7 +10,7 @@ class ScanNetBenchmark:
     def __init__(self, data_root="data/scannet") -> None:
         self.data_root = data_root
 
-    def benchmark(self, model, model_name=None):
+    def benchmark(self, model, model_name = None):
         model.train(False)
         with torch.no_grad():
             data_root = self.data_root
@@ -24,20 +24,20 @@ class ScanNetBenchmark:
                 scene = pairs[pairind]
                 scene_name = f"scene0{scene[0]}_00"
                 im_A_path = osp.join(
-                    self.data_root,
-                    "scans_test",
-                    scene_name,
-                    "color",
-                    f"{scene[2]}.jpg",
-                )
+                        self.data_root,
+                        "scans_test",
+                        scene_name,
+                        "color",
+                        f"{scene[2]}.jpg",
+                    )
                 im_A = Image.open(im_A_path)
                 im_B_path = osp.join(
-                    self.data_root,
-                    "scans_test",
-                    scene_name,
-                    "color",
-                    f"{scene[3]}.jpg",
-                )
+                        self.data_root,
+                        "scans_test",
+                        scene_name,
+                        "color",
+                        f"{scene[3]}.jpg",
+                    )
                 im_B = Image.open(im_B_path)
                 T_gt = rel_pose[pairind].reshape(3, 4)
                 R, t = T_gt[:3, :3], T_gt[:3, 3]
@@ -76,20 +76,24 @@ class ScanNetBenchmark:
 
                 offset = 0.5
                 kpts1 = sparse_matches[:, :2]
-                kpts1 = np.stack(
-                    (
-                        w1 * (kpts1[:, 0] + 1) / 2 - offset,
-                        h1 * (kpts1[:, 1] + 1) / 2 - offset,
-                    ),
-                    axis=-1,
+                kpts1 = (
+                    np.stack(
+                        (
+                            w1 * (kpts1[:, 0] + 1) / 2 - offset,
+                            h1 * (kpts1[:, 1] + 1) / 2 - offset,
+                        ),
+                        axis=-1,
+                    )
                 )
                 kpts2 = sparse_matches[:, 2:]
-                kpts2 = np.stack(
-                    (
-                        w2 * (kpts2[:, 0] + 1) / 2 - offset,
-                        h2 * (kpts2[:, 1] + 1) / 2 - offset,
-                    ),
-                    axis=-1,
+                kpts2 = (
+                    np.stack(
+                        (
+                            w2 * (kpts2[:, 0] + 1) / 2 - offset,
+                            h2 * (kpts2[:, 1] + 1) / 2 - offset,
+                        ),
+                        axis=-1,
+                    )
                 )
                 for _ in range(5):
                     shuffling = np.random.permutation(np.arange(len(kpts1)))
@@ -97,8 +101,7 @@ class ScanNetBenchmark:
                     kpts2 = kpts2[shuffling]
                     try:
                         norm_threshold = 0.5 / (
-                            np.mean(np.abs(K1[:2, :2])) + np.mean(np.abs(K2[:2, :2]))
-                        )
+                        np.mean(np.abs(K1[:2, :2])) + np.mean(np.abs(K2[:2, :2])))
                         R_est, t_est, mask = estimate_pose(
                             kpts1,
                             kpts2,
