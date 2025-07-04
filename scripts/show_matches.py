@@ -1,7 +1,7 @@
 import os
 import argparse
 from pathlib import Path
-
+import sqlite3
 import cv2
 import numpy as np
 from deep_image_matching.utils.database import (
@@ -10,12 +10,45 @@ from deep_image_matching.utils.database import (
     pair_id_to_image_ids,
 )
 
-def generate_pairs(imgs_dir):
+
+def pair_id_to_image_ids(pair_id):
+    image_id2 = pair_id % 2147483647
+    image_id1 = (pair_id - image_id2) / 2147483647
+    return image_id1, image_id2
+
+def ExportMatches(
+    database_path: Path, 
+    min_num_matches: int = 1, 
+) -> None:
+    
+    connection = sqlite3.connect(database_path)
+    cursor = connection.cursor()
     pairs = []
-    n_images = len(os.listdir(imgs_dir))
-    for i in range(n_images-1):
-        if i%2 == 0:
-            pairs.append((i+1, i+2))
+
+    cursor.execute("SELECT pair_id, rows FROM two_view_geometries")
+    for row in cursor:
+        pair_id = row[0]
+        n_matches = row[1]
+        id_img1, id_img2 = pair_id_to_image_ids(pair_id)
+        id_img1, id_img2 = int(id_img1), int(id_img2)
+        #img1 = images[id_img1]
+        #img2 = images[id_img2]
+        if n_matches >= min_num_matches:
+            pairs.append((id_img1, id_img2))
+    
+    connection.close()
+
+    return pairs
+
+def generate_pairs(imgs_dir, method=["bruteforce", "custom"], database_path=Path("./")):
+    pairs = []
+    if method == "custom":
+        n_images = len(os.listdir(imgs_dir))
+        for i in range(n_images-1):
+            if i%2 == 0:
+                pairs.append((i+1, i+2))
+    elif method == "bruteforce":
+        pairs = ExportMatches(database_path)
     return pairs
 
 class ShowPairMatches:
@@ -72,11 +105,11 @@ class ShowPairMatches:
                         (int(pair_id[0]), int(pair_id[1]))
                     ] = blob_to_array(data, np.uint32, (-1, 2))
 
-    def ShowMatches(self):
+    def ShowMatches(self, plot_config: dict):
         if self.db_type == "colmap":
-            self.ShowColmapMatches()
+            self.ShowColmapMatches(plot_config)
 
-    def ShowColmapMatches(self):
+    def ShowColmapMatches(self, plot_config: dict):
         print("Showing matches..")
         if self.imgs_dict["type"] == "ids":
             id0 = int(self.imgs_dict["data"][0])
@@ -93,8 +126,14 @@ class ShowPairMatches:
         keypoints1 = self.keypoints[id1][:,:2]
         print(f"Img {id0}: kpts shape = {keypoints0.shape}")
         print(f"Img {id1}: kpts shape = {keypoints1.shape}")
-        print("raw matches shape", np.shape(self.matches[(id0, id1)]))
-        print("verified matches shape", np.shape(self.two_views_matches[(id0, id1)]))
+        try:
+            print("raw matches shape", np.shape(self.matches[(id0, id1)]))
+        except:
+            pass
+        try:
+            print("verified matches shape", np.shape(self.two_views_matches[(id0, id1)]))
+        except:
+            self.two_views_matches[(id0, id1)] = []
 
         img0_path = self.imgs_dir / self.imgs[id0]
         img1_path = self.imgs_dir / self.imgs[id1]
@@ -107,6 +146,7 @@ class ShowPairMatches:
             keypoints0,
             keypoints1,
             self.two_views_matches[(id0, id1)],
+            plot_config,
         )
 
     def GeneratePlot(
@@ -116,7 +156,14 @@ class ShowPairMatches:
         kpts0: np.ndarray,
         kpts1: np.ndarray,
         matches: np.ndarray,
+        plot_config: dict,
     ):
+        
+        show_keypoints = plot_config["show_keypoints"]
+        radius = plot_config["radius"]
+        thickness = plot_config["thickness"]
+        space_between_images = plot_config["space_between_images"]
+
         # Load images
         img0 = cv2.imread(str(img0_path))
         img1 = cv2.imread(str(img1_path))
@@ -127,20 +174,22 @@ class ShowPairMatches:
 
         # Create a new image to draw matches
         img_matches = np.zeros(
-            (max(img0.shape[0], img1.shape[0]), img0.shape[1] + img1.shape[1], 3),
+            (max(img0.shape[0], img1.shape[0]), img0.shape[1] + img1.shape[1] + space_between_images, 3),
             dtype=np.uint8,
         )
         img_matches[: img0.shape[0], : img0.shape[1]] = img0
-        img_matches[: img1.shape[0], img0.shape[1] :] = img1
+        img_matches[: img1.shape[0], img0.shape[1]+space_between_images :] = img1
+        img_matches[: img1.shape[0], img0.shape[1] : img0.shape[1]+space_between_images] = (255,255,255)
 
-        # Show keypoints
-        for kpt in kpts0_int:
-            kpt = tuple(kpt)
-            cv2.circle(img_matches, kpt, 3, (0, 0, 255), -1)
+        if show_keypoints:
+            # Show keypoints
+            for kpt in kpts0_int:
+                kpt = tuple(kpt)
+                cv2.circle(img_matches, kpt, radius, (0, 0, 255), thickness)
 
-        for kpt in kpts1_int:
-            kpt = tuple(kpt + np.array([img0.shape[1], 0]))
-            cv2.circle(img_matches, kpt, 3, (0, 0, 255), -1)
+            for kpt in kpts1_int:
+                kpt = tuple(kpt + np.array([img0.shape[1], 0]))
+                cv2.circle(img_matches, kpt, radius, (0, 0, 255), thickness)
 
         # Draw lines and circles for matches
         for match in matches:
@@ -148,11 +197,11 @@ class ShowPairMatches:
             pt2 = tuple(np.array(kpts1_int[match[1]]) + np.array([img0.shape[1], 0]))
 
             # Draw a line connecting the keypoints
-            cv2.line(img_matches, pt1, pt2, (0, 255, 0), 1)
+            cv2.line(img_matches, pt1, pt2, (0, 255, 0), thickness)
 
             # Draw circles around keypoints
-            cv2.circle(img_matches, pt1, 3, (255, 0, 0), -1)
-            cv2.circle(img_matches, pt2, 3, (255, 0, 0), -1)
+            cv2.circle(img_matches, pt1, radius, (255, 0, 0), thickness)
+            cv2.circle(img_matches, pt2, radius, (255, 0, 0), thickness)
 
         img_matches_resized = self.resize_image(img_matches, self.max_out_img_size)
 
@@ -217,6 +266,13 @@ def parse_args():
 
 
 def main():
+    plot_config = {
+        "show_keypoints": True,
+        "radius": 5,
+        "thickness": 2,
+        "space_between_images": 0,
+    }
+    
     args = parse_args()
     database_path = Path(args.database)
     out_dir = Path(args.output)
@@ -244,10 +300,10 @@ def main():
         )
 
         show_pair_matches.LoadDatabase()
-        show_pair_matches.ShowMatches()
+        show_pair_matches.ShowMatches(plot_config)
     
     else:
-        pairs = generate_pairs(imgs_dir)
+        pairs = generate_pairs(imgs_dir, method="bruteforce", database_path=database_path)
         print(pairs)
         for pair in pairs:
             i1, i2 = pair[0], pair[1]
@@ -267,9 +323,10 @@ def main():
             )
 
             show_pair_matches.LoadDatabase()
+            #show_pair_matches.ShowMatches(plot_config);quit()
 
             try:
-                show_pair_matches.ShowMatches()
+                show_pair_matches.ShowMatches(plot_config)
             except:
                 print("No verified matches found")
 

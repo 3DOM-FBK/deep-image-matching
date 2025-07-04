@@ -44,12 +44,12 @@ conf_general = {
     #   GeometricVerification.PYDEGENSAC (use pydegensac),
     #   GeometricVerification.MAGSAC (use opencv MAGSAC),
     #   Other methods: RANSAC, LMEDS, RHO, USAC_DEFAULT, USAC_PARALLEL, USAC_FM_8PTS, USAC_FAST, USAC_ACCURATE, USAC_PROSAC, USAC_MAGSAC
-    "geom_verification": GeometricVerification.PYDEGENSAC,
+    "geom_verification": GeometricVerification.MAGSAC,
     "gv_threshold": 4,
     "gv_confidence": 0.99999,
     # Minimum number of inliers matches and minumum inlier ratio per pair
     "min_inliers_per_pair": 15,
-    "min_inlier_ratio_per_pair": 0.25,
+    "min_inlier_ratio_per_pair": 0.15,
     # Even if the features are extracted by tiles, you can try to match the features of the entire image first (if the number of features is not too high and they can fit into memory). Default is False.
     "try_match_full_images": False,
     "preselection_pipeline": "superpoint+lightglue",
@@ -66,7 +66,7 @@ confs = {
             "name": "superpoint",
             "nms_radius": 3,
             "keypoint_threshold": 0.0005,
-            "max_keypoints": 4096,
+            "max_keypoints": 2048,
         },
         "matcher": {
             # Refer to https://github.com/cvg/LightGlue/tree/main for the meaning of the parameters
@@ -156,6 +156,11 @@ confs = {
     "sift+kornia_matcher": {
         "extractor": {
             "name": "sift",
+            "n_features": 2048,
+            "nOctaveLayers": 3,
+            "contrastThreshold": 0.0004,
+            "edgeThreshold": 10,
+            "sigma": 1.6,
         },
         "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.85},
     },
@@ -171,6 +176,10 @@ confs = {
         "extractor": {"name": "no_extractor"},
         "matcher": {"name": "roma", "pretrained": "outdoor"},
     },
+    "srif": {
+        "extractor": {"name": "no_extractor"},
+        "matcher": {"name": "srif", "pretrained": "outdoor"}, ################################################### togliere outdoor
+    },
     "keynetaffnethardnet+kornia_matcher": {
         "extractor": {
             "name": "keynetaffnethardnet",
@@ -182,15 +191,7 @@ confs = {
     "dedode+kornia_matcher": {
         "extractor": {
             "name": "dedode",
-            "n_features": 1000,
-            "upright": False,
-        },
-        "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.99},
-    },
-    "dedode+kornia_matcher": {
-        "extractor": {
-            "name": "dedode",
-            "n_features": 1000,
+            "n_features": 4000,
             "upright": False,
         },
         "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.99},
@@ -230,6 +231,7 @@ opt_zoo = {
         "lightglue",
         "loftr",
         "se2loftr",
+        "srif",
         "adalam",
         "kornia_matcher",
         "roma",

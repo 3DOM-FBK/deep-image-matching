@@ -1,4 +1,5 @@
 import os
+import time
 import logging
 from importlib import import_module
 from pathlib import Path
@@ -6,6 +7,9 @@ from pathlib import Path
 import deep_image_matching as dim
 from deep_image_matching.utils.loftr_roma_to_multiview import LoftrRomaToMultiview
 import yaml
+
+
+start_time = time.time()
 
 logger = dim.setup_logger("dim")
 
@@ -33,14 +37,19 @@ dim.io.export_to_colmap(
     camera_config_path=config.general["camera_options"],
 )
 
-if matcher.matching in ["loftr", "se2loftr", "roma"]:
+import shutil
+
+shutil.copyfile(database_path, output_dir / "debug.db")
+
+if matcher.matching in ["loftr", "se2loftr", "roma", "srif"]:
     images = os.listdir(imgs_dir)
     image_format = Path(images[0]).suffix
     LoftrRomaToMultiview(
         input_dir=feature_path.parent,
         output_dir=feature_path.parent,
-        image_dir=imgs_dir, 
-        img_ext=image_format)
+        image_dir=imgs_dir,
+        img_ext=image_format,
+    )
 
 # Visualize view graph
 if config.general["graph"]:
@@ -101,7 +110,11 @@ if not config.general["skip_reconstruction"]:
         #     },
         # )
         reconst_opts = {}
-        refine_intrinsics = config.general["refine_intrinsics"] if "refine_intrinsics" in config.general else True
+        refine_intrinsics = (
+            config.general["refine_intrinsics"]
+            if "refine_intrinsics" in config.general
+            else True
+        )
 
         # Run reconstruction
         model = reconstruction.pycolmap_reconstruction(
@@ -112,3 +125,8 @@ if not config.general["skip_reconstruction"]:
             verbose=config.general["verbose"],
             refine_intrinsics=refine_intrinsics,
         )
+
+end_time = time.time()
+
+total_time = end_time - start_time
+print(f"Total processing time: {total_time:.2f} seconds")
