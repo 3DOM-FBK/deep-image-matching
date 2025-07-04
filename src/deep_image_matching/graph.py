@@ -3,11 +3,14 @@ import os
 import sqlite3
 from statistics import mean
 
+import matplotlib
 import networkx as nx
 import numpy as np
 from pyvis.network import Network
 
 from deep_image_matching.utils.database import pair_id_to_image_ids
+
+matplotlib.use("Agg")  # Use a non-interactive backend for matplotlib
 
 logger = logging.getLogger("dim")
 

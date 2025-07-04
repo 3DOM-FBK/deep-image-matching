@@ -21,6 +21,7 @@ import logging
 import os
 import warnings
 from pathlib import Path
+from typing import Union
 
 import h5py
 import numpy as np
@@ -28,7 +29,7 @@ import yaml
 from PIL import ExifTags, Image
 from tqdm import tqdm
 
-from ..utils.database import COLMAPDatabase, image_ids_to_pair_id
+from deep_image_matching.utils.database import COLMAPDatabase, image_ids_to_pair_id
 
 logger = logging.getLogger("dim")
 
@@ -45,8 +46,8 @@ def export_to_colmap(
     feature_path: Path,
     match_path: Path,
     database_path: str = "database.db",
-    camera_config_path: Path = None,
-):
+    camera_config_path: Union[Path, None] = None,
+) -> None:
     """
     Exports image features and matches to a COLMAP database.
 
@@ -75,10 +76,12 @@ def export_to_colmap(
             database_path="colmap.db",
         )
     """
-    database_path = Path(database_path)
-    if database_path.exists():
-        logger.warning(f"Database path {database_path} already exists - deleting it")
-        database_path.unlink()
+    database_path_obj = Path(database_path)
+    if database_path_obj.exists():
+        logger.warning(
+            f"Database path {database_path_obj} already exists - deleting it"
+        )
+        database_path_obj.unlink()
 
     # If a config file is provided, read camera options, otherwise use defaults
     if camera_config_path is not None:
@@ -106,7 +109,234 @@ def export_to_colmap(
         )
 
     db.commit()
-    return
+
+    return None
+
+
+def create_camera(
+    db: COLMAPDatabase,
+    image_path: Path,
+    camera_model: str,
+    param_arr: Union[np.ndarray, None] = None,
+):
+    image = Image.open(image_path)
+    width, height = image.size
+
+    focal = get_focal(image_path)
+
+    if camera_model == "simple-pinhole":
+        model = 0  # simple pinhole
+        if param_arr is None:
+            param_arr = np.array([focal, width / 2, height / 2])
+    elif camera_model == "pinhole":
+        model = 1  # pinhole
+        if param_arr is None:
+            param_arr = np.array([focal, focal, width / 2, height / 2])
+    elif camera_model == "simple-radial":
+        model = 2  # simple radial
+        if param_arr is None:
+            param_arr = np.array([focal, width / 2, height / 2, 0.1])
+    elif camera_model == "opencv":
+        model = 4  # opencv
+        if param_arr is None:
+            param_arr = np.array(
+                [focal, focal, width / 2, height / 2, 0.0, 0.0, 0.0, 0.0]
+            )
+    else:
+        raise RuntimeError(f"Invalid camera model {camera_model}")
+
+    return db.add_camera(str(model), width, height, param_arr)
+
+
+def parse_camera_options(
+    camera_options: dict,
+    db: COLMAPDatabase,
+    image_path: Path,
+) -> dict:
+    """
+    Parses camera options and creates camera entries in the COLMAP database.
+
+    This function groups images by camera, assigns camera IDs, and attempts to
+    initialize camera models in the provided COLMAP database.
+
+    Args:
+        camera_options (dict): A dictionary containing camera configuration options.
+        db (Path): Path to the COLMAP database.
+        image_path (Path): Path to the directory containing source images.
+
+    Returns:
+        dict: A dictionary mapping image filenames to their assigned camera IDs.
+    """
+
+    grouped_images = {}
+    n_cameras = len(camera_options.keys()) - 1
+    for camera in range(n_cameras):
+        cam_opt = camera_options[f"cam{camera}"]
+        # images = cam_opt["images"].split(",")
+        # use glob pattern to find images
+        patterns = cam_opt["images"].split(",")
+        images = []
+        for pattern in patterns:
+            images.extend(img.name for img in Path(image_path).glob(pattern))
+        images = sorted(images)
+
+        for i, img in enumerate(images):
+            grouped_images[img] = {"camera_id": camera + 1}
+            if i == 0:
+                path = Path(image_path) / img
+                try:
+                    create_camera(
+                        db, path, cam_opt["camera_model"], cam_opt["intrinsics"]
+                    )
+                except Exception:
+                    logger.warning(
+                        f"Was not possible to load the first image to initialize cam{camera}"
+                    )
+    return grouped_images
+
+
+def add_keypoints(
+    db: COLMAPDatabase,
+    h5_path: Path,
+    image_path: Path,
+    camera_options: Union[dict, None] = None,
+) -> dict:
+    """
+    Adds keypoints from an HDF5 file to a COLMAP database.
+
+    Reads keypoints from an HDF5 file, associates them with cameras (if necessary),
+    and adds the image and keypoint information to the specified COLMAP database.
+
+    Args:
+        db (COLMAPDatabase): COLMAP database object.
+        h5_path (Path): Path to the HDF5 file containing keypoints.
+        image_path (Path): Path to the directory containing source images.
+        camera_options (dict, optional): Camera configuration options (see `parse_camera_options`).
+                                         Defaults to None.
+
+    Returns:
+        dict: A dictionary mapping image filenames to their corresponding image IDs in the database.
+    """
+    if camera_options is None:
+        camera_options = {}
+
+    grouped_images = parse_camera_options(camera_options, db, image_path)
+
+    with h5py.File(str(h5_path), "r") as keypoint_f:
+        fname_to_id = {}
+        k = 0
+        for filename in tqdm(list(keypoint_f.keys())):
+            keypoints = np.array(keypoint_f[filename]["keypoints"])
+
+            path = Path(image_path) / filename
+            if not path.exists():
+                raise OSError(f"Invalid image path {path}")
+
+            if filename not in grouped_images:
+                if camera_options["general"]["single_camera"] is False:
+                    camera_id = create_camera(
+                        db, path, camera_options["general"]["camera_model"]
+                    )
+                else:
+                    if k == 0:
+                        camera_id = create_camera(
+                            db, path, camera_options["general"]["camera_model"]
+                        )
+                        single_camera_id = camera_id
+                        k += 1
+                    elif k > 0:
+                        camera_id = single_camera_id
+            else:
+                camera_id = grouped_images[filename]["camera_id"]
+
+            if camera_id is None:
+                raise RuntimeError("Camera ID could not be determined")
+
+            image_id = db.add_image(filename, camera_id)
+            fname_to_id[filename] = image_id
+
+            if len(keypoints.shape) >= 2:
+                db.add_keypoints(image_id, keypoints)
+
+    return fname_to_id
+
+
+def add_raw_matches(db: COLMAPDatabase, h5_path: Path, fname_to_id: dict):
+    """
+    Adds raw feature matches from an HDF5 file to a COLMAP database.
+
+    Reads raw matches from an HDF5 file, maps image filenames to their image IDs,
+    and adds match information to the specified COLMAP database. Prevents duplicate
+    matches from being added.
+
+    Args:
+        db (COLMAPDatabase): COLMAP database object.
+        h5_path (Path): Path to the HDF5 file containing raw matches.
+        fname_to_id (dict):  A dictionary mapping image filenames to their image IDs.
+    """
+    match_file = h5py.File(str(h5_path), "r")
+
+    added = set()
+    n_keys = len(match_file.keys())
+    n_total = (n_keys * (n_keys - 1)) // 2
+
+    with tqdm(total=n_total) as pbar:
+        for key_1 in match_file:
+            group = match_file[key_1]
+            if hasattr(group, "keys"):
+                for key_2 in group:
+                    id_1 = fname_to_id[key_1]
+                    id_2 = fname_to_id[key_2]
+
+                    pair_id = image_ids_to_pair_id(id_1, id_2)
+                    if pair_id in added:
+                        warnings.warn(
+                            f"Pair {pair_id} ({id_1}, {id_2}) already added!",
+                            stacklevel=2,
+                        )
+                        continue
+
+                    matches = group[key_2][()]
+                    db.add_matches(id_1, id_2, matches)
+                    # db.add_two_view_geometry(id_1, id_2, matches)
+
+                    added.add(pair_id)
+
+                    pbar.update(1)
+    match_file.close()
+
+
+def add_matches(db: COLMAPDatabase, h5_path: Path, fname_to_id: dict):
+    match_file = h5py.File(str(h5_path), "r")
+
+    added = set()
+    n_keys = len(match_file.keys())
+    n_total = (n_keys * (n_keys - 1)) // 2
+
+    with tqdm(total=n_total) as pbar:
+        for key_1 in match_file:
+            group = match_file[key_1]
+            if hasattr(group, "keys"):
+                for key_2 in group:
+                    id_1 = fname_to_id[key_1]
+                    id_2 = fname_to_id[key_2]
+
+                    pair_id = image_ids_to_pair_id(id_1, id_2)
+                    if pair_id in added:
+                        warnings.warn(
+                            f"Pair {pair_id} ({id_1}, {id_2}) already added!",
+                            stacklevel=2,
+                        )
+                        continue
+
+                    matches = group[key_2][()]
+                    # db.add_matches(id_1, id_2, matches)
+                    db.add_two_view_geometry(id_1, id_2, matches)
+
+                    added.add(pair_id)
+
+                    pbar.update(1)
+    match_file.close()
 
 
 def get_focal(image_path: Path, err_on_default: bool = False) -> float:
@@ -153,198 +383,6 @@ def get_focal(image_path: Path, err_on_default: bool = False) -> float:
         focal = FOCAL_PRIOR * max_size
 
     return focal
-
-
-def create_camera(db: Path, image_path: Path, camera_model: str):
-    image = Image.open(image_path)
-    width, height = image.size
-
-    focal = get_focal(image_path)
-
-    if camera_model == "simple-pinhole":
-        model = 0  # simple pinhole
-        param_arr = np.array([focal, width / 2, height / 2])
-    elif camera_model == "pinhole":
-        model = 1  # pinhole
-        param_arr = np.array([focal, focal, width / 2, height / 2])
-    elif camera_model == "simple-radial":
-        model = 2  # simple radial
-        param_arr = np.array([focal, width / 2, height / 2, 0.1])
-    elif camera_model == "opencv":
-        model = 4  # opencv
-        param_arr = np.array([focal, focal, width / 2, height / 2, 0.0, 0.0, 0.0, 0.0])
-    else:
-        raise RuntimeError(f"Invalid camera model {camera_model}")
-
-    return db.add_camera(model, width, height, param_arr)
-
-
-def parse_camera_options(
-    camera_options: dict,
-    db: Path,
-    image_path: Path,
-) -> dict:
-    """
-    Parses camera options and creates camera entries in the COLMAP database.
-
-    This function groups images by camera, assigns camera IDs, and attempts to
-    initialize camera models in the provided COLMAP database.
-
-    Args:
-        camera_options (dict): A dictionary containing camera configuration options.
-        db (Path): Path to the COLMAP database.
-        image_path (Path): Path to the directory containing source images.
-
-    Returns:
-        dict: A dictionary mapping image filenames to their assigned camera IDs.
-    """
-
-    grouped_images = {}
-    n_cameras = len(camera_options.keys()) - 1
-    for camera in range(n_cameras):
-        cam_opt = camera_options[f"cam{camera}"]
-        images = cam_opt["images"].split(",")
-        for i, img in enumerate(images):
-            grouped_images[img] = {"camera_id": camera + 1}
-            if i == 0:
-                path = os.path.join(image_path, img)
-                try:
-                    create_camera(db, path, cam_opt["camera_model"])
-                except:
-                    logger.warning(
-                        f"Was not possible to load the first image to initialize cam{camera}"
-                    )
-    return grouped_images
-
-
-def add_keypoints(
-    db: Path, h5_path: Path, image_path: Path, camera_options: dict = {}
-) -> dict:
-    """
-    Adds keypoints from an HDF5 file to a COLMAP database.
-
-    Reads keypoints from an HDF5 file, associates them with cameras (if necessary),
-    and adds the image and keypoint information to the specified COLMAP database.
-
-    Args:
-        db (Path): Path to the COLMAP database.
-        h5_path (Path): Path to the HDF5 file containing keypoints.
-        image_path (Path): Path to the directory containing source images.
-        camera_options (dict, optional): Camera configuration options (see `parse_camera_options`).
-                                         Defaults to an empty dictionary.
-
-    Returns:
-        dict: A dictionary mapping image filenames to their corresponding image IDs in the database.
-    """
-
-    grouped_images = parse_camera_options(camera_options, db, image_path)
-
-    with h5py.File(str(h5_path), "r") as keypoint_f:
-        fname_to_id = {}
-        k = 0
-        for filename in tqdm(list(keypoint_f.keys())):
-            keypoints = keypoint_f[filename]["keypoints"].__array__()
-
-            path = os.path.join(image_path, filename)
-            if not os.path.isfile(path):
-                raise OSError(f"Invalid image path {path}")
-
-            if filename not in list(grouped_images.keys()):
-                if camera_options["general"]["single_camera"] is False:
-                    camera_id = create_camera(
-                        db, path, camera_options["general"]["camera_model"]
-                    )
-                elif camera_options["general"]["single_camera"] is True:
-                    if k == 0:
-                        camera_id = create_camera(
-                            db, path, camera_options["general"]["camera_model"]
-                        )
-                        single_camera_id = camera_id
-                        k += 1
-                    elif k > 0:
-                        camera_id = single_camera_id
-            elif filename in list(grouped_images.keys()):
-                camera_id = grouped_images[filename]["camera_id"]
-            else:
-                print("ERROR in h5_to_db.py")
-                quit()
-            image_id = db.add_image(filename, camera_id)
-            fname_to_id[filename] = image_id
-
-            if len(keypoints.shape) >= 2:
-                db.add_keypoints(image_id, keypoints)
-
-    return fname_to_id
-
-
-def add_raw_matches(db: Path, h5_path: Path, fname_to_id: dict):
-    """
-    Adds raw feature matches from an HDF5 file to a COLMAP database.
-
-    Reads raw matches from an HDF5 file, maps image filenames to their image IDs,
-    and adds match information to the specified COLMAP database. Prevents duplicate
-    matches from being added.
-
-    Args:
-        db (Path): Path to the COLMAP database.
-        h5_path (Path): Path to the HDF5 file containing raw matches.
-        fname_to_id (dict):  A dictionary mapping image filenames to their image IDs.
-    """
-    match_file = h5py.File(str(h5_path), "r")
-
-    added = set()
-    n_keys = len(match_file.keys())
-    n_total = (n_keys * (n_keys - 1)) // 2
-
-    with tqdm(total=n_total) as pbar:
-        for key_1 in match_file.keys():
-            group = match_file[key_1]
-            for key_2 in group.keys():
-                id_1 = fname_to_id[key_1]
-                id_2 = fname_to_id[key_2]
-
-                pair_id = image_ids_to_pair_id(id_1, id_2)
-                if pair_id in added:
-                    warnings.warn(f"Pair {pair_id} ({id_1}, {id_2}) already added!")
-                    continue
-
-                matches = group[key_2][()]
-                db.add_matches(id_1, id_2, matches)
-                # db.add_two_view_geometry(id_1, id_2, matches)
-
-                added.add(pair_id)
-
-                pbar.update(1)
-    match_file.close()
-
-
-def add_matches(db, h5_path, fname_to_id):
-    match_file = h5py.File(str(h5_path), "r")
-
-    added = set()
-    n_keys = len(match_file.keys())
-    n_total = (n_keys * (n_keys - 1)) // 2
-
-    with tqdm(total=n_total) as pbar:
-        for key_1 in match_file.keys():
-            group = match_file[key_1]
-            for key_2 in group.keys():
-                id_1 = fname_to_id[key_1]
-                id_2 = fname_to_id[key_2]
-
-                pair_id = image_ids_to_pair_id(id_1, id_2)
-                if pair_id in added:
-                    warnings.warn(f"Pair {pair_id} ({id_1}, {id_2}) already added!")
-                    continue
-
-                matches = group[key_2][()]
-                # db.add_matches(id_1, id_2, matches)
-                db.add_two_view_geometry(id_1, id_2, matches)
-
-                added.add(pair_id)
-
-                pbar.update(1)
-    match_file.close()
 
 
 if __name__ == "__main__":
