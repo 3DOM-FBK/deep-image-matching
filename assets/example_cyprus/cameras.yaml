@@ -6,17 +6,17 @@ general:
     1200, 1200, 750, 500
   ]  
 
-cam0: # This camera is used for the image rotated by 180 degrees
-  camera_model: "pinhole"
-  intrinsics: [
-    1200, 1200, 750, 500
-  ]  
-  images : "DSC_6468.JPG"
-
-
-cam1: # This camera is used for the image rotated by 90 degrees
+cam0: # This camera is used for the image rotated by 90 degrees. You need to define a different camera model, as the image size is different (width and height are swapped).
   camera_model: "pinhole"
   intrinsics: [
     1200, 1200, 500, 750
   ]
   images : "DSC_6471.JPG"
+
+
+# cam1: # This camera is used for the image rotated by 180 degrees. This is not necessary, you can use the same camera model as the general one.
+#   camera_model: "pinhole"
+#   intrinsics: [
+#     1200, 1200, 750, 500
+#   ]  
+#   images : "DSC_6468.JPG"
