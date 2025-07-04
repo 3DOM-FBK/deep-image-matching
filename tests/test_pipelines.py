@@ -25,7 +25,7 @@ import deep_image_matching as dim
 
 @pytest.fixture
 def config_file_tiling(data_dir):
-    config = {"general": {"tile_size": (200, 200)}}
+    config = {"general": {"tile_size": (400, 300)}}
     config_file = Path(data_dir) / "config.yaml"
     return create_config_file(config, config_file)
 
@@ -48,6 +48,7 @@ def test_sp_lg_bruteforce(data_dir):
         "pipeline": "superpoint+lightglue",
         "strategy": "bruteforce",
         "skip_reconstruction": True,
+        "graph": False,
         "force": True,
     }
     config = dim.Config(prm)
@@ -64,6 +65,7 @@ def test_sp_lg_sequential(data_dir):
         "strategy": "sequential",
         "overlap": 1,
         "skip_reconstruction": True,
+        "graph": False,
         "force": True,
     }
     config = dim.Config(prm)
@@ -79,6 +81,7 @@ def test_sp_lg_matching_lowres(data_dir):
         "pipeline": "superpoint+lightglue",
         "strategy": "matching_lowres",
         "skip_reconstruction": True,
+        "graph": False,
         "force": True,
     }
     config = dim.Config(prm)
@@ -105,6 +108,7 @@ def test_sp_lg_custom_config(data_dir):
         "overlap": 1,
         "config_file": config_file,
         "skip_reconstruction": True,
+        "graph": False,
         "force": True,
     }
     config = dim.Config(prm)
@@ -123,6 +127,7 @@ def test_pycolmap(data_dir):
         "strategy": "sequential",
         "overlap": 1,
         "skip_reconstruction": False,
+        "graph": False,
         "force": True,
     }
     config = dim.Config(prm)
@@ -154,6 +159,7 @@ def test_sp_lg_quality_medium(data_dir):
         "strategy": "sequential",
         "overlap": 1,
         "skip_reconstruction": True,
+        "graph": False,
         "force": True,
     }
     config = dim.Config(prm)
@@ -173,6 +179,7 @@ def test_tiling_preselection(data_dir, config_file_tiling):
         "tiling": "preselection",
         "config_file": config_file_tiling,
         "skip_reconstruction": True,
+        "graph": False,
         "force": True,
     }
     config = dim.Config(prm)
@@ -192,6 +199,7 @@ def test_tiling_grid(data_dir, config_file_tiling):
         "tiling": "grid",
         "config_file": config_file_tiling,
         "skip_reconstruction": True,
+        "graph": False,
         "force": True,
     }
     config = dim.Config(prm)
@@ -211,6 +219,7 @@ def test_tiling_exhaustive(data_dir, config_file_tiling):
         "tiling": "exhaustive",
         "config_file": config_file_tiling,
         "skip_reconstruction": True,
+        "graph": False,
         "force": True,
     }
     config = dim.Config(prm)
@@ -229,6 +238,7 @@ def test_disk_lg(data_dir):
         "strategy": "sequential",
         "overlap": 1,
         "skip_reconstruction": True,
+        "graph": False,
         "force": True,
     }
     config = dim.Config(prm)
@@ -245,6 +255,7 @@ def test_aliked_lg(data_dir):
         "strategy": "sequential",
         "overlap": 1,
         "skip_reconstruction": True,
+        "graph": False,
         "force": True,
     }
     config = dim.Config(prm)
@@ -261,6 +272,7 @@ def test_orb(data_dir):
         "strategy": "sequential",
         "overlap": 1,
         "skip_reconstruction": True,
+        "graph": False,
         "force": True,
     }
     config = dim.Config(prm)
@@ -277,6 +289,7 @@ def test_sift(data_dir):
         "strategy": "sequential",
         "overlap": 1,
         "skip_reconstruction": True,
+        "graph": False,
         "force": True,
     }
     config = dim.Config(prm)
@@ -293,6 +306,7 @@ def test_keynet(data_dir):
         "strategy": "sequential",
         "overlap": 1,
         "skip_reconstruction": True,
+        "graph": False,
         "force": True,
     }
     config = dim.Config(prm)
@@ -311,6 +325,7 @@ def test_dedode_nn(data_dir):
         "strategy": "sequential",
         "overlap": 1,
         "skip_reconstruction": True,
+        "graph": False,
         "force": True,
     }
     config = dim.Config(prm)
@@ -328,6 +343,7 @@ def test_loftr(data_dir):
         "strategy": "sequential",
         "overlap": 1,
         "skip_reconstruction": True,
+        "graph": False,
         "force": True,
     }
     config = dim.Config(prm)
@@ -346,6 +362,7 @@ def test_roma(data_dir):
         "strategy": "sequential",
         "overlap": 1,
         "skip_reconstruction": True,
+        "graph": False,
         "force": True,
     }
     config = dim.Config(prm)
@@ -365,6 +382,7 @@ def test_roma_tiling(data_dir, config_file_tiling):
         "overlap": 1,
         "tiling": "preselection",
         "skip_reconstruction": True,
+        "graph": False,
         "force": True,
     }
     config = dim.Config(prm)
