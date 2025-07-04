@@ -1,4 +1,3 @@
-import platform
 from pathlib import Path
 
 import pytest
@@ -114,10 +113,6 @@ def test_sp_lg_custom_config(data_dir):
 
 # Test pycolmap reconstruction
 def test_pycolmap(data_dir):
-    if platform.system() == "Windows":
-        pytest.skip(
-            "Pycolmap is not available on Windows. Please use WSL or Docker to run this test."
-        )
     prm = {
         "dir": data_dir,
         "pipeline": "superpoint+lightglue",
@@ -135,7 +130,7 @@ def test_pycolmap(data_dir):
         database_path=config.general["output_dir"] / "database.db",
         camera_config_path=config.general["camera_options"],
     )
-    model = dim.reconstruction.pycolmap_reconstruction(
+    model = dim.reconstruction.incremental_reconstruction(
         database_path=config.general["output_dir"] / "database.db",
         sfm_dir=config.general["output_dir"],
         image_dir=config.general["image_dir"],
