@@ -172,7 +172,7 @@ class COLMAPDatabase(sqlite3.Connection):
         model: str,
         width: int,
         height: int,
-        params: List[float],
+        params: list[float],
         prior_focal_length: bool = False,
         camera_id: int = None,
     ):
@@ -196,7 +196,7 @@ class COLMAPDatabase(sqlite3.Connection):
         model: str,
         width: int,
         height: int,
-        params: List[float],
+        params: list[float],
         prior_focal_length: bool = True,
     ):
         params = np.asarray(params, np.float64)
