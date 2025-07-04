@@ -7,7 +7,7 @@ from copy import deepcopy
 from enum import Enum
 from pathlib import Path
 from pprint import pprint
-from typing import Tuple
+from typing import Union
 
 import yaml
 
@@ -45,7 +45,7 @@ conf_general = {
     #   GeometricVerification.PYDEGENSAC (use pydegensac),
     #   GeometricVerification.MAGSAC (use opencv MAGSAC),
     #   Other methods: RANSAC, LMEDS, RHO, USAC_DEFAULT, USAC_PARALLEL, USAC_FM_8PTS, USAC_FAST, USAC_ACCURATE, USAC_PROSAC, USAC_MAGSAC
-    "geom_verification": GeometricVerification.MAGSAC,
+    "geom_verification": GeometricVerification.PYDEGENSAC,
     "gv_threshold": 4,
     "gv_confidence": 0.99999,
     # Minimum number of inliers matches and minumum inlier ratio per pair
@@ -179,7 +179,10 @@ confs = {
     },
     "srif": {
         "extractor": {"name": "no_extractor"},
-        "matcher": {"name": "srif", "pretrained": "outdoor"}, ################################################### togliere outdoor
+        "matcher": {
+            "name": "srif",
+            "pretrained": "outdoor",
+        },  ################################################### togliere outdoor
     },
     "keynetaffnethardnet+kornia_matcher": {
         "extractor": {
@@ -624,7 +627,7 @@ class Config:
                 ]
             if "tile_size" in cfg["general"]:
                 tile_sz = cfg["general"]["tile_size"]
-                if isinstance(tile_sz, Tuple):
+                if isinstance(tile_sz, tuple):
                     tile_sz = tuple([int(x) for x in tile_sz])
                     cfg["general"]["tile_size"] = tile_sz
                 elif isinstance(tile_sz, str):
@@ -677,7 +680,7 @@ class Config:
         pprint(self.matcher)
         print("\n")
 
-    def save(self, path: Path = None):
+    def save(self, path: Union[Path, str, None] = None):
         """Save configuration to file.
 
         Args:
@@ -705,5 +708,5 @@ class Config:
                 if isinstance(vv, Path):
                     cfg[k][kk] = str(vv)
 
-        with open(path, "w") as file:
+        with open(str(path), "w") as file:
             json.dump(cfg, file, indent=4)
