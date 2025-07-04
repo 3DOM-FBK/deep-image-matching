@@ -1,12 +1,22 @@
 general:
   camera_model: "pinhole" # ["simple-pinhole", "pinhole", "simple-radial", "opencv"]
-  openmvg_camera_model: "pinhole_radial_k3" # ["pinhole", "pinhole_radial_k3", "pinhole_brown_t2"]
+  openmvg_camera_model: "pinhole" # ["pinhole", "pinhole_radial_k3", "pinhole_brown_t2"]
   single_camera: True
+  intrinsics: [
+    1200, 1200, 750, 500
+  ]  
 
-cam0:
+cam0: # This camera is used for the image rotated by 180 degrees
   camera_model: "pinhole"
-  images : ""
+  intrinsics: [
+    1200, 1200, 750, 500
+  ]  
+  images : "DSC_6468.JPG"
 
-cam1:
+
+cam1: # This camera is used for the image rotated by 90 degrees
   camera_model: "pinhole"
-  images : "DSC_6468.JPG,DSC_6468.JPG"
+  intrinsics: [
+    1200, 1200, 500, 750
+  ]
+  images : "DSC_6471.JPG"

@@ -25,6 +25,8 @@ feature_path, match_path = matcher.run()
 
 # Export in colmap format
 database_path = output_dir / "database.db"
+if database_path.exists():
+    database_path.unlink()
 dim.io.export_to_colmap(
     img_dir=imgs_dir,
     feature_path=feature_path,
