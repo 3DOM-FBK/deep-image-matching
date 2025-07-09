@@ -1,6 +1,5 @@
 import os
 import time
-from importlib import import_module
 from pathlib import Path
 
 import yaml
@@ -16,11 +15,12 @@ logger = dim.setup_logger("dim")
 args = {
     "dir": "./assets/example_cyprus",
     "pipeline": "superpoint+lightglue",
-    "strategy": "bruteforce",
+    "strategy": "matching_lowres",
     "quality": "medium",
     "tiling": "none",
     "camera_options": "./assets/example_cyprus/cameras.yaml",
     "openmvg": None,
+    "force": True,  # Remove existing features and matches
 }
 
 # Alternatively, you can parse the parameters from the command line with
@@ -64,10 +64,9 @@ if matcher.matching in ["loftr", "se2loftr", "roma", "srif"]:
 # Visualize view graph
 if config.general["graph"]:
     try:
-        graph = import_module("deep_image_matching.graph")
-        graph.view_graph(database_path, output_dir, imgs_dir)
-    except ImportError:
-        logger.error("pyvis is not available. Unable to visualize view graph.")
+        dim.graph.view_graph(database_path, output_dir, imgs_dir)
+    except Exception as e:
+        logger.error(f"Unable to visualize view graph: {e}")
 
 # If --skip_reconstruction is not specified, run reconstruction with pycolmap
 if not config.general["skip_reconstruction"]:
