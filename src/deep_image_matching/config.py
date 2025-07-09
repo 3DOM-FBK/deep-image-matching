@@ -4,6 +4,7 @@ import logging
 import shutil
 import sys
 from copy import deepcopy
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from pprint import pprint
@@ -15,6 +16,30 @@ from .constants import GeometricVerification, Quality, TileSelection
 from .utils.logger import change_logger_level
 
 logger = logging.getLogger("dim")
+
+# Default CLI options for the deep image matching tool.
+cli_options_defaults = {
+    "gui": False,
+    "dir": None,
+    "images": None,
+    "outs": None,
+    "pipeline": None,
+    "config_file": None,
+    "quality": "high",
+    "tiling": "none",
+    "strategy": "matching_lowres",
+    "pair_file": None,
+    "overlap": None,
+    "global_feature": None,
+    "db_path": None,
+    "upright": False,
+    "skip_reconstruction": False,
+    "force": False,
+    "verbose": False,
+    "graph": True,
+    "openmvg": None,
+    "camera_options": None,
+}
 
 # General configuration for the matching process.
 # It defines the quality of the matching process, the tile selection strategy, the tiling grid, the overlap between tiles, the geometric verification method, and the geometric verification parameters.
@@ -253,6 +278,7 @@ opt_zoo = {
 }
 
 
+@dataclass
 class Config:
     """
     Configuration class for deep image matching.
@@ -263,53 +289,70 @@ class Config:
 
     Attributes:
         _default_cli_opts (dict): The default command-line options.
-        cfg (dict): The configuration dictionary with the following keys: general, extractor, matcher.
+        _cfg (dict): The configuration dictionary with the following keys: general, extractor, matcher.
+        config_file (Path): The path to the configuration file.
 
     Methods:
         general: Get the general configuration options.
         extractor: Get the extractor configuration options.
         matcher: Get the matcher configuration options.
-        __init__: Initialize the Config object.
         as_dict: Get the configuration dictionary.
         get_config: Get a specific configuration by name.
-        get_config_names: Get a list of available configuration names.
-        get_matching_strategy_names: Get a list of available matching strategy names.
+        get_pipelines: Get a list of available pipeline names.
+        get_matching_strategies: Get a list of available matching strategy names.
         get_extractor_names: Get a list of available extractor names.
         get_matcher_names: Get a list of available matcher names.
         get_retrieval_names: Get a list of available retrieval names.
-        parse_user_config: Parse the user configuration and perform checks on the input arguments.
+        get_upright_options: Get a list of available upright options.
+        parse_general_config: Parse the user configuration and perform checks on the input arguments.
         update_from_yaml: Update the configuration from a YAML file.
         print: Print the configuration settings.
         save: Save the configuration to a file.
     """
 
-    _default_cli_opts = {
-        "gui": False,
-        "dir": None,
-        "images": None,
-        "outs": None,
-        "pipeline": None,
-        "config_file": None,
-        "quality": "high",
-        "tiling": "none",
-        "strategy": "matching_lowres",
-        "pair_file": None,
-        "overlap": None,
-        "global_feature": None,
-        "db_path": None,
-        "upright": False,
-        "skip_reconstruction": False,
-        "force": False,
-        "verbose": False,
-        "graph": True,
-        "openmvg": None,
-        "camera_options": None,
-    }
-    _cfg = {
-        "general": {},
-        "extractor": {},
-        "matcher": {},
-    }
+    # Input arguments passed to the constructor
+    args: dict
+
+    # Internal fields with factory defaults
+    _default_cli_opts: dict = field(
+        init=False, repr=False, default_factory=lambda: deepcopy(cli_options_defaults)
+    )
+
+    _cfg: dict = field(
+        init=False,
+        repr=False,
+        default_factory=lambda: {
+            "general": {},
+            "extractor": {},
+            "matcher": {},
+        },
+    )
+
+    config_file: Path = field(init=False, repr=False)
+
+    def __post_init__(self):
+        """
+        Initialize the Config object after dataclass initialization.
+        """
+        # Parse input arguments
+        general = self.parse_general_config(self.args)
+
+        # Build configuration dictionary
+        self._cfg["general"] = {**conf_general, **general}
+        features_config = self.get_config(self.args["pipeline"])
+        self._cfg["extractor"] = features_config["extractor"]
+        self._cfg["matcher"] = features_config["matcher"]
+
+        # If the user has provided a configuration file, update the configuration
+        if "config_file" in self.args and self.args["config_file"] is not None:
+            config_file = Path(self.args["config_file"]).resolve()
+            if not config_file.exists():
+                raise FileNotFoundError(f"Configuration file {config_file} not found.")
+            self.update_from_yaml(config_file)
+            self.print()
+
+        self.config_file = self._cfg["general"]["output_dir"] / "config.json"
+        self.save(self.config_file)
 
     @property
     def general(self):
@@ -323,35 +366,8 @@ class Config:
     def matcher(self):
         return self._cfg["matcher"]
 
-    def __repr__(self) -> str:
-        return "DeepImageMatching Configuration Object"
-
-    def __init__(self, args: dict):
-        """
-        Initialize the Config object.
-
-        Args:
-            args (dict): The input arguments provided by the user.
-        """
-        # Parse input arguments
-        general = self.parse_general_config(args)
-
-        # Build configuration dictionary
-        self._cfg["general"] = {**conf_general, **general}
-        features_config = self.get_config(args["pipeline"])
-        self._cfg["extractor"] = features_config["extractor"]
-        self._cfg["matcher"] = features_config["matcher"]
-
-        # If the user has provided a configuration file, update the configuration
-        if "config_file" in args and args["config_file"] is not None:
-            config_file = Path(args["config_file"]).resolve()
-            if not config_file.exists():
-                raise FileNotFoundError(f"Configuration file {config_file} not found.")
-            self.update_from_yaml(config_file)
-            self.print()
-
-        self.config_file = self._cfg["general"]["output_dir"] / "config.json"
-        self.save(self.config_file)
+    # def __repr__(self) -> str:
+    #     return "DeepImageMatching Configuration Object"
 
     def as_dict(self) -> dict:
         """
@@ -405,8 +421,7 @@ class Config:
     def get_upright_options() -> list:
         return opt_zoo["upright_strategy"]
 
-    @staticmethod
-    def parse_general_config(input_args: dict) -> dict:
+    def parse_general_config(self, input_args: dict) -> dict:
         """
         Parses the user configuration and performs checks on the input arguments.
 
@@ -417,7 +432,7 @@ class Config:
             dict: The configuration dictionary with the following keys: general, extractor, matcher.
 
         """
-        args = {**Config._default_cli_opts, **input_args}
+        args = {**self._default_cli_opts, **input_args}
 
         # Check that at least one of the two options is provided
         if args["images"] is None and args["dir"] is None:
