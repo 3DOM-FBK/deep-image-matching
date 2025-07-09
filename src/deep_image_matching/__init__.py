@@ -1,5 +1,6 @@
 __version__ = "1.3.0"
 
+import importlib
 import logging
 from collections import OrderedDict
 from time import time
@@ -7,29 +8,33 @@ from time import time
 time_dict = OrderedDict()
 time_dict["start"] = time()
 
-# Check if pycolmap is installed
 try:
-    import pycolmap
-
+    importlib.import_module("pycolmap")
     NO_PYCOLMAP = False
 except ImportError:
     logging.warning(
-        "pycolmap is not installed, some advanced features may not work, but you will be able to run deep-image-matching and export the matched features in a sqlite3 database to be opened in COLMAP GUI."
+        "pycolmap is not installed. Some functionalities will be unavailable. "
+        "Use the `skip-reconstruction` parameter to run DIM without reconstruction. "
+        "For installing pycolmap, follow the instructions at https://colmap.github.io/pycolmap/index.html."
     )
     NO_PYCOLMAP = True
 
 # Import submodules
-from . import extractors, io, matchers, thirdparty, utils, visualization
+from . import (
+    extractors,
+    graph,
+    io,
+    matchers,
+    thirdparty,
+    utils,
+    visualization,
+)
 
 if not NO_PYCOLMAP:
-    # Import submodules that require pycolmap
+    # If pycolmap is available, import reconstruction and triangulation module
     from . import reconstruction, triangulation
-try:
-    from . import graph
-except ImportError:
-    logging.warning("pyvis is not available. Unable to visualize view graph.")
 
-# Import functions
+# Import Config class and constants
 from .config import Config
 from .constants import *
 
