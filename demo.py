@@ -12,10 +12,22 @@ start_time = time.time()
 
 logger = dim.setup_logger("dim")
 
-# Parse arguments from command line
-args = dim.parse_cli()
+# Define the configuration parameters
+args = {
+    "dir": "./assets/example_cyprus",
+    "pipeline": "superpoint+lightglue",
+    "strategy": "bruteforce",
+    "quality": "medium",
+    "tiling": "none",
+    "camera_options": "./assets/example_cyprus/cameras.yaml",
+    "openmvg": None,
+}
 
-# Build configuration
+# Alternatively, you can parse the parameters from the command line with
+# from deep_image_matching.parser import parse_cli
+# args = parse_cli()
+
+# Build the configuration from the parameters or command line arguments
 config = dim.Config(args)
 imgs_dir = config.general["image_dir"]
 output_dir = config.general["output_dir"]
