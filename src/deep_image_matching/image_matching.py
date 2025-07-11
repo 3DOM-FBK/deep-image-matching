@@ -353,7 +353,7 @@ class ImageMatcher:
         timer.update("generate_pairs")
 
         # Try to rotate images so they will be all "upright", useful for deep-learning approaches that usually are not rotation invariant
-        if (self.config.general["upright"]  in ["custom", "2clusters", "exif"]):
+        if self.config.general["upright"] in ["custom", "2clusters", "exif"]:
             self.rotate_upright_images(self.config.general["upright"])
             timer.update("rotate_upright_images")
 
