@@ -155,10 +155,13 @@ def LoftrRomaToMultiview(
     image_dir: Path,
     img_ext: Path,
 ) -> None:
+    input_dir = Path(input_dir)
+    output_dir = Path(output_dir)
+    image_dir = Path(image_dir)
     with (
-        h5py.File(rf"{input_dir}\features.h5", mode="r") as h5_feats,
-        h5py.File(rf"{input_dir}\matches.h5", mode="r") as h5_matches,
-        h5py.File(rf"{input_dir}\matches_loftr.h5", mode="w") as h5_out,
+        h5py.File(input_dir / "features.h5", mode="r") as h5_feats,
+        h5py.File(input_dir / "matches.h5", mode="r") as h5_matches,
+        h5py.File(input_dir / "matches_loftr.h5", mode="w") as h5_out,
     ):
         for img1 in h5_matches.keys():
             print(img1)
@@ -177,7 +180,7 @@ def LoftrRomaToMultiview(
     match_indexes = defaultdict(dict)
     total_kpts = defaultdict(int)
 
-    with h5py.File(rf"{input_dir}\matches_loftr.h5", mode="r") as f_match:
+    with h5py.File(input_dir / "matches_loftr.h5", mode="r") as f_match:
         for k1 in f_match.keys():
             group = f_match[k1]
             for k2 in group.keys():
@@ -224,11 +227,11 @@ def LoftrRomaToMultiview(
             m2_semiclean2 = m2_semiclean[unique_idxs_current2]
             out_match[k1][k2] = m2_semiclean2.numpy()
 
-    with h5py.File(rf"{output_dir}\keypoints.h5", mode="w") as f_kp:
+    with h5py.File(output_dir / "keypoints.h5", mode="w") as f_kp:
         for k, kpts1 in unique_kpts.items():
             f_kp[k] = kpts1
 
-    with h5py.File(rf"{output_dir}\matches.h5", mode="w") as f_match:
+    with h5py.File(output_dir / "matches.h5", mode="w") as f_match:
         for k1, gr in out_match.items():
             group = f_match.require_group(k1)
             for k2, match in gr.items():
@@ -241,8 +244,8 @@ def LoftrRomaToMultiview(
 
     import_into_colmap(
         image_dir,
-        feature_dir=f"{output_dir}",
-        database_path=f"{output_dir}/database.db",
+        feature_dir=output_dir,
+        database_path=output_dir / "database.db",
     )
 
 
