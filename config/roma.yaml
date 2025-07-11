@@ -6,7 +6,7 @@ general:
   geom_verification: ransac # ransac is suggested with a large number of matches (pydegensac may have issues with very large datasets)
   min_inliers_per_pair: 10
   min_inlier_ratio_per_pair: 0.05
-  gv_threshold: 1
+  gv_threshold: 2 # threshold for geometric verification in pixels
 
 extractor:
   name: "no_extractor"
