@@ -1,5 +1,4 @@
 import logging
-import os
 import sqlite3
 from pathlib import Path
 from statistics import mean
@@ -19,12 +18,12 @@ logger = logging.getLogger("dim")
 TEMPLATE_DIR = Path(__file__).parent / "utils" / "templates"
 
 
-def save_output_graph(G: nx.Graph, name: Union[str, Path]) -> None:
+def save_output_graph(G: nx.Graph, path: Union[str, Path]) -> None:
     """Save a NetworkX graph as an HTML visualization using pyvis.
 
     Args:
         G: The NetworkX graph to visualize.
-        name: The output filename/path for the HTML file.
+        path: The output filename/path for the HTML file.
     """
     nt = Network()
 
@@ -53,8 +52,8 @@ def save_output_graph(G: nx.Graph, name: Union[str, Path]) -> None:
     }}
     """
     )
-    html = nt.generate_html(str(name), notebook=False)
-    with open(name, mode="w", encoding="utf-8") as fp:
+    html = nt.generate_html(str(path), notebook=False)
+    with open(path, mode="w", encoding="utf-8") as fp:
         fp.write(html)
 
 
@@ -75,7 +74,8 @@ def view_graph(
 
     # Convert to Path objects
     db_path = Path(db)
-    output_path = Path(output_dir)
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
     imgs_path = Path(imgs_dir).resolve()
 
     con = sqlite3.connect(str(db_path))
@@ -168,16 +168,16 @@ def view_graph(
 
     # Remove output files if they exist
     files_to_remove = [
-        output_path / "communities.txt",
-        output_path / "raw_mst_pairs.txt",
-        output_path / "exp_mst_pairs.txt",
+        output_dir / "communities.txt",
+        output_dir / "raw_mst_pairs.txt",
+        output_dir / "exp_mst_pairs.txt",
     ]
     for file_path in files_to_remove:
         if file_path.exists():
             file_path.unlink()
 
     # Write communities output file
-    communities_file = output_path / "communities.csv"
+    communities_file = output_dir / "communities.csv"
     with open(communities_file, "w", encoding="utf-8") as comm_file:
         print(
             "IMG_ID,IMG_NAME,Community_ID,Clustering_coefficient(0,1),IS_OUTLIER?[0,1]",
@@ -247,14 +247,14 @@ def view_graph(
     MST_raw.graph["communities"] = G.graph["communities"]
 
     # Write MST and MST_expanded pairs output files
-    raw_mst_file = output_path / "raw_mst_pairs.txt"
+    raw_mst_file = output_dir / "raw_mst_pairs.txt"
     with open(raw_mst_file, "w", encoding="utf-8") as f:
         for e in MST_raw.edges():
             node1_title = G.nodes[e[0]]["title"]
             node2_title = G.nodes[e[1]]["title"]
             print(f"{node1_title} {node2_title}", file=f)
 
-    exp_mst_file = output_path / "exp_mst_pairs.txt"
+    exp_mst_file = output_dir / "exp_mst_pairs.txt"
     with open(exp_mst_file, "w", encoding="utf-8") as f:
         for e in MST.edges():
             node1_title = G.nodes[e[0]]["title"]
@@ -262,14 +262,13 @@ def view_graph(
             print(f"{node1_title} {node2_title}", file=f)
 
     # Save graph visualizations
-    original_cwd = os.getcwd()
     try:
-        os.chdir(output_path)
-        save_output_graph(G, "graph.html")
-        save_output_graph(MST, "exp_mst.html")
-        save_output_graph(MST_raw, "raw_mst.html")
-    finally:
-        os.chdir(original_cwd)
+        save_output_graph(G, output_dir / "graph.html")
+        save_output_graph(MST, output_dir / "exp_mst.html")
+        save_output_graph(MST_raw, output_dir / "raw_mst.html")
+    except Exception as e:
+        logger.error(f"Error saving graph visualizations: {e}")
+        return
 
-    logger.info(f"View graphs written at {output_path}")
+    logger.info(f"View graphs written at {output_dir}")
     con.close()

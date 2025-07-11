@@ -14,8 +14,8 @@ logger = dim.setup_logger("dim")
 # Define the configuration parameters
 args = {
     "dir": "./assets/example_cyprus",
-    "pipeline": "superpoint+lightglue",
-    "strategy": "matching_lowres",
+    "pipeline": "roma",
+    "strategy": "bruteforce",
     "quality": "medium",
     "tiling": "none",
     "camera_options": "./assets/example_cyprus/cameras.yaml",
@@ -64,7 +64,7 @@ if matcher.matching in ["loftr", "se2loftr", "roma", "srif"]:
 # Visualize view graph
 if config.general["graph"]:
     try:
-        dim.graph.view_graph(database_path, output_dir, imgs_dir)
+        dim.graph.view_graph(database_path, output_dir / "image_graphs", imgs_dir)
     except Exception as e:
         logger.error(f"Unable to visualize view graph: {e}")
 

@@ -1,5 +1,4 @@
 import os
-from importlib import import_module
 from pathlib import Path
 
 import yaml
@@ -35,7 +34,7 @@ dim.io.export_to_colmap(
     camera_config_path=config.general["camera_options"],
 )
 
-if matcher.matching in ["loftr", "se2loftr", "roma"]:
+if matcher.matching in ["loftr", "se2loftr", "roma", "srif"]:
     images = os.listdir(imgs_dir)
     image_format = Path(images[0]).suffix
     LoftrRomaToMultiview(
@@ -48,10 +47,9 @@ if matcher.matching in ["loftr", "se2loftr", "roma"]:
 # Visualize view graph
 if config.general["graph"]:
     try:
-        graph = import_module("deep_image_matching.graph")
-        graph.view_graph(database_path, output_dir, imgs_dir)
-    except ImportError:
-        logger.error("pyvis is not available. Unable to visualize view graph.")
+        dim.graph.view_graph(database_path, output_dir / "image_graphs", imgs_dir)
+    except Exception as e:
+        logger.error(f"Unable to visualize view graph: {e}")
 
 # If --skip_reconstruction is not specified, run reconstruction with pycolmap
 if not config.general["skip_reconstruction"]:
