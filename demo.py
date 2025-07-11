@@ -15,8 +15,8 @@ logger = dim.setup_logger("dim")
 args = {
     "dir": "./assets/example_cyprus",
     "pipeline": "roma",
-    "strategy": "bruteforce",
-    "quality": "medium",
+    "strategy": "matching_lowres",
+    "quality": "low",
     "tiling": "none",
     "camera_options": "./assets/example_cyprus/cameras.yaml",
     "openmvg": None,

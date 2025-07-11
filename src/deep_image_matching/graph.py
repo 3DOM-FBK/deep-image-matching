@@ -1,4 +1,5 @@
 import logging
+import os
 import sqlite3
 from pathlib import Path
 from statistics import mean
@@ -72,7 +73,7 @@ def view_graph(
     """
     logger.info("Creating view graph visualization...")
 
-    # Convert to Path objects
+    # Convert to Path objects and get absolute paths
     db_path = Path(db)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -81,11 +82,31 @@ def view_graph(
     con = sqlite3.connect(str(db_path))
     cur = con.cursor()
 
-    # Add nodes
+    # Add nodes with image preview capability
     G = nx.Graph()
     res = cur.execute("SELECT name, image_id from images")
     for name, img_id in res.fetchall():
-        G.add_node(int(img_id), label=str(img_id), shape="circle", title=name)
+        # Create relative path from output_dir to image for preview
+        img_file_path = imgs_path / name
+        try:
+            # Calculate relative path from output_dir to image
+            relative_img_path = img_file_path.relative_to(output_dir)
+            image_src = str(relative_img_path)
+        except ValueError:
+            # If relative path can't be calculated, use absolute path
+            image_src = str(img_file_path)
+
+        # Add image preview to node title (HTML tooltip)
+        image_title = f'<img src="{image_src}" width="200" height="150" style="object-fit: cover;"><br>{name}'
+
+        G.add_node(
+            int(img_id),
+            label=str(img_id),
+            shape="circle",
+            title=image_title,  # This enables image preview on hover/click
+            image_name=name,  # Keep original name for file operations
+            image_path=image_src,  # Store image path for reference
+        )
 
     # Add edges
     res = cur.execute("SELECT pair_id, rows FROM two_view_geometries")
@@ -210,7 +231,8 @@ def view_graph(
                     else:
                         is_outlier = 0
 
-                    out = f"{n},{G.nodes[n]['title']},{i},{node_clustering:.4f},{is_outlier}"
+                    # Use image_name for CSV output instead of title (which contains HTML)
+                    out = f"{n},{G.nodes[n]['image_name']},{i},{node_clustering:.4f},{is_outlier}"
                     print(out, file=comm_file)
 
             i += 1
@@ -250,25 +272,31 @@ def view_graph(
     raw_mst_file = output_dir / "raw_mst_pairs.txt"
     with open(raw_mst_file, "w", encoding="utf-8") as f:
         for e in MST_raw.edges():
-            node1_title = G.nodes[e[0]]["title"]
-            node2_title = G.nodes[e[1]]["title"]
-            print(f"{node1_title} {node2_title}", file=f)
+            node1_name = G.nodes[e[0]]["image_name"]
+            node2_name = G.nodes[e[1]]["image_name"]
+            print(f"{node1_name} {node2_name}", file=f)
 
     exp_mst_file = output_dir / "exp_mst_pairs.txt"
     with open(exp_mst_file, "w", encoding="utf-8") as f:
         for e in MST.edges():
-            node1_title = G.nodes[e[0]]["title"]
-            node2_title = G.nodes[e[1]]["title"]
-            print(f"{node1_title} {node2_title}", file=f)
+            node1_name = G.nodes[e[0]]["image_name"]
+            node2_name = G.nodes[e[1]]["image_name"]
+            print(f"{node1_name} {node2_name}", file=f)
 
-    # Save graph visualizations
+    # Save graph visualizations (change to output directory like the original)
+    original_cwd = Path.cwd()
     try:
-        save_output_graph(G, output_dir / "graph.html")
-        save_output_graph(MST, output_dir / "exp_mst.html")
-        save_output_graph(MST_raw, output_dir / "raw_mst.html")
+        # Change to output directory to ensure relative paths work for images
+        os.chdir(output_dir)
+        save_output_graph(G, "graph.html")
+        save_output_graph(MST, "exp_mst.html")
+        save_output_graph(MST_raw, "raw_mst.html")
     except Exception as e:
         logger.error(f"Error saving graph visualizations: {e}")
         return
+    finally:
+        # Always return to original directory
+        os.chdir(original_cwd)
 
     logger.info(f"View graphs written at {output_dir}")
     con.close()
