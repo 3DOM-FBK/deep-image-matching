@@ -56,7 +56,7 @@ class SE2LOFTRMatcher(DetectorFreeMatcherBase):
             logger.info("SE2-LOFTR weights downloaded successfully.")
 
         self.matcher.load_state_dict(
-            torch.load(str(self.se2loftr_path), map_location=self._device)["state_dict"]
+            torch.load(str(self.se2loftr_path), map_location=self._device, weights_only=False)["state_dict"]
         )
         self.matcher = self.matcher.eval().to(device=self._device)
 
