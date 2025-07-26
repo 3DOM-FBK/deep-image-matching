@@ -27,13 +27,13 @@ def parse_cli() -> dict:
         help="Folder containing images to process. If not specified, an 'images' folder inside the project folder is assumed.",
         default=None,
     )
-    # parser.add_argument(
-    #     "-o",
-    #     "--outs",
-    #     type=str,
-    #     help="Output folder. If None, the output folder will be created inside the project folder.",
-    #     default=None,
-    # )
+    parser.add_argument(
+         "-o",
+         "--outs",
+         type=str,
+         help="Output folder. If None, the output folder will be created inside the project folder.",
+         default=None,
+    )
     parser.add_argument(
         "-p",
         "--pipeline",
