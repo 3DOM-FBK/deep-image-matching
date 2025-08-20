@@ -3,7 +3,7 @@ import time
 from collections import OrderedDict
 from functools import wraps
 
-logger = logging.getLogger("deep-image-matching")
+logger = logging.getLogger("dim")
 
 
 def timeit(func):

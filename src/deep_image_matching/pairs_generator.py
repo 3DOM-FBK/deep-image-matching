@@ -10,10 +10,10 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from . import Timer, logger
-from .hloc.extractors.superpoint import SuperPoint
+from .constants import Timer, logger
 from .image_retrieval import ImageRetrieval
 from .io.colmap_read_write_model import read_model
+from .thirdparty.hloc.extractors.superpoint import SuperPoint
 from .thirdparty.LightGlue.lightglue import LightGlue
 from .utils.geometric_verification import geometric_verification
 
@@ -220,7 +220,7 @@ def pairs_from_lowres(
 
             # print(im0_path.name, im1_path.name, count_true)
             if count_true > min_matches:
-                pairs.append((pair))
+                pairs.append(pair)
         else:
             if len(mkpts0) > min_matches:
                 pairs.append(pair)
@@ -309,7 +309,7 @@ class PairsGenerator:
         self.output_dir = output_dir
         self.existing_colmap_model = existing_colmap_model
 
-        self._config = kwargs
+        self.config = kwargs
 
     def bruteforce(self):
         logger.debug("Bruteforce matching, generating pairs ..")
@@ -344,7 +344,7 @@ class PairsGenerator:
 
     def covisibility(self):
         logger.info("Covisibility matching, generating pairs ..")
-        num_matched = self._config.get("num_matched", 10)
+        num_matched = self.config.get("num_matched", 10)
         pairs = pairs_from_covisibility(
             model=self.existing_colmap_model,
             num_matched=num_matched,

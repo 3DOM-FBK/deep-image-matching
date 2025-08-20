@@ -21,13 +21,8 @@ from datetime import date, datetime
 from pathlib import Path
 
 
-def get_logger(name: str = None):
-    logger = logging.getLogger(name)
-    return logger
-
-
 def change_logger_level(name: str = None, level: str = "warning"):
-    logger = get_logger(name)
+    logger = logging.getLogger(name)
     log_level = logging.getLevelName(level.upper())
     for handler in logger.handlers:
         handler.setLevel(log_level)
@@ -188,7 +183,7 @@ def configure_logging(
             )  # only accepts uppercase level names
         except Exception as exception:
             print(
-                f"Failed to set log file log level: invalid level: '{ logfile_log_level}. {exception}"
+                f"Failed to set log file log level: invalid level: '{logfile_log_level}. {exception}"
             )
             return False
 
@@ -207,7 +202,7 @@ def deprecated(func):
 
     @functools.wraps(func)
     def new_func(*args, **kwargs):
-        message = kwargs.get("message", None)
+        message = kwargs.get("message")
         if message is None:
             message = f"Depracated {func.__name__}."
         warnings.simplefilter("always", DeprecationWarning)  # turn off filter

@@ -1,18 +1,19 @@
+import inspect
 import sys
 from abc import ABCMeta, abstractmethod
-from torch import nn
 from copy import copy
-import inspect
+
+from torch import nn
 
 
 class BaseModel(nn.Module, metaclass=ABCMeta):
-    default_conf = {}
+    _default_conf = {}
     required_inputs = []
 
     def __init__(self, conf):
         """Perform some logic and call the _init method of the child model."""
         super().__init__()
-        self.conf = conf = {**self.default_conf, **conf}
+        self.conf = conf = {**self._default_conf, **conf}
         self.required_inputs = copy(self.required_inputs)
         self._init(conf)
         sys.stdout.flush()
@@ -20,7 +21,7 @@ class BaseModel(nn.Module, metaclass=ABCMeta):
     def forward(self, data):
         """Check the data and call the _forward method of the child model."""
         for key in self.required_inputs:
-            assert key in data, "Missing key {} in data".format(key)
+            assert key in data, f"Missing key {key} in data"
         return self._forward(data)
 
     @abstractmethod

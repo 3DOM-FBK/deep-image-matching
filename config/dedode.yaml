@@ -1,0 +1,18 @@
+# User configuration file
+
+general:
+  tile_size: (2500, 2500)
+  geom_verification: pydegensac
+  min_inliers_per_pair: 10
+  min_inlier_ratio_per_pair: 0.15
+  gv_threshold: 1
+
+extractor:
+  name: "dedode"
+  n_features: 8000
+  upright: False
+
+matcher:
+  name: "kornia_matcher"
+  match_mode: "smnn"
+  th: 0.95

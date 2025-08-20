@@ -1,11 +1,10 @@
-import os
-import sys
-import sqlite3
-import numpy as np
 import argparse
-
+import os
+import sqlite3
+import sys
 from pathlib import Path
 
+import numpy as np
 
 IS_PYTHON3 = sys.version_info[0] >= 3
 
@@ -50,7 +49,7 @@ def dbReturnMatches(database_path, min_num_matches):
             image_id1, image_id2 = pair_id_to_image_ids(pair_id)
             image_name1 = images[image_id1]
             image_name2 = images[image_id2]
-            raw_matches["{} {}".format(image_name1, image_name2)] = _matches
+            raw_matches[f"{image_name1} {image_name2}"] = _matches
 
         # Geometric verified matches
         cursor.execute(
@@ -64,7 +63,7 @@ def dbReturnMatches(database_path, min_num_matches):
             image_id1, image_id2 = pair_id_to_image_ids(pair_id)
             image_name1 = images[image_id1]
             image_name2 = images[image_id2]
-            matches["{} {}".format(image_name1, image_name2)] = inlier_matches
+            matches[f"{image_name1} {image_name2}"] = inlier_matches
 
         cursor.close()
         connection.close()

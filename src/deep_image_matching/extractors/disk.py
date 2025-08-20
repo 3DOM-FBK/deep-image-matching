@@ -1,14 +1,14 @@
 import numpy as np
 import torch
 
-from ..hloc.extractors.disk import DISK
+from ..thirdparty.hloc.extractors.disk import DISK
 from .extractor_base import ExtractorBase
 
 # TODO: use Kornia implementation of DISK
 
 
 class DiskExtractor(ExtractorBase):
-    default_conf = {
+    _default_conf = {
         "weights": "depth",
         "max_keypoints": 2000,
         "nms_window_size": 5,
@@ -23,7 +23,7 @@ class DiskExtractor(ExtractorBase):
         # Init the base class
         super().__init__(config)
 
-        disk_cfg = self._config.get("extractor")
+        disk_cfg = self.config.get("extractor")
 
         # Load extractor
         self._extractor = DISK(disk_cfg).eval().to(self._device)

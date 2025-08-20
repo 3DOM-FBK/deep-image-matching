@@ -1,0 +1,73 @@
+name: run-tests
+
+on:
+  push:
+    branches: "*" # Run on all branches
+  pull_request:
+    branches: [master, dev]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  run_tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.9"]
+    env:
+      # macOS specific environment variables to handle potential issues
+      PYTORCH_ENABLE_MPS_FALLBACK: 1
+      OBJC_DISABLE_INITIALIZE_FORK_SAFETY: YES
+      # Disable MPS entirely on macOS for testing
+      PYTORCH_MPS_HIGH_WATERMARK_RATIO: 0.0
+      # Force CPU-only mode
+      CUDA_VISIBLE_DEVICES: ""
+      MPS_AVAILABLE: "0"
+      KMP_DUPLICATE_LIB_OK: TRUE # Fix OpenMP conflict on macOS
+      # Additional macOS stability fixes
+      OMP_NUM_THREADS: 1
+      MKL_NUM_THREADS: 1
+      NUMEXPR_NUM_THREADS: 1
+      # Force single-threaded execution to avoid memory issues
+      PYTORCH_MPS_PREFER_METAL: 0
+      # Reduce memory pressure
+      MALLOC_MMAP_THRESHOLD_: 131072
+      MALLOC_TRIM_THRESHOLD_: 131072
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+      - name: Debug environment (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          uv run python -c "import sys; print(f'Python: {sys.version}')"
+          uv run python -c "import platform; print(f'Platform: {platform.platform()}')"
+          uv run python -c "import torch; print(f'PyTorch: {torch.__version__}')"
+          uv run python -c "import torch; print(f'MPS available: {torch.backends.mps.is_available()}')"
+          uv run python -c "import os; print(f'Environment vars: CUDA_VISIBLE_DEVICES={os.environ.get(\"CUDA_VISIBLE_DEVICES\", \"not set\")}, MPS_AVAILABLE={os.environ.get(\"MPS_AVAILABLE\", \"not set\")}')"
+      - name: Test import of main modules (macOS debug)
+        if: runner.os == 'macOS'
+        run: |
+          uv run python -c "print('Testing basic imports...')"
+          uv run python -c "import torch; print('torch OK')"
+          uv run python -c "import cv2; print('opencv OK')"
+          uv run python -c "import kornia; print('kornia OK')"
+          uv run python -c "import pycolmap; print('pycolmap OK')"
+          uv run python -c "import deep_image_matching; print('deep_image_matching OK')"
+      - name: Test pytest collection (macOS debug)
+        if: runner.os == 'macOS'
+        run: |
+          uv run pytest --collect-only -v || echo "Collection failed, continuing..."
+      - name: Test with pytest
+        run: |
+          uv run pytest -v --tb=short

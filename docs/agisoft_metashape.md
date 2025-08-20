@@ -8,7 +8,7 @@ Then, you can export the solution into a [Bundler file format](https://www.cs.co
 To perform an automatic incremental reconstruction with pycolmap, you must first install pycolmap (see [Installation](installation.md)) and then run DIM omitting the `--skip_reconstruction` flag (see [Getting started](getting_started.md)).
 
 ```bash
-python main.py --dir ./assets/example_cyprus --pipeline superpoint+lightglue
+python -m deep_image_matching --dir ./assets/example_cyprus --pipeline superpoint+lightglue
 ```
 
 This will generate a `reconstruction` folder with the necessary files to import into Agisoft Metashape.
@@ -37,7 +37,6 @@ To fix this, you should import your camera calibration according to the Metashap
 
 ![](./assets/metashape_keypoints.png)
 
-
 ## The Bundler file format
 
 The Bundler format is composed of two files: `bundler.out` and `bundler_list.txt`.
@@ -46,7 +45,7 @@ The file `bundler.out` contains the camera poses and the matches between the ima
 
 ```
 # Bundle file v0.3
-<num_cameras> <num_points> 
+<num_cameras> <num_points>
 <camera1> [two integers]
 <camera2>
     ...
@@ -76,11 +75,11 @@ The `<point>` is defined as:
 The `<view list>` is defined as:
 
 ```
-    <track_length> <camera1> <key1> <x> <y> <camera2> <key2> <x> <y> ... 
+    <track_length> <camera1> <key1> <x> <y> <camera2> <key2> <x> <y> ...
 ```
 
 where `<track_length>` is the number of cameras the point is visible in.
-The list is then followed by the camera index, the keypoint index, and the 2D coordinates of the point in the image. 
+The list is then followed by the camera index, the keypoint index, and the 2D coordinates of the point in the image.
 Both indices are 0-based.
 
 The pixel positions are floating point numbers in a coordinate system where the origin is the center of the image, the x-axis increases to the right, and the y-axis increases towards the top of the image. Thus, (-w/2, -h/2) is the lower-left corner of the image, and (w/2, h/2) is the top-right corner (where w and h are the width and height of the image).
@@ -176,4 +175,3 @@ An example of the `bundler.out` file is shown below.
 ```
 
 </details>
-

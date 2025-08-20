@@ -5,7 +5,7 @@ from .extractor_base import ExtractorBase, FeaturesDict
 
 
 class ORBExtractor(ExtractorBase):
-    default_conf = {
+    _default_conf = {
         "name:": "orb",
         "n_features": 4000,
         "scaleFactor": 1.2,
@@ -27,7 +27,7 @@ class ORBExtractor(ExtractorBase):
         super().__init__(config)
 
         # Load extractor
-        cfg = self._config.get("extractor")
+        cfg = self.config.get("extractor")
         self._extractor = cv2.ORB_create(
             nfeatures=cfg["n_features"],
             scaleFactor=cfg["scaleFactor"],

@@ -1,21 +1,45 @@
 import ast
 import json
+import logging
 import shutil
+import sys
 from copy import deepcopy
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from pprint import pprint
-from typing import Tuple
+from typing import Union
 
 import yaml
 
-from deep_image_matching import (
-    GeometricVerification,
-    Quality,
-    TileSelection,
-    change_logger_level,
-    logger,
-)
+from .constants import GeometricVerification, Quality, TileSelection
+from .utils.logger import change_logger_level
+
+logger = logging.getLogger("dim")
+
+# Default CLI options for the deep image matching tool.
+cli_options_defaults = {
+    "gui": False,
+    "dir": None,
+    "images": None,
+    "outs": None,
+    "pipeline": None,
+    "config_file": None,
+    "quality": "high",
+    "tiling": "none",
+    "strategy": "matching_lowres",
+    "pair_file": None,
+    "overlap": None,
+    "global_feature": None,
+    "db_path": None,
+    "upright": False,
+    "skip_reconstruction": False,
+    "force": False,
+    "verbose": False,
+    "graph": True,
+    "openmvg": None,
+    "camera_options": None,
+}
 
 # General configuration for the matching process.
 # It defines the quality of the matching process, the tile selection strategy, the tiling grid, the overlap between tiles, the geometric verification method, and the geometric verification parameters.
@@ -45,18 +69,20 @@ conf_general = {
     #   GeometricVerification.NONE (no geometric verification),
     #   GeometricVerification.PYDEGENSAC (use pydegensac),
     #   GeometricVerification.MAGSAC (use opencv MAGSAC),
+    #   Other methods: RANSAC, LMEDS, RHO, USAC_DEFAULT, USAC_PARALLEL, USAC_FM_8PTS, USAC_FAST, USAC_ACCURATE, USAC_PROSAC, USAC_MAGSAC
     "geom_verification": GeometricVerification.PYDEGENSAC,
     "gv_threshold": 4,
     "gv_confidence": 0.99999,
     # Minimum number of inliers matches and minumum inlier ratio per pair
     "min_inliers_per_pair": 15,
-    "min_inlier_ratio_per_pair": 0.25,
+    "min_inlier_ratio_per_pair": 0.15,
     # Even if the features are extracted by tiles, you can try to match the features of the entire image first (if the number of features is not too high and they can fit into memory). Default is False.
     "try_match_full_images": False,
+    "preselection_pipeline": "superpoint+lightglue",
 }
 
 
-# The configuration for DeepImageMatching is defined as a dictionary with the following keys:
+# The configuration for DeepImageMatcher is defined as a dictionary with the following keys:
 # - 'extractor': extractor configuration
 # - 'matcher': matcher configuration
 # The 'extractor' and 'matcher' values must contain a 'name' key with the name of the extractor/matcher to be used. Additionally, the other parameters of the extractor/matcher can be specified.
@@ -66,7 +92,7 @@ confs = {
             "name": "superpoint",
             "nms_radius": 3,
             "keypoint_threshold": 0.0005,
-            "max_keypoints": 4096,
+            "max_keypoints": 2048,
         },
         "matcher": {
             # Refer to https://github.com/cvg/LightGlue/tree/main for the meaning of the parameters
@@ -110,10 +136,22 @@ confs = {
             "sinkhorn_iterations": 100,
         },
     },
+    "superpoint+kornia_matcher": {
+        "extractor": {
+            "name": "superpoint",
+            "nms_radius": 3,
+            "keypoint_threshold": 0.0005,
+            "max_keypoints": 4096,
+        },
+        "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.95},
+    },
     "disk+lightglue": {
         "extractor": {
             "name": "disk",
             "max_keypoints": 4096,
+            "nms_window_size": 5,
+            "detection_threshold": 0.0,
+            "pad_if_not_divisible": True,
         },
         "matcher": {
             "name": "lightglue",
@@ -144,6 +182,11 @@ confs = {
     "sift+kornia_matcher": {
         "extractor": {
             "name": "sift",
+            "n_features": 2048,
+            "nOctaveLayers": 3,
+            "contrastThreshold": 0.0004,
+            "edgeThreshold": 10,
+            "sigma": 1.6,
         },
         "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.85},
     },
@@ -159,6 +202,13 @@ confs = {
         "extractor": {"name": "no_extractor"},
         "matcher": {"name": "roma", "pretrained": "outdoor"},
     },
+    "srif": {
+        "extractor": {"name": "no_extractor"},
+        "matcher": {
+            "name": "srif",
+            "pretrained": "outdoor",
+        },  ################################################### togliere outdoor
+    },
     "keynetaffnethardnet+kornia_matcher": {
         "extractor": {
             "name": "keynetaffnethardnet",
@@ -170,11 +220,27 @@ confs = {
     "dedode+kornia_matcher": {
         "extractor": {
             "name": "dedode",
-            "n_features": 1000,
+            "n_features": 4000,
             "upright": False,
         },
         "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.99},
     },
+    # "sift+lightglue": {
+    #     "extractor": {
+    #         "name": "sift",
+    #         "model_name": "aliked-n16rot",
+    #         "max_num_keypoints": 4000,
+    #         "detection_threshold": 0.2,
+    #         "nms_radius": 3,
+    #     },
+    #     "matcher": {
+    #         "name": "lightglue",
+    #         "n_layers": 9,
+    #         "depth_confidence": 0.95,  # early stopping, disable with -1
+    #         "width_confidence": 0.99,  # point pruning, disable with -1
+    #         "filter_threshold": 0.1,  # match threshold
+    #     },
+    # },
 }
 
 opt_zoo = {
@@ -194,6 +260,7 @@ opt_zoo = {
         "lightglue",
         "loftr",
         "se2loftr",
+        "srif",
         "adalam",
         "kornia_matcher",
         "roma",
@@ -207,9 +274,11 @@ opt_zoo = {
         "matching_lowres",
         "covisibility",
     ],
+    "upright_strategy": ["custom", "2clusters", "exif"],
 }
 
 
+@dataclass
 class Config:
     """
     Configuration class for deep image matching.
@@ -219,91 +288,86 @@ class Config:
     the configuration to a file.
 
     Attributes:
-        default_cli_opts (dict): The default command-line options.
-        cfg (dict): The configuration dictionary with the following keys: general, extractor, matcher.
+        _default_cli_opts (dict): The default command-line options.
+        _cfg (dict): The configuration dictionary with the following keys: general, extractor, matcher.
+        config_file (Path): The path to the configuration file.
 
     Methods:
         general: Get the general configuration options.
         extractor: Get the extractor configuration options.
         matcher: Get the matcher configuration options.
-        __init__: Initialize the Config object.
         as_dict: Get the configuration dictionary.
         get_config: Get a specific configuration by name.
-        get_config_names: Get a list of available configuration names.
-        get_matching_strategy_names: Get a list of available matching strategy names.
+        get_pipelines: Get a list of available pipeline names.
+        get_matching_strategies: Get a list of available matching strategy names.
         get_extractor_names: Get a list of available extractor names.
         get_matcher_names: Get a list of available matcher names.
         get_retrieval_names: Get a list of available retrieval names.
-        parse_user_config: Parse the user configuration and perform checks on the input arguments.
+        get_upright_options: Get a list of available upright options.
+        parse_general_config: Parse the user configuration and perform checks on the input arguments.
         update_from_yaml: Update the configuration from a YAML file.
         print: Print the configuration settings.
         save: Save the configuration to a file.
     """
 
-    default_cli_opts = {
-        "gui": False,
-        "dir": None,
-        "images": None,
-        "outs": None,
-        "pipeline": None,
-        "config_file": None,
-        "quality": "high",
-        "tiling": "none",
-        "strategy": "matching_lowres",
-        "pair_file": None,
-        "overlap": None,
-        "global_feature": None,
-        "db_path": None,
-        "upright": False,
-        "skip_reconstruction": False,
-        "force": True,
-        "verbose": False,
-        "graph": True,
-    }
-    cfg = {
-        "general": {},
-        "extractor": {},
-        "matcher": {},
-    }
+    # Input arguments passed to the constructor
+    args: dict
 
-    @property
-    def general(self):
-        return self.cfg["general"]
+    # Internal fields with factory defaults
+    _default_cli_opts: dict = field(
+        init=False, repr=False, default_factory=lambda: deepcopy(cli_options_defaults)
+    )
 
-    @property
-    def extractor(self):
-        return self.cfg["extractor"]
+    _cfg: dict = field(
+        init=False,
+        repr=False,
+        default_factory=lambda: {
+            "general": {},
+            "extractor": {},
+            "matcher": {},
+        },
+    )
 
-    @property
-    def matcher(self):
-        return self.cfg["matcher"]
+    config_file: Path = field(init=False, repr=False)
 
-    def __init__(self, args: dict):
+    def __post_init__(self):
         """
-        Initialize the Config object.
-
-        Args:
-            args (dict): The input arguments provided by the user.
+        Initialize the Config object after dataclass initialization.
         """
         # Parse input arguments
-        general = self.parse_general_config(args)
+        general = self.parse_general_config(self.args)
 
         # Build configuration dictionary
-        self.cfg["general"] = {**conf_general, **general}
-        features_config = self.get_config(args["pipeline"])
-        self.cfg["extractor"] = features_config["extractor"]
-        self.cfg["matcher"] = features_config["matcher"]
+        self._cfg["general"] = {**conf_general, **general}
+        features_config = self.get_config(self.args["pipeline"])
+        self._cfg["extractor"] = features_config["extractor"]
+        self._cfg["matcher"] = features_config["matcher"]
 
         # If the user has provided a configuration file, update the configuration
-        if "config_file" in args and args["config_file"] is not None:
-            config_file = Path(args["config_file"]).resolve()
+        if "config_file" in self.args and self.args["config_file"] is not None:
+            config_file = Path(self.args["config_file"]).resolve()
             if not config_file.exists():
                 raise FileNotFoundError(f"Configuration file {config_file} not found.")
             self.update_from_yaml(config_file)
             self.print()
 
-        self._config_file = self.cfg["general"]["output_dir"] / "config.json"
-        self.save(self._config_file)
+        self.config_file = self._cfg["general"]["output_dir"] / "config.json"
+        self.save(self.config_file)
+
+    @property
+    def general(self):
+        return self._cfg["general"]
+
+    @property
+    def extractor(self):
+        return self._cfg["extractor"]
+
+    @property
+    def matcher(self):
+        return self._cfg["matcher"]
+
+    # def __repr__(self) -> str:
+    #     return "DeepImageMatching Configuration Object"
 
     def as_dict(self) -> dict:
         """
@@ -312,7 +376,7 @@ class Config:
         Returns:
             dict: The configuration dictionary.
         """
-        return self.cfg
+        return self._cfg
 
     @staticmethod
     def get_config(name: str) -> dict:
@@ -354,7 +418,10 @@ class Config:
         return opt_zoo["retrieval"]
 
     @staticmethod
-    def parse_general_config(input_args: dict) -> dict:
+    def get_upright_options() -> list:
+        return opt_zoo["upright_strategy"]
+
+    def parse_general_config(self, input_args: dict) -> dict:
         """
         Parses the user configuration and performs checks on the input arguments.
 
@@ -365,7 +432,7 @@ class Config:
             dict: The configuration dictionary with the following keys: general, extractor, matcher.
 
         """
-        args = {**Config.default_cli_opts, **input_args}
+        args = {**self._default_cli_opts, **input_args}
 
         # Check that at least one of the two options is provided
         if args["images"] is None and args["dir"] is None:
@@ -423,9 +490,13 @@ class Config:
                 shutil.rmtree(args["outs"])
             else:
                 logger.warning(
-                    f"{args['outs']} already exists. Use '--force' option to overwrite the folder. Using existing features is not yet fully implemented (it will be implemented in a future release). Exiting."
+                    "Output folder already exists. Results will be overwritten (reusing existing features is not yet implemented). Do you want to continue anyway? (yes/no)"
                 )
-                exit(1)
+                if input("Type 'yes' to continue: ").lower() != "yes":
+                    logger.error(
+                        "Exiting. Please use '--force' option to overwrite the existing folder."
+                    )
+                    sys.exit(1)
         args["outs"].mkdir(parents=True, exist_ok=True)
 
         # Check extraction and matching configuration
@@ -504,14 +575,16 @@ class Config:
             args["openmvg"] = Path(args["openmvg"])
             if not args["openmvg"].exists():
                 raise ValueError(f"File {args['openmvg']} does not exist")
-        
+
         if args["camera_options"] is not None:
-            if Path(args["camera_options"]).suffix != '.yaml':
-                raise ValueError(f"File passed to --camera_options must be .yaml file")
-        
-        if args["upright"] == True:
+            if Path(args["camera_options"]).suffix != ".yaml":
+                raise ValueError("File passed to --camera_options must be .yaml file")
+
+        if args["upright"] is True:
             if args["strategy"] == "matching_lowres":
-                raise ValueError(f"With option '--upright' is not possible to use '--strategy matching_lowres', since pairs are chosen with superpoint+lightglue that is not rotation invariant. Use another strategy, e.g. 'bruteforce'.")
+                raise ValueError(
+                    "With option '--upright' is not possible to use '--strategy matching_lowres', since pairs are chosen with superpoint+lightglue that is not rotation invariant. Use another strategy, e.g. 'bruteforce'."
+                )
 
         # Build configuration dictionary
         cfg = {
@@ -553,7 +626,7 @@ class Config:
 
         print(f"Using a custom configuration file: {path}")
 
-        with open(path, "r") as file:
+        with open(path) as file:
             cfg = yaml.safe_load(file)
 
         if "general" in cfg:
@@ -569,7 +642,7 @@ class Config:
                 ]
             if "tile_size" in cfg["general"]:
                 tile_sz = cfg["general"]["tile_size"]
-                if isinstance(tile_sz, Tuple):
+                if isinstance(tile_sz, tuple):
                     tile_sz = tuple([int(x) for x in tile_sz])
                     cfg["general"]["tile_size"] = tile_sz
                 elif isinstance(tile_sz, str):
@@ -581,7 +654,7 @@ class Config:
                         f"Invalid tile_size option: {tile_sz} in the configuration file {path}. Valid options are: Tuple[int, int], str, list"
                     )
 
-            self.cfg["general"].update(cfg["general"])
+            self._cfg["general"].update(cfg["general"])
 
         if "extractor" in cfg:
             if "name" not in cfg["extractor"]:
@@ -589,22 +662,22 @@ class Config:
                     f"Extractor name is missing in configuration file {path}. Please specify the extractor name for which you want to update the configuration."
                 )
                 exit(1)
-            if cfg["extractor"]["name"] != self.cfg["extractor"]["name"]:
+            if cfg["extractor"]["name"] != self._cfg["extractor"]["name"]:
                 logger.warning(
                     f"Extractor name in configuration file {path} does not match with the extractor chosen from CLI or GUI. The custom configuration is not set, but matching is run with the default options."
                 )
-            self.cfg["extractor"].update(cfg["extractor"])
+            self._cfg["extractor"].update(cfg["extractor"])
         if "matcher" in cfg:
             if "name" not in cfg["matcher"]:
                 logger.error(
                     f"Matcher name is missing in configuration file {path}. Please specify the matcher name for which you want to update the configuration."
                 )
                 exit(1)
-            if cfg["matcher"]["name"] != self.cfg["matcher"]["name"]:
+            if cfg["matcher"]["name"] != self._cfg["matcher"]["name"]:
                 logger.warning(
                     f"Matcher name in configuration file {path} does not match with the matcher chosen from CLI or GUI. The custom configuration is not set, but matching is run with the default options."
                 )
-            self.cfg["matcher"].update(cfg["matcher"])
+            self._cfg["matcher"].update(cfg["matcher"])
 
     def print(self):
         """
@@ -622,7 +695,7 @@ class Config:
         pprint(self.matcher)
         print("\n")
 
-    def save(self, path: Path = None):
+    def save(self, path: Union[Path, str, None] = None):
         """Save configuration to file.
 
         Args:
@@ -631,12 +704,12 @@ class Config:
 
         """
         if path is None:
-            path = self._config_file
+            path = self.config_file
         else:
             path = Path(path)
             path.parent.mkdir(parents=True, exist_ok=True)
 
-        cfg = deepcopy(self.cfg)
+        cfg = deepcopy(self._cfg)
 
         # Convert enums to strings
         for k, v in cfg.items():
@@ -650,5 +723,5 @@ class Config:
                 if isinstance(vv, Path):
                     cfg[k][kk] = str(vv)
 
-        with open(path, "w") as file:
+        with open(str(path), "w") as file:
             json.dump(cfg, file, indent=4)

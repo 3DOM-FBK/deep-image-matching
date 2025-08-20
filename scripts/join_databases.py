@@ -5,12 +5,13 @@ from copy import deepcopy
 from pathlib import Path
 
 import numpy as np
+from tqdm import tqdm
+
 from deep_image_matching.utils.database import (
     COLMAPDatabase,
     blob_to_array,
     pair_id_to_image_ids,
 )
-from tqdm import tqdm
 
 
 def parse_args():
@@ -150,9 +151,9 @@ def MergeColmapDatabases(db_path1: Path, db_path2: Path, db_joined: Path) -> Non
         matches2_im1 = matches2_im1.reshape((-1, 1))
         matches2_im2 = matches2_im2.reshape((-1, 1))
         joinedmatches2 = np.hstack((matches2_im1, matches2_im2))
-        if pair not in matches1.keys():
+        if pair not in matches1:
             all_matches[pair] = joinedmatches2
-        elif pair in matches1.keys():
+        elif pair in matches1:
             all_matches[pair] = np.vstack((matches1[pair], joinedmatches2))
 
     for pair in all_matches:
@@ -173,9 +174,9 @@ def MergeColmapDatabases(db_path1: Path, db_path2: Path, db_joined: Path) -> Non
         matches2_im1 = matches2_im1.reshape((-1, 1))
         matches2_im2 = matches2_im2.reshape((-1, 1))
         joinedmatches2 = np.hstack((matches2_im1, matches2_im2))
-        if pair not in two_views_matches1.keys():
+        if pair not in two_views_matches1:
             all_matches[pair] = joinedmatches2
-        elif pair in two_views_matches1.keys():
+        elif pair in two_views_matches1:
             all_matches[pair] = np.vstack((two_views_matches1[pair], joinedmatches2))
 
     for pair in all_matches:

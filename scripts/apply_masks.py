@@ -1,11 +1,11 @@
 import os
 from pathlib import Path
-from PIL import Image
-import numpy as np
 
-img_dir = Path(r"/home/luca/Desktop/IMC24/GlassCup/original")
+from PIL import Image
+
+img_dir = Path(r"/path/to/imgs")
 size = (1300, 3288)
-out_dir = Path(r"/home/luca/Desktop/IMC24/GlassCup/outs")
+out_dir = Path(r"/output/path")
 
 images = os.listdir(img_dir)
 

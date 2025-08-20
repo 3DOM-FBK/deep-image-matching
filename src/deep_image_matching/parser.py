@@ -27,13 +27,13 @@ def parse_cli() -> dict:
         help="Folder containing images to process. If not specified, an 'images' folder inside the project folder is assumed.",
         default=None,
     )
-    # parser.add_argument(
-    #     "-o",
-    #     "--outs",
-    #     type=str,
-    #     help="Output folder. If None, the output folder will be created inside the project folder.",
-    #     default=None,
-    # )
+    parser.add_argument(
+         "-o",
+         "--outs",
+         type=str,
+         help="Output folder. If None, the output folder will be created inside the project folder.",
+         default=None,
+    )
     parser.add_argument(
         "-p",
         "--pipeline",
@@ -49,15 +49,13 @@ def parse_cli() -> dict:
         help="Path of a YAML configuration file that contains user-defined options. If not specified, the default configuration for the selected matching configuration is used.",
         default=None,
     )
-    (
-        parser.add_argument(
-            "-q",
-            "--quality",
-            type=str,
-            choices=["lowest", "low", "medium", "high", "highest"],
-            default="high",
-            help="Set the image resolution for the matching. High means full resolution images, medium is half res, low is 1/4 res, highest is x2 upsampling. Default is high.",
-        ),
+    parser.add_argument(
+        "-q",
+        "--quality",
+        type=str,
+        choices=["lowest", "low", "medium", "high", "highest"],
+        default="high",
+        help="Set the image resolution for the matching. High means full resolution images, medium is half res, low is 1/4 res, highest is x2 upsampling. Default is high.",
     )
     parser.add_argument(
         "-t",
@@ -104,9 +102,9 @@ def parse_cli() -> dict:
     )
     parser.add_argument(
         "--upright",
-        action="store_true",
-        help="Enable the estimation of the best image rotation for the matching (useful in case of aerial datasets).",
-        default=False,
+        choices=Config.get_upright_options(),
+        default=None,
+        help="Enable the estimation of the best image rotation for the matching.",
     )
     parser.add_argument(
         "--skip_reconstruction",
@@ -148,6 +146,8 @@ def parse_cli() -> dict:
 
     if args.gui is True:
         gui_out = gui()
+        if gui_out is None:
+            raise SystemExit("GUI was closed, exiting...")
         args.images = gui_out["image_dir"]
         args.outs = gui_out["out_dir"]
         args.matcher = gui_out["matcher"]

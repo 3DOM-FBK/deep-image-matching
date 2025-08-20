@@ -52,7 +52,7 @@ CREATE_DESCRIPTORS_TABLE = """CREATE TABLE IF NOT EXISTS descriptors (
     data BLOB,
     FOREIGN KEY(image_id) REFERENCES images(image_id) ON DELETE CASCADE)"""
 
-CREATE_IMAGES_TABLE = """CREATE TABLE IF NOT EXISTS images (
+CREATE_IMAGES_TABLE = f"""CREATE TABLE IF NOT EXISTS images (
     image_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     name TEXT NOT NULL UNIQUE,
     camera_id INTEGER NOT NULL,
@@ -63,7 +63,7 @@ CREATE_IMAGES_TABLE = """CREATE TABLE IF NOT EXISTS images (
     prior_tx REAL,
     prior_ty REAL,
     prior_tz REAL,
-    CONSTRAINT image_id_check CHECK(image_id >= 0 and image_id < {}),
+    CONSTRAINT image_id_check CHECK(image_id >= 0 and image_id < {MAX_IMAGE_ID}),
     FOREIGN KEY(camera_id) REFERENCES cameras(camera_id))
 """.format(MAX_IMAGE_ID)
 
@@ -76,7 +76,9 @@ CREATE TABLE IF NOT EXISTS two_view_geometries (
     config INTEGER NOT NULL,
     F BLOB,
     E BLOB,
-    H BLOB)
+    H BLOB,
+    qvec BLOB,
+    tvec BLOB)
 """
 
 CREATE_KEYPOINTS_TABLE = """CREATE TABLE IF NOT EXISTS keypoints (
@@ -130,13 +132,15 @@ def blob_to_array(blob, dtype, shape=(-1,)):
 
 class COLMAPDatabase(sqlite3.Connection):
     @staticmethod
-    def connect(database_path):
+    def connect(database_path: str):
         return sqlite3.connect(database_path, factory=COLMAPDatabase)
 
     def __init__(self, *args, **kwargs):
+        """
+        __init__ Create a new COLMAP database and initialize the tables.
+        """
         super(COLMAPDatabase, self).__init__(*args, **kwargs)
 
-        self.create_tables = lambda: self.executescript(CREATE_ALL)
         self.create_cameras_table = lambda: self.executescript(CREATE_CAMERAS_TABLE)
         self.create_descriptors_table = lambda: self.executescript(
             CREATE_DESCRIPTORS_TABLE
@@ -149,8 +153,28 @@ class COLMAPDatabase(sqlite3.Connection):
         self.create_matches_table = lambda: self.executescript(CREATE_MATCHES_TABLE)
         self.create_name_index = lambda: self.executescript(CREATE_NAME_INDEX)
 
+        self.create_tables()
+        self.commit()
+
+    def __enter__(self):
+        """Enter the context manager"""
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        """Exit the context manager. Close the connection when exiting"""
+        self.close()
+
+    def create_tables(self):
+        self.executescript(CREATE_ALL)
+
     def add_camera(
-        self, model, width, height, params, prior_focal_length=False, camera_id=None
+        self,
+        model: str,
+        width: int,
+        height: int,
+        params: list[float],
+        prior_focal_length: bool = False,
+        camera_id: int = None,
     ):
         params = np.asarray(params, np.float64)
         cursor = self.execute(
@@ -168,12 +192,12 @@ class COLMAPDatabase(sqlite3.Connection):
 
     def update_camera(
         self,
-        camera_id,
-        model,
-        width,
-        height,
-        params,
-        prior_focal_length=True,
+        camera_id: int,
+        model: str,
+        width: int,
+        height: int,
+        params: list[float],
+        prior_focal_length: bool = True,
     ):
         params = np.asarray(params, np.float64)
         cursor = self.execute(
@@ -187,10 +211,16 @@ class COLMAPDatabase(sqlite3.Connection):
                 camera_id,
             ),
         )
+        self.commit()
         return cursor.lastrowid
 
     def add_image(
-        self, name, camera_id, prior_q=np.zeros(4), prior_t=np.zeros(3), image_id=None
+        self,
+        name: str,
+        camera_id: int,
+        prior_q: np.ndarray = np.zeros(4),
+        prior_t: np.ndarray = np.zeros(3),
+        image_id: int = None,
     ):
         cursor = self.execute(
             "INSERT INTO images VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -248,6 +278,8 @@ class COLMAPDatabase(sqlite3.Connection):
         F=np.eye(3),
         E=np.eye(3),
         H=np.eye(3),
+        qvec=np.array([1.0, 0.0, 0.0, 0.0]),
+        tvec=np.zeros(3),
         config=2,
     ):
         assert len(matches.shape) == 2
@@ -261,8 +293,10 @@ class COLMAPDatabase(sqlite3.Connection):
         F = np.asarray(F, dtype=np.float64)
         E = np.asarray(E, dtype=np.float64)
         H = np.asarray(H, dtype=np.float64)
+        qvec = np.asarray(qvec, dtype=np.float64)
+        tvec = np.asarray(tvec, dtype=np.float64)
         self.execute(
-            "INSERT INTO two_view_geometries VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO two_view_geometries VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (pair_id,)
             + matches.shape
             + (
@@ -271,138 +305,68 @@ class COLMAPDatabase(sqlite3.Connection):
                 array_to_blob(F),
                 array_to_blob(E),
                 array_to_blob(H),
+                array_to_blob(qvec),
+                array_to_blob(tvec),
             ),
         )
 
+    def get_keypoints(self) -> dict:
+        query = "SELECT images.name, rows, cols, data FROM keypoints JOIN images ON keypoints.image_id = images.image_id"
+        data = self.execute(query).fetchall()
 
-def example_usage():
-    import argparse
-    import os
+        kpts = {}
+        for d in data:
+            image_name = d[0]
+            kp_shape = (d[1], d[2])
+            kpts[image_name] = blob_to_array(d[3], np.float32, kp_shape)
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--database_path", default="database.db")
-    args = parser.parse_args()
+        return kpts
 
-    if os.path.exists(args.database_path):
-        os.remove(args.database_path)
+    def get_descriptors(self) -> dict:
+        query = "SELECT images.name, rows, cols, data FROM descriptors JOIN images ON descriptors.image_id = images.image_id"
+        data = self.execute(query).fetchall()
 
-    # Open the database.
-    db = COLMAPDatabase.connect(args.database_path)
+        descs = {}
+        for d in data:
+            image_name = d[0]
+            desc_shape = (d[1], d[2])
+            descs[image_name] = blob_to_array(d[3], np.float32, desc_shape)
 
-    # For convenience, try creating all the tables upfront.
+        return descs
 
-    db.create_tables()
+    def get_matches(self) -> tuple:
+        images = {
+            k[0]: k[1]
+            for k in self.execute("SELECT image_id, name FROM images").fetchall()
+        }
+        data = self.execute("SELECT * FROM matches").fetchall()
+        matches = {}
+        for pair in data:
+            pair_id = pair[0]
+            im_ids = pair_id_to_image_ids(pair_id)
+            im_ids = tuple(int(x) for x in im_ids)
+            shape = (pair[1], pair[2])
+            mtc = blob_to_array(pair[3], np.int32, shape)
+            matches[im_ids] = mtc
 
-    # Create dummy cameras.
+        return matches, images
 
-    model1, width1, height1, params1 = 0, 1024, 768, np.array((1024.0, 512.0, 384.0))
-    model2, width2, height2, params2 = (
-        2,
-        1024,
-        768,
-        np.array((1024.0, 512.0, 384.0, 0.1)),
-    )
+    def get_images(self) -> dict:
+        query = "SELECT image_id, name, camera_id FROM images"
+        data = self.execute(query).fetchall()
+        images = {}
+        for d in data:
+            image_id = d[0]
+            image_name = d[1]
+            camera_id = d[2]
+            images[image_name] = (image_id, camera_id)
+        return images
 
-    camera_id1 = db.add_camera(model1, width1, height1, params1)
-    camera_id2 = db.add_camera(model2, width2, height2, params2)
+    def clean_keypoints(self):
+        self.execute("DELETE FROM keypoints")
 
-    # Create dummy images.
+    def clean_matches(self):
+        self.execute("DELETE FROM matches")
 
-    image_id1 = db.add_image("image1.png", camera_id1)
-    image_id2 = db.add_image("image2.png", camera_id1)
-    image_id3 = db.add_image("image3.png", camera_id2)
-    image_id4 = db.add_image("image4.png", camera_id2)
-
-    # Create dummy keypoints.
-    #
-    # Note that COLMAP supports:
-    #      - 2D keypoints: (x, y)
-    #      - 4D keypoints: (x, y, theta, scale)
-    #      - 6D affine keypoints: (x, y, a_11, a_12, a_21, a_22)
-
-    num_keypoints = 1000
-    keypoints1 = np.random.rand(num_keypoints, 2) * (width1, height1)
-    keypoints2 = np.random.rand(num_keypoints, 2) * (width1, height1)
-    keypoints3 = np.random.rand(num_keypoints, 2) * (width2, height2)
-    keypoints4 = np.random.rand(num_keypoints, 2) * (width2, height2)
-
-    db.add_keypoints(image_id1, keypoints1)
-    db.add_keypoints(image_id2, keypoints2)
-    db.add_keypoints(image_id3, keypoints3)
-    db.add_keypoints(image_id4, keypoints4)
-
-    # Create dummy matches.
-
-    M = 50
-    matches12 = np.random.randint(num_keypoints, size=(M, 2))
-    matches23 = np.random.randint(num_keypoints, size=(M, 2))
-    matches34 = np.random.randint(num_keypoints, size=(M, 2))
-
-    db.add_matches(image_id1, image_id2, matches12)
-    db.add_matches(image_id2, image_id3, matches23)
-    db.add_matches(image_id3, image_id4, matches34)
-
-    # Commit the data to the file.
-
-    db.commit()
-
-    # Read and check cameras.
-
-    rows = db.execute("SELECT * FROM cameras")
-
-    camera_id, model, width, height, params, prior = next(rows)
-    params = blob_to_array(params, np.float64)
-    assert camera_id == camera_id1
-    assert model == model1 and width == width1 and height == height1
-    assert np.allclose(params, params1)
-
-    camera_id, model, width, height, params, prior = next(rows)
-    params = blob_to_array(params, np.float64)
-    assert camera_id == camera_id2
-    assert model == model2 and width == width2 and height == height2
-    assert np.allclose(params, params2)
-
-    # Read and check keypoints.
-
-    keypoints = dict(
-        (image_id, blob_to_array(data, np.float32, (-1, 2)))
-        for image_id, data in db.execute("SELECT image_id, data FROM keypoints")
-    )
-
-    assert np.allclose(keypoints[image_id1], keypoints1)
-    assert np.allclose(keypoints[image_id2], keypoints2)
-    assert np.allclose(keypoints[image_id3], keypoints3)
-    assert np.allclose(keypoints[image_id4], keypoints4)
-
-    # Read and check matches.
-
-    pair_ids = [
-        image_ids_to_pair_id(*pair)
-        for pair in (
-            (image_id1, image_id2),
-            (image_id2, image_id3),
-            (image_id3, image_id4),
-        )
-    ]
-
-    matches = dict(
-        (pair_id_to_image_ids(pair_id), blob_to_array(data, np.uint32, (-1, 2)))
-        for pair_id, data in db.execute("SELECT pair_id, data FROM matches")
-    )
-
-    assert np.all(matches[(image_id1, image_id2)] == matches12)
-    assert np.all(matches[(image_id2, image_id3)] == matches23)
-    assert np.all(matches[(image_id3, image_id4)] == matches34)
-
-    # Clean up.
-
-    db.close()
-
-    if os.path.exists(args.database_path):
-        os.remove(args.database_path)
-
-    print("All tests passed.")
-
-
-if __name__ == "__main__":
-    example_usage()
+    def clean_two_view_geometries(self):
+        self.execute("DELETE FROM two_view_geometries")

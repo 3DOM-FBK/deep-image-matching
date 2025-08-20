@@ -1,7 +1,9 @@
-import cv2
-import os
 import argparse
+import os
 from pathlib import Path
+
+import cv2
+
 
 def extract_frames(video_path, output_folder, interval):
     # Open the video file
@@ -27,7 +29,9 @@ def extract_frames(video_path, output_folder, interval):
 
         # Save frames at the specified interval
         if frame_count % interval == 0:
-            frame_filename = os.path.join(output_folder, f"{video_name}_{frame_count:06d}.jpg")
+            frame_filename = os.path.join(
+                output_folder, f"{video_name}_{frame_count:06d}.jpg"
+            )
             cv2.imwrite(frame_filename, frame)
 
         frame_count += 1
@@ -35,12 +39,22 @@ def extract_frames(video_path, output_folder, interval):
     # Release the video capture object
     cap.release()
 
+
 def main():
     # Argument parsing
-    parser = argparse.ArgumentParser(description="Extract frames from a video at a specified time interval.")
+    parser = argparse.ArgumentParser(
+        description="Extract frames from a video at a specified time interval."
+    )
     parser.add_argument("video_path", help="Path to the input video file")
-    parser.add_argument("output_folder", help="Path to the output folder for extracted frames")
-    parser.add_argument("--interval", type=int, default=25, help="Time interval between frames (default: 25 frames)")
+    parser.add_argument(
+        "output_folder", help="Path to the output folder for extracted frames"
+    )
+    parser.add_argument(
+        "--interval",
+        type=int,
+        default=25,
+        help="Time interval between frames (default: 25 frames)",
+    )
 
     args = parser.parse_args()
 
@@ -48,6 +62,7 @@ def main():
     extract_frames(args.video_path, args.output_folder, args.interval)
 
     print(f"Frames extracted successfully to {args.output_folder}")
+
 
 if __name__ == "__main__":
     main()

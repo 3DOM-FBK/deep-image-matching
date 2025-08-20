@@ -5,7 +5,7 @@ from .utils import Extractor
 
 
 class DISK(Extractor):
-    default_conf = {
+    _default_conf = {
         "weights": "depth",
         "max_num_keypoints": None,
         "desc_dim": 128,

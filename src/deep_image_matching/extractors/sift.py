@@ -5,7 +5,7 @@ from .extractor_base import ExtractorBase, FeaturesDict
 
 
 class SIFTExtractor(ExtractorBase):
-    default_conf = {
+    _default_conf = {
         "name:": "sift",
         "n_features": 4000,
         "nOctaveLayers": 3,
@@ -23,7 +23,7 @@ class SIFTExtractor(ExtractorBase):
         super().__init__(config)
 
         # Load extractor
-        cfg = self._config.get("extractor")
+        cfg = self.config.get("extractor")
         self._extractor = cv2.SIFT_create(
             nfeatures=cfg["n_features"],
             nOctaveLayers=cfg["nOctaveLayers"],

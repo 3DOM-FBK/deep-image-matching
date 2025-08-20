@@ -132,7 +132,7 @@ def import_markers(
     if not marker_image_file.exists():
         raise FileNotFoundError(f"Marker image file {marker_image_file} not found.")
     else:
-        with open(marker_image_file, "rt") as input:
+        with open(marker_image_file) as input:
             marker_img_content = input.readlines()
 
     if marker_world_file:
@@ -140,7 +140,7 @@ def import_markers(
         if not marker_world_file.exists():
             raise FileNotFoundError(f"Marker world file {marker_world_file} not found.")
         else:
-            with open(marker_world_file, "rt") as input:
+            with open(marker_world_file) as input:
                 input.readlines()
 
     if chunk is None:
@@ -231,7 +231,7 @@ def read_opencv_calibration(
     assert path.exists(), "Calibration file does not exist."
     assert path.suffix == ".txt", "Calibration file must be a .txt file."
 
-    with open(path, "r") as f:
+    with open(path) as f:
         data = np.loadtxt(f)
         w = data[0]
         h = data[1]
@@ -263,7 +263,7 @@ def find_gcp_in_data(data, label, verbose=False) -> List[dict]:
     for line in data:
         if line["label"] == label:
             if verbose:
-                logging.info(f'GCP {label} found in image {line["image"]}.')
+                logging.info(f"GCP {label} found in image {line['image']}.")
             markers.append(line)
             continue
     if not markers:
@@ -336,11 +336,13 @@ def export_tie_points_world(
             cov = point.cov
             f.write(f"{track_id},{coord[0]},{coord[1]},{coord[2]},")
             if expot_covariance_mat:
-                f.write(f"{cov[0,0]},{cov[0,1]},{cov[0,2]},")
-                f.write(f"{cov[1,0]},{cov[1,1]},{cov[1,2]},")
-                f.write(f"{cov[2,0]},{cov[2,1]},{cov[2,2]},")
+                f.write(f"{cov[0, 0]},{cov[0, 1]},{cov[0, 2]},")
+                f.write(f"{cov[1, 0]},{cov[1, 1]},{cov[1, 2]},")
+                f.write(f"{cov[2, 0]},{cov[2, 1]},{cov[2, 2]},")
             else:
-                f.write(f"{np.sqrt(cov[0,0])},{np.sqrt(cov[1,1])},{np.sqrt(cov[2,2])},")
+                f.write(
+                    f"{np.sqrt(cov[0, 0])},{np.sqrt(cov[1, 1])},{np.sqrt(cov[2, 2])},"
+                )
             f.write("\n")
     print(f"Tie points exported to {file_name}.")
 

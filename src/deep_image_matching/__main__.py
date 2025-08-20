@@ -1,70 +1,95 @@
-from . import timer
-from .config import Config
-from .image_matching import ImageMatching
-from .io.h5_to_db import export_to_colmap
-from .parser import parse_cli
+import os
+from pathlib import Path
 
+import yaml
 
-def run_pipeline():
+import deep_image_matching as dim
+from deep_image_matching.utils.loftr_roma_to_multiview import LoftrRomaToMultiview
 
-    # Parse arguments from command line
-    args = parse_cli()
+logger = dim.setup_logger("dim")
 
-    # Build configuration
-    config = Config(args)
+# Parse arguments from command line
+args = dim.parse_cli()
 
-    # For simplicity, save some of the configuration parameters in variables.
-    imgs_dir = config.general["image_dir"]
-    output_dir = config.general["output_dir"]
+# Build configuration
+config = dim.Config(args)
+imgs_dir = config.general["image_dir"]
+output_dir = config.general["output_dir"]
 
-    # Initialize ImageMatching class
-    img_matching = ImageMatching(
-        imgs_dir=imgs_dir,
-        output_dir=output_dir,
-        matching_strategy=config.general["matching_strategy"],
-        local_features=config.extractor["name"],
-        matching_method=config.matcher["name"],
-        pair_file=config.general["pair_file"],
-        retrieval_option=config.general["retrieval"],
-        overlap=config.general["overlap"],
-        existing_colmap_model=config.general["db_path"],
-        custom_config=config.as_dict(),
+# Initialize ImageMatcher class
+matcher = dim.ImageMatcher(config)
+
+# Run image matching
+feature_path, match_path = matcher.run()
+
+# Export in colmap format
+database_path = output_dir / "database.db"
+if database_path.exists():
+    database_path.unlink()
+dim.io.export_to_colmap(
+    img_dir=imgs_dir,
+    feature_path=feature_path,
+    match_path=match_path,
+    database_path=database_path,
+    camera_config_path=config.general["camera_options"],
+)
+
+if matcher.matching in ["loftr", "se2loftr", "roma", "srif"]:
+    images = os.listdir(imgs_dir)
+    image_format = Path(images[0]).suffix
+    LoftrRomaToMultiview(
+        input_dir=feature_path.parent,
+        output_dir=feature_path.parent,
+        image_dir=imgs_dir,
+        img_ext=image_format,
     )
 
-    # Generate pairs to be matched
-    pair_path = img_matching.generate_pairs()
-    timer.update("generate_pairs")
+# Visualize view graph
+if config.general["graph"]:
+    try:
+        dim.graph.view_graph(database_path, output_dir / "image_graphs", imgs_dir)
+    except Exception as e:
+        logger.error(f"Unable to visualize view graph: {e}")
 
-    # Try to rotate images so they will be all "upright", useful for deep-learning approaches that usually are not rotation invariant
-    if config.general["upright"]:
-        img_matching.rotate_upright_images()
-        timer.update("rotate_upright_images")
+# If --skip_reconstruction is not specified, run reconstruction with pycolmap
+if not config.general["skip_reconstruction"]:
+    model = dim.reconstruction.incremental_reconstruction(
+        database_path=output_dir / "database.db",
+        image_dir=imgs_dir,
+        sfm_dir=output_dir / "reconstruction",
+        reconstruction_options=None,
+        refine_intrinsics=True,
+        ignore_two_view_tracks=True,
+        filter_min_tri_angle=None,
+        export_ply=True,
+        export_text=True,
+        export_bundler=False,
+    )
 
-    # Extract features
-    feature_path = img_matching.extract_features()
-    timer.update("extract_features")
 
-    # Matching
-    match_path = img_matching.match_pairs(feature_path)
-    timer.update("matching")
-
-    # If features have been extracted on "upright" images, this function bring features back to their original image orientation
-    if config.general["upright"]:
-        img_matching.rotate_back_features(feature_path)
-        timer.update("rotate_back_features")
-
-    # Export in colmap format
-    database_path = output_dir / "database.db"
-    export_to_colmap(
+# Export in openMVG format
+if config.general["openmvg_conf"]:
+    with open(config.general["openmvg_conf"]) as file:
+        openmvgcfg = yaml.safe_load(file)
+    openmvg_sfm_bin = openmvgcfg["general"]["path_to_binaries"]
+    openmvg_database = openmvgcfg["general"]["openmvg_database"]
+    openmvg_out_path = output_dir / "openmvg"
+    dim.io.export_to_openmvg(
         img_dir=imgs_dir,
         feature_path=feature_path,
         match_path=match_path,
-        database_path=database_path,
-        camera_model="simple-radial",
-        single_camera=True,
+        openmvg_out_path=openmvg_out_path,
+        openmvg_sfm_bin=openmvg_sfm_bin,
+        openmvg_database=openmvg_database,
+        camera_config_path=config.general["camera_options"],
     )
-    timer.update("export_to_colmap")
 
+    # If skip_reconstruction is not specified, run OpenMVG reconstruction
+    if not config.general["skip_reconstruction"]:
+        from deep_image_matching.openmvg import openmvg_reconstruction
 
-if __name__ == "__main__":
-    run_pipeline()
+        openmvg_reconstruction(
+            openmvg_out_path=openmvg_out_path,
+            skip_reconstruction=config.general["skip_reconstruction"],
+            openmvg_sfm_bin=openmvg_sfm_bin,
+        )
