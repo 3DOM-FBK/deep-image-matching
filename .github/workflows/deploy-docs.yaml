@@ -43,7 +43,7 @@ jobs:
         run: uv run mkdocs build --config-file ./mkdocs.yml --site-dir ./_site
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
+        uses: actions/upload-pages-artifact@v3
         with:
           path: ./_site
 
