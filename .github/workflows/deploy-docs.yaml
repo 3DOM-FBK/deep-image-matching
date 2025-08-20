@@ -37,9 +37,9 @@ jobs:
       - name: Create virtual environment
         run: uv venv
       - name: Install MkDocs and Material for MkDocs
-        run: uv pip install mkdocs-material mkdocstrings[python]
+        run: uv pip install --upgrade mkdocstrings[python] mkdocs-material
       - name: Install Pillow and CairoSVG (required for social card generation)
-        run: uv pip install pillow cairosvg
+        run: uv pip install --upgrade pillow cairosvg
       - name: Build site (_site directory name is used for Jekyll compatiblity)
         run: uv run mkdocs build --config-file ./mkdocs.yml --site-dir ./_site
       - name: Upload artifact
