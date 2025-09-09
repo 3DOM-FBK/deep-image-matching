@@ -280,6 +280,7 @@ class ImageMatcher:
         self.extraction = config.extractor["name"]
         self.matching = config.matcher["name"]
         self.pair_file = config.general["pair_file"]
+        self.rotated_images = []
 
         # self.existing_colmap_model = config.general["db_path"]
         # if config.general["retrieval"] == "covisibility":
@@ -349,13 +350,17 @@ class ImageMatcher:
             None
         """
         # Generate pairs to be matched
-        pair_path = self.generate_pairs()
+        self.generate_pairs()
         timer.update("generate_pairs")
 
         # Try to rotate images so they will be all "upright", useful for deep-learning approaches that usually are not rotation invariant
         if self.config.general["upright"] in ["custom", "2clusters", "exif"]:
             self.rotate_upright_images(self.config.general["upright"])
             timer.update("rotate_upright_images")
+        elif self.config.general["upright"] is True:
+            logger.warning(
+                "The 'upright' option should be one of ['custom', '2clusters', 'exif']. Proceeding without rotating images."
+            )
 
         # Extract features
         feature_path = self.extract_features()
@@ -365,7 +370,7 @@ class ImageMatcher:
         match_path = self.match_pairs(feature_path)
 
         # If features have been extracted on "upright" images, this function bring features back to their original image orientation
-        if self.config.general["upright"]:
+        if self.config.general["upright"] in ["custom", "2clusters", "exif"]:
             self.rotate_back_features(feature_path)
             timer.update("rotate_back_features")
 
@@ -374,12 +379,12 @@ class ImageMatcher:
 
         return feature_path, match_path
 
-    def generate_pairs(self, **kwargs) -> Path:
+    def generate_pairs(self, **kwargs) -> None:
         """
-        Generates pairs of images for matching.
+        Generates pairs of images for matching and stores them in the 'self.pairs' attribute.
 
         Returns:
-            Path: The path to the pair file containing the generated pairs of images.
+            None
         """
         if self.pair_file is not None and self.strategy == "custom_pairs":
             if not self.pair_file.exists():
@@ -403,7 +408,86 @@ class ImageMatcher:
             )
             self.pairs = pairs_generator.run()
 
-        return self.pair_file
+        return None
+
+    def extract_features(self) -> Path:
+        """
+        Extracts features from the images using the specified local feature extraction method.
+
+        Returns:
+            Path: The path to the directory containing the extracted features.
+
+        Raises:
+            ValueError: If the local feature extraction method is invalid or not supported.
+
+        """
+        logger.info(f"Extracting features with {self.extraction}...")
+        logger.info(f"{self.extraction} configuration: ")
+        pprint(self.config.extractor)
+
+        # Extract features
+        for img in tqdm(self.image_list):
+            feature_path = self._extractor.extract(img)
+
+        torch.cuda.empty_cache()
+        logger.info("Features extracted!")
+
+        return feature_path
+
+    def match_pairs(self, feature_path: Path, try_full_image: bool = False) -> Path:
+        """
+        Matches features using a specified matching method.
+
+        Args:
+            feature_path (Path): The path to the directory containing the extracted features.
+            try_full_image (bool, optional): Whether to try matching the full image. Defaults to False.
+
+        Returns:
+            Path: The path to the directory containing the matches.
+
+        Raises:
+            ValueError: If the feature path does not exist.
+        """
+
+        logger.info(f"Matching features with {self.matching}...")
+        logger.info(f"{self.matching} configuration: ")
+        pprint(self.config.matcher)
+
+        # Check that feature_path exists
+        feature_path = Path(feature_path)
+        if not feature_path.exists():
+            raise ValueError(f"Feature path {feature_path} does not exist")
+
+        # Define matches path
+        matches_path = feature_path.parent / "matches.h5"
+
+        # Match pairs
+        logger.info("Matching features...")
+        logger.info("")
+        for i, pair in enumerate(tqdm(self.pairs)):
+            name0 = pair[0].name if isinstance(pair[0], Path) else pair[0]
+            name1 = pair[1].name if isinstance(pair[1], Path) else pair[1]
+            im0 = self.image_dir / name0
+            im1 = self.image_dir / name1
+
+            logger.debug(f"Matching image pair: {name0} - {name1}")
+
+            # Run matching
+            self._matcher.match(
+                feature_path=feature_path,
+                matches_path=matches_path,
+                img0=im0,
+                img1=im1,
+                try_full_image=try_full_image,
+            )
+            timer.update("Match pair")
+
+            # NOTE: Geometric verif. has been moved to the end of the matching process
+
+        torch.cuda.empty_cache()
+        timer.print("matching")
+
+        return matches_path
 
     def rotate_upright_images(
         self, strategy, resize_size=500, n_cores=4, multi_processing=False
@@ -611,85 +695,6 @@ class ImageMatcher:
         torch.cuda.empty_cache()
         logger.info(f"Images rotated and saved in {path_to_upright_dir}")
         gc.collect()
-
-    def extract_features(self) -> Path:
-        """
-        Extracts features from the images using the specified local feature extraction method.
-
-        Returns:
-            Path: The path to the directory containing the extracted features.
-
-        Raises:
-            ValueError: If the local feature extraction method is invalid or not supported.
-
-        """
-        logger.info(f"Extracting features with {self.extraction}...")
-        logger.info(f"{self.extraction} configuration: ")
-        pprint(self.config.extractor)
-
-        # Extract features
-        for img in tqdm(self.image_list):
-            feature_path = self._extractor.extract(img)
-
-        torch.cuda.empty_cache()
-        logger.info("Features extracted!")
-
-        return feature_path
-
-    def match_pairs(self, feature_path: Path, try_full_image: bool = False) -> Path:
-        """
-        Matches features using a specified matching method.
-
-        Args:
-            feature_path (Path): The path to the directory containing the extracted features.
-            try_full_image (bool, optional): Whether to try matching the full image. Defaults to False.
-
-        Returns:
-            Path: The path to the directory containing the matches.
-
-        Raises:
-            ValueError: If the feature path does not exist.
-        """
-
-        logger.info(f"Matching features with {self.matching}...")
-        logger.info(f"{self.matching} configuration: ")
-        pprint(self.config.matcher)
-
-        # Check that feature_path exists
-        feature_path = Path(feature_path)
-        if not feature_path.exists():
-            raise ValueError(f"Feature path {feature_path} does not exist")
-
-        # Define matches path
-        matches_path = feature_path.parent / "matches.h5"
-
-        # Match pairs
-        logger.info("Matching features...")
-        logger.info("")
-        for i, pair in enumerate(tqdm(self.pairs)):
-            name0 = pair[0].name if isinstance(pair[0], Path) else pair[0]
-            name1 = pair[1].name if isinstance(pair[1], Path) else pair[1]
-            im0 = self.image_dir / name0
-            im1 = self.image_dir / name1
-
-            logger.debug(f"Matching image pair: {name0} - {name1}")
-
-            # Run matching
-            self._matcher.match(
-                feature_path=feature_path,
-                matches_path=matches_path,
-                img0=im0,
-                img1=im1,
-                try_full_image=try_full_image,
-            )
-            timer.update("Match pair")
-
-            # NOTE: Geometric verif. has been moved to the end of the matching process
-
-        torch.cuda.empty_cache()
-        timer.print("matching")
-
-        return matches_path
 
     def rotate_back_features(self, feature_path: Path) -> None:
         """
