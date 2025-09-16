@@ -122,7 +122,8 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
         # Get matches and build features
         mkpts0 = correspondences["keypoints0"].cpu().numpy()
         mkpts1 = correspondences["keypoints1"].cpu().numpy()
-        torch.cuda.synchronize()
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
 
         # Retrieve original image coordinates if matching was performed on up/down-sampled images
         mkpts0 = self._resize_keypoints(self._quality, mkpts0)

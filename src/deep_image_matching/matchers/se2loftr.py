@@ -174,8 +174,9 @@ class SE2LOFTRMatcher(DetectorFreeMatcherBase):
             mkpts0 = batch["mkpts0_f"].cpu().numpy()
             mkpts1 = batch["mkpts1_f"].cpu().numpy()
             mconf = batch["mconf"].cpu().numpy()
-        torch.cuda.synchronize()
-        # torch.cuda.current_stream().synchronize()
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+            # torch.cuda.current_stream().synchronize()
 
         # Upscale features to original size
         mkpts0[:, 0] = mkpts0[:, 0] * width0 / 640
