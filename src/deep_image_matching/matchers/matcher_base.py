@@ -9,6 +9,7 @@ import cv2
 import h5py
 import numpy as np
 import torch
+import rasterio
 
 from ..config import Config
 from ..constants import Quality, TileSelection, Timer, get_size_by_quality
@@ -998,8 +999,10 @@ def tile_selection(
 
     # Compute tiles limits and origin
     tiler = Tiler(tiling_mode="size")
-    i0 = cv2.imread(str(img0), cv2.IMREAD_GRAYSCALE).astype(np.float32)
-    i1 = cv2.imread(str(img1), cv2.IMREAD_GRAYSCALE).astype(np.float32)
+    with rasterio.open(str(img0)) as src:
+        i0 = src.read(1).astype(np.float32)
+    with rasterio.open(str(img1)) as src:
+        i1 = src.read(1).astype(np.float32)
 
     # Resize images to the specified quality to reproduce the same tiling as in feature extraction
     if quality != Quality.HIGH:

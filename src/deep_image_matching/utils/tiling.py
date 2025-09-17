@@ -123,12 +123,50 @@ class Tiler:
         # NOTE: from version 0.7.1 compute_padding() returns a tuple of 2 int and not 4 ints (top, bottom, left, right) anymore.
         padding = K.contrib.compute_padding((H, W), window_size)
         stride = [w - o for w, o in zip(window_size, overlap)]
-        patches = K.contrib.extract_tensor_patches(
-            input, window_size, stride=stride, padding=padding
-        )
+        # Convert to numpy for manual patch extraction
+        input_np = input.squeeze(0).permute(1, 2, 0).numpy()  # (H, W, C)
 
-        # Remove batch dimension
-        patches = patches.squeeze(0)
+        # Apply padding
+        if konria_071():
+            padded_input = np.pad(input_np, ((padding[0], padding[0]), (padding[1], padding[1]), (0, 0)), mode='constant', constant_values=0)
+        else:
+            padded_input = np.pad(input_np, ((padding[0], padding[1]), (padding[2], padding[3]), (0, 0)), mode='constant', constant_values=0)
+
+        # Extract patches manually with memory-efficient approach
+        padded_h, padded_w = padded_input.shape[:2]
+        
+        # Calculate total number of patches to estimate memory usage
+        total_patches = len(range(0, padded_h - window_size[0] + 1, stride[0])) * len(range(0, padded_w - window_size[1] + 1, stride[1]))
+        patch_memory_mb = (window_size[0] * window_size[1] * padded_input.shape[2] * 4) / (1024 * 1024)  # 4 bytes per float32
+        total_memory_gb = (total_patches * patch_memory_mb) / 1024
+        
+        # If estimated memory usage > 4GB, use memory-efficient extraction
+        if total_memory_gb > 4.0:
+            print(f"Warning: Estimated memory usage {total_memory_gb:.1f}GB for {total_patches} patches. Using memory-efficient extraction.")
+            
+            # Create patches dictionary directly without loading all into memory
+            patches = {}
+            patch_idx = 0
+            for y in range(0, padded_h - window_size[0] + 1, stride[0]):
+                for x in range(0, padded_w - window_size[1] + 1, stride[1]):
+                    patch = padded_input[y:y+window_size[0], x:x+window_size[1]]
+                    patches[patch_idx] = patch  # Store as (H, W, C)
+                    patch_idx += 1
+        else:
+            # Original method for smaller memory usage
+            patches_list = []
+            for y in range(0, padded_h - window_size[0] + 1, stride[0]):
+                for x in range(0, padded_w - window_size[1] + 1, stride[1]):
+                    patch = padded_input[y:y+window_size[0], x:x+window_size[1]]
+                    patches_list.append(patch)
+
+            patches_tensor = torch.from_numpy(np.stack(patches_list)).permute(0, 3, 1, 2)  # (N, C, H, W)
+            
+            # Convert patches to numpy array (N, H, W, C)
+            patches_np = patches_tensor.permute(0, 2, 3, 1).numpy()
+            
+            # arrange patches in a dictionary with the index of the patch as key
+            patches = {i: patches_np[i] for i in range(patches_np.shape[0])}
 
         # Compute number of rows and columns
         if konria_071():
@@ -150,12 +188,6 @@ class Tiler:
                     x = -padding[2] + col * stride[1]
                     y = -padding[0] + row * stride[0]
                 origins[tile_idx] = (x, y)
-
-        # Convert patches to numpy array (H, W, C)
-        patches = patches.permute(0, 2, 3, 1).numpy()
-
-        # arrange patches in a dictionary with the index of the patch as key
-        patches = {i: patches[i] for i in range(patches.shape[0])}
 
         return patches, origins, padding
 
