@@ -5,6 +5,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+import rasterio
 
 from deep_image_matching.utils.database import (
     COLMAPDatabase,
@@ -151,7 +152,7 @@ class ShowPairMatches:
             img1_path,
             keypoints0,
             keypoints1,
-            self.two_views_matches[(id0, id1)],
+            self.matches[(id0, id1)], #"self.two_views_matches[(id0, id1)]," or "self.matches[(id0, id1)],"
             plot_config,
         )
 
@@ -169,13 +170,49 @@ class ShowPairMatches:
         thickness = plot_config["thickness"]
         space_between_images = plot_config["space_between_images"]
 
-        # Load images
-        img0 = cv2.imread(str(img0_path))
-        img1 = cv2.imread(str(img1_path))
+        # Load images using rasterio
+        def load_image_with_rasterio(img_path):
+            with rasterio.open(str(img_path)) as src:
+                img_data = src.read()
+                # Convert from (bands, rows, cols) to (rows, cols, bands)
+                img = np.transpose(img_data, (1, 2, 0))
+                
+                # Handle different number of bands
+                if img.shape[2] == 1:
+                    # Single band - convert to 3-channel grayscale
+                    img = np.repeat(img, 3, axis=2)
+                elif img.shape[2] > 3:
+                    # More than 3 bands - take first 3 (typically RGB)
+                    img = img[:, :, :3]
+                
+                # Convert to uint8 if needed
+                if img.dtype != np.uint8:
+                    # Normalize to 0-255 range if values are in different range
+                    if img.max() <= 1.0:
+                        img = (img * 255).astype(np.uint8)
+                    else:
+                        img = np.clip(img, 0, 255).astype(np.uint8)
+                
+                ## Convert RGB to BGR for OpenCV compatibility (if 3 channels)
+                #if img.shape[2] == 3:
+                #    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+                
+                return img
+        
+        img0 = load_image_with_rasterio(img0_path)
+        img1 = load_image_with_rasterio(img1_path)
 
-        # Convert keypoints to integers
-        kpts0_int = np.round(kpts0).astype(int)
-        kpts1_int = np.round(kpts1).astype(int)
+        # Filter out invalid keypoints (NaN, inf) and convert to integers
+        valid_mask0 = np.isfinite(kpts0).all(axis=1)
+        valid_mask1 = np.isfinite(kpts1).all(axis=1)
+        
+        kpts0_valid = kpts0[valid_mask0]
+        kpts1_valid = kpts1[valid_mask1]
+        
+        kpts0_int = np.round(kpts0_valid).astype(int)
+        kpts1_int = np.round(kpts1_valid).astype(int)
+        
+        print(f"Valid keypoints - Img0: {len(kpts0_int)}/{len(kpts0)}, Img1: {len(kpts1_int)}/{len(kpts1)}")
 
         # Create a new image to draw matches
         img_matches = np.zeros(
@@ -193,19 +230,58 @@ class ShowPairMatches:
         ] = (255, 255, 255)
 
         if show_keypoints:
-            # Show keypoints
+            # Show valid keypoints within image bounds
             for kpt in kpts0_int:
-                kpt = tuple(kpt)
-                cv2.circle(img_matches, kpt, radius, (0, 0, 255), thickness)
+                if 0 <= kpt[0] < img0.shape[1] and 0 <= kpt[1] < img0.shape[0]:
+                    kpt_tuple = tuple(kpt)
+                    cv2.circle(img_matches, kpt_tuple, radius, (0, 0, 255), thickness)
 
             for kpt in kpts1_int:
-                kpt = tuple(kpt + np.array([img0.shape[1], 0]))
-                cv2.circle(img_matches, kpt, radius, (0, 0, 255), thickness)
+                kpt_shifted = kpt + np.array([img0.shape[1] + space_between_images, 0])
+                if (0 <= kpt[0] < img1.shape[1] and 0 <= kpt[1] < img1.shape[0] and
+                    0 <= kpt_shifted[0] < img_matches.shape[1] and 0 <= kpt_shifted[1] < img_matches.shape[0]):
+                    kpt_tuple = tuple(kpt_shifted)
+                    cv2.circle(img_matches, kpt_tuple, radius, (0, 0, 255), thickness)
 
-        # Draw lines and circles for matches
+        # Filter matches to only include those with valid keypoints and within image bounds
+        valid_matches = []
+        
+        # Create mapping from original indices to filtered indices
+        valid_idx0_map = {}
+        valid_idx1_map = {}
+        
+        for i, is_valid in enumerate(valid_mask0):
+            if is_valid:
+                valid_idx0_map[i] = len(valid_idx0_map)
+                
+        for i, is_valid in enumerate(valid_mask1):
+            if is_valid:
+                valid_idx1_map[i] = len(valid_idx1_map)
+        
         for match in matches:
-            pt1 = tuple(kpts0_int[match[0]])
-            pt2 = tuple(np.array(kpts1_int[match[1]]) + np.array([img0.shape[1], 0]))
+            orig_idx0, orig_idx1 = match[0], match[1]
+            
+            # Check if both original indices had valid keypoints
+            if orig_idx0 in valid_idx0_map and orig_idx1 in valid_idx1_map:
+                new_idx0 = valid_idx0_map[orig_idx0]
+                new_idx1 = valid_idx1_map[orig_idx1]
+                
+                # Check if indices are within filtered arrays
+                if new_idx0 < len(kpts0_int) and new_idx1 < len(kpts1_int):
+                    kpt0 = kpts0_int[new_idx0]
+                    kpt1 = kpts1_int[new_idx1]
+                    
+                    # Check if keypoints are within image bounds
+                    if (0 <= kpt0[0] < img0.shape[1] and 0 <= kpt0[1] < img0.shape[0] and
+                        0 <= kpt1[0] < img1.shape[1] and 0 <= kpt1[1] < img1.shape[0]):
+                        valid_matches.append((new_idx0, new_idx1))
+        
+        print(f"Valid matches: {len(valid_matches)}/{len(matches)}")
+        
+        # Draw lines and circles for valid matches
+        for idx0, idx1 in valid_matches:
+            pt1 = tuple(kpts0_int[idx0])
+            pt2 = tuple(kpts1_int[idx1] + np.array([img0.shape[1] + space_between_images, 0]))
 
             # Draw a line connecting the keypoints
             cv2.line(img_matches, pt1, pt2, (0, 255, 0), thickness)
