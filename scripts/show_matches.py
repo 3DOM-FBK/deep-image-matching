@@ -202,17 +202,58 @@ class ShowPairMatches:
         img0 = load_image_with_rasterio(img0_path)
         img1 = load_image_with_rasterio(img1_path)
 
-        # Filter out invalid keypoints (NaN, inf) and convert to integers
-        valid_mask0 = np.isfinite(kpts0).all(axis=1)
-        valid_mask1 = np.isfinite(kpts1).all(axis=1)
+        # Check if images are too large and resize if necessary
+        max_dimension = plot_config.get("max_dimension", 4000)  # Maximum dimension for visualization
+        scale_factor0 = 1.0
+        scale_factor1 = 1.0
         
-        kpts0_valid = kpts0[valid_mask0]
-        kpts1_valid = kpts1[valid_mask1]
+        # Calculate scale factors for each image
+        if max(img0.shape[:2]) > max_dimension:
+            scale_factor0 = max_dimension / max(img0.shape[:2])
+            new_size0 = (int(img0.shape[1] * scale_factor0), int(img0.shape[0] * scale_factor0))
+            img0 = cv2.resize(img0, new_size0, interpolation=cv2.INTER_AREA)
+            print(f"Resized img0 by factor {scale_factor0:.3f} to {img0.shape[1]}x{img0.shape[0]}")
+            
+        if max(img1.shape[:2]) > max_dimension:
+            scale_factor1 = max_dimension / max(img1.shape[:2])
+            new_size1 = (int(img1.shape[1] * scale_factor1), int(img1.shape[0] * scale_factor1))
+            img1 = cv2.resize(img1, new_size1, interpolation=cv2.INTER_AREA)
+            print(f"Resized img1 by factor {scale_factor1:.3f} to {img1.shape[1]}x{img1.shape[0]}")
+
+        # Scale keypoints to match resized images
+        kpts0_scaled = kpts0 * scale_factor0
+        kpts1_scaled = kpts1 * scale_factor1
+
+        # Filter out invalid keypoints (NaN, inf) and convert to integers
+        valid_mask0 = np.isfinite(kpts0_scaled).all(axis=1)
+        valid_mask1 = np.isfinite(kpts1_scaled).all(axis=1)
+        
+        kpts0_valid = kpts0_scaled[valid_mask0]
+        kpts1_valid = kpts1_scaled[valid_mask1]
         
         kpts0_int = np.round(kpts0_valid).astype(int)
         kpts1_int = np.round(kpts1_valid).astype(int)
         
         print(f"Valid keypoints - Img0: {len(kpts0_int)}/{len(kpts0)}, Img1: {len(kpts1_int)}/{len(kpts1)}")
+
+        # Calculate final visualization size and check memory requirements
+        final_height = max(img0.shape[0], img1.shape[0])
+        final_width = img0.shape[1] + img1.shape[1] + space_between_images
+        estimated_memory_gb = (final_height * final_width * 3) / (1024**3)
+        
+        print(f"Final visualization size: {final_width}x{final_height} ({estimated_memory_gb:.2f} GB)")
+        
+        if estimated_memory_gb > 8.0:  # If still too large after resizing
+            print("Warning: Visualization still requires significant memory. Consider using smaller max_dimension.")
+            additional_scale = min(1.0, 8.0 / estimated_memory_gb)
+            if additional_scale < 1.0:
+                new_size0 = (int(img0.shape[1] * additional_scale), int(img0.shape[0] * additional_scale))
+                new_size1 = (int(img1.shape[1] * additional_scale), int(img1.shape[0] * additional_scale))
+                img0 = cv2.resize(img0, new_size0, interpolation=cv2.INTER_AREA)
+                img1 = cv2.resize(img1, new_size1, interpolation=cv2.INTER_AREA)
+                kpts0_int = np.round(kpts0_int * additional_scale).astype(int)
+                kpts1_int = np.round(kpts1_int * additional_scale).astype(int)
+                print(f"Applied additional scaling factor {additional_scale:.3f}")
 
         # Create a new image to draw matches
         img_matches = np.zeros(
@@ -350,20 +391,29 @@ def parse_args():
         required=False,
         default=1500,
     )
+    parser.add_argument(
+        "--max_dimension",
+        type=int,
+        help="Maximum dimension (width or height) for individual images before visualization",
+        required=False,
+        default=4000,
+    )
     args = parser.parse_args()
 
     return args
 
 
 def main():
+    args = parse_args()
+    
     plot_config = {
         "show_keypoints": True,
         "radius": 5,
         "thickness": 2,
         "space_between_images": 0,
+        "max_dimension": args.max_dimension,
     }
 
-    args = parse_args()
     database_path = Path(args.database)
     out_dir = Path(args.output)
     imgs_dir = Path(args.imgsdir)
