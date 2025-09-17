@@ -709,7 +709,10 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
 
         # Rescale threshold according the image original image size
         img_shape = cv2.imread(str(img0)).shape
-        scale_fct = np.floor(max(img_shape) / self.max_tile_size / 2)
+        if self._tiling == TileSelection.NONE:
+            scale_fct = 1
+        else:
+            scale_fct = np.floor(max(img_shape) / self.max_tile_size / 2)
         gv_threshold = self.config["general"]["gv_threshold"] * scale_fct
 
         # Apply geometric verification
