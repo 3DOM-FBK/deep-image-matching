@@ -66,7 +66,7 @@ conf_general = {
     # Minimum number of matches per tile
     "min_matches_per_tile": 10,
     # Use geomertic verification for each tile pair (if tiling is used)
-    "geometric_verification_per_tile": True,
+    "geometric_verification_per_tile": False,
     "gv_threshold_in_tiles_matching": 4,
     # Geometric verification method and parameters:
     #   GeometricVerification.NONE (no geometric verification),
