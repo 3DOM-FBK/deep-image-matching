@@ -42,6 +42,7 @@ class TileSelection(Enum):
     EXHAUSTIVE = 1
     GRID = 2
     PRESELECTION = 3
+    PRESELECTION_AFFINE_TRANSFORM = 4
 
 
 class GeometricVerification(Enum):

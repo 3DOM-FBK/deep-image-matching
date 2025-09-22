@@ -17,7 +17,7 @@ args = {
     "pipeline": "superpoint+lightglue", # ["superpoint+lightglue", "superpoint+lightglue_fast", "superpoint+superglue", "superpoint+kornia_matcher", "disk+lightglue", "aliked+lightglue", "orb+kornia_matcher", "sift+kornia_matcher", "loftr", "se2loftr", "roma", "srif", "keynetaffnethardnet+kornia_matcher", "dedode+kornia_matcher"]
     "strategy": "bruteforce", # ["matching_lowres", "bruteforce", "sequential", "retrieval", "custom_pairs", "covisibility"]
     "quality": "medium", # ["lowest", "low", "medium", "high", "highest"]
-    "tiling": "none", # ["none", "preselection", "grid", "exhaustive"]
+    "tiling": "preselection", # ["none", "preselection", "grid", "exhaustive", "preselection_affine_transform"]
     "camera_options": "./assets/example_cyprus/cameras.yaml",
     "openmvg": None,
     "force": True,  # Remove existing features and matches
