@@ -62,15 +62,18 @@ conf_general = {
     # Overlap between tiles in pixels
     "tile_overlap": 10,
     # Size of the low resolution tiles used for the tile preselection
-    "tile_preselection_size": 1000,
+    "tile_preselection_size": 2000,
     # Minimum number of matches per tile
     "min_matches_per_tile": 10,
+    # Use geomertic verification for each tile pair (if tiling is used)
+    "geometric_verification_per_tile": True,
+    "gv_threshold_in_tiles_matching": 4,
     # Geometric verification method and parameters:
     #   GeometricVerification.NONE (no geometric verification),
     #   GeometricVerification.PYDEGENSAC (use pydegensac),
     #   GeometricVerification.MAGSAC (use opencv MAGSAC),
     #   Other methods: RANSAC, LMEDS, RHO, USAC_DEFAULT, USAC_PARALLEL, USAC_FM_8PTS, USAC_FAST, USAC_ACCURATE, USAC_PROSAC, USAC_MAGSAC
-    "geom_verification": GeometricVerification.USAC_MAGSAC,
+    "geom_verification": GeometricVerification.MAGSAC,
     "gv_threshold": 4,
     "gv_confidence": 0.99999,
     # Minimum number of inliers matches and minumum inlier ratio per pair

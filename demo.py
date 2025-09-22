@@ -24,6 +24,8 @@ args = {
     "skip_reconstruction": False,
     "graph": True,
     #"upright": "custom", # ["custom", "2clusters", "exif"] With "custom" option, rotations must be specified in ./config/rotations.txt
+    #"config_file": "./config_superpoint_lightglue.yaml", # Path to custom config file (YAML format) for matcher
+    "verbose": False,
 }
 
 # Alternatively, you can parse the parameters from the command line with
