@@ -13,6 +13,7 @@ from ..config import Config
 from ..constants import Quality, TileSelection, get_size_by_quality
 from ..utils.image import Image, resize_image
 from ..utils.tiling import Tiler
+import rasterio
 
 logger = logging.getLogger("dim")
 
@@ -186,9 +187,17 @@ class ExtractorBase(metaclass=ABCMeta):
         feature_path = self.config["general"]["output_dir"] / "features.h5"
 
         # Load image
-        image = cv2.imread(str(im_path))
+        with rasterio.open(str(im_path)) as src:
+            image = src.read()
+            # Convert from (bands, rows, cols) to (rows, cols, bands)
+            image = np.transpose(image, (1, 2, 0))
+            # If single band, squeeze to (rows, cols)
+            if image.shape[2] == 1:
+                image = image[:, :, 0]
         if self.grayscale:
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            # Only convert to grayscale if the image is not already grayscale
+            if len(image.shape) == 3 and image.shape[2] > 1:
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         if self.as_float:
             image = image.astype(np.float32)
 
@@ -283,17 +292,18 @@ class ExtractorBase(metaclass=ABCMeta):
             input=image, window_size=tile_size, overlap=overlap
         )
 
-        # Initialize empty arrays
-        kpts_full = np.array([], dtype=np.float32).reshape(0, 2)
-        descriptors_full = np.array([], dtype=np.float32).reshape(
-            self.descriptor_size, 0
-        )
-        scores_full = np.array([], dtype=np.float32)
-        tile_idx_full = np.array([], dtype=np.float32)
+        # Use lists for memory-efficient accumulation
+        kpts_list = []
+        descriptors_list = []
+        scores_list = []
+        tile_idx_list = []
+        
+        total_tiles = len(tiles)
+        logger.debug(f"  - Processing {total_tiles} tiles for feature extraction")
 
         # Extract features from each tile
         for idx, tile in tiles.items():
-            logger.debug(f"  - Extracting features from tile: {idx}")
+            logger.debug(f"  - Extracting features from tile: {idx}/{total_tiles}")
 
             # Extract features in tile
             feat_tile = self._extract(tile)
@@ -335,14 +345,28 @@ class ExtractorBase(metaclass=ABCMeta):
                 scor_tile = scor_tile[mask]
 
             if len(kp_tile) > 0:
-                kpts_full = np.vstack((kpts_full, kp_tile))
-                descriptors_full = np.hstack((descriptors_full, des_tile))
+                kpts_list.append(kp_tile)
+                descriptors_list.append(des_tile)
                 tile_idx = np.full(len(kp_tile), idx, dtype=np.float32)
-                tile_idx_full = np.concatenate((tile_idx_full, tile_idx))
+                tile_idx_list.append(tile_idx)
                 if scor_tile is not None:
-                    scores_full = np.concatenate((scores_full, scor_tile))
-                else:
-                    scores_full = None
+                    scores_list.append(scor_tile)
+
+        # Efficiently concatenate all features at once
+        if kpts_list:
+            kpts_full = np.vstack(kpts_list)
+            descriptors_full = np.hstack(descriptors_list)
+            tile_idx_full = np.concatenate(tile_idx_list)
+            if scores_list:
+                scores_full = np.concatenate(scores_list)
+            else:
+                scores_full = None
+        else:
+            # No features found
+            kpts_full = np.array([], dtype=np.float32).reshape(0, 2)
+            descriptors_full = np.array([], dtype=np.float32).reshape(self.descriptor_size, 0)
+            tile_idx_full = np.array([], dtype=np.float32)
+            scores_full = None
 
         if scores_full is None:
             logger.warning("No scores found in features")

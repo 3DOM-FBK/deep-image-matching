@@ -11,7 +11,7 @@ def resize_images(input_folder, output_folder, new_resolution):
 
     # Loop through all files in the input folder
     for filename in os.listdir(input_folder):
-        if filename.endswith((".jpg", ".jpeg", ".png", ".gif", ".tif")):
+        if filename.endswith((".jpg", ".JPG", ".jpeg", ".JPEG", ".png", ".PNG", ".gif", ".GIF", ".tif", ".TIF", ".tiff", ".TIFF")):
             input_path = os.path.join(input_folder, filename)
             output_path = os.path.join(output_folder, filename)
 

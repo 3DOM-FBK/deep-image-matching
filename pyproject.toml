@@ -27,6 +27,7 @@ dependencies = [
   "torch",
   "torchvision",
   "pillow",
+  "rasterio",
   "opencv-python",
   "opencv-contrib-python",
   "pydegensac==0.1.3; platform_system=='Windows' and platform_machine=='i386'",

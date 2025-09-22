@@ -11,7 +11,7 @@ cam0: # This camera is used for the image rotated by 90 degrees. You need to def
   intrinsics: [
     1200, 1200, 500, 750
   ]
-  images : "DSC_6471.JPG"
+  images : "*.JPG"
 
 
 # cam1: # This camera is used for the image rotated by 180 degrees. This is not necessary, you can use the same camera model as the general one.

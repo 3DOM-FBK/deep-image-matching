@@ -14,13 +14,18 @@ logger = dim.setup_logger("dim")
 # Define the configuration parameters
 args = {
     "dir": "./assets/example_cyprus",
-    "pipeline": "superpoint+lightglue",
-    "strategy": "bruteforce",
-    "quality": "medium",
-    "tiling": "none",
+    "pipeline": "superpoint+lightglue", # ["superpoint+lightglue", "superpoint+lightglue_fast", "superpoint+superglue", "superpoint+kornia_matcher", "disk+lightglue", "aliked+lightglue", "orb+kornia_matcher", "sift+kornia_matcher", "loftr", "se2loftr", "roma", "srif", "keynetaffnethardnet+kornia_matcher", "dedode+kornia_matcher"]
+    "strategy": "bruteforce", # ["matching_lowres", "bruteforce", "sequential", "retrieval", "custom_pairs", "covisibility"]
+    "quality": "medium", # ["lowest", "low", "medium", "high", "highest"]
+    "tiling": "none", # ["none", "preselection", "grid", "exhaustive"]
     "camera_options": "./assets/example_cyprus/cameras.yaml",
     "openmvg": None,
     "force": True,  # Remove existing features and matches
+    "skip_reconstruction": False,
+    "graph": True,
+    #"upright": "custom", # ["custom", "2clusters", "exif"] With "custom" option, rotations must be specified in ./config/rotations.txt
+    #"config_file": "./config_superpoint_lightglue.yaml", # Path to custom config file (YAML format) for matcher
+    "verbose": False,
 }
 
 # Alternatively, you can parse the parameters from the command line with

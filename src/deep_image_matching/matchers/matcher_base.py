@@ -9,6 +9,7 @@ import cv2
 import h5py
 import numpy as np
 import torch
+import rasterio
 
 from ..config import Config
 from ..constants import Quality, TileSelection, Timer, get_size_by_quality
@@ -422,6 +423,22 @@ class MatcherBase(metaclass=ABCMeta):
 
             # Match features
             correspondences = self._match_pairs(feats0_tile, feats1_tile)
+
+            ## Apply geometric verification
+            if self.config["general"]["geometric_verification_per_tile"]:
+                _, inlMask = geometric_verification(
+                    kpts0=feats0_tile['keypoints'][correspondences[:, 0]],
+                    kpts1=feats1_tile['keypoints'][correspondences[:, 1]],
+                    method=self.config["general"]["geom_verification"],
+                    threshold=self.config["general"]["gv_threshold_in_tiles_matching"],
+                    confidence=self.config["general"]["gv_confidence"],
+                )
+                
+                true_values = inlMask.sum()
+                if true_values < 15:
+                    inlMask = np.zeros_like(inlMask, dtype=bool)
+                correspondences = correspondences[inlMask]
+
             logger.debug(f"     Found {len(correspondences)} matches")
             timer.update("match tile")
 
@@ -708,7 +725,10 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
 
         # Rescale threshold according the image original image size
         img_shape = cv2.imread(str(img0)).shape
-        scale_fct = np.floor(max(img_shape) / self.max_tile_size / 2)
+        if self._tiling == TileSelection.NONE:
+            scale_fct = 1
+        else:
+            scale_fct = np.floor(max(img_shape) / self.max_tile_size / 2)
         gv_threshold = self.config["general"]["gv_threshold"] * scale_fct
 
         # Apply geometric verification
@@ -998,8 +1018,10 @@ def tile_selection(
 
     # Compute tiles limits and origin
     tiler = Tiler(tiling_mode="size")
-    i0 = cv2.imread(str(img0), cv2.IMREAD_GRAYSCALE).astype(np.float32)
-    i1 = cv2.imread(str(img1), cv2.IMREAD_GRAYSCALE).astype(np.float32)
+    with rasterio.open(str(img0)) as src:
+        i0 = src.read(1).astype(np.float32)
+    with rasterio.open(str(img1)) as src:
+        i1 = src.read(1).astype(np.float32)
 
     # Resize images to the specified quality to reproduce the same tiling as in feature extraction
     if quality != Quality.HIGH:

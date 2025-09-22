@@ -5,6 +5,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+import rasterio
 
 from deep_image_matching.utils.database import (
     COLMAPDatabase,
@@ -151,7 +152,7 @@ class ShowPairMatches:
             img1_path,
             keypoints0,
             keypoints1,
-            self.two_views_matches[(id0, id1)],
+            self.matches[(id0, id1)], #"self.two_views_matches[(id0, id1)]," or "self.matches[(id0, id1)],"
             plot_config,
         )
 
@@ -169,13 +170,90 @@ class ShowPairMatches:
         thickness = plot_config["thickness"]
         space_between_images = plot_config["space_between_images"]
 
-        # Load images
-        img0 = cv2.imread(str(img0_path))
-        img1 = cv2.imread(str(img1_path))
+        # Load images using rasterio
+        def load_image_with_rasterio(img_path):
+            with rasterio.open(str(img_path)) as src:
+                img_data = src.read()
+                # Convert from (bands, rows, cols) to (rows, cols, bands)
+                img = np.transpose(img_data, (1, 2, 0))
+                
+                # Handle different number of bands
+                if img.shape[2] == 1:
+                    # Single band - convert to 3-channel grayscale
+                    img = np.repeat(img, 3, axis=2)
+                elif img.shape[2] > 3:
+                    # More than 3 bands - take first 3 (typically RGB)
+                    img = img[:, :, :3]
+                
+                # Convert to uint8 if needed
+                if img.dtype != np.uint8:
+                    # Normalize to 0-255 range if values are in different range
+                    if img.max() <= 1.0:
+                        img = (img * 255).astype(np.uint8)
+                    else:
+                        img = np.clip(img, 0, 255).astype(np.uint8)
+                
+                ## Convert RGB to BGR for OpenCV compatibility (if 3 channels)
+                #if img.shape[2] == 3:
+                #    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+                
+                return img
+        
+        img0 = load_image_with_rasterio(img0_path)
+        img1 = load_image_with_rasterio(img1_path)
 
-        # Convert keypoints to integers
-        kpts0_int = np.round(kpts0).astype(int)
-        kpts1_int = np.round(kpts1).astype(int)
+        # Check if images are too large and resize if necessary
+        max_dimension = plot_config.get("max_dimension", 4000)  # Maximum dimension for visualization
+        scale_factor0 = 1.0
+        scale_factor1 = 1.0
+        
+        # Calculate scale factors for each image
+        if max(img0.shape[:2]) > max_dimension:
+            scale_factor0 = max_dimension / max(img0.shape[:2])
+            new_size0 = (int(img0.shape[1] * scale_factor0), int(img0.shape[0] * scale_factor0))
+            img0 = cv2.resize(img0, new_size0, interpolation=cv2.INTER_AREA)
+            print(f"Resized img0 by factor {scale_factor0:.3f} to {img0.shape[1]}x{img0.shape[0]}")
+            
+        if max(img1.shape[:2]) > max_dimension:
+            scale_factor1 = max_dimension / max(img1.shape[:2])
+            new_size1 = (int(img1.shape[1] * scale_factor1), int(img1.shape[0] * scale_factor1))
+            img1 = cv2.resize(img1, new_size1, interpolation=cv2.INTER_AREA)
+            print(f"Resized img1 by factor {scale_factor1:.3f} to {img1.shape[1]}x{img1.shape[0]}")
+
+        # Scale keypoints to match resized images
+        kpts0_scaled = kpts0 * scale_factor0
+        kpts1_scaled = kpts1 * scale_factor1
+
+        # Filter out invalid keypoints (NaN, inf) and convert to integers
+        valid_mask0 = np.isfinite(kpts0_scaled).all(axis=1)
+        valid_mask1 = np.isfinite(kpts1_scaled).all(axis=1)
+        
+        kpts0_valid = kpts0_scaled[valid_mask0]
+        kpts1_valid = kpts1_scaled[valid_mask1]
+        
+        kpts0_int = np.round(kpts0_valid).astype(int)
+        kpts1_int = np.round(kpts1_valid).astype(int)
+        
+        print(f"Valid keypoints - Img0: {len(kpts0_int)}/{len(kpts0)}, Img1: {len(kpts1_int)}/{len(kpts1)}")
+
+        # Calculate final visualization size and check memory requirements
+        final_height = max(img0.shape[0], img1.shape[0])
+        final_width = img0.shape[1] + img1.shape[1] + space_between_images
+        estimated_memory_gb = (final_height * final_width * 3) / (1024**3)
+        
+        print(f"Final visualization size: {final_width}x{final_height} ({estimated_memory_gb:.2f} GB)")
+        
+        if estimated_memory_gb > 8.0:  # If still too large after resizing
+            print("Warning: Visualization still requires significant memory. Consider using smaller max_dimension.")
+            additional_scale = min(1.0, 8.0 / estimated_memory_gb)
+            if additional_scale < 1.0:
+                new_size0 = (int(img0.shape[1] * additional_scale), int(img0.shape[0] * additional_scale))
+                new_size1 = (int(img1.shape[1] * additional_scale), int(img1.shape[0] * additional_scale))
+                img0 = cv2.resize(img0, new_size0, interpolation=cv2.INTER_AREA)
+                img1 = cv2.resize(img1, new_size1, interpolation=cv2.INTER_AREA)
+                kpts0_int = np.round(kpts0_int * additional_scale).astype(int)
+                kpts1_int = np.round(kpts1_int * additional_scale).astype(int)
+                print(f"Applied additional scaling factor {additional_scale:.3f}")
 
         # Create a new image to draw matches
         img_matches = np.zeros(
@@ -193,19 +271,58 @@ class ShowPairMatches:
         ] = (255, 255, 255)
 
         if show_keypoints:
-            # Show keypoints
+            # Show valid keypoints within image bounds
             for kpt in kpts0_int:
-                kpt = tuple(kpt)
-                cv2.circle(img_matches, kpt, radius, (0, 0, 255), thickness)
+                if 0 <= kpt[0] < img0.shape[1] and 0 <= kpt[1] < img0.shape[0]:
+                    kpt_tuple = tuple(kpt)
+                    cv2.circle(img_matches, kpt_tuple, radius, (0, 0, 255), thickness)
 
             for kpt in kpts1_int:
-                kpt = tuple(kpt + np.array([img0.shape[1], 0]))
-                cv2.circle(img_matches, kpt, radius, (0, 0, 255), thickness)
+                kpt_shifted = kpt + np.array([img0.shape[1] + space_between_images, 0])
+                if (0 <= kpt[0] < img1.shape[1] and 0 <= kpt[1] < img1.shape[0] and
+                    0 <= kpt_shifted[0] < img_matches.shape[1] and 0 <= kpt_shifted[1] < img_matches.shape[0]):
+                    kpt_tuple = tuple(kpt_shifted)
+                    cv2.circle(img_matches, kpt_tuple, radius, (0, 0, 255), thickness)
 
-        # Draw lines and circles for matches
+        # Filter matches to only include those with valid keypoints and within image bounds
+        valid_matches = []
+        
+        # Create mapping from original indices to filtered indices
+        valid_idx0_map = {}
+        valid_idx1_map = {}
+        
+        for i, is_valid in enumerate(valid_mask0):
+            if is_valid:
+                valid_idx0_map[i] = len(valid_idx0_map)
+                
+        for i, is_valid in enumerate(valid_mask1):
+            if is_valid:
+                valid_idx1_map[i] = len(valid_idx1_map)
+        
         for match in matches:
-            pt1 = tuple(kpts0_int[match[0]])
-            pt2 = tuple(np.array(kpts1_int[match[1]]) + np.array([img0.shape[1], 0]))
+            orig_idx0, orig_idx1 = match[0], match[1]
+            
+            # Check if both original indices had valid keypoints
+            if orig_idx0 in valid_idx0_map and orig_idx1 in valid_idx1_map:
+                new_idx0 = valid_idx0_map[orig_idx0]
+                new_idx1 = valid_idx1_map[orig_idx1]
+                
+                # Check if indices are within filtered arrays
+                if new_idx0 < len(kpts0_int) and new_idx1 < len(kpts1_int):
+                    kpt0 = kpts0_int[new_idx0]
+                    kpt1 = kpts1_int[new_idx1]
+                    
+                    # Check if keypoints are within image bounds
+                    if (0 <= kpt0[0] < img0.shape[1] and 0 <= kpt0[1] < img0.shape[0] and
+                        0 <= kpt1[0] < img1.shape[1] and 0 <= kpt1[1] < img1.shape[0]):
+                        valid_matches.append((new_idx0, new_idx1))
+        
+        print(f"Valid matches: {len(valid_matches)}/{len(matches)}")
+        
+        # Draw lines and circles for valid matches
+        for idx0, idx1 in valid_matches:
+            pt1 = tuple(kpts0_int[idx0])
+            pt2 = tuple(kpts1_int[idx1] + np.array([img0.shape[1] + space_between_images, 0]))
 
             # Draw a line connecting the keypoints
             cv2.line(img_matches, pt1, pt2, (0, 255, 0), thickness)
@@ -274,20 +391,29 @@ def parse_args():
         required=False,
         default=1500,
     )
+    parser.add_argument(
+        "--max_dimension",
+        type=int,
+        help="Maximum dimension (width or height) for individual images before visualization",
+        required=False,
+        default=4000,
+    )
     args = parser.parse_args()
 
     return args
 
 
 def main():
+    args = parse_args()
+    
     plot_config = {
         "show_keypoints": True,
         "radius": 5,
         "thickness": 2,
         "space_between_images": 0,
+        "max_dimension": args.max_dimension,
     }
 
-    args = parse_args()
     database_path = Path(args.database)
     out_dir = Path(args.output)
     imgs_dir = Path(args.imgsdir)

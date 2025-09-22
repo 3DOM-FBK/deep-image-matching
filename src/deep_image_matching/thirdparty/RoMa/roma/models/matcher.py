@@ -711,6 +711,11 @@ class RegressionMatcher(nn.Module):
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         if isinstance(im_A_path, (str, os.PathLike)):
             im_A, im_B = Image.open(im_A_path), Image.open(im_B_path)
+            # Ensure images are in RGB mode (convert from grayscale if needed)
+            if im_A.mode != 'RGB':
+                im_A = im_A.convert('RGB')
+            if im_B.mode != 'RGB':
+                im_B = im_B.convert('RGB')
         else:
             # Assume its not a path
             im_A, im_B = im_A_path, im_B_path
@@ -777,6 +782,11 @@ class RegressionMatcher(nn.Module):
                     # TODO: need to adjust corresps when doing this
                 else:
                     im_A, im_B = Image.open(im_A_path), Image.open(im_B_path)
+                    # Ensure images are in RGB mode (convert from grayscale if needed)
+                    if im_A.mode != 'RGB':
+                        im_A = im_A.convert('RGB')
+                    if im_B.mode != 'RGB':
+                        im_B = im_B.convert('RGB')
                 im_A, im_B = test_transform((im_A, im_B))
                 im_A, im_B = im_A[None].to(device), im_B[None].to(device)
                 scale_factor = math.sqrt(
@@ -859,6 +869,11 @@ class RegressionMatcher(nn.Module):
             from PIL import Image
 
             im_A, im_B = Image.open(im_A_path), Image.open(im_B_path)
+            # Ensure images are in RGB mode (convert from grayscale if needed)
+            if im_A.mode != 'RGB':
+                im_A = im_A.convert('RGB')
+            if im_B.mode != 'RGB':
+                im_B = im_B.convert('RGB')
         im_A = im_A.resize((W, H))
         im_B = im_B.resize((W, H))
 
