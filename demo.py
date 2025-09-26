@@ -102,8 +102,8 @@ if not config.general["skip_reconstruction"]:
 if config.general["openmvg_conf"]:
     with open(config.general["openmvg_conf"]) as file:
         openmvgcfg = yaml.safe_load(file)
-    openmvg_sfm_bin = openmvgcfg["general"]["path_to_binaries"]
-    openmvg_database = openmvgcfg["general"]["openmvg_database"]
+    openmvg_sfm_bin = Path(openmvgcfg["general"]["path_to_binaries"])
+    openmvg_database = Path(openmvgcfg["general"]["openmvg_database"])
     openmvg_out_path = output_dir / "openmvg"
     dim.io.export_to_openmvg(
         img_dir=imgs_dir,
@@ -112,7 +112,7 @@ if config.general["openmvg_conf"]:
         openmvg_out_path=openmvg_out_path,
         openmvg_sfm_bin=openmvg_sfm_bin,
         openmvg_database=openmvg_database,
-        camera_config_path=config.general["camera_options"],
+        camera_config_path=Path(config.general["camera_options"]),
     )
 
     # If skip_reconstruction is not specified, run OpenMVG reconstruction
