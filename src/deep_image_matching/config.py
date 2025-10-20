@@ -484,6 +484,8 @@ class Config:
                 args["dir"]
                 / f"results_{args['pipeline']}_{args['strategy']}_quality_{args['quality']}"
             )
+        else:
+            args["outs"] = Path(args["outs"])
 
         if args["outs"].exists():
             if args["force"]:
