@@ -8,8 +8,8 @@ from typing import Optional, Tuple, TypedDict
 import cv2
 import h5py
 import numpy as np
-import torch
 import rasterio
+import torch
 
 from ..config import Config
 from ..constants import Quality, TileSelection, Timer, get_size_by_quality
@@ -207,8 +207,8 @@ class MatcherBase(metaclass=ABCMeta):
             np.ndarray: Array containing the indices of matched keypoints.
         """
 
-        timer_match = Timer(log_level="debug")
-
+        timer_match = Timer(log_level=logging.DEBUG)
+Timer(log_level=logging.DEBUG
         # Check that feature_path exists
         if not Path(feature_path).exists():
             raise FileNotFoundError(f"Feature file {feature_path} does not exist.")
@@ -383,8 +383,8 @@ class MatcherBase(metaclass=ABCMeta):
             np.ndarray: Array containing the indices of matched keypoints.
         """
 
-        timer = Timer(log_level="debug", cumulate_by_key=True)
-
+        timer = Timer(log_level=logging.DEBUG, cumulate_by_key=True)
+Timer(log_level=logging.DEBUG
         # Initialize empty matches array
         matches_full = np.array([], dtype=np.int64).reshape(0, 2)
 
@@ -427,13 +427,13 @@ class MatcherBase(metaclass=ABCMeta):
             ## Apply geometric verification
             if self.config["general"]["geometric_verification_per_tile"]:
                 _, inlMask = geometric_verification(
-                    kpts0=feats0_tile['keypoints'][correspondences[:, 0]],
-                    kpts1=feats1_tile['keypoints'][correspondences[:, 1]],
+                    kpts0=feats0_tile["keypoints"][correspondences[:, 0]],
+                    kpts1=feats1_tile["keypoints"][correspondences[:, 1]],
                     method=self.config["general"]["geom_verification"],
                     threshold=self.config["general"]["gv_threshold_in_tiles_matching"],
                     confidence=self.config["general"]["gv_confidence"],
                 )
-                
+
                 true_values = inlMask.sum()
                 if true_values < 15:
                     inlMask = np.zeros_like(inlMask, dtype=bool)
@@ -692,8 +692,8 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
             np.ndarray: Array containing the indices of matched keypoints.
         """
 
-        timer_match = Timer(log_level="debug")
-
+        timer_match = Timer(log_level=logging.DEBUG)
+Timer(log_level=logging.DEBUG
         # Check that feature_path exists
         if not Path(feature_path).exists():
             raise FileNotFoundError(f"Feature file {feature_path} does not exist.")
@@ -1014,8 +1014,8 @@ def tile_selection(
         List[Tuple[int, int]]: The selected tile pairs.
     """
 
-    timer = Timer(log_level="debug")
-
+    timer = Timer(log_level=logging.DEBUG)
+Timer(log_level=logging.DEBUG
     # Compute tiles limits and origin
     tiler = Tiler(tiling_mode="size")
     with rasterio.open(str(img0)) as src:
@@ -1051,122 +1051,10 @@ def tile_selection(
         # Match tiles by regular grid
         logger.debug("Matching tiles by regular grid")
         tile_pairs = sorted(zip(tiles0.keys(), tiles1.keys()))
-    elif method == TileSelection.PRESELECTION:
-        # Match tiles by preselection running matching on downsampled images
-        logger.debug("Matching tiles by downsampling preselection")
-
-        if pipeline == "superpoint+lightglue":
-            if not preselction_extractor or not preselction_matcher:
-                raise ValueError(
-                    "Preselection extractor and matcher must be provided for superpoint+lightglue pipeline"
-                )
-
-            # Downsampled images
-            size0 = i0.shape[:2][::-1]
-            size1 = i1.shape[:2][::-1]
-            scale0 = tile_preselection_size / max(size0)
-            scale1 = tile_preselection_size / max(size1)
-            size0_new = tuple(int(round(x * scale0)) for x in size0)
-            size1_new = tuple(int(round(x * scale1)) for x in size1)
-            i0 = cv2.resize(i0, size0_new, interpolation=cv2.INTER_AREA)
-            i1 = cv2.resize(i1, size1_new, interpolation=cv2.INTER_AREA)
-
-            # Run SuperPoint on downsampled images
-            with torch.inference_mode():
-                feats0 = preselction_extractor({"image": frame2tensor(i0, device)})
-                feats1 = preselction_extractor({"image": frame2tensor(i1, device)})
-
-                # Match features with LightGlue
-                feats0 = sp2lg(feats0)
-                feats1 = sp2lg(feats1)
-                res = preselction_matcher({"image0": feats0, "image1": feats1})
-                res = rbd2np(res)
-
-            # Get keypoints in original image
-            kp0 = feats0["keypoints"].cpu().numpy()[0]
-            kp0 = kp0[res["matches"][:, 0], :]
-            kp1 = feats1["keypoints"].cpu().numpy()[0]
-            kp1 = kp1[res["matches"][:, 1], :]
-
-            # Scale up keypoints
-            kp0 = kp0 / scale0
-            kp1 = kp1 / scale1
-
-        elif pipeline == "roma":
-            # match downsampled images with roma
-            from ..thirdparty.RoMa.roma import roma_outdoor
-
-            n_matches = 5000
-            coarse_res = 420
-            upsample_res = 560
-            matcher = roma_outdoor(
-                device, coarse_res=coarse_res, upsample_res=upsample_res
-            )
-            H_A, W_A = i0_new_size
-            H_B, W_B = i1_new_size
-            warp, certainty = matcher.match(str(img0), str(img1), device=device)
-            matches, certainty = matcher.sample(warp, certainty, num=n_matches)
-            kp0, kp1 = matcher.to_pixel_coordinates(matches, H_A, W_A, H_B, W_B)
-            kp0, kp1 = kp0.cpu().numpy(), kp1.cpu().numpy()
-
-        else:
-            raise ValueError(
-                f"Invalid tile selection method: {method}. Only superpoint+lightglue and roma are supported so far"
-            )
-
-        # geometric verification
-        if do_geometric_verification:
-            _, inlMask = geometric_verification(
-                kpts0=kp0,
-                kpts1=kp1,
-                threshold=10,
-                confidence=0.99999,
-                quiet=True,
-            )
-            kp0 = kp0[inlMask]
-            kp1 = kp1[inlMask]
-
-        # Select tile pairs where there are enough matches
-        tile_pairs = set()
-        all_pairs = sorted(product(tiles0.keys(), tiles1.keys()))
-        for tidx0, tidx1 in all_pairs:
-            ret0 = points_in_rect(kp0, get_tile_bounding_box(t_orig0[tidx0], tile_size))
-            ret1 = points_in_rect(kp1, get_tile_bounding_box(t_orig1[tidx1], tile_size))
-            n_matches = sum(ret0 & ret1)
-            if n_matches > min_matches_per_tile:
-                tile_pairs.add((tidx0, tidx1))
-        tile_pairs = sorted(tile_pairs)
-
-        timer.update("preselection")
-
-        # For Debugging...
-        if debug_dir:
-            from matplotlib import pyplot as plt
-
-            out_dir = Path(debug_dir) / "preselection"
-            out_dir.mkdir(parents=True, exist_ok=True)
-            image0 = cv2.imread(str(img0), cv2.IMREAD_GRAYSCALE)
-            image1 = cv2.imread(str(img1), cv2.IMREAD_GRAYSCALE)
-            image0 = resize_image(image0, (i0_new_size[1], i0_new_size[0]))
-            image1 = resize_image(image1, (i1_new_size[1], i1_new_size[0]))
-            c = "r"
-            s = 2
-            fig, axes = plt.subplots(1, 2)
-            for ax, img, kp in zip(axes, [image0, image1], [kp0, kp1]):
-                ax.imshow(cv2.cvtColor(img, cv2.COLOR_BAYER_BG2BGR))
-                ax.scatter(kp[:, 0], kp[:, 1], s=s, c=c)
-                ax.axis("off")
-                ax.set_aspect("equal")
-            for lim0, lim1 in zip(t_orig0.values(), t_orig0.values()):
-                axes[0].axvline(lim0[0])
-                axes[0].axhline(lim0[1])
-                axes[1].axvline(lim1[0])
-                axes[1].axhline(lim1[1])
-            axes[1].get_yaxis().set_visible(False)
-            fig.tight_layout()
-            fig.savefig(out_dir / f"{img0.name}-{img1.name}.jpg")
-            plt.close()
-    elif method == TileSelection.PRESELECTION_AFFINE_TRANSFORM:
+    elif (
+        method == TileSelection.PRESELECTION
+        or method == TileSelection.PRESELECTION_AFFINE_TRANSFORM
+    ):
         # Match tiles by preselection running matching on downsampled images
         logger.debug("Matching tiles by downsampling preselection")
 

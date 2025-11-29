@@ -171,7 +171,7 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
             np.ndarray: Array containing the indices of matched keypoints.
         """
 
-        timer = Timer(log_level="debug", cumulate_by_key=True)
+        timer = Timer(log_level=logging.DEBUG, cumulate_by_key=True)
 
         tile_size = self.config["general"]["tile_size"]
         overlap = self.config["general"]["tile_overlap"]

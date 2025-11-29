@@ -56,7 +56,9 @@ class SE2LOFTRMatcher(DetectorFreeMatcherBase):
             logger.info("SE2-LOFTR weights downloaded successfully.")
 
         self.matcher.load_state_dict(
-            torch.load(str(self.se2loftr_path), map_location=self._device, weights_only=False)["state_dict"]
+            torch.load(
+                str(self.se2loftr_path), map_location=self._device, weights_only=False
+            )["state_dict"]
         )
         self.matcher = self.matcher.eval().to(device=self._device)
 
@@ -227,7 +229,7 @@ class SE2LOFTRMatcher(DetectorFreeMatcherBase):
             f"Matching by tile is not implemented for SE2-LOFTR. Please, set tile_selection to TileSelection.NONE and trying again. The images will be automatically subsampled to {self.resize_to} for matching."
         )
 
-        timer = Timer(log_level="debug", cumulate_by_key=True)
+        timer = Timer(log_level=logging.DEBUG, cumulate_by_key=True)
 
         tile_size = self.config["general"]["tile_size"]
         overlap = self.config["general"]["tile_overlap"]

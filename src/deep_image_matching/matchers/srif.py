@@ -1,17 +1,16 @@
 import logging
+import subprocess
 from pathlib import Path
 
 import kornia as K
 import numpy as np
+import pydegensac
 import torch
 from kornia import feature as KF
 
 from ..constants import TileSelection, Timer
 from ..utils.tiling import Tiler
 from .matcher_base import DetectorFreeMatcherBase, tile_selection
-import subprocess
-import os
-import pydegensac
 
 logger = logging.getLogger("dim")
 
@@ -100,24 +99,35 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
         img1_name = img1_path.name
 
         # Run inference
-        exe = './src/deep_image_matching/thirdparty/SRIF/SRIF.exe'
-        output_matches = './src/deep_image_matching/thirdparty/SRIF/matches.txt'
-        command = [exe, str(img0_path), str(img1_path), '128', '4', '8', f'{MAX_FEATURES}', '1', '1', output_matches]
+        exe = "./src/deep_image_matching/thirdparty/SRIF/SRIF.exe"
+        output_matches = "./src/deep_image_matching/thirdparty/SRIF/matches.txt"
+        command = [
+            exe,
+            str(img0_path),
+            str(img1_path),
+            "128",
+            "4",
+            "8",
+            f"{MAX_FEATURES}",
+            "1",
+            "1",
+            output_matches,
+        ]
         result = subprocess.run(command, capture_output=True, text=True)
         if result.returncode != 0:
             logger.error(f"Command failed with error: {result.stderr}")
             raise RuntimeError(f"Command failed with error: {result.stderr}")
         output = result.stdout
-        
+
         # Read matches
-        with open(output_matches, 'r') as f:
+        with open(output_matches) as f:
             lines = f.readlines()
             num_matches = len(lines)
             mkpts0 = np.zeros((num_matches, 2), dtype=np.float16)
             mkpts1 = np.zeros((num_matches, 2), dtype=np.float16)
 
-            for i,line in enumerate(lines):
-                x0, y0, x1, y1 = map(np.float16, line.strip().split(' ', 3))
+            for i, line in enumerate(lines):
+                x0, y0, x1, y1 = map(np.float16, line.strip().split(" ", 3))
                 mkpts0[i] = [x0, y0]
                 mkpts1[i] = [x1, y1]
 
@@ -177,7 +187,7 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
             np.ndarray: Array containing the indices of matched keypoints.
         """
 
-        timer = Timer(log_level="debug", cumulate_by_key=True)
+        timer = Timer(log_level=logging.DEBUG, cumulate_by_key=True)
 
         tile_size = self.config["general"]["tile_size"]
         overlap = self.config["general"]["tile_overlap"]
@@ -266,7 +276,9 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
         # Select uniue features on image 0, on rounded coordinates
         if select_unique is True:
             decimals = 1
-            _, unique_idx = np.unique(np.round(mkpts0_full, decimals), axis=0, return_index=True)
+            _, unique_idx = np.unique(
+                np.round(mkpts0_full, decimals), axis=0, return_index=True
+            )
             mkpts0_full = mkpts0_full[unique_idx]
             mkpts1_full = mkpts1_full[unique_idx]
 

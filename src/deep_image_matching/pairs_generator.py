@@ -1,3 +1,4 @@
+import logging
 from collections import defaultdict, namedtuple
 from itertools import combinations
 from pathlib import Path
@@ -93,7 +94,7 @@ def pairs_from_lowres(
 
     use_superpoint = True
 
-    timer = Timer(log_level="debug")
+    timer = Timer(log_level=logging.DEBUG)
 
     brute_pairs = pairs_from_bruteforce(img_list)
 

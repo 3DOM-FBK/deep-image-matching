@@ -1,3 +1,4 @@
+import logging
 from itertools import combinations
 from pathlib import Path
 from typing import List, Optional, Tuple, TypedDict, Union
@@ -103,7 +104,7 @@ def match_low_resolution(
     lg_cfg: dict = {},
     gv_cfg: dict = {},
 ) -> List[tuple]:
-    timer = Timer(log_level="debug")
+    timer = Timer(log_level=logging.DEBUG)
 
     # Generate all possible pairs
     brute_pairs = list(combinations(img_list, 2))

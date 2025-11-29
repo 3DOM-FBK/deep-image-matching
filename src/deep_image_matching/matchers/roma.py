@@ -108,7 +108,7 @@ class RomaMatcher(DetectorFreeMatcherBase):
         Returns:
             np.ndarray: Array containing the indices of matched keypoints.
         """
-        timer_match = Timer(log_level="debug")
+        timer_match = Timer(log_level=logging.DEBUG)
 
         # Check that feature_path exists
         if not Path(feature_path).exists():
@@ -256,7 +256,7 @@ class RomaMatcher(DetectorFreeMatcherBase):
                 name = str(output_dir / f"tile_{i}.png")
                 cv2.imwrite(name, tile)
 
-        timer = Timer(log_level="debug", cumulate_by_key=True)
+        timer = Timer(log_level=logging.DEBUG, cumulate_by_key=True)
 
         tile_size = self.config["general"]["tile_size"]
         overlap = self.config["general"]["tile_overlap"]

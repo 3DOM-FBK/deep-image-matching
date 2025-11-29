@@ -46,6 +46,7 @@ class Timer:
         smoothing: float = 0.3,
         cumulate_by_key: bool = False,
         logger: logging.Logger | None = None,
+        log_level: int | None = None,
     ):
         """
         Initializes the Timer object.
@@ -63,6 +64,12 @@ class Timer:
         self.smoothing = smoothing
         self.cumulate_by_key = cumulate_by_key
         self.logger = logger if logger is not None else logging.getLogger(__name__)
+
+        if log_level is not None:
+            try:
+                self.logger.setLevel(log_level)
+            except Exception as e:
+                self.logger.error(f"Unable to set log level: {e}")
 
         self.reset()
 
