@@ -133,7 +133,7 @@ if __name__ == "__main__":
             "force": True,
             "skip_reconstruction": False,
             "graph": True,
-            "verbose": False,
+            "verbose": True,
         }
 
     run_matching(args)
