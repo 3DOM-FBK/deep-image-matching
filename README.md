@@ -100,7 +100,7 @@ import deep_image_matching as dim
 To test most of the functionality, run the tests to check if deep-image-matching is correctly installed, run:
 
 ```bash
-uv pytest tests
+uv run pytests
 ```
 
 For more information, check the [documentation](https://3dom-fbk.github.io/deep-image-matching/installation/).
