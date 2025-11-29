@@ -208,7 +208,7 @@ class MatcherBase(metaclass=ABCMeta):
         """
 
         timer_match = Timer(log_level=logging.DEBUG)
-Timer(log_level=logging.DEBUG
+
         # Check that feature_path exists
         if not Path(feature_path).exists():
             raise FileNotFoundError(f"Feature file {feature_path} does not exist.")
@@ -384,7 +384,7 @@ Timer(log_level=logging.DEBUG
         """
 
         timer = Timer(log_level=logging.DEBUG, cumulate_by_key=True)
-Timer(log_level=logging.DEBUG
+
         # Initialize empty matches array
         matches_full = np.array([], dtype=np.int64).reshape(0, 2)
 
@@ -693,7 +693,7 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         """
 
         timer_match = Timer(log_level=logging.DEBUG)
-Timer(log_level=logging.DEBUG
+
         # Check that feature_path exists
         if not Path(feature_path).exists():
             raise FileNotFoundError(f"Feature file {feature_path} does not exist.")
@@ -1015,7 +1015,7 @@ def tile_selection(
     """
 
     timer = Timer(log_level=logging.DEBUG)
-Timer(log_level=logging.DEBUG
+
     # Compute tiles limits and origin
     tiler = Tiler(tiling_mode="size")
     with rasterio.open(str(img0)) as src:
