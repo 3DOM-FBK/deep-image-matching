@@ -63,6 +63,12 @@ class Timer:
 
         self.reset()
 
+    def start(self):
+        """
+        Starts the Timer by resetting the initial time values.
+        """
+        self.reset()
+
     def reset(self):
         """
         Resets the Timer object, setting initial time values.
