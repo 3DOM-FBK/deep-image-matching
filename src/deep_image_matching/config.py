@@ -148,6 +148,15 @@ confs = {
         },
         "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.95},
     },
+    "superpoint_open+kornia_matcher": {
+        "extractor": {
+            "name": "superpoint_open",
+            "nms_radius": 5,
+            "keypoint_threshold": 0.005,
+            "max_keypoints": 4096,
+        },
+        "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.95},
+    },
     "disk+lightglue": {
         "extractor": {
             "name": "disk",
@@ -249,6 +258,7 @@ confs = {
 opt_zoo = {
     "extractors": [
         "superpoint",
+        "superpoint_open",
         "alike",
         "aliked",
         "disk",

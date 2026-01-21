@@ -1,0 +1,27 @@
+data:
+    name: 'coco'
+    cache_in_memory: false
+    validation_size: 100
+model:
+    name: 'magic_point'
+    batch_size: 50
+    learning_rate: 0.001
+    detection_threshold: 0.015  # 0.001
+    nms: 4
+    # top_k: 600
+    homography_adaptation:
+        num: 100
+        aggregation: 'sum'
+        filter_counts: 0
+        valid_border_margin: 3
+        homographies:
+            translation: true
+            rotation: true
+            scaling: true
+            perspective: true
+            scaling_amplitude: 0.2
+            perspective_amplitude_x: 0.2
+            perspective_amplitude_y: 0.2
+            allow_artifacts: true
+            patch_ratio: 0.85
+eval_iter: -1
