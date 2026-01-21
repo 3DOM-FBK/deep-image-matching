@@ -473,13 +473,17 @@ class ImageMatcher:
             logger.debug(f"Matching image pair: {name0} - {name1}")
 
             # Run matching
-            self._matcher.match(
-                feature_path=feature_path,
-                matches_path=matches_path,
-                img0=im0,
-                img1=im1,
-                try_full_image=try_full_image,
-            )
+            try:
+                self._matcher.match(
+                    feature_path=feature_path,
+                    matches_path=matches_path,
+                    img0=im0,
+                    img1=im1,
+                    try_full_image=try_full_image,
+                )
+            except Exception as e:
+                logger.error(f"Error matching pair {name0} - {name1}: {e}")
+                continue
             timer.update("Match pair")
 
             # NOTE: Geometric verif. has been moved to the end of the matching process
