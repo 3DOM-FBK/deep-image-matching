@@ -1,8 +1,9 @@
 import os
 import sys
-from pathlib import Path
-
+import yaml
 import deep_image_matching as dim
+
+from pathlib import Path
 from deep_image_matching import logger, timer
 from deep_image_matching.utils.loftr_roma_to_multiview import LoftrRomaToMultiview
 
