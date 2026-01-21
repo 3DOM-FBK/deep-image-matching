@@ -2,6 +2,7 @@ import logging
 import time
 from collections import OrderedDict
 from functools import wraps
+from typing import Union
 
 logger = logging.getLogger("dim")
 
@@ -45,8 +46,8 @@ class Timer:
         self,
         smoothing: float = 0.3,
         cumulate_by_key: bool = False,
-        logger: logging.Logger | None = None,
-        log_level: int | None = None,
+        logger: Union[logging.Logger, None] = None,
+        log_level: Union[Union[int, None]] = None,
     ):
         """
         Initializes the Timer object.
