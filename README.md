@@ -37,7 +37,7 @@ Key features:
 | ---------------------------------- | --------------------------------------------------------- |
 | &check; SuperPoint                 | &check; Lightglue (with Superpoint, Disk, and ALIKED)     |
 | &check; DISK                       | &check; SuperGlue (with Superpoint)                       |
-| &#x2610; Superpoint free           | &check; Nearest neighbor (with KORNIA Descriptor Matcher) |
+| &check; Superpoint free            | &check; Nearest neighbor (with KORNIA Descriptor Matcher) |
 | &check; ALIKE                      | &check; LoFTR (only GPU)                                  |
 | &check; ALIKED                     | &check; SE2-LoFTR (no tiling and only GPU)                |
 | &check; KeyNet + OriNet + HardNet8 | &check; RoMa                                              |
