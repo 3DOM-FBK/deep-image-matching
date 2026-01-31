@@ -5,31 +5,62 @@ from ..thirdparty.LightGlue.lightglue import LightGlue
 from .matcher_base import FeaturesDict, MatcherBase
 
 
-def featuresDict2Lightglue(feats: FeaturesDict, device: torch.device) -> dict:
-    # Remove elements from list/tuple
+def featuresDict2Lightglue(feats: dict, device: torch.device) -> dict:
+    """
+    Convert a feature dictionary to LightGlue-compatible format.
+
+    Ensures:
+        keypoints   : (B, N, 2)
+        descriptors : (B, N, D)
+        scores      : (B, N) (if present)
+    """
+
+    # 1. Unwrap list / tuple
     feats = {k: v[0] if isinstance(v, (list, tuple)) else v for k, v in feats.items()}
-    # Move descriptors dimension to last
-    if "descriptors" in feats.keys():
-        if feats["descriptors"].shape[-1] != 256:
-            feats["descriptors"] = feats["descriptors"].T
 
-    if "feature_path" in feats.keys():
-        del feats["feature_path"]
-    if "im_path" in feats.keys():
-        del feats["im_path"]
-    # if "time" in feats.keys():
-    #    del feats["time"]
+    # 2. Sanity checks
+    if "keypoints" not in feats or "descriptors" not in feats:
+        raise KeyError("features must contain 'keypoints' and 'descriptors'")
 
-    # Add batch dimension
+    kpts = feats["keypoints"]          # (N, 2)
+    desc = feats["descriptors"]        # (N, D) or (D, N)
+
+    if kpts.ndim != 2 or kpts.shape[1] != 2:
+        raise ValueError(f"Invalid keypoints shape: {kpts.shape}")
+
+    N = kpts.shape[0]
+
+    # 3. Fix descriptor layout using keypoint count
+    if desc.ndim != 2:
+        raise ValueError(f"Invalid descriptors shape: {desc.shape}")
+
+    # Case A: (D, N) → transpose
+    if desc.shape[1] == N and desc.shape[0] != N:
+        desc = desc.T
+
+    # Case B: (N, D) → OK
+    elif desc.shape[0] == N:
+        pass
+
+    else:
+        raise ValueError(
+            f"Descriptor / keypoint mismatch: "
+            f"descriptors={desc.shape}, keypoints={kpts.shape}"
+        )
+
+    feats["descriptors"] = desc  # now guaranteed (N, D)
+
+    # 4. Remove unused keys (LightGlue don't use)
+    feats.pop("feature_path", None)
+    feats.pop("im_path", None)
+
+    # 5. Add batch dimension
     feats = {k: v[None] for k, v in feats.items()}
 
-    # Convert to tensor
+    # 6. Convert to torch.Tensor
     feats = {
-        k: torch.tensor(v, dtype=torch.float, device=device) for k, v in feats.items()
-    }
-    # Check device
-    feats = {
-        k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in feats.items()
+        k: torch.as_tensor(v, dtype=torch.float32, device=device)
+        for k, v in feats.items()
     }
 
     return feats
