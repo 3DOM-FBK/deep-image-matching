@@ -16,8 +16,7 @@ RUN apt-get update && \
     libxext6
 
 # Install uv
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.cargo/bin:$PATH"
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # Clone repo
 RUN git clone https://github.com/3DOM-FBK/deep-image-matching.git /workspace/dim
