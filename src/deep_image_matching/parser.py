@@ -61,7 +61,7 @@ def parse_cli() -> dict:
         "-t",
         "--tiling",
         type=str,
-        choices=["none", "preselection", "grid", "exhaustive"],
+        choices=["none", "preselection", "preselection_affine_transform", "grid", "exhaustive"],
         default="none",
         help="Set the tiling strategy for the matching. Default is none.",
     )
