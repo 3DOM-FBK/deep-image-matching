@@ -140,7 +140,7 @@ class MatcherBase(metaclass=ABCMeta):
         )
         logger.debug(f"Running inference on device {self._device}")
 
-        # Load extractor and matcher for the preselction
+        # Load extractor and matcher for the preselection
         if self.config["general"]["tile_selection"] != TileSelection.NONE:
             sp_cfg = {
                 "nms_radius": 5,  # 3
@@ -155,11 +155,11 @@ class MatcherBase(metaclass=ABCMeta):
                 "filter_threshold": 0.3,
                 "flash": True,
             }
-            self._preselction_extractor = SuperPoint(sp_cfg).eval().to(self._device)
-            self._preselction_matcher = LightGlue(**lg_cfg).eval().to(self._device)
+            self._preselection_extractor = SuperPoint(sp_cfg).eval().to(self._device)
+            self._preselection_matcher = LightGlue(**lg_cfg).eval().to(self._device)
         else:
-            self._preselction_extractor = None
-            self._preselction_matcher = None
+            self._preselection_extractor = None
+            self._preselection_matcher = None
 
     @abstractmethod
     def _match_pairs(
@@ -396,8 +396,8 @@ class MatcherBase(metaclass=ABCMeta):
             quality=self.config["general"]["quality"],
             tile_size=self.config["general"]["tile_size"],
             tile_overlap=self.config["general"]["tile_overlap"],
-            preselction_extractor=self._preselction_extractor,
-            preselction_matcher=self._preselction_matcher,
+            preselection_extractor=self._preselection_extractor,
+            preselection_matcher=self._preselection_matcher,
             pipeline=self.config["general"]["preselection_pipeline"],
             tile_preselection_size=self.tile_preselection_size,
             min_matches_per_tile=self.min_matches_per_tile,
@@ -646,7 +646,7 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
         )
         logger.debug(f"Running inference on device {self._device}")
 
-        # Load extractor and matcher for the preselction
+        # Load extractor and matcher for the preselection
         if self.config["general"]["tile_selection"] == TileSelection.PRESELECTION:
             sp_cfg = {
                 "nms_radius": 5,
@@ -661,11 +661,11 @@ class DetectorFreeMatcherBase(metaclass=ABCMeta):
                 "filter_threshold": 0.5,
                 "flash": True,
             }
-            self._preselction_extractor = SuperPoint(sp_cfg).eval().to(self._device)
-            self._preselction_matcher = LightGlue(**lg_cfg).eval().to(self._device)
+            self._preselection_extractor = SuperPoint(sp_cfg).eval().to(self._device)
+            self._preselection_matcher = LightGlue(**lg_cfg).eval().to(self._device)
         else:
-            self._preselction_extractor = None
-            self._preselction_matcher = None
+            self._preselection_extractor = None
+            self._preselection_matcher = None
 
     def match(
         self,
@@ -993,8 +993,8 @@ def tile_selection(
     quality: Quality,
     tile_size: Tuple[int, int],
     tile_overlap: int,
-    preselction_extractor: ExtractorBase = None,
-    preselction_matcher: MatcherBase = None,
+    preselection_extractor: ExtractorBase = None,
+    preselection_matcher: MatcherBase = None,
     pipeline: str = "superpoint+lightglue",
     tile_preselection_size: int = 1024,
     min_matches_per_tile: int = 5,
@@ -1051,15 +1051,12 @@ def tile_selection(
         # Match tiles by regular grid
         logger.debug("Matching tiles by regular grid")
         tile_pairs = sorted(zip(tiles0.keys(), tiles1.keys()))
-    elif (
-        method == TileSelection.PRESELECTION
-        or method == TileSelection.PRESELECTION_AFFINE_TRANSFORM
-    ):
+    elif method == TileSelection.PRESELECTION:
         # Match tiles by preselection running matching on downsampled images
         logger.debug("Matching tiles by downsampling preselection")
 
         if pipeline == "superpoint+lightglue":
-            if not preselction_extractor or not preselction_matcher:
+            if not preselection_extractor or not preselection_matcher:
                 raise ValueError(
                     "Preselection extractor and matcher must be provided for superpoint+lightglue pipeline"
                 )
@@ -1076,13 +1073,13 @@ def tile_selection(
 
             # Run SuperPoint on downsampled images
             with torch.inference_mode():
-                feats0 = preselction_extractor({"image": frame2tensor(i0, device)})
-                feats1 = preselction_extractor({"image": frame2tensor(i1, device)})
+                feats0 = preselection_extractor({"image": frame2tensor(i0, device)})
+                feats1 = preselection_extractor({"image": frame2tensor(i1, device)})
 
                 # Match features with LightGlue
                 feats0 = sp2lg(feats0)
                 feats1 = sp2lg(feats1)
-                res = preselction_matcher({"image0": feats0, "image1": feats1})
+                res = preselection_matcher({"image0": feats0, "image1": feats1})
                 res = rbd2np(res)
 
             # Get keypoints in original image
@@ -1169,6 +1166,175 @@ def tile_selection(
             fig.tight_layout()
             fig.savefig(out_dir / f"{img0.name}-{img1.name}.jpg")
             plt.close()
+    elif method == TileSelection.PRESELECTION_AFFINE_TRANSFORM:
+
+        logger.debug("Matching tiles by preselection with affine transform")
+
+        if pipeline == "superpoint+lightglue":
+            if not preselection_extractor or not preselection_matcher:
+                raise ValueError(
+                    "Preselection extractor and matcher must be provided for superpoint+lightglue pipeline"
+                )
+
+            # Downsampled images
+            size0 = i0.shape[:2][::-1]
+            size1 = i1.shape[:2][::-1]
+            scale0 = tile_preselection_size / max(size0)
+            scale1 = tile_preselection_size / max(size1)
+            size0_new = tuple(int(round(x * scale0)) for x in size0)
+            size1_new = tuple(int(round(x * scale1)) for x in size1)
+            i0 = cv2.resize(i0, size0_new, interpolation=cv2.INTER_AREA)
+            i1 = cv2.resize(i1, size1_new, interpolation=cv2.INTER_AREA)
+
+            # Run SuperPoint on downsampled images
+            with torch.inference_mode():
+                feats0 = preselection_extractor({"image": frame2tensor(i0, device)})
+                feats1 = preselection_extractor({"image": frame2tensor(i1, device)})
+
+                # Match features with LightGlue
+                feats0 = sp2lg(feats0)
+                feats1 = sp2lg(feats1)
+                res = preselection_matcher({"image0": feats0, "image1": feats1})
+                res = rbd2np(res)
+
+            # Get keypoints in original image
+            kp0 = feats0["keypoints"].cpu().numpy()[0]
+            kp0 = kp0[res["matches"][:, 0], :]
+            kp1 = feats1["keypoints"].cpu().numpy()[0]
+            kp1 = kp1[res["matches"][:, 1], :]
+
+            # Scale up keypoints
+            kp0 = kp0 / scale0
+            kp1 = kp1 / scale1
+
+        elif pipeline == "roma":
+            # match downsampled images with roma
+            from ..thirdparty.RoMa.roma import roma_outdoor
+
+            n_matches = 5000
+            coarse_res = 420
+            upsample_res = 560
+            matcher = roma_outdoor(
+                device, coarse_res=coarse_res, upsample_res=upsample_res
+            )
+            H_A, W_A = i0_new_size
+            H_B, W_B = i1_new_size
+            warp, certainty = matcher.match(str(img0), str(img1), device=device)
+            matches, certainty = matcher.sample(warp, certainty, num=n_matches)
+            kp0, kp1 = matcher.to_pixel_coordinates(matches, H_A, W_A, H_B, W_B)
+            kp0, kp1 = kp0.cpu().numpy(), kp1.cpu().numpy()
+
+        else:
+            raise ValueError(
+                f"Invalid tile selection method: {method}. Only superpoint+lightglue and roma are supported so far"
+            )
+
+        # geometric verification
+        if do_geometric_verification:
+            _, inlMask = geometric_verification(
+                kpts0=kp0,
+                kpts1=kp1,
+                threshold=10,
+                confidence=0.99999,
+                quiet=True,
+            )
+            kp0 = kp0[inlMask]
+            kp1 = kp1[inlMask]
+
+        if len(kp0) < 3:
+            # Not enough points to estimate a transform!
+            logger.warning(
+                "Not enough matches (<3) to estimate affine transform. Falling back to standard PRESELECTION.")
+
+            # --- RUN THE PRESELECTION LOGIC AS A FALLBACK ---
+            tile_pairs = set()
+            all_pairs = sorted(product(tiles0.keys(), tiles1.keys()))
+            for tidx0, tidx1 in all_pairs:
+                ret0 = points_in_rect(kp0, get_tile_bounding_box(t_orig0[tidx0], tile_size))
+                ret1 = points_in_rect(kp1, get_tile_bounding_box(t_orig1[tidx1], tile_size))
+                n_matches = sum(ret0 & ret1)
+                if n_matches > min_matches_per_tile:
+                    tile_pairs.add((tidx0, tidx1))
+            tile_pairs = sorted(tile_pairs)
+
+        else:
+            M = estimate_affine_from_matches(kp0, kp1)
+
+            logger.debug(f"Estimated affine transform:\n{M}")
+
+            # Pre-build rectangles for image1 tiles
+            tiles1_rects = {}
+            for t1idx, bl1 in t_orig1.items():
+                tiles1_rects[t1idx] = np.array(get_tile_bounding_box(bl1, tile_size), dtype=np.float32)
+
+            # For speed: vectorize img1 tile rects into an array
+            t1_ids = np.array(list(tiles1_rects.keys()))
+            t1_boxes = np.stack([tiles1_rects[i] for i in t1_ids], axis=0)  # [N,4]
+
+            # compute pair candidates
+            tile_pairs = []
+            margin_x = max(2, tile_overlap)  # small expansion helps catch rounding/slop
+            margin_y = max(2, tile_overlap)
+
+            # For each tile in image0, transform its corners to image1 and check intersection
+            for t0idx, bl0 in t_orig0.items():
+
+                rect0 = np.array(get_tile_bounding_box(bl0, tile_size), dtype=np.float32)
+
+                # Expand source rect slightly
+                rect0_exp = rect0.copy()
+                rect0_exp[0] -= margin_x;
+                rect0_exp[2] += margin_x
+                rect0_exp[1] -= margin_y;
+                rect0_exp[3] += margin_y
+
+                # Transform to img1 space
+                rect1_pred = transform_rectangle_with_affine(M, rect0_exp)
+
+                # Clamp to image1 size (quality-resized size is i1_new_size [H,W])
+                # rect is [xmin, ymin, xmax, ymax]
+                rect1_pred[0] = np.clip(rect1_pred[0], 0, i1_new_size[1])
+                rect1_pred[1] = np.clip(rect1_pred[1], 0, i1_new_size[0])
+                rect1_pred[2] = np.clip(rect1_pred[2], 0, i1_new_size[1])
+                rect1_pred[3] = np.clip(rect1_pred[3], 0, i1_new_size[0])
+
+                # Intersect against all img1 tile rects (vectorized)
+                # intersection check: (x1>x0) & (y1>y0)
+                ix0 = np.maximum(rect1_pred[0], t1_boxes[:, 0])
+                iy0 = np.maximum(rect1_pred[1], t1_boxes[:, 1])
+                ix1 = np.minimum(rect1_pred[2], t1_boxes[:, 2])
+                iy1 = np.minimum(rect1_pred[3], t1_boxes[:, 3])
+                inter_ok = (ix1 > ix0) & (iy1 > iy0)
+
+                for t1idx in t1_ids[inter_ok]:
+                    tile_pairs.append((t0idx, int(t1idx)))
+
+            # keep only pairs with enough preselection matches
+            if len(tile_pairs) and min_matches_per_tile > 0:
+                kp0_in = kp0
+                kp1_in = kp1
+                filtered = []
+                # Precompute dict of rects for img0 tiles too
+                tiles0_rects = {t0idx: np.array(get_tile_bounding_box(bl0, tile_size), dtype=np.float32)
+                                for t0idx, bl0 in t_orig0.items()}
+
+                for (t0idx, t1idx) in tile_pairs:
+                    r0 = tiles0_rects[t0idx]
+                    r1 = tiles1_rects[t1idx]
+                    # Count preselection matches that fall in both rects
+                    in0 = (kp0_in[:, 0] >= r0[0]) & (kp0_in[:, 0] <= r0[2]) & \
+                          (kp0_in[:, 1] >= r0[1]) & (kp0_in[:, 1] <= r0[3])
+                    in1 = (kp1_in[:, 0] >= r1[0]) & (kp1_in[:, 0] <= r1[2]) & \
+                          (kp1_in[:, 1] >= r1[1]) & (kp1_in[:, 1] <= r1[3])
+                    if int(np.sum(in0 & in1)) >= min_matches_per_tile:
+                        filtered.append((t0idx, t1idx))
+                tile_pairs = sorted(set(filtered))
+            else:
+                tile_pairs = sorted(set(tile_pairs))
+
+            timer.update("preselection_affine")
+    else:
+        raise ValueError(f"Invalid tile selection method: {method}")
 
     timer.update("Tile selection")
     timer.print("Tile selection")
@@ -1261,3 +1427,43 @@ def rbd2np(data: dict) -> dict:
         k: v[0].cpu().numpy() if isinstance(v, (torch.Tensor, np.ndarray, list)) else v
         for k, v in data.items()
     }
+
+def estimate_affine_from_matches(kp0: np.ndarray, kp1: np.ndarray) -> np.ndarray:
+    """ Estimate img0->img1 affine (2x3) from matched keypoints. Falls back to identity if estimation fails."""
+
+    M = None
+    try:
+        if 'cv2' in globals():
+            # robust fit allowing outliers
+            M, _ = cv2.estimateAffinePartial2D(kp0, kp1, method=cv2.RANSAC,
+                                               ransacReprojThreshold=4.0, confidence=0.999,
+                                               maxIters=10000)
+        if M is None:
+            # fallback to least-squares fit
+            from skimage.transform import estimate_transform
+            tform = estimate_transform('affine', kp0, kp1)
+            M = tform.params[:2, :]  # 2x3
+    except (Exception,):
+        logger.warning(f"Affine estimation failed")
+        M = None
+
+    if M is None or not np.isfinite(M).all():
+        # identity
+        M = np.array([[1, 0, 0], [0, 1, 0]], dtype=np.float32)
+
+    return M.astype(np.float32)
+
+def transform_rectangle_with_affine(M: np.ndarray, bounds: list) -> np.ndarray:
+    """ Transform rectangle with affine transformation M"""
+
+    xmin, ymin, xmax, ymax = bounds
+    corners = np.array([[xmin, ymin],
+                        [xmin, ymax],
+                        [xmax, ymax],
+                        [xmax, ymin]], dtype=np.float32)
+    # to homogeneous
+    corners_h = np.c_[corners, np.ones((4, 1), dtype=np.float32)]
+    warped = corners_h @ M.T
+    x0, y0 = warped.min(axis=0)
+    x1, y1 = warped.max(axis=0)
+    return np.array([x0, y0, x1, y1], dtype=np.float32)
