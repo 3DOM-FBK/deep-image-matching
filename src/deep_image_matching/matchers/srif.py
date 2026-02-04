@@ -124,7 +124,7 @@ class LOFTRMatcher(DetectorFreeMatcherBase):
             F, inlMask = pydegensac.findFundamentalMatrix(
                 mkpts0,
                 mkpts1,
-                px_th=1.0,
+                px_th=4.0,
                 conf=0.99,
                 max_iters=10000,
             )

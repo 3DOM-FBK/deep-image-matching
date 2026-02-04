@@ -18,6 +18,8 @@ def ProjectionsOfTriangulatedTiePoints(
 
     image_projections = {}
     reconstruction = pycolmap.Reconstruction(model_path)
+    average_tie_points = []
+    average_tie_points_also_not_triangulated = []
  
     for image in tqdm(reconstruction.images.values(), desc="Find projections that have a corresponding 3D tie points"):
         camera_id = image.camera_id
@@ -26,6 +28,8 @@ def ProjectionsOfTriangulatedTiePoints(
         height = camera.height
 
         projections = []
+        tot_tie_points = 0
+        tot_tie_points_also_not_triangulated = 0
         for feature_idx, point2D in enumerate(image.points2D):
             #if point2D.has_point3D:
             if point2D.point3D_id < 1000000:
@@ -33,12 +37,18 @@ def ProjectionsOfTriangulatedTiePoints(
                 #print(point2D.has_point3D.__getattribute__)
                 #print(type(point2D.has_point3D))
                 #quit()
+                tot_tie_points += 1
+                tot_tie_points_also_not_triangulated += 1
                 x, y = point2D.xy
                 x, y = x, (height-y)
                 projections.append((image.image_id, (x,y), width, height))
+            else:
+                tot_tie_points_also_not_triangulated += 1
         image_projections[image] = projections
+        average_tie_points.append(tot_tie_points)
+        average_tie_points_also_not_triangulated.append(tot_tie_points_also_not_triangulated)
 
-    return image_projections
+    return image_projections, np.mean(average_tie_points), np.mean(average_tie_points_also_not_triangulated)
 
 def ComupteMetrics(
         output_dir: Path,
@@ -75,11 +85,11 @@ def ComupteMetrics(
     transform = from_origin(xmin, ymax, resolution, resolution)
 
     zero_cells = np.count_nonzero(density_grid == 0)
-    print(f"Image: {image_name}")
-    print(f"Number of cells with zero density: {zero_cells}")
-    print(f"Total number of cells: {rows * cols}")
+    #print(f"Image: {image_name}")
+    #print(f"Number of cells with zero density: {zero_cells}")
+    #print(f"Total number of cells: {rows * cols}")
     covered_area = ((rows * cols)-zero_cells) / (rows * cols) * 100
-    print(f"Percentage of cells with non zero density: {covered_area}%")
+    #print(f"Percentage of cells with non zero density: {covered_area}%")
 
     density_grid_normalized = zoom(
         density_grid_normalized, 
@@ -107,20 +117,25 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Export pairs in a txt file from a COLMAP database."
     )
-    parser.add_argument("-d", "--database", type=Path, required=True, help="Path to COLMAP database.")
-    parser.add_argument("-m", "--min_n_matches", type=int, required=True, help="Min number of matches that a pair should have after geometric verification.")
-    parser.add_argument("-o", "--output", type=Path, required=True, help="Path to output folder.")
+    #parser.add_argument("-d", "--database", type=Path, required=True, help="Path to COLMAP database.")
+    #parser.add_argument("-m", "--min_n_matches", type=int, required=True, help="Min number of matches that a pair should have after geometric verification.")
+    #parser.add_argument("-o", "--output", type=Path, required=True, help="Path to output folder.")
     parser.add_argument("-l", "--model", type=Path, required=True, help="Path to model folder.")
     args = parser.parse_args()
 
-    image_projections = ProjectionsOfTriangulatedTiePoints(model_path=args.model)
+    image_projections, mean_tie_points, mean_tie_points_also_not_triangulated = ProjectionsOfTriangulatedTiePoints(model_path=args.model)
+    print('Mean number of tie points per image:', mean_tie_points)
+    print('Mean number of tie points per image also not triangulated:', mean_tie_points_also_not_triangulated)
+    print(f"Inlier ratio: {mean_tie_points / mean_tie_points_also_not_triangulated}")
 
     results = {}
+    output_dir = Path(args.model) / "tie_points_density"
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     for image in tqdm(image_projections, desc="Compute metrics"):
         #print(f"Image: {image.name} - Number of projections: {len(image_projections[image])}")
         image_name, covered_area = ComupteMetrics(
-                                        output_dir=Path(args.output),
+                                        output_dir=output_dir,
                                         image_name=image.name,
                                         projections=image_projections[image],
                                         scale_max_value=1,
