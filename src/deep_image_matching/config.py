@@ -157,6 +157,14 @@ confs = {
         },
         "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.95},
     },
+    "liftfeat+kornia_matcher": {
+        "extractor": {
+            "name": "liftfeat",
+            "max_keypoints": 4096,
+            "detect_threshold": 0.05,
+        },
+        "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.99},
+    },
     "disk+lightglue": {
         "extractor": {
             "name": "disk",
@@ -283,6 +291,7 @@ opt_zoo = {
         "sift",
         "no_extractor",
         "rdd_sparse",
+        "liftfeat",
     ],
     "matchers": [
         "superglue",
