@@ -185,6 +185,21 @@ confs = {
             "filter_threshold": 0.1,  # match threshold
         },
     },
+    "rdd_sparse+lightglue": {
+        "extractor": {
+            "name": "rdd_sparse",
+            "max_num_keypoints": 4000,
+        },
+        "matcher": {
+            "name": "lightglue",
+            "n_layers": 9,
+            "depth_confidence": 0.95,  # early stopping, disable with -1
+            "width_confidence": 0.99,  # point pruning, disable with -1
+            "filter_threshold": 0.1,  # match threshold
+            "input_dim": 256,  # RDD descriptor dimension
+            "weights": '../../rdd/RDD/weights/RDD_lg-v2.pth',  # path to the weights
+        },
+    },
     "orb+kornia_matcher": {
         "extractor": {
             "name": "orb",
@@ -267,6 +282,7 @@ opt_zoo = {
         "orb",
         "sift",
         "no_extractor",
+        "rdd_sparse",
     ],
     "matchers": [
         "superglue",

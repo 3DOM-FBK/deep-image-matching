@@ -351,10 +351,12 @@ class LightGlue(nn.Module):
         super().__init__()
         self.conf = conf = SimpleNamespace(**{**self._default_conf, **conf})
         if features is not None:
-            if features not in self.features:
-                raise ValueError(f"Unsupported features: {features} not in " f"{{{','.join(self.features)}}}")
-            for k, v in self.features[features].items():
-                setattr(conf, k, v)
+            if features not in self.features and features != "rdd_sparse":
+                #raise ValueError(f"Unsupported features: {features} not in " f"{{{','.join(self.features)}}}")
+                print(f"Unsupported features: {features} not in " f"{{{','.join(self.features)}}}")
+            if features != "rdd_sparse":
+                for k, v in self.features[features].items():
+                    setattr(conf, k, v)
 
         if conf.input_dim != conf.descriptor_dim:
             self.input_proj = nn.Linear(conf.input_dim, conf.descriptor_dim, bias=True)
@@ -376,13 +378,12 @@ class LightGlue(nn.Module):
         )
 
         state_dict = None
-        if features is not None:
+        if features is not None and conf.weights in ['superpoint_lightglue', 'disk_lightglue', 'aliked_lightglue', 'sift_lightglue']:
             fname = f"{conf.weights}_{self.version.replace('.', '-')}.pth"
             state_dict = torch.hub.load_state_dict_from_url(self.url.format(self.version, features), file_name=fname)
             self.load_state_dict(state_dict, strict=False)
         elif conf.weights is not None:
-            path = Path(__file__).parent
-            path = path / "weights/{}.pth".format(self.conf.weights)
+            path = Path(__file__).parent / self.conf.weights
             state_dict = torch.load(str(path), map_location="cpu")
 
         if state_dict:
