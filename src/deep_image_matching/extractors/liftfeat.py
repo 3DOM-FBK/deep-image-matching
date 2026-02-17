@@ -25,12 +25,7 @@ class LiftFeatExtractor(ExtractorBase):
         # Load extractor
         cfg = self.config.get("extractor")
         detct_threshold = cfg.get("detect_threshold", self._default_conf["detect_threshold"])
-        #config_path = Path(__file__).parent.parent / 'thirdparty' / 'rdd' / 'configs' / 'default.yaml'
-        #weights_path = Path(__file__).parent.parent / 'thirdparty' / 'rdd' / 'RDD' / 'weights' / 'RDD-v2.pth'
-        
-        #with open(config_path, 'r') as f:
-        #    network_config = yaml.safe_load(f)
-        #print(MODEL_PATH);quit()
+
         self._extractor = LiftFeat(weight=MODEL_PATH,detect_threshold=detct_threshold)
         self.max_num_keypoints = cfg.get("max_keypoints", self._default_conf["max_keypoints"])
 
