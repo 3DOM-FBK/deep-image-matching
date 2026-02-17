@@ -168,7 +168,7 @@ confs = {
     "ripe+kornia_matcher": {
         "extractor": {
             "name": "ripe",
-            "max_keypoints": 500,
+            "max_keypoints": 4096,
             "detect_threshold": 0.5,
         },
         "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.95},
