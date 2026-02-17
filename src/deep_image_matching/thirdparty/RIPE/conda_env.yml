@@ -1,0 +1,26 @@
+name: ripe-env
+channels:
+  - conda-forge
+dependencies:
+  - python
+  - cmake
+  - eigen # for poselib
+  - pytorch=2.6=*cuda*
+  - torchvision
+  - pip
+  # others
+  - pudb # debugger
+  - pip:
+      - lightning>=2.0.0
+      - setuptools
+      - poselib @ git+https://github.com/PoseLib/PoseLib.git@56d158f744d3561b0b70174e6d8ca9a7fc9bd9c1
+      - hydra-core
+      - opencv-python
+      - torchmetrics
+      - pyrootutils # standardizing the project root setup
+      - rich
+      - matplotlib
+      - kornia
+      - numpy
+      - wandb
+      - h5py

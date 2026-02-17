@@ -1,0 +1,3 @@
+_target_: ripe.losses.contrastive_loss.ContrastiveLoss
+pos_margin: 0.2
+neg_margin: 0.2

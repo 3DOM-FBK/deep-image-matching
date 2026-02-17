@@ -1,0 +1,6 @@
+_target_: ripe.models.backbones.resnet.ResNet
+nchannels: 3
+pretrained: True
+use_instance_norm: False
+mode: dect
+num_layers: 4
