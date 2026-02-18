@@ -185,6 +185,15 @@ confs = {
             "name": "lightglue",
         },
     },
+    "xfeat+lighterglue": {
+        "extractor": {
+            "name": "xfeat",
+            "max_num_keypoints": 4096,
+        },
+        "matcher": {
+            "name": "lighterglue",
+        },
+    },
     "aliked+lightglue": {
         "extractor": {
             "name": "aliked",
@@ -301,6 +310,7 @@ opt_zoo = {
         "rdd_sparse",
         "liftfeat",
         "ripe",
+        "xfeat",
     ],
     "matchers": [
         "superglue",
@@ -311,6 +321,7 @@ opt_zoo = {
         "adalam",
         "kornia_matcher",
         "roma",
+        "lighterglue",
     ],
     "retrieval": ["netvlad", "openibl", "cosplace", "dir"],
     "matching_strategy": [
