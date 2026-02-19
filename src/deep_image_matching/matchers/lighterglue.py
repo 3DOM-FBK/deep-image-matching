@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 import os
-import traceback
 
 from .matcher_base import FeaturesDict, MatcherBase
 from ..thirdparty.accelerated_features.modules.lighterglue import LighterGlue
@@ -222,10 +221,6 @@ class LighterGlueMatcher(MatcherBase):
             filter_threshold = self.config["matcher"]["filter_threshold"]
             result = self._lightergule(data, min_conf=filter_threshold)
         except Exception as e:
-            print(f"\n{'='*80}")
-            print("Full traceback for LighterGlue forward error:")
-            traceback.print_exc()
-            print(f"{'='*80}\n")
             raise RuntimeError(f"LighterGlue forward failed: {str(e)}") from e
         
         # Extract match indices from result
@@ -239,9 +234,6 @@ class LighterGlueMatcher(MatcherBase):
                 idxs = matches_tensor.cpu().numpy()
             else:
                 idxs = np.array(matches_tensor)
-            
-            print(f"DEBUG: Using result['matches']: shape={idxs.shape}, dtype={idxs.dtype}")
-            print(f"DEBUG: Sample matches (first 10):\n{idxs[:10]}")
         else:
             # Fallback: return empty matches
             idxs = np.empty((0, 2), dtype=np.int32)
