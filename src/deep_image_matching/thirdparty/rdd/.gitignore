@@ -1,0 +1,12 @@
+.venv
+/build/
+**.egg-info
+**.pyc
+/.idea/
+**/__pycache__/
+weights/
+outputs
+**/build/
+**.so
+data/*
+!data/.gitkeep

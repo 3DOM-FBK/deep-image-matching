@@ -1,0 +1,2 @@
+_target_: ripe.models.upsampler.hypercolumn_features.HyperColumnFeatures
+mode: bilinear

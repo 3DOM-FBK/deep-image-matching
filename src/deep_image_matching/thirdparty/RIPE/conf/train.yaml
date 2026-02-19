@@ -1,0 +1,89 @@
+defaults:
+  - data: disk_megadepth # megadepth+acdc or megadepth+tokyo
+  - backbones: vgg
+  - upsampler: hypercolumn_features # interpolate_sparse2D
+  - matcher: concurrent_mnn_poselib
+  - descriptor_loss: contrastive_loss # none to deactivate
+  - inl_th: constant # exp_decay
+  - _self_
+
+project_name: ???
+name: ???
+
+hydra:
+  run:
+    dir: ${oc.env:OUTPUT_DIR}/${project_name}/${name}/${oc.env:SLURM_JOB_ID}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+output_dir: ${hydra:runtime.output_dir}
+
+num_gpus: 1
+# precision: "32-true"
+precision: "bf16-mixed" # numerically more stable
+# precision: "16-mixed"
+
+log_interval: 50 # log every N steps/ batches
+wandb_mode: online
+val_interval: 2000
+conf_inference:
+  threshold: 0.5
+  top_k: 2048
+
+desc_loss_weight: 5.0 # 0.0 to deactivate, also deactivates 1x1 conv
+
+num_workers: 8
+batch_size: 6
+
+transformation_model: fundamental
+
+network:
+  _target_: ripe.models.ripe.RIPE
+  _partial_: true
+  window_size: 8
+  non_linearity_dect:
+    _target_: torch.nn.Identity
+    # _target_: torch.nn.ReLU
+  desc_shares:
+    null
+    # - 64
+    # - 64
+    # - 64
+    # - 64
+
+lr: 0.001 # 0.001 makes it somewhat unstable
+fp_penalty: -1e-7 # -1e-7
+kp_penalty: -7e-7 # -7e-7
+num_grad_accs: 4
+reward_type: inlier # inlier_ratio , inlier+inlier_ratio
+no_filtering_negatives: False
+descriptor_dim: 256
+
+lr_scheduler:
+  _partial_: true
+  _target_: ripe.scheduler.linearLR.StepLinearLR
+  num_steps: ${num_steps}
+  initial_lr: ${lr}
+  final_lr: 1e-6
+
+use_whitening: false
+
+selected_only: False
+
+padding_filter_mode: ignore
+# padding_filter_mode: punish
+
+num_steps: 80000
+
+alpha_scheduler: # 1.0 after 1/3 of the steps
+  _target_: ripe.scheduler.linear_with_plateaus.LinearWithPlateaus
+  start_val: 0.0
+  end_val: 1.0
+  steps_total: ${num_steps}
+  rel_length_start_plateau: 0.0
+  rel_length_end_plateu: 0.6666666
+
+beta_scheduler: # linear increase over all steps
+  _target_: ripe.scheduler.linear_with_plateaus.LinearWithPlateaus
+  start_val: 0.0
+  end_val: 1.0
+  steps_total: ${num_steps}
+  rel_length_start_plateau: 0.0
+  rel_length_end_plateu: 0.0

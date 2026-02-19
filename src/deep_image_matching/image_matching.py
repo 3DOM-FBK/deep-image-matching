@@ -315,7 +315,7 @@ class ImageMatcher:
             Matcher = matcher_loader(matchers, self.matching)
         except AttributeError:
             raise ValueError(f"Invalid matcher. {self.matching} is not supported.")
-        if self.matching == "lightglue":
+        if self.matching in ["lightglue", "lighterglue"]:
             self._matcher = Matcher(local_features=self.extraction, config=self.config)
         else:
             self._matcher = Matcher(self.config)

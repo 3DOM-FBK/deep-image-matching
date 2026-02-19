@@ -157,6 +157,22 @@ confs = {
         },
         "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.95},
     },
+    "liftfeat+kornia_matcher": {
+        "extractor": {
+            "name": "liftfeat",
+            "max_keypoints": 4096,
+            "detect_threshold": 0.05,
+        },
+        "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.99},
+    },
+    "ripe+kornia_matcher": {
+        "extractor": {
+            "name": "ripe",
+            "max_keypoints": 4096,
+            "detect_threshold": 0.5,
+        },
+        "matcher": {"name": "kornia_matcher", "match_mode": "smnn", "th": 0.95},
+    },
     "disk+lightglue": {
         "extractor": {
             "name": "disk",
@@ -167,6 +183,15 @@ confs = {
         },
         "matcher": {
             "name": "lightglue",
+        },
+    },
+    "xfeat+lighterglue": {
+        "extractor": {
+            "name": "xfeat",
+            "max_num_keypoints": 4096,
+        },
+        "matcher": {
+            "name": "lighterglue",
         },
     },
     "aliked+lightglue": {
@@ -183,6 +208,21 @@ confs = {
             "depth_confidence": 0.95,  # early stopping, disable with -1
             "width_confidence": 0.99,  # point pruning, disable with -1
             "filter_threshold": 0.1,  # match threshold
+        },
+    },
+    "rdd_sparse+lightglue": {
+        "extractor": {
+            "name": "rdd_sparse",
+            "max_num_keypoints": 4000,
+        },
+        "matcher": {
+            "name": "lightglue",
+            "n_layers": 9,
+            "depth_confidence": 0.95,  # early stopping, disable with -1
+            "width_confidence": 0.99,  # point pruning, disable with -1
+            "filter_threshold": 0.1,  # match threshold
+            "input_dim": 256,  # RDD descriptor dimension
+            "weights": '../../rdd/RDD/weights/RDD_lg-v2.pth',  # path to the weights
         },
     },
     "orb+kornia_matcher": {
@@ -267,6 +307,10 @@ opt_zoo = {
         "orb",
         "sift",
         "no_extractor",
+        "rdd_sparse",
+        "liftfeat",
+        "ripe",
+        "xfeat",
     ],
     "matchers": [
         "superglue",
@@ -277,6 +321,7 @@ opt_zoo = {
         "adalam",
         "kornia_matcher",
         "roma",
+        "lighterglue",
     ],
     "retrieval": ["netvlad", "openibl", "cosplace", "dir"],
     "matching_strategy": [

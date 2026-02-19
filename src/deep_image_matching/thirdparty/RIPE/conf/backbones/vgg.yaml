@@ -1,0 +1,5 @@
+_target_: ripe.models.backbones.vgg.VGG
+nchannels: 3
+pretrained: True
+use_instance_norm: False
+mode: dect

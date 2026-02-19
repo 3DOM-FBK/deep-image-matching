@@ -18,8 +18,6 @@
 
 Multivew matcher for SfM software. Support both deep-learning based and hand-crafted local features and matchers and export keypoints and matches directly in a COLMAP database or to Agisoft Metashape by importing the reconstruction in Bundler format. Now, it supports both OpenMVG and MicMac. Feel free to collaborate!
 
-While `dev` branch is more frequently updated, `master` is the default more stable branch and is updated from `dev` less frequently. If you are looking for the newest developments, please switch to `dev`.
-
 For how to use DIM, check the <a href="https://3dom-fbk.github.io/deep-image-matching/">Documentation</a> (updated for the master branch).
 
 **Please, note that `deep-image-matching` is under active development** and it is still in an experimental stage. If you find any bug, please open an issue. **For the licence of individual local features and matchers please refer to the authors' original projects**.
@@ -32,25 +30,47 @@ Key features:
 - Support for image rotations
 - Compatibility with several SfM software
 - Support image retrieval with deep-learning local features
+- Graph-based clustering
+- Run SfM directly in DIM (pycolmap, openmvg, etc)
 
-| Supported Extractors               | Supported Matchers                                        |
-| ---------------------------------- | --------------------------------------------------------- |
-| &check; SuperPoint                 | &check; Lightglue (with Superpoint, Disk, and ALIKED)     |
-| &check; DISK                       | &check; SuperGlue (with Superpoint)                       |
-| &check; Superpoint free            | &check; Nearest neighbor (with KORNIA Descriptor Matcher) |
-| &check; SRIF                       | &check; LoFTR (only GPU)                                  |
-| &check; ALIKED                     | &check; SE2-LoFTR (no tiling and only GPU)                |
-| &check; KeyNet + OriNet + HardNet8 | &check; RoMa                                              |
-| &check; DeDoDe (only GPU)          | &#x2610; GlueStick                                        |
-| &check; SIFT (from Opencv)         |
-| &check; ORB (from Opencv)          |
+### Supported Extractors
 
-| Supported SfM software                        |
-| --------------------------------------------- |
-| &check; COLMAP                                |
-| &check; OpenMVG                               |
-| &check; MICMAC                                |
-| &check; Agisoft Metashape                     |
+| Algorithm       | Year | Paper link   | Github link | Notes |
+| ---------       | ---- | -----------   | ---------- | ----- |
+| RIPE            | 2025 | [link](https://arxiv.org/abs/2507.04839) | [link](https://github.com/fraunhoferhhi/RIPE) | supported |
+| RDD sparse      | 2025 | [link](https://arxiv.org/abs/2505.08013) | [link](https://github.com/xtcpete/rdd) | supported |
+| LiftFeat        | 2025 | [link](https://www.arxiv.org/abs/2505.03422) | [link](https://github.com/lyp-deeplearning/LiftFeat) | supported |
+| XFeat           | 2024 | [link](https://arxiv.org/abs/2404.19174) | [link](https://github.com/verlab/accelerated_features) | supported |
+| DeDoDe          | 2024 | [link](https://arxiv.org/abs/2308.08479) | [link](https://github.com/Parskatt/DeDoDe) | only GPU  |
+| ALIKED          | 2023 | [link](https://arxiv.org/pdf/2304.03608) | [link](https://github.com/Shiaoming/ALIKED) | supported |
+| SRIF            | 2023 | [link](https://www.sciencedirect.com/science/article/abs/pii/S0924271623002277) | [link](https://github.com/LJY-RS/SRIF) | supported |
+| DISK            | 2020 | [link](https://arxiv.org/abs/2006.13566) | [link](https://github.com/cvlab-epfl/disk) | supported |
+| KeyNet          | 2019 | [link](https://arxiv.org/abs/1904.00889) | [link](https://github.com/axelBarroso/Key.Net) | supported |
+| SuperPoint      | 2018 | [link](https://arxiv.org/abs/1712.07629) | [link](https://github.com/magicleap/SuperPointPretrainedNetwork) | supported |
+| Superpoint open | 2018 | [link](https://arxiv.org/abs/1712.07629) | [link](https://github.com/rpautrat/SuperPoint) | supported |
+| HardNet      | 2017 | [link](https://arxiv.org/abs/1705.10872) | [link](https://github.com/DagnyT/hardnet) | supported |
+| ORB             | 2011 | [link](https://docs.opencv.org/3.4/d1/d89/tutorial_py_orb.html) | [link](https://ieeexplore.ieee.org/abstract/document/6126544) | from OpenCV |
+| SIFT            | 2004 | [link](https://docs.opencv.org/4.x/da/df5/tutorial_py_sift_intro.html) | [link](https://www.cs.ubc.ca/~lsigal/425_2024W1/ijcv04.pdf) | from OpenCV |
+
+
+### Supported Matchers
+
+| Algorithm | Year | Paper link | Github link | Notes |
+| --------- | ---- | ----------- | ---------- | ----- |
+| LightGlue | 2023 | [link](https://arxiv.org/pdf/2306.13643) | [link](https://github.com/cvg/LightGlue) | with SuperPoint, DISK, and ALIKED |
+| LighterGlue | 2023 | [link](https://arxiv.org/pdf/2306.13643) | [link](https://github.com/cvg/LightGlue) | with XFeat |
+| RoMa | 2023 | [link](https://arxiv.org/abs/2305.15404) | [link](https://github.com/Parskatt/RoMa) | supported |
+| SE2-LoFTR | 2022 | [link](https://openaccess.thecvf.com/content/CVPR2022W/IMW/papers/Bokman_A_Case_for_Using_Rotation_Invariant_Features_in_State_of_CVPRW_2022_paper.pdf) | [link](https://github.com/georg-bn/se2-loftr) | no tiling and only GPU |
+| LoFTR | 2021 | [link](https://arxiv.org/abs/2104.00680) | [link](https://github.com/zju3dv/LoFTR) | only GPU |
+| SuperGlue | 2020 | [link](https://arxiv.org/abs/1911.11763) | [link](https://github.com/magicleap/SuperGluePretrainedNetwork) | with SuperPoint |
+| Nearest Neighbor | - | - | - | from KORNIA |
+
+### Supported SfM software  
+
+| &check; [COLMAP](https://github.com/colmap/colmap)                                |
+| &check; [OpenMVG](https://github.com/openMVG/openMVG)                               |
+| &check; [MICMAC](https://github.com/micmacIGN/micmac)                                |
+| &check; [Agisoft Metashape](https://www.agisoft.com/)                     |
 | &check; Software that supports bundler format |
 
 ## Colab demo and notebooks
@@ -189,13 +209,14 @@ python ./join_databases.py --input path/to/dir/with/databases --output path/to/o
 
 ### Exporting the solution to Metashape
 
-To export the solution to Metashape, you can export the COLMAP database to Bundler format and then import it into Metashape.
-This can be done from Metashape GUI, by first importing the images and then use the function `Import Cameras` (File -> Import -> Import Cameras) to select Bundler file (e.g., bundler.out) and the image list file (e.g., bundler_list.txt).
+Suggested solution:
+* It is now possible to run SfM directly in Metashape using 2D observations extracted in DIM. You can use the script `export_to_bundler.py` from the scripts folder. It will create a fake bundler file. Then in Metashape import all the images you need, import camera poses using the bundler file, select all images and reset the alignment. Finally right click, align selected cameras (see [issue](https://github.com/3DOM-FBK/deep-image-matching/issues/94)).
 
-Alternatevely, you can use the `export_to_metashape.py` script to automatically create a Metashape project from a reconstruction saved in Bundler format.
-The script `export_to_metashape.py` takes as input the solution in Bundler format and the images and it exports the solution to Metashape.
-It requires to install Metashape as a Python module in your environment and to have a valid license.
-Please, refer to the instructions at [https://github.com/franioli/metashape](https://github.com/franioli/metashape).
+
+Other solutions:
+* To export the solution to Metashape, you can export the COLMAP database to Bundler format and then import it into Metashape. This can be done from Metashape GUI, by first importing the images and then use the function `Import Cameras` (File -> Import -> Import Cameras) to select Bundler file (e.g., bundler.out) and the image list file (e.g., bundler_list.txt).
+
+* Alternatevely, you can use the `export_to_metashape.py` script to automatically create a Metashape project from a reconstruction saved in Bundler format. The script `export_to_metashape.py` takes as input the solution in Bundler format and the images and it exports the solution to Metashape. It requires to install Metashape as a Python module in your environment and to have a valid license. Please, refer to the instructions at [https://github.com/franioli/metashape](https://github.com/franioli/metashape).
 
 ## How to contribute
 
