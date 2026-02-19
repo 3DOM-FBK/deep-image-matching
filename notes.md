@@ -8,9 +8,6 @@
 - [ ] Testing on very large datasets ([Issue [#29](https://github.com/3DOM-FBK/deep-image-matching/issues/29)])
 - [ ] Use Github submodules instead of copying thirdpary code inside the repo
 - [ ] Add subpixel refinement of the matches (e.g., cross-correlation or [pixel-perfect-sfm](https://github.com/cvg/pixel-perfect-sfm))
-- [ ] Make semi-dense matcher work with multi-camera (Issue [[#24](https://github.com/3DOM-FBK/deep-image-matching/issues/24)])
-- [ ] Improve usage of multiple descriptors together
-- [ ] Finish extending compatibility to OpenMVG
 
 ## Bugs and Issues
 
@@ -26,7 +23,6 @@
 ## Other enhancements
 
 - [ ] Improve configuration management [_Hydra_](https://hydra.cc/docs/tutorials/structured_config/schema/) to make using yaml files, command line and GUI (Issue [[#48](https://github.com/3DOM-FBK/deep-image-matching/issues/48)])
-- [ ] Tests on satellite images
 - [ ] Add steerers + DeDoDe
 - [ ] Add Silk features
 - [ ] Add SIFT + LightGlue
@@ -59,3 +55,7 @@
 - [x] Add tests, documentation and examples (e.g. colab, ..)
 - [x] Cleanup repository to removed large files from Git history
 - [x] Update README CLI options
+- [x] Make semi-dense matcher work with multi-camera (Issue [[#24](https://github.com/3DOM-FBK/deep-image-matching/issues/24)])
+- [x] Improve usage of multiple descriptors together
+- [x] Finish extending compatibility to OpenMVG
+- [x] Tests on satellite images
